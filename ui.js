@@ -303,8 +303,8 @@ function tabInv(){
   const statOpts=Object.entries(CFG.sec).filter(([k])=>hasStat(k)).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
   return `<section class="panel"><h3>Armas (${G.invCount()}/${G.invMax()})</h3>
     <div class="filters fpanel"><div class="ctrl" id="fHead">${fHead()}</div>
-      <div class="frow"><select id="fRar" aria-label="Rareza">${['all',...R.filter(r=>have.some(x=>x.r===r))].map(r=>`<option value="${r}" ${F.rar===r?'selected':''}>${r==='all'?'Todas las rarezas':CFG.rarName[r]}</option>`).join('')}</select>
-        <select id="fCls" aria-label="Clase">${['all',...clsAZ().filter(c=>have.some(x=>x.cls===c))].map(c=>`<option value="${c}" ${F.cls===c?'selected':''}>${c==='all'?'Todas las clases':clsLabel(c)}</option>`).join('')}</select></div>
+      <div class="frow"><select id="fRar" aria-label="Rareza">${['all',...R.filter(r=>have.some(x=>x.r===r))].map(r=>`<option value="${r}" ${F.rar===r?'selected':''}>${r==='all'?'Rareza':CFG.rarName[r]}</option>`).join('')}</select>
+        <select id="fCls" aria-label="Clase">${['all',...clsAZ().filter(c=>have.some(x=>x.cls===c))].map(c=>`<option value="${c}" ${F.cls===c?'selected':''}>${c==='all'?'Clase':clsLabel(c)}</option>`).join('')}</select></div>
       <div class="frow"><select id="fStat" aria-label="Stat"><option value="any">Cualquier stat</option>${statOpts}</select>
         <input type="number" id="fMin" aria-label="Mínimo %" inputmode="decimal" placeholder="mín" value="${esc(F.min)}">
         <input type="number" id="fMax" aria-label="Máximo %" inputmode="decimal" placeholder="máx" value="${esc(F.max)}"></div>
