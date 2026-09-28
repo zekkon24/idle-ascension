@@ -459,8 +459,9 @@ function createGame(opts){
   }
   const disValue=it=>CFG.weapon.scrapDis[it.r]+Math.floor(CFG.weapon.refund*it.invested);
   // Desmontar por rareza (opcional: solo las de tu clase). Nunca la equipada ni las bloqueadas con ★.
-  const byRarity=(r,mine)=>S.items.filter(x=>x.r===r&&(!mine||x.cls===S.cls)&&x.id!==S.equippedId&&!x.fav);
-  function dismantleRarity(r,mine){ return dismantle(byRarity(r,mine).map(x=>x.id)) }
+  // cls: nombre de clase para solo esa clase (true = la tuya; vacío = todas)
+  const byRarity=(r,cls)=>{ const k=cls===true?S.cls:cls||null; return S.items.filter(x=>x.r===r&&(!k||x.cls===k)&&x.id!==S.equippedId&&!x.fav) };
+  function dismantleRarity(r,cls){ return dismantle(byRarity(r,cls).map(x=>x.id)) }
   function dismantle(ids){
     let v=0,n=0; const set=new Set(ids);
     S.items=S.items.filter(x=>{ if(set.has(x.id)&&x.id!==S.equippedId&&!x.fav){v+=disValue(x);n++;return false} return true});
