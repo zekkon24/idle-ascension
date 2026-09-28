@@ -24,6 +24,8 @@ function createGame(opts){
   const handlers={};
   const on=(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn)};
   const emit=(ev,data)=>{(handlers[ev]||[]).forEach(fn=>fn(data))};
+  // Acciones importantes para la base de datos (la interfaz las envía al servidor): track {type, ...datos}
+  const track=(type,data)=>emit('track',{type,...(data||{})});
 
   /* ---------- estado ---------- */
   let S=null, B=null, HS=null;
@@ -37,13 +39,14 @@ function createGame(opts){
       best:0,fase:1,wave:1,push:true,autoPush:true,farmClears:0,
       items:[],nextId:1,equippedId:null,chestInv:{},opt:{},
       calStart:null,cardUntil:0,vipUntil:0,
-      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null};
+      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,
+      stats:{deposited:0,withdrawNet:0,adGold:0,ads:0,offGold:0}}; // registro para la base de datos: tokens comprados, $ retirados (neto), oro de anuncios, anuncios vistos, oro sin conexión
   }
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
     if(!st||!CFG.classes[st.cls]) return null;
     const d=newState(st.cls);
     for(const k in d) if(st[k]===undefined) st[k]=d[k];
-    st.up={...d.up,...(st.up||{})}; for(const k in st.up) if(!Number.isFinite(st.up[k])) st.up[k]=0;
+    st.up={...d.up,...(st.up||{})}; st.stats={...d.stats,...(st.stats||{})}; for(const k in st.up) if(!Number.isFinite(st.up[k])) st.up[k]=0;
     for(const k of ['gold','tokens','won','withdrawn','scrap','xp','lvl','best','fase','wave','tickets','bossTickets','evm','kills','boostMs','evo','mode','nextId','cardUntil','vipUntil'])
       if(!Number.isFinite(st[k])) st[k]=d[k];
     st.lvl=Math.max(1,st.lvl|0); st.fase=Math.max(1,st.fase|0); st.wave=Math.min(10,Math.max(1,st.wave|0));
@@ -68,7 +71,7 @@ function createGame(opts){
   const validName=n=>cleanName(n).length>=3;
   // El nombre es permanente: solo se puede poner si la partida aún no tiene (partidas antiguas)
   function setName(n){ const c=cleanName(n); if(c.length<3||S.name) return false; S.name=c; save(); emit('change'); return true }
-  function newGame(cls,name){ S=newState(cls,name); HS=null; S.equippedId=newItem(cls,CFG.startWeapon||'C').id; S.calStart=dayKey(); startWave(); emit('change'); return S }
+  function newGame(cls,name){ S=newState(cls,name); HS=null; S.equippedId=newItem(cls,CFG.startWeapon||'C').id; S.calStart=dayKey(); startWave(); track('start',{cls,name:S.name}); emit('change'); return S }
 
   /* ---------- fórmulas ---------- */
   const hasCard=()=>dayKey()<S.cardUntil, hasVip=()=>dayKey()<S.vipUntil;
@@ -404,8 +407,8 @@ function createGame(opts){
   const wbWeekDmg=()=>{ const w=wbShownWeek(); return S.wbLog&&S.wbLog.week===w?S.wbLog.dmg:0 };
 
   /* ---------- mejoras ---------- */
-  function buyUpgrade(k){ const c=upCost(k); if(S.gold<c) return false; S.gold-=c; S.up[k]++; statsDirty(); emit('change'); return true }
-  function buyMax(k){ let n=0; while(S.gold>=upCost(k)){S.gold-=upCost(k);S.up[k]++;n++} if(n){statsDirty();emit('change')} return n }
+  function buyUpgrade(k){ const c=upCost(k); if(S.gold<c) return false; S.gold-=c; S.up[k]++; statsDirty(); track('upgrade',{k,n:1,gold:c}); emit('change'); return true }
+  function buyMax(k){ let n=0, g=0; while(S.gold>=upCost(k)){g+=upCost(k);S.gold-=upCost(k);S.up[k]++;n++} if(n){statsDirty();track('upgrade',{k,n,gold:g});emit('change')} return n }
   function upgradeGain(k){ const g0=computeStats(); S.up[k]++; const g1=computeStats(); S.up[k]--; return g1[k]-g0[k] }
 
   /* ---------- armas ---------- */
@@ -499,6 +502,7 @@ function createGame(opts){
     const loot=[]; let n=all?chestCount(type):Math.min(1,chestCount(type));
     while(n-->0){ S.chestInv[type]--; loot.push(openChest(type)); }
     if(!S.chestInv[type]) delete S.chestInv[type];
+    if(loot.length){ const r={}; for(const x of loot) r[x.r]=(r[x.r]||0)+1; track('chests',{chest:type,n:loot.length,rar:r}); }
     save(); emit('change'); return loot;
   }
   /* ---------- tokens y tienda ---------- */
@@ -508,17 +512,18 @@ function createGame(opts){
   function spend(n){ if(!(n>0)) return true; if(tokens()<n) return false;
     const a=Math.min(S.tokens,n); S.tokens-=a; S.won-=n-a; emit('spend',n); return true }
   // Comprar un paquete de tokens con dinero (simulado)
-  function buyTokens(n){ if(!CFG.tokens.packs.includes(n)) return false; S.tokens+=n; save(); emit('change'); return true }
+  function buyTokens(n){ if(!CFG.tokens.packs.includes(n)) return false; S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,usd:n/CFG.tokens.perUsd}); save(); emit('change'); return true }
   // Retirar tokens ganados: comisión y mínimo (simulado: no mueve dinero real)
   function withdraw(n){ const W=CFG.tokens.withdraw; n=Math.floor(n);
     if(!(n>=W.min)||n>S.won) return {ok:false,why:n>S.won?'won':'min'};
-    const fee=Math.ceil(n*W.fee); S.won-=n; S.withdrawn=(S.withdrawn||0)+n; save(); emit('change');
+    const fee=Math.ceil(n*W.fee); S.won-=n; S.withdrawn=(S.withdrawn||0)+n; S.stats.withdrawNet+=(n-fee)/CFG.tokens.perUsd;
+    track('withdraw',{tokens:n,fee,usd:(n-fee)/CFG.tokens.perUsd}); save(); emit('change');
     return {ok:true,n,fee,usd:(n-fee)/CFG.tokens.perUsd} }
   // Cofre de plata: se paga con ORO (el de goldMin minutos farmeando tu récord) y hay un máximo al día
   const silverPrice=()=>Math.max(10,Math.round(farmRate(Math.max(1,S.best)).g*60*CFG.chests.silver.goldMin));
   const silverLeft=()=>CFG.chests.silver.perDay-(S.silverDay&&S.silverDay.d===dayKey()?S.silverDay.n:0);
   function buySilver(n){ n=n|0; if(n<1||n>silverLeft()) return false; const c=silverPrice()*n; if(S.gold<c) return false;
-    S.gold-=c; if(!S.silverDay||S.silverDay.d!==dayKey()) S.silverDay={d:dayKey(),n:0}; S.silverDay.n+=n; addChest('silver',n); save(); emit('change'); return true }
+    S.gold-=c; if(!S.silverDay||S.silverDay.d!==dayKey()) S.silverDay={d:dayKey(),n:0}; S.silverDay.n+=n; addChest('silver',n); track('buy',{item:'silver',n,gold:c}); save(); emit('change'); return true }
   const shopPrice=k=>({mode:CFG.chests.mode.price, ticket:CFG.event.ticketCost, bossTicket:CFG.wboss.ticketCost, card:CFG.cardPrice, vip:CFG.vipPrice})[k];
   function buy(k,n){
     n=n|0; if(n<1) return false; if(k==='silver') return buySilver(n); const unit=shopPrice(k); if(unit==null) return false;
@@ -529,7 +534,7 @@ function createGame(opts){
     else if(k==='bossTicket') S.bossTickets+=n;
     else if(k==='card') S.cardUntil=Math.max(S.cardUntil,dayKey())+30;
     else if(k==='vip') S.vipUntil=Math.max(S.vipUntil,dayKey())+30;
-    save(); emit('change'); return true;
+    track('buy',{item:k,n,tokens:unit*n}); save(); emit('change'); return true;
   }
 
   /* ---------- potenciadores por anuncios ---------- */
@@ -544,11 +549,12 @@ function createGame(opts){
   function watchAd(k){
     const b=CFG.boosts[k]; if(!b) return {ok:false};
     if(boostUsesLeft(k)<=0) return {ok:false,why:'limit'};
-    const a=adsState(); a.p[k]=(a.p[k]||0)+1;
+    const a=adsState(); a.p[k]=(a.p[k]||0)+1; S.stats.ads++;
     const res={ok:true,p:a.p[k],need:b.ads,applied:false};
     if(a.p[k]>=b.ads){ a.p[k]=0; a.n[k]=(a.n[k]||0)+1; res.applied=true;
       if(k==='speed') S.boostMs=(S.boostMs||0)+b.min*60000;
-      if(k==='gold'){ res.gold=goldBoostValue(); S.gold+=res.gold; } }
+      if(k==='gold'){ res.gold=goldBoostValue(); S.gold+=res.gold; S.stats.adGold+=res.gold; }
+      track('ad',{boost:k,gold:res.gold||0}); }
     emit('change'); return res;
   }
 
@@ -571,14 +577,15 @@ function createGame(opts){
     if(inEvent()) return null;                                 // durante el evento el tiempo está en pausa: no se farmea a la vez
     if(!(el>60&&(S.best>0||S.mode>0))) return null;
     const f=Math.max(1,Math.min(S.fase,S.best)), r=farmRate(f), l0=S.lvl;
-    const g=r.g*el, x=r.x*el; S.gold+=g; addXp(x);
+    const g=r.g*el, x=r.x*el; S.gold+=g; addXp(x); S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
     const capped=raw>=cap; if(capped&&offlineAdLeft()>0) S.offBonus=g*(CFG.offlineAdMult-1);
     emit('change');
     return {secs:el,fase:f,gold:g,xp:x,lvlFrom:l0,lvlTo:S.lvl,capped,bonus:S.offBonus||0};
   }
   // usos que quedan hoy del extra con anuncio (se renuevan con el cambio de día)
   const offlineAdLeft=()=>CFG.offlineAdPerDay-(adsState().n.off||0);
-  function claimOfflineBonus(){ const b=S.offBonus; if(!b) return 0; S.gold+=b; S.offBonus=null; const a=adsState(); a.n.off=(a.n.off||0)+1; emit('change'); return b }
+  function claimOfflineBonus(){ const b=S.offBonus; if(!b) return 0; S.gold+=b; S.offBonus=null; const a=adsState(); a.n.off=(a.n.off||0)+1;
+    S.stats.ads++; S.stats.adGold+=b; track('ad',{boost:'offline',gold:b}); emit('change'); return b }
 
   /* ---------- ajustes y pruebas ---------- */
   function setOpt(k,v){ S.opt=S.opt||{}; S.opt[k]=v; emit('change') }

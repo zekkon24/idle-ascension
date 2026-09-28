@@ -12,6 +12,7 @@ const storage={
 };
 const G=createGame({cfg:window.CFG,storage});
 window.G=G; // útil para depurar desde la consola
+if(window.Telemetry) Telemetry.attach(G); // envío a la base de datos (solo dentro de Telegram y con servidor)
 const CFG=G.CFG, R=G.R, CLASSES=G.CLASSES;
 let S=null; // alias de G.S (se actualiza al cargar, crear o borrar partida)
 const syncS=()=>{S=G.S};
