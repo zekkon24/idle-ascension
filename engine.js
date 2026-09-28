@@ -458,6 +458,9 @@ function createGame(opts){
     statsDirty(); save(); emit('change'); return {ok:true,lvl:it.lvl};
   }
   const disValue=it=>CFG.weapon.scrapDis[it.r]+Math.floor(CFG.weapon.refund*it.invested);
+  // Desmontar por rareza (opcional: solo las de tu clase). Nunca la equipada ni las bloqueadas con ★.
+  const byRarity=(r,mine)=>S.items.filter(x=>x.r===r&&(!mine||x.cls===S.cls)&&x.id!==S.equippedId&&!x.fav);
+  function dismantleRarity(r,mine){ return dismantle(byRarity(r,mine).map(x=>x.id)) }
   function dismantle(ids){
     let v=0,n=0; const set=new Set(ids);
     S.items=S.items.filter(x=>{ if(set.has(x.id)&&x.id!==S.equippedId&&!x.fav){v+=disValue(x);n++;return false} return true});
@@ -512,8 +515,13 @@ function createGame(opts){
   function addChest(type,n){ S.chestInv[type]=(S.chestInv[type]||0)+n }
   const chestCount=type=>S.chestInv[type]||0;
   function openChest(type){ const r=pick(chestProbs(type)); const cls=CLASSES[Math.floor(rand()*CLASSES.length)]; return newItem(cls,r) }
+  // Inventario: como mucho weapon.invMax armas (la equipada cuenta). Para abrir X cofres hacen falta X huecos libres.
+  const invMax=()=>CFG.weapon.invMax||Infinity;
+  const invFree=()=>Math.max(0,invMax()-S.items.length);
+  // all: true = todos, false = 1, número = ese número. Si no caben, no se abre ninguno (devuelve [] con .full)
   function openChests(type,all){
-    const loot=[]; let n=all?chestCount(type):Math.min(1,chestCount(type));
+    let n=all===true?chestCount(type):typeof all==='number'?Math.min(all|0,chestCount(type)):Math.min(1,chestCount(type));
+    const loot=[]; if(n>invFree()){ loot.full={need:n,free:invFree()}; return loot }
     while(n-->0){ S.chestInv[type]--; loot.push(openChest(type)); }
     if(!S.chestInv[type]) delete S.chestInv[type];
     if(loot.length){ const r={}; for(const x of loot) r[x.r]=(r[x.r]||0)+1; track('chests',{chest:type,n:loot.length,rar:r}); }
@@ -691,7 +699,7 @@ function createGame(opts){
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,
     // cofres y tienda
-    chestProbs, addChest, chestCount, openChests, buy, shopPrice, silverPrice, silverLeft, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
+    chestProbs, addChest, chestCount, openChests, invFree, invMax, byRarity, dismantleRarity, buy, shopPrice, silverPrice, silverLeft, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
     // otros
     applyOffline, claimOfflineBonus, offlineCap, offlineAdLeft, setOpt, dev, applyRewards,
     // grimorios

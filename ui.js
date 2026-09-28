@@ -240,7 +240,7 @@ function tabInv(){
   if(invView==='forja') return tabForja();
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0);
   const head=`<div class="fchips" role="tablist">
-    <button data-act="invview" data-v="armas" aria-pressed="${invView==='armas'}">Armas (${S.items.length})</button>
+    <button data-act="invview" data-v="armas" aria-pressed="${invView==='armas'}">Armas (${S.items.length}/${G.invMax()})</button>
     <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">Cofres (${nc})</button>
     <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button>
     <button data-act="invview" data-v="grim" aria-pressed="${invView==='grim'}">Grimorio</button></div>`;
@@ -267,6 +267,7 @@ function tabInv(){
   }
   const statOpts=Object.entries(CFG.sec).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
   return `<section class="panel"><h3>Inventario</h3>${head}
+    ${disRarityBox()}
     <div class="ctrl" id="fHead">${fHead()}</div>
     ${filtersOpen?`<div class="filters fpanel">
       <div class="fchips" role="group" aria-label="Rareza">${['all',...R].map(r=>`<button data-f="rar" data-v="${r}" aria-pressed="${F.rar===r}" ${r!=='all'?`style="color:var(--r${r})"`:''}>${r==='all'?'Todas':CFG.rarName[r]}</button>`).join('')}</div>
@@ -292,6 +293,14 @@ function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(),
     ${locked?`<p class="hint">Desbloquear ${Object.keys(S.grim&&S.grim.owned||{}).length?'el segundo':'uno'} cuesta:</p><div class="loot">${need('Oro',S.gold,c.gold)}${need(CFG.modes[0].mat+'s',S.mats[0]||0,c.ess)}${need(CFG.event.mat+'s',S.evm||0,c.ev)}</div>`:''}
     ${cards}
     <p class="hint">Sube de nivel contigo. Solo puedes llevar uno activo; cambiarlo cuesta ${GC.switchCost} tokens.${tokOpen()?' Esencias y emblemas también en la Tienda.':''}</p></section>` }
+// Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.
+let disMine=false;
+const RAR_PL={C:'Comunes',U:'Poco comunes',R:'Raras',E:'Épicas',L:'Legendarias',M:'Míticas'};
+function disRarityBox(){ const btns=R.map(r=>{ const n=G.byRarity(r,disMine).length; return n?`<button class="btn sm" data-act="disRar" data-k="${r}" style="color:var(--r${r})">${RAR_PL[r]} (${n})</button>`:'' }).join('');
+  return `<div class="panel" style="padding:10px"><div class="ctrl" style="justify-content:space-between"><b>Desmontar por rareza</b>
+    <label class="s" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="disMine" ${disMine?'checked':''}> Solo mi clase</label></div>
+    <div class="ctrl">${btns||'<span class="s">Nada que desmontar.</span>'}</div>
+    <p class="hint" style="margin:0">Tienes ${S.items.length}/${G.invMax()} armas. La equipada y las bloqueadas con ★ no se desmontan.</p></div>` }
 function fHead(){ const active=(F.rar!=='all')+(F.cls!=='all')+(F.stat!=='any');
   return `<button class="btn sm${filtersOpen?' on':''}" data-act="ftoggle" aria-expanded="${filtersOpen}">Filtros${active?' ('+active+')':''}</button>${active?'<button class="btn sm" data-act="fclear">Quitar filtros</button>':''}` }
 function filtered(){
@@ -684,6 +693,9 @@ const ACT={
   disAsk:()=>{const ids=filtered().filter(x=>x.id!==S.equippedId&&!x.fav).map(x=>x.id);const v=ids.reduce((s,id)=>s+G.disValue(G.findItem(id)),0);
     pendingDis=ids;showModal(`<h3>¿Desmontar ${ids.length} armas?</h3><p class="hint">+${v} chatarra</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`)},
   disYes:()=>{closeModal();disToast(G.dismantle(pendingDis||[]));pendingDis=null;renderTab()},
+  disRar:(b,k)=>{ const list=G.byRarity(k,disMine); if(!list.length) return; pendingDis=list.map(x=>x.id); const v=list.reduce((a,x)=>a+G.disValue(x),0);
+    showModal(`<h3>¿Desmontar ${list.length===1?'1 arma '+CFG.rarName[k].toLowerCase():list.length+' armas '+RAR_PL[k].toLowerCase()}?</h3><p class="hint">${disMine?'Solo de tu clase':'De todas las clases'} · +${fmt(v)} chatarra</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`) },
+  invFull:()=>{ closeModal(); tab='inv'; invView='armas'; renderTab() },
   refopen:(b,k,id)=>{reforgeId=reforgeId===id?null:id;lockSel=[];renderTab()},
   forge:(b,k,id)=>{forgeId=id;reforgeId=null;lockSel=[];tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
   invview:b=>{invView=b.dataset.v;renderTab()},
@@ -725,7 +737,9 @@ const ACT={
   reset:()=>{closeModal();G.reset();syncS();tab='up';invView='armas';shopView='cofres';forgeId=null;reforgeId=null;lockSel=[];expandedId=null;filtersOpen=false;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
 };
 function disToast(r){ if(r.n) toast(`${r.n} arma${r.n>1?'s':''} desmontada${r.n>1?'s':''}: +${r.v} chatarra`) }
-function openChests(k,all){ const n0=G.chestCount(k), l=G.openChests(k,all); if(!l.length) return; haptic('medium'); renderTab(); spin(k,l,n0-G.chestCount(k)) }
+function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0);
+  if(need>G.invFree()) return showModal(`<h3>Inventario lleno</h3><p class="hint">Para abrir ${need} cofre${need>1?'s':''} necesitas ${need} hueco${need>1?'s':''} libre${need>1?'s':''} y tienes ${G.invFree()} (${S.items.length}/${G.invMax()} armas). Libera espacio desmontando armas.</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button><button class="btn gold" data-act="invFull">Ir a Armas</button></div>`);
+  const l=G.openChests(k,all); if(!l.length) return; haptic('medium'); renderTab(); spin(k,l,n0-G.chestCount(k)) }
 
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
@@ -733,7 +747,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
-document.addEventListener('change',e=>{ if(e.target.id==='fStat'){F.stat=e.target.value;renderList()} });
+document.addEventListener('change',e=>{ if(e.target.id==='fStat'){F.stat=e.target.value;renderList()} if(e.target.id==='disMine'){disMine=e.target.checked;renderTab()} });
 document.addEventListener('input',e=>{
   if(e.target.id==='buyQty'&&buyCtx){const n=Math.floor(+e.target.value||0);buyCtx.n=n;const mx=maxBuy(buyCtx.k);$('#buyTotal').textContent=priceTxt(buyCtx.k,Math.max(0,n));$('#buyOk').disabled=!(n>=1&&n<=mx)}
   if(e.target.id==='fMin'){F.min=e.target.value;renderList()}
