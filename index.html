@@ -234,7 +234,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609281341-00def3d';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609281344-dac0d7f';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
@@ -242,8 +242,17 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
     s.onload=function(){ load(i+1) }; s.onerror=function(){ document.getElementById('bootMsg').textContent='No se pudo cargar. Revisa tu conexión.' };
     document.body.appendChild(s) }
   if(APP_VERSION==='DEV'||!window.fetch) return load(0);
-  var done=false, go=function(){ if(!done){ done=true; load(0) } };
-  setTimeout(go,3000);                                        // sin respuesta en 3 s: entra con lo que hay
+  var CONTROL_URL='https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track';   // estado de mantenimiento (tabla control)
+  var done=false, go=function(){ if(!done){ done=true; checkMaint() } };
+  // Mantenimiento ANTES de entrar: si está activo, se queda en esta pantalla y mira cada 15 s; al quitarlo, entra.
+  function checkMaint(){ var ok=false, t=setTimeout(function(){ if(!ok){ ok=true; load(0) } },3000);   // sin respuesta en 3 s: entra
+    fetch(CONTROL_URL,{cache:'no-store'}).then(function(r){ return r.ok?r.json():null }).then(function(c){ if(ok) return; ok=true; clearTimeout(t);
+      if(c&&c.mantenimiento){ var b=document.querySelector('#boot b'); b.textContent='En mantenimiento';
+        document.getElementById('bootMsg').textContent=String(c.mensaje||'Vuelve en unos minutos.');
+        setTimeout(function(){ location.reload() },15000); }
+      else load(0);
+    }).catch(function(){ if(!ok){ ok=true; clearTimeout(t); load(0) } }) }
+  setTimeout(go,3000);                                        // sin respuesta en 3 s: sigue con lo que hay
   fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ return r.json() }).then(function(j){
     if(done) return;
     var key='upd_'+j.v, tried=false; try{ tried=sessionStorage.getItem(key) }catch(e){}
