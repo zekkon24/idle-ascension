@@ -19,6 +19,9 @@
 }
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
+.boot{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg)}
+.boot b{font-family:var(--display);font-size:26px;font-weight:800;color:var(--gold);letter-spacing:.5px}
+.boot span{color:var(--muted);font-size:13px}
 *{box-sizing:border-box}
 button,select,input{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -235,7 +238,29 @@ input[type=number]{width:64px}
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>/* Telegram: avisa de que la app está lista y la abre a pantalla completa */
 try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){ tg.ready(); tg.expand(); if(tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } }catch(e){}</script>
-<script src="config.js" charset="utf-8"></script>
-<script src="engine.js" charset="utf-8"></script>
-<script src="telemetry.js" charset="utf-8"></script>
-<script src="ui.js" charset="utf-8"></script>
+<div id="boot" class="boot" role="status"><b>Idle Ascension</b><span id="bootMsg">Cargando…</span></div>
+<script>
+/* Pantalla de carga: comprueba si hay una versión más nueva publicada (version.json, sin usar la memoria del teléfono).
+   Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
+   así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
+(function(){
+  var APP_VERSION='202609281149-ad05352';                                      // tools/publicar.sh pone aquí la versión publicada
+  var FILES=['config.js','engine.js','telemetry.js','ui.js'];
+  function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
+    var s=document.createElement('script'); s.src=FILES[i]+(APP_VERSION==='DEV'?'':'?v='+APP_VERSION); s.charset='utf-8';
+    s.onload=function(){ load(i+1) }; s.onerror=function(){ document.getElementById('bootMsg').textContent='No se pudo cargar. Revisa tu conexión.' };
+    document.body.appendChild(s) }
+  if(APP_VERSION==='DEV'||!window.fetch) return load(0);
+  var done=false, go=function(){ if(!done){ done=true; load(0) } };
+  setTimeout(go,3000);                                        // sin respuesta en 3 s: entra con lo que hay
+  fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ return r.json() }).then(function(j){
+    if(done) return;
+    var key='upd_'+j.v, tried=false; try{ tried=sessionStorage.getItem(key) }catch(e){}
+    if(j&&j.v&&j.v!==APP_VERSION&&!tried){                   // hay versión nueva: recarga (una sola vez, para no entrar en bucle)
+      done=true; try{ sessionStorage.setItem(key,'1') }catch(e){}
+      document.getElementById('bootMsg').textContent='Actualizando…';
+      var u=new URL(location.href); u.searchParams.set('v',j.v); location.replace(u.toString());  // conserva los datos de Telegram (#…)
+    } else go();
+  }).catch(go);
+})();
+</script>
