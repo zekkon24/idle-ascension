@@ -167,20 +167,7 @@ input[type=number]{width:64px}
 .fabs .fab:first-child{justify-self:start}
 .fabs .fab:nth-child(2){justify-self:end}
 /* calaveras de modo: centradas abajo, dentro del marco del juego (debajo de la pelea) */
-.modes{position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:8px;z-index:3} /* sobre el borde inferior, bajando unos píxeles */
-.micons{display:flex;align-items:flex-end;gap:6px}
 .fasetxt{position:absolute;right:10px;bottom:-1px;z-index:3;font-family:var(--display);font-weight:800;font-size:14px;white-space:nowrap;padding:3px 9px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
-.mskull{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);background:var(--bg);display:flex;align-items:center;justify-content:center;padding:0;color:#555b6e}
-.mskull.m0{--mc:#e9e4d6}.mskull.m1{--mc:#b066e8}.mskull.m2{--mc:#ff5a3c}
-.mskull svg{width:16px;height:16px}
-.mskull.cur{width:36px;height:36px;border-radius:10px;color:var(--mc);border:2px solid var(--mc);box-shadow:0 0 10px -2px var(--mc)} /* la activa: grande y con borde de su color; las demás, pequeñas */
-.mskull.cur svg{width:24px;height:24px}
-.mskull.done{color:var(--mc);opacity:.55}
-.mskull.ready{color:var(--mc);border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 14px var(--gold);animation:mpulse 1.4s ease-in-out infinite}
-.mskull.lock{opacity:.5}
-.mskull.soon{border-style:dashed;opacity:.35} /* modo bloqueado: próximamente */
-@keyframes mpulse{50%{box-shadow:0 0 0 2px var(--gold),0 0 22px var(--gold)}}
-@media (min-height:700px){.mskull.cur{width:40px;height:40px}.mskull.cur svg{width:27px;height:27px}.mskull{width:28px;height:28px}.mskull svg{width:18px;height:18px}}
 .fabs .fab:last-child{justify-self:end}
 .fab.small{padding:8px 12px;font-size:12px;border-radius:12px}
 .fab.off{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
@@ -229,7 +216,7 @@ input[type=number]{width:64px}
   <button role="tab" data-tab="up" aria-selected="true">Inicio</button>
   <button role="tab" data-tab="inv">Inventario</button>
   <button role="tab" data-tab="shop">Tienda</button>
-  <button role="tab" data-tab="ev">Evento</button>
+  <button role="tab" data-tab="ev">Modos</button>
   <button role="tab" data-tab="dev">Ajustes</button>
 </div></nav>
 <div class="fabs" id="upFab" hidden><button class="fab" data-act="upOpen">Mejoras</button><button class="fab" id="autoBtn" data-act="autoToggle" aria-pressed="true" title="Avance automático">Auto</button></div>
@@ -244,7 +231,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609281149-ad05352';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609281258-54db62e';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','ui.js'];
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
     var s=document.createElement('script'); s.src=FILES[i]+(APP_VERSION==='DEV'?'':'?v='+APP_VERSION); s.charset='utf-8';

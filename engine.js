@@ -39,7 +39,7 @@ function createGame(opts){
       best:0,fase:1,wave:1,push:true,autoPush:true,farmClears:0,
       items:[],nextId:1,equippedId:null,chestInv:{},opt:{},
       calStart:null,cardUntil:0,vipUntil:0,
-      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,
+      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{owned:{},active:null},
       stats:{deposited:0,withdrawNet:0,adGold:0,ads:0,offGold:0}}; // registro para la base de datos: tokens comprados, $ retirados (neto), oro de anuncios, anuncios vistos, oro sin conexión
   }
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
@@ -151,7 +151,7 @@ function createGame(opts){
     // jefe: al empujar una fase múltiplo de 10; y el de la fase 150 se puede repetir (farmear) una vez vencido
     const boss=(S.wave===10 && S.fase%10===0 && (S.fase===S.best+1 || (S.fase===CAP() && S.best>=CAP())));
     const h=heroStats();
-    B={t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0};
+    B={t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     spawnEnemy(); emit('wave',B);
   }
   function spawnEnemy(){
@@ -175,10 +175,10 @@ function createGame(opts){
     const kill=e=>{ if(e.dead) return; e.dead=true;
       if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return } onKill(); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
     if(B.auraPool>0){ const d=B.auraPool*Math.min(1,dt/P.auraDur); B.auraPool-=d;                    // Santo: aura sagrada (en área)
-      for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const dd=d*(B.boss?1+h.bd:1); e.hp-=dd; B.auraDmg=(B.auraDmg||0)+dd; if(B.kind==='boss') addDmg(dd); if(e.hp<=0) kill(e); } }
+      for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const dd=d*(B.boss?1+h.bd:1); e.hp-=dd; B.auraDmg=(B.auraDmg||0)+dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); if(e.hp<=0) kill(e); } }
     if(P&&P.burnPct) for(const e of B.enemies){ // Archimago: quemaduras (cada acumulación hace burnPct del daño por segundo)
       if(e.dead||!e.burn) continue; e.burn=e.burn.filter(u=>u>B.t); if(!e.burn.length) continue;
-      const d=e.burn.length*P.burnPct*h.atk*dt; e.hp-=d; B.burnDmg=(B.burnDmg||0)+d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
+      const d=e.burn.length*P.burnPct*h.atk*dt; e.hp-=d; B.burnDmg=(B.burnDmg||0)+d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     const hitOnce=tg=>{
       let d=dmgF(h.atk+(P&&P.defDmg?P.defDmg*h.df/h.dfK:0),tg.df)*(B.boss?1+h.bd:1), crit=false; // Titán: daño extra según su defensa (en la escala antigua)
       if(P&&P.rage) d*=1+Math.min(P.rageCap,(B.rage||0)*P.rage);        // Berserker: furia por golpes recibidos
@@ -186,7 +186,7 @@ function createGame(opts){
       if(B.critBuff){ d*=1+P.critNext; B.critBuff=false; }                // Sombra: golpe potenciado tras un crítico
       if(rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
       else if(P&&P.critStack) B.critAcc=Math.min(P.critStackMax||1,(B.critAcc||0)+P.critStack); // Segador: cada golpe sin crítico suma probabilidad de crítico
-      tg.hp-=d; heal(d*h.ls*h.hpK); if(B.kind==='boss') addDmg(d);   // robo de vida: cura la misma parte de tu vida máxima que antes
+      tg.hp-=d; B.mD+=d; heal(d*h.ls*h.hpK); if(B.kind==='boss') addDmg(d);   // robo de vida: cura la misma parte de tu vida máxima que antes
       if(P&&P.burnPct){ tg.burn=tg.burn||[]; if(tg.burn.length>=P.burnMax) tg.burn.shift(); tg.burn.push(B.t+P.burnDur); }
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
       if(tg.hp<=0) kill(tg);
@@ -198,6 +198,7 @@ function createGame(opts){
         const cand=B.enemies.filter(canHit);
         if(!cand.length){B.th=null;break}
         const tg=cand.reduce((a,b)=>a.arrive<=b.arrive?a:b);
+        B.mB+=dmgF(h.atk,tg.df)*(B.boss?1+h.bd:1)*(1+h.cr*h.cd);   // lo que diría la fórmula por ataque (para medir el DPS real)
         hitOnce(tg);
         if(P&&P.double&&!tg.dead&&rand()<P.double){ hitOnce(tg); if(P.dblBuff){ B.dblSt=(B.dblSt||[]).filter(u=>u>B.t); if(B.dblSt.length<P.dblMax) B.dblSt.push(B.t+P.dblDur); } } // Tirador: disparo doble
         B.th+=1/h.spd;
@@ -221,15 +222,21 @@ function createGame(opts){
   function onKill(){
     S.kills++;
     const m=B.boss?CFG.econ.bossGold:3/B.count; // el oro por oleada no sube con más enemigos
-    S.gold+=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1); // el oro entra directo (la bolsa solo guarda materiales y cofres)
+    const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales y cofres)
     addXp(xpAt(S.fase)*m*heroStats().xpMult);
   }
-  function waveClear(){ if(S.wave<10){S.wave++;endWave(CFG.delays.wave);return} faseClear() }
+  // DPS medido: en oleadas normales (sin jefe ni evento) se compara el daño real (golpes, quemaduras, aura…) con el de la
+  // fórmula. La proporción (media móvil) se usa en el cálculo sin conexión y sustituye a la aproximación evoDps.
+  function measureWave(){ if(!B||B.boss||B.event||!(B.mB>0)) return; const M=S.dpsM=S.dpsM||{d:0,b:0}, k=0.98;
+    M.d=M.d*k+B.mD; M.b=M.b*k+B.mB; }
+  const dpsK=h=>{ const M=S.dpsM; return M&&M.b>=CFG.offlineMinMeasure*heroStats().atk?Math.max(0.5,Math.min(3,M.d/M.b)):evoDps(h) };
+  function waveClear(){ measureWave(); if(S.wave<10){S.wave++;endWave(CFG.delays.wave);return} faseClear() }
   function faseClear(){
     const f=S.fase; S.wave=1;
     if(f===S.best+1){
       S.best=f;
       if(f%10===0){ addLoot({wood:1,scrap:bossScrap(f,false)});                  // los jefes ya no dan tokens (los tokens son dinero)
+        if(!S.mode&&CFG.matDrop&&(CFG.matDrop.sure||[]).includes(f)) addLoot({mat:1}); // élite 50 y 100: 1 esencia segura
         const mat=rollMat(f);
         emit('boss',{f,elite:f%50===0,mat,mode:S.mode}); }
       S.fase=S.push?Math.min(f+1,CAP()):f; if(f>=CAP()) S.push=false;
@@ -258,7 +265,7 @@ function createGame(opts){
   // pasivas acumuladas de las evoluciones hechas (la última da el nombre)
   let EP=null, EPk=''; // caché de la pasiva (se llama en cada paso del combate)
   function evoP(){ if(!S.evo) return null; const k=S.cls+S.evo; if(EPk===k) return EP; const o={}; for(const t of evoTiers().slice(0,S.evo)) Object.assign(o,t.classes[S.cls]); EP=o; EPk=k; return o }
-  // cuánto sube el daño medio por la pasiva (solo para el cálculo del farmeo sin conexión)
+  // cuánto sube el daño medio por la pasiva: estimación que solo se usa hasta tener DPS medido (dpsK)
   function evoDps(h){ const P=evoP(); if(!P) return 1; let m=1;
     if(P.double) m*=1+P.double; if(P.critNext) m*=1+h.cr*P.critNext; if(P.rage) m*=1+P.rageCap*0.5;
     if(P.burnPct) m*=1+P.burnPct*Math.min(P.burnMax,h.spd*P.burnDur)/h.spd;
@@ -273,7 +280,7 @@ function createGame(opts){
   function evolve(){
     if(!canEvolve()||inEvent()) return {ok:false};
     const c=evoCost(); if(c){ if(c.ess) S.mats[c.essMode]-=c.ess; S.gold-=c.gold; spend(c.tokens); S.evm-=c.ev; }
-    S.evo++; statsDirty(); save();
+    S.evo++; S.dpsM=null; statsDirty(); save();                 // con la nueva pasiva se vuelve a medir el DPS
     emit('evolve',{evo:S.evo,name:evoP().name}); emit('change'); return {ok:true};
   }
 
@@ -510,7 +517,38 @@ function createGame(opts){
   // Al gastar se usan primero los comprados. Todo es SIMULADO hasta que haya servidor y pasarela de pago.
   const tokens=()=>(S.tokens||0)+(S.won||0);
   function spend(n){ if(!(n>0)) return true; if(tokens()<n) return false;
-    const a=Math.min(S.tokens,n); S.tokens-=a; S.won-=n-a; emit('spend',n); return true }
+    const a=Math.min(S.tokens,n); S.tokens-=a; S.won-=n-a; addSpent(n); emit('spend',n); return true }
+  /* ---------- liga mensual (simulada) ---------- */
+  // Puntos del mes: tokens gastados, anuncios vistos y horas de oro generado. El bote (70 % de lo gastado por todos)
+  // se reparte el día 1 a la 01:00 UTC entre todos según sus puntos, en tokens ganados.
+  const LG=()=>CFG.league;
+  const monthOf=d=>{ const t=new Date(d*864e5); return t.getUTCFullYear()*12+t.getUTCMonth() };
+  const monthKey=()=>monthOf(dayKey());
+  const monthDays=m=>new Date(Date.UTC(Math.floor(m/12),m%12+1,0)).getUTCDate();
+  const monthName=m=>['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][m%12];
+  function league(){ const m=monthKey(); let L=S.league;
+    if(!L||L.m!==m){ if(L&&L.m<m&&!(S.leagueLast&&S.leagueLast.m>=L.m)) S.leagueLast={...L,claimed:false}; L=S.league={m,spent:0,ads:0,goldH:0}; }
+    return L }
+  const leaguePts=L=>L?L.spent*LG().ptsToken+L.ads*LG().ptsAd+L.goldH*LG().ptsGoldHour:0;
+  const leaguePool=L=>Math.floor(LG().share*(LG().rivals*LG().rivalSpend*monthDays(L.m)+L.spent));
+  const leagueTotal=L=>LG().rivals*(LG().rivalSpend*LG().ptsToken+LG().rivalPlay)*monthDays(L.m)+leaguePts(L);
+  const leaguePrize=L=>{ const p=leaguePts(L); return p>0?Math.floor(leaguePool(L)*p/leagueTotal(L)):0 };
+  // oro generado → horas de farmeo de tu récord (el ritmo se guarda en caché por récord y nivel)
+  let GR={k:'',g:1};
+  function addGoldH(g){ if(!(g>0)||!CFG.league) return; const k=S.best+'|'+S.lvl+'|'+S.mode;
+    if(GR.k!==k){ GR.k=k; GR.g=Math.max(1e-9,farmRate(Math.max(1,S.best)).g*3600); } league().goldH+=g/GR.g; }
+  function addSpent(n){ if(CFG.league) league().spent+=n }
+  function addAd(){ if(CFG.league) league().ads++ }
+  // Premio del mes anterior: pendiente desde el día 1 a la 01:00 UTC
+  function leaguePending(){ league(); const P=S.leagueLast; if(!P||P.claimed) return null;
+    if(P.m===monthKey()-1&&new Date(dayKey()*864e5).getUTCDate()===1&&evPaused()) return null;
+    return {m:P.m,name:monthName(P.m),pts:leaguePts(P),pool:leaguePool(P),tok:leaguePrize(P)} }
+  function leagueClaim(){ const p=leaguePending(); if(!p) return null; S.leagueLast.claimed=true;
+    if(p.tok>0){ S.won+=p.tok; track('league',{month:p.m,pts:Math.round(p.pts),tokens:p.tok}); } save(); emit('change'); return p }
+  function leagueNow(){ const L=league(), d=new Date(dayKey()*864e5).getUTCDate();
+    return {name:monthName(L.m),spent:L.spent,ads:L.ads,goldH:L.goldH,pts:leaguePts(L),pool:leaguePool(L),tok:leaguePrize(L),daysLeft:monthDays(L.m)-d+1,
+      share:leaguePts(L)/leagueTotal(L)} }
+
   // Comprar un paquete de tokens con dinero (simulado)
   function buyTokens(n){ if(!CFG.tokens.packs.includes(n)) return false; S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,usd:n/CFG.tokens.perUsd}); save(); emit('change'); return true }
   // Retirar tokens ganados: comisión y mínimo (simulado: no mueve dinero real)
@@ -524,7 +562,7 @@ function createGame(opts){
   const silverLeft=()=>CFG.chests.silver.perDay-(S.silverDay&&S.silverDay.d===dayKey()?S.silverDay.n:0);
   function buySilver(n){ n=n|0; if(n<1||n>silverLeft()) return false; const c=silverPrice()*n; if(S.gold<c) return false;
     S.gold-=c; if(!S.silverDay||S.silverDay.d!==dayKey()) S.silverDay={d:dayKey(),n:0}; S.silverDay.n+=n; addChest('silver',n); track('buy',{item:'silver',n,gold:c}); save(); emit('change'); return true }
-  const shopPrice=k=>({mode:CFG.chests.mode.price, ticket:CFG.event.ticketCost, bossTicket:CFG.wboss.ticketCost, card:CFG.cardPrice, vip:CFG.vipPrice})[k];
+  const shopPrice=k=>({ess:(CFG.matShop||{}).ess, ev:(CFG.matShop||{}).ev, mode:CFG.chests.mode.price, ticket:CFG.event.ticketCost, bossTicket:CFG.wboss.ticketCost, card:CFG.cardPrice, vip:CFG.vipPrice})[k];
   function buy(k,n){
     n=n|0; if(n<1) return false; if(k==='silver') return buySilver(n); const unit=shopPrice(k); if(unit==null) return false;
     if((k==='card'||k==='vip')&&n!==1) return false;
@@ -532,6 +570,8 @@ function createGame(opts){
     if(k==='mode') addChest('mode',n);
     else if(k==='ticket') S.tickets+=n;
     else if(k==='bossTicket') S.bossTickets+=n;
+    else if(k==='ess') S.mats[0]=(S.mats[0]||0)+n;               // esencia (de Normal)
+    else if(k==='ev') S.evm+=n;                                   // emblema
     else if(k==='card') S.cardUntil=Math.max(S.cardUntil,dayKey())+30;
     else if(k==='vip') S.vipUntil=Math.max(S.vipUntil,dayKey())+30;
     track('buy',{item:k,n,tokens:unit*n}); save(); emit('change'); return true;
@@ -549,11 +589,11 @@ function createGame(opts){
   function watchAd(k){
     const b=CFG.boosts[k]; if(!b) return {ok:false};
     if(boostUsesLeft(k)<=0) return {ok:false,why:'limit'};
-    const a=adsState(); a.p[k]=(a.p[k]||0)+1; S.stats.ads++;
+    const a=adsState(); a.p[k]=(a.p[k]||0)+1; S.stats.ads++; addAd();
     const res={ok:true,p:a.p[k],need:b.ads,applied:false};
     if(a.p[k]>=b.ads){ a.p[k]=0; a.n[k]=(a.n[k]||0)+1; res.applied=true;
       if(k==='speed') S.boostMs=(S.boostMs||0)+b.min*60000;
-      if(k==='gold'){ res.gold=goldBoostValue(); S.gold+=res.gold; S.stats.adGold+=res.gold; }
+      if(k==='gold'){ res.gold=goldBoostValue(); S.gold+=res.gold; S.stats.adGold+=res.gold; addGoldH(res.gold); }
       track('ad',{boost:k,gold:res.gold||0}); }
     emit('change'); return res;
   }
@@ -563,7 +603,7 @@ function createGame(opts){
   function farmRate(f){
     const h=computeStats(), per=perWave(f);
     let t=0; for(let w=1;w<=10;w++){ const e=enemyStats(f,w,false);
-      const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*evoDps(h), K=Math.max(1,Math.ceil(e.hp/hit))/h.spd, W=CFG.enemy.walk;
+      const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*dpsK(h), K=Math.max(1,Math.ceil(e.hp/hit))/h.spd, W=CFG.enemy.walk;
       // a distancia se dispara mientras se acercan; cuerpo a cuerpo cada enemigo sale cuando el anterior llega y hay que esperarlo
       t+=(h.ranged?per*K:W+K+(per-1)*Math.max(W,K)) + CFG.delays.wave; }
     return {g:goldAt(f)*3*10*(hasCard()?1+CFG.cardGold:1)/t, x:xpAt(f)*3*10*h.xpMult/t};
@@ -577,7 +617,7 @@ function createGame(opts){
     if(inEvent()) return null;                                 // durante el evento el tiempo está en pausa: no se farmea a la vez
     if(!(el>60&&(S.best>0||S.mode>0))) return null;
     const f=Math.max(1,Math.min(S.fase,S.best)), r=farmRate(f), l0=S.lvl;
-    const g=r.g*el, x=r.x*el; S.gold+=g; addXp(x); S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
+    const g=r.g*el, x=r.x*el; S.gold+=g; addGoldH(g); addXp(x); S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
     const capped=raw>=cap; if(capped&&offlineAdLeft()>0) S.offBonus=g*(CFG.offlineAdMult-1);
     emit('change');
     return {secs:el,fase:f,gold:g,xp:x,lvlFrom:l0,lvlTo:S.lvl,capped,bonus:S.offBonus||0};
@@ -585,7 +625,29 @@ function createGame(opts){
   // usos que quedan hoy del extra con anuncio (se renuevan con el cambio de día)
   const offlineAdLeft=()=>CFG.offlineAdPerDay-(adsState().n.off||0);
   function claimOfflineBonus(){ const b=S.offBonus; if(!b) return 0; S.gold+=b; S.offBonus=null; const a=adsState(); a.n.off=(a.n.off||0)+1;
-    S.stats.ads++; S.stats.adGold+=b; track('ad',{boost:'offline',gold:b}); emit('change'); return b }
+    S.stats.ads++; addAd(); S.stats.adGold+=b; addGoldH(b); track('ad',{boost:'offline',gold:b}); emit('change'); return b }
+
+  /* ---------- grimorios ---------- */
+  // 2 por clase. Se desbloquean donando oro + esencias + emblemas (o con tokens); el 2.º cuesta el doble. Suben con tu
+  // nivel (nivel 1 al desbloquearlo). Por ahora SIN EFECTO en combate: solo existen. Solo uno activo; cambiarlo cuesta tokens.
+  const GC=()=>CFG.grimoire;
+  const grimList=()=>(GC()&&GC().classes[S.cls])||[];
+  const grimState=()=>S.grim=S.grim||{owned:{},active:null};
+  const grimOwned=id=>grimState().owned[id]!=null;
+  const grimLevel=id=>grimOwned(id)?Math.max(1,S.lvl-grimState().owned[id]+1):0;
+  const grimSkill=id=>grimLevel(id)>=GC().skillLvl;
+  const grimTier=()=>Math.min(Object.keys(grimState().owned).length,GC().cost.length-1);
+  function grimCost(){ const c=GC().cost[grimTier()]; return {gold:Math.round(c.goldH*3600*farmRate(Math.max(1,S.best)).g),ess:c.ess,ev:c.ev} }
+  const grimPack=()=>GC().pack[grimTier()];
+  function grimMissing(){ const c=grimCost(), o={}; if(S.gold<c.gold) o.gold=c.gold-S.gold; if((S.mats[0]||0)<c.ess) o.ess=c.ess-(S.mats[0]||0); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o }
+  function grimGet(id,how){ const G=grimState(); G.owned[id]=S.lvl; if(!G.active) G.active=id; track('grimoire',{id,how}); save(); emit('change'); return {ok:true} }
+  function grimUnlock(id){ if(!grimList().some(g=>g.id===id)||grimOwned(id)) return {ok:false,why:'id'};
+    if(Object.keys(grimMissing()).length) return {ok:false,why:'cost'}; const c=grimCost();
+    S.gold-=c.gold; S.mats[0]-=c.ess; S.evm-=c.ev; return grimGet(id,'recursos') }
+  function grimBuy(id){ if(!grimList().some(g=>g.id===id)||grimOwned(id)) return {ok:false,why:'id'}; const p=grimPack();
+    if(!spend(p)) return {ok:false,why:'tokens'}; return grimGet(id,'tokens') }
+  function grimSet(id){ const G=grimState(); if(!grimOwned(id)||G.active===id) return {ok:false}; if(inEvent()) return {ok:false,why:'event'};
+    if(!spend(GC().switchCost)) return {ok:false,why:'tokens'}; G.active=id; track('grimoire',{id,how:'cambio'}); save(); emit('change'); return {ok:true} }
 
   /* ---------- premios del servidor (referidos) ---------- */
   // El servidor manda premios pendientes: 'silver' = cofres de plata, 'won' = tokens ganados (retirables)
@@ -608,7 +670,7 @@ function createGame(opts){
     // estado
     get S(){return S}, get B(){return B}, CFG, R, CLASSES, on, save, load, reset, newGame, setName, validName, cleanName, startWave, dayKey, rand,
     // fórmulas
-    hasCard, hasVip, equipped, weaponMain, heroStats, computeStats, statsDirty, enemyStats, xpReq, upCost, upgradeGain, farmRate,
+    hasCard, hasVip, equipped, weaponMain, heroStats, dpsK, computeStats, statsDirty, enemyStats, xpReq, upCost, upgradeGain, farmRate,
     // combate
     step, setAuto, goFase,
     // mejoras
@@ -621,9 +683,11 @@ function createGame(opts){
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,
     // cofres y tienda
-    chestProbs, addChest, chestCount, openChests, buy, shopPrice, silverPrice, silverLeft, tokens, spend, buyTokens, withdraw,
+    chestProbs, addChest, chestCount, openChests, buy, shopPrice, silverPrice, silverLeft, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
     // otros
     applyOffline, claimOfflineBonus, offlineCap, offlineAdLeft, setOpt, dev, applyRewards,
+    // grimorios
+    grimList, grimOwned, grimLevel, grimSkill, grimCost, grimPack, grimMissing, grimUnlock, grimBuy, grimSet,
     // anuncios
     adsState, watchAd, boostLeft, tickBoost, speedMult, boostUsesLeft, goldBoostHours, goldBoostValue,
   };

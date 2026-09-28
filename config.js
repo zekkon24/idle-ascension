@@ -70,6 +70,23 @@ const CFG = {
   // Al gastar se usan primero los comprados. Compras y retiros SIMULADOS hasta que haya servidor y pasarela de pago.
   tokens:{perUsd:100, packs:[100,500,1000,2500], withdraw:{fee:0.15, min:100}}, // retiro: comisión 15 %, mínimo 100 (1 $)
   startWeapon:'C',
+  // Grimorios: 2 por clase; se desbloquean donando oro (horas de farmeo de tu récord), esencias y emblemas, o se compran con tokens.
+  // El 2.º cuesta el doble. Suben de nivel contigo (nivel 1 al desbloquearlo). En el nivel 'skillLvl' dan su efecto
+  // (POR AHORA SIN EFECTO: solo existen). Solo uno activo; cambiarlo cuesta switchCost tokens.
+  grimoire:{skillLvl:25, switchCost:250, cost:[{goldH:2,ess:2,ev:4},{goldH:4,ess:4,ev:8}], pack:[300,600],
+    classes:{
+      Guerrero:[{id:'espinas',name:'Grimorio de Espinas',role:'Castigador',desc:'Devuelve el 40 % del daño que recibe al que le pega'},
+                {id:'trueno',name:'Grimorio del Trueno',role:'Limpiador',desc:'Cada 4.º golpe lanza un rayo que salta a 2 enemigos más'}],
+      Mago:[{id:'invocador',name:'Grimorio del Invocador',role:'Invocador',desc:'Cada 20 s invoca un esqueleto 8 s que pega por él y se lleva los golpes'},
+            {id:'hielo',name:'Grimorio de Hielo',role:'Control',desc:'Sus golpes ralentizan: los enemigos atacan un 30 % más despacio'}],
+      Arquero:[{id:'plaga',name:'Grimorio de la Plaga',role:'Contagio',desc:'Sus flechas envenenan; al morir, el enemigo pasa el veneno al siguiente'},
+               {id:'viento',name:'Grimorio del Viento',role:'Kiting',desc:'Cada 15 s empuja a los enemigos atrás: tienen que volver a caminar'}],
+      Asesino:[{id:'almas',name:'Grimorio de las Almas',role:'Bola de nieve',desc:'Cada enemigo que mata le da +3 % de daño hasta acabar la oleada (máx. +30 %)'},
+               {id:'sangre',name:'Grimorio de Sangre',role:'Duelista',desc:'Sus críticos hacen sangrar 3 s y roban vida'}],
+      Clerigo:[{id:'tiempo',name:'Grimorio del Tiempo',role:'Segunda oportunidad',desc:'Una vez por combate, al morir retrocede 5 s y revive con la vida que tenía'},
+               {id:'juicio',name:'Grimorio del Juicio',role:'Paladín',desc:'Cuanta más vida tiene, más daño hace (hasta +50 % con la vida llena)'}],
+    }},
+  matShop:{ess:50, ev:25}, // tienda: Esencia 50 tokens, Emblema 25 tokens
   boosts:{ // potenciadores por anuncios (cada uso pide 'ads' anuncios; 'perDay' usos al día)
     speed:{ads:2,min:15,mult:2,perDay:3}, // combate ×2 durante 15 min reales (se acumula si ya está activo)
     gold:{ads:2,hours:1,earlyHours:0.5,earlyUntil:50,perDay:3}, // oro de 1 h farmeando tu fase récord (30 min hasta pasar la fase 50)
@@ -94,7 +111,7 @@ const CFG = {
       }},
     ],
   },
-  matDrop:{from:10,to:150,c0:0.01,c1:0.05,max0:1,max1:3}, // todos los jefes sueltan esencia del modo: 1 % (1) en la fase 10 → 5 % (1-3) en la 150 (el de la 150 se puede farmear)
+  matDrop:{from:10,to:150,c0:0.01,c1:0.05,max0:1,max1:3,sure:[50,100]}, // sure: esos jefes de élite dan 1 esencia segura la primera vez (para el Grimorio) // todos los jefes sueltan esencia del modo: 1 % (1) en la fase 10 → 5 % (1-3) en la 150 (el de la 150 se puede farmear)
   event:{ // Laberinto (diario): 3 min de monstruos sin parar; ranking por muertes; 1 entrada gratis al día, las demás con ticket
     dur:180, spawnEvery:1.2, walk:0.6, group:3, groupHp:2, groupGap:0.3, groupAtk:0.9, // grupos de 3 monstruos con ×2 de vida; llegan cada 0,3 s y pegan un 10 % menos
     ticketCost:100, // ticket extra en la tienda (tokens); las muertes de varios intentos del día se suman
@@ -110,7 +127,7 @@ const CFG = {
     dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
     ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
-    curve:[[1,1150],[2,5400],[3,10700],[5,23800],[7,40500],[10,73600],[13,152000],[15,241000],[17,487000],[20,1125000],[25,2578000],[30,4791000],[35,8360000],[40,14230000],[45,21740000]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P)
+    curve:[[1,1200],[2,3800],[3,8700],[5,20700],[7,38100],[10,73200],[13,140300],[15,236300],[17,446900],[20,771400],[25,1585100],[30,2680400],[35,4049100],[40,5815200],[45,7649300]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
       // ×3 del premio diario del Laberinto en el mismo puesto (solo hay uno por semana); los cofres de madera
       // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca
@@ -118,6 +135,11 @@ const CFG = {
       {to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
   },
   referral:{link:'https://t.me/IdleAscensionTestBot/game', goalFase:50, goalSilver:3, buyPct:0.10, giftSilver:1}, // enlace de la mini app (t.me/<bot>/<app>); premios (los da el servidor: server/track)
+  // Liga mensual (SIMULADA: sin dinero real). Bote = 70 % de todos los tokens gastados en el mes. Se reparte entre TODOS los
+  // jugadores según sus puntos del mes: 1 por token gastado, 1 por anuncio visto (≈3× lo que genera: ~0,3 tokens) y
+  // 0,5 por hora de oro generado (oro ÷ lo que da 1 h farmeando tu récord). Premio en tokens ganados (retirables), el día 1 a la 01:00 UTC.
+  // Mientras no haya servidor: 99 rivales que gastan rivalSpend tokens/día y juegan rivalPlay puntos/día (14 anuncios + ~14 h de oro).
+  league:{share:0.7, ptsToken:1, ptsAd:1, ptsGoldHour:0.5, rivals:99, rivalSpend:50, rivalPlay:21},
   server:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track', every:10}, // base de datos: dirección de la función "track" de Supabase (vacía = no se envía nada); envía como mucho cada 10 s
   devTools:false, // herramientas de prueba (velocidad, +oro, avanzar día…): poner a false al publicar en Telegram
   phaseCap:150, // cada modo tiene 150 fases; tras vencer la 150 y evolucionar se pasa al siguiente modo
@@ -131,6 +153,7 @@ const CFG = {
       walls:{50:{hp:2.5,atk:1.95},100:{hp:2.3,atk:1.8},150:{hp:2.1,atk:1.7}}},
   ],
   delays:{wave:0.25,fase:0.4,defeat:0.7}, // segundos de juego entre oleadas / fases / tras perder
+  offlineMinMeasure:30, // sin conexión: se usa el DPS medido cuando ya se han medido ataques por valor de 30 golpes de tu daño
   offlineCapH:3, offlineVipH:8, offlineAdMult:1.5, offlineAdPerDay:2, // horas de farmeo sin conexión (VIP); extra de oro con anuncio al llenar el tope, 2 veces por día
   cardGold:0.2, cardPrice:500, vipSpeed:1.5, vipPrice:1000, // Tarjeta mensual (+20 % de oro) y VIP (combate ×1,5, 8 h sin conexión), 30 días, en tokens
 };

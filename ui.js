@@ -33,7 +33,7 @@ const CHEST_TYPES=['wood','silver','mode'];
 const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
-let tab='up', upOpen=false, invView='armas', shopView='cofres', evView=null;
+let tab='up', upOpen=false, invView='armas', shopView='cofres', evView=null, modView='eventos';
 let expandedId=null, filtersOpen=false, forgeId=null, reforgeId=null, lockSel=[];
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -80,7 +80,7 @@ function renderShell(){
     <div class="res"><span title="Oro"><i class="dot" style="background:var(--gold)"></i><b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)"><i class="dot" style="background:var(--tok)"></i><b id="rTok"></b></span>
     <span title="Chatarra"><i class="dot" style="background:var(--scrap)"></i><b id="rScrap"></b></span></div></div>
-  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><div class="modes"><div class="micons" id="modeIcons" role="group" aria-label="Modos"></div></div><span class="fasetxt" id="faseTxt"></span><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
+  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
   <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
     <div class="bar"><i id="hpBar"></i></div><div class="bar xp"><i id="xpBar"></i></div>
     </div>
@@ -97,7 +97,8 @@ function updateHUD(){
     :ev?`${mmss(Math.max(0,CFG.event.dur-B.t)*1000)} · ${B.kills}`:`Fase ${S.fase}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const tag=$('#tag'); tag.textContent=ev?(B.kind==='boss'?'JEFE SEMANAL':'LABERINTO'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):(S.fase===S.best+1?'Avanzando':'Farmeando'); tag.className='tag'+(ev?' ev':B&&B.boss?' boss':'');
+  const tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'LABERINTO'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):''; // (sin "Avanzando"/"Farmeando")
+  tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
   const es=$('#evoSlot'); if(es){ const can=!ev&&G.evoLvlOk(), key=can+'|'+S.mode+'|'+(S.lvl>=G.lvlCap())+'|'+ev;
@@ -113,16 +114,11 @@ function updateHUD(){
   const bl=G.boostLeft(), bt=$('#boostTime'), bb=$('#boostBtn');
   if(bt){ bt.hidden=!bl; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
   if(boostModalOpen) updateBoostModal();
-  const mi=$('#modeIcons'); if(mi){ const on=!ev&&G.canAdvanceMode();
-    setHTML(mi,CFG.modes.slice(0,3).map((M,m)=>{ const st=m===S.mode?'cur':m<S.mode?'done':M.locked?'lock soon':(m===S.mode+1&&on)?'ready':'lock';
-      const lab=`${M.name}: ${st==='cur'?'modo actual':st==='done'?'completado':st==='ready'?'desbloqueado, toca para entrar':M.locked?'próximamente':'bloqueado'}`;
-      return `<button class="mskull m${m} ${st}" data-act="modeIcon" data-k="${m}" aria-label="${lab}" title="${lab}">${skullSVG(m)}</button>` }).join(''));
-    if(on&&modeReady===false){ toast(`¡${CFG.modes[S.mode+1].name} desbloqueado!`); const b=mi.querySelector('.ready'); if(b&&!reduceMotion()) b.animate([{transform:'scale(1)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:500,iterations:3}); }
-    modeReady=on; }
+  const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   const ab=$('#autoBtn'); if(ab){ab.setAttribute('aria-label',S.autoPush?'Avance automático activado':'Avance automático desactivado');ab.classList.toggle('off',!S.autoPush);ab.setAttribute('aria-pressed',S.autoPush)}
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
-  setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Evento<sup class="nb">${n}</sup>`:'Evento')(S.tickets+S.bossTickets+G.evFreeLeft()+G.wbFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)));
+  setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Modos<sup class="nb">${n}</sup>`:'Modos')(S.tickets+S.bossTickets+G.evFreeLeft()+G.wbFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(G.leaguePending()?1:0)));
   setHTML(document.querySelector('[data-tab="inv"]'),nc?`Inventario<sup class="nb">${nc>99?'99+':nc}</sup>`:'Inventario');
 }
 function renderTab(){
@@ -152,26 +148,18 @@ function tabUp(){
   return `<section class="panel"><h3>Mejoras</h3><div class="statline" id="hStats"></div>${rows}</section>`;
 }
 // Modos: Normal, Pesadilla, Infierno. Muestra dónde estás, qué da cada uno y qué hace falta para pasar al siguiente.
-// Calavera de jefe para cada modo (Normal lisa, Pesadilla con cuernos, Infierno con cuernos grandes)
-function skullSVG(m){
-  const horns=m===1?'<path d="M6 7.5 3 3.2l4.6 2.4zM18 7.5 21 3.2l-4.6 2.4z"/>':m===2?'<path d="M5.6 8 1.6 1.8l6 3.2zM18.4 8l4-6.2-6 3.2z"/>':'';
-  return `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor">${horns}<path d="M12 3C7.4 3 4 6.3 4 10.6c0 2.4 1.1 4.2 2.8 5.3V19a1 1 0 0 0 1 1h1.4v-2h1.4v2h2.8v-2h1.4v2h1.4a1 1 0 0 0 1-1v-3.1c1.7-1.1 2.8-2.9 2.8-5.3C20 6.3 16.6 3 12 3z"/><circle cx="8.9" cy="10.8" r="2" fill="#12141c"/><circle cx="15.1" cy="10.8" r="2" fill="#12141c"/><path d="M12 13.4l-1.1 2h2.2z" fill="#12141c"/></svg>`;
-}
-// Solo para partidas antiguas sin nombre: el nombre se elige una vez y es permanente
 function nameModal(){ showModal(`<h3>Tu nombre</h3><input id="nameIn" class="nameinp" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(S.name||'')}">
   <p class="hint">No se podrá cambiar.</p><div class="ctrl"><button class="btn gold" data-act="nameSave">Guardar</button></div>`); const i=$('#nameIn'); if(i) i.focus() }
-function modeModal(){
-  const CAP=CFG.phaseCap, rows=CFG.modes.map((M,m)=>{
+function modeRows(){
+  const CAP=CFG.phaseCap; return CFG.modes.map((M,m)=>{
     const cur=m===S.mode, done=m<S.mode, next=m===S.mode+1, tier=CFG.evo.tiers[m-1];
-    const need=M.locked?'Próximamente':m?`Vencer la fase ${CAP} de ${CFG.modes[m-1].name} y hacer la evolución ${m}${tier&&tier.pending?' (próximamente)':''}`:'';
+    const need=M.locked?'':m?`Vencer la fase ${CAP} de ${CFG.modes[m-1].name} y hacer la evolución ${m}${tier&&tier.pending?' (próximamente)':''}`:'';
     const st=cur?`<span class="pill" style="color:var(--gold)">Actual · fase ${S.best}/${CAP}</span>`:done?'<span class="pill">Completado</span>':`<span class="pill">${M.locked?'Próximamente':next&&G.canAdvanceMode()?'Desbloqueado':'Bloqueado'}</span>`;
     return `<div class="mcard${cur?' cur':''}${!cur&&!done&&!(next&&G.canAdvanceMode())?' lock':''}">
       <div class="ctrl" style="justify-content:space-between"><b>${M.name}</b>${st}</div>
       <span class="s">Oro ×${(M.gold||1).toLocaleString('es-ES')} · ${M.mat}</span>
-      ${!cur&&!done?`<span class="s">${need}</span>`:''}
-      ${next&&G.canAdvanceMode()?`<button class="btn sm gold" data-act="modeGo">Ir a ${M.name}</button>`:''}</div>`; }).join('');
-  showModal(`<h3>Modo</h3><div class="mlist">${rows}</div><p class="hint">Cada modo tiene ${CAP} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p><button class="btn" data-act="close">${G.canAdvanceMode()?'Seguir farmeando':'Cerrar'}</button>`);
-}
+      ${!cur&&!done&&need?`<span class="s">${need}</span>`:''}
+      ${next&&G.canAdvanceMode()?`<button class="btn sm gold" data-act="modeGo">Ir a ${M.name}</button>`:''}</div>`; }).join('') }
 
 /* ---------- Inventario ---------- */
 // ¿daño y velocidad base mejores que el arma equipada? (las armas ya no se equipan solas)
@@ -234,7 +222,9 @@ function tabInv(){
   const head=`<div class="fchips" role="tablist">
     <button data-act="invview" data-v="armas" aria-pressed="${invView==='armas'}">Armas (${S.items.length})</button>
     <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">Cofres (${nc})</button>
-    <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button></div>`;
+    <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button>
+    <button data-act="invview" data-v="grim" aria-pressed="${invView==='grim'}">Grimorio</button></div>`;
+  if(invView==='grim') return `<section class="panel"><h3>Inventario</h3>${head}</section>${tabGrim()}`;
   if(invView==='cofres'){
     const row=k=>{const n=G.chestCount(k);return `<div class="chest">
       <div><div class="cn">${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
@@ -268,6 +258,20 @@ function tabInv(){
     </div>`:''}
     <div id="invList" class="ilist"></div></section>`;
 }
+// Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Por ahora sin efecto.
+function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(), act=S.grim&&S.grim.active;
+  const need=(n,have,v)=>`<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${fmt(Math.floor(have))} / ${fmt(v)}</b></div>`;
+  const cards=G.grimList().map(g=>{ const own=G.grimOwned(g.id), on=act===g.id, lv=G.grimLevel(g.id);
+    return `<div class="wcard${on?' eq':''}"><div class="hd"><span class="nm" style="font-size:16px;color:var(--rE)">${g.name}</span><span class="rar">${g.role}</span></div>
+      <div class="s">${g.desc}</div>
+      <div class="s">${own?`Nivel <b>${lv}</b> · efecto ${lv>=GC.skillLvl?'activo':'en el nivel '+GC.skillLvl}`:`Efecto en el nivel ${GC.skillLvl}`} · <i>efecto próximamente</i></div>
+      <div class="ctrl">${own?(on?'<span class="pill">Activo</span>':`<button class="btn sm" data-act="grimSet" data-k="${g.id}">Activar · ${GC.switchCost} tokens</button>`)
+        :`<button class="btn sm gold" data-act="grimUnlock" data-k="${g.id}" ${Object.keys(miss).length?'disabled':''}>Desbloquear</button><button class="btn sm" data-act="grimBuy" data-k="${g.id}">${fmt(G.grimPack())} tokens</button>`}</div></div>` }).join('');
+  const locked=G.grimList().some(g=>!G.grimOwned(g.id));
+  return `<section class="panel"><h3>Grimorio</h3>
+    ${locked?`<p class="hint">Desbloquear ${Object.keys(S.grim&&S.grim.owned||{}).length?'el segundo':'uno'} cuesta:</p><div class="loot">${need('Oro',S.gold,c.gold)}${need(CFG.modes[0].mat+'s',S.mats[0]||0,c.ess)}${need(CFG.event.mat+'s',S.evm||0,c.ev)}</div>`:''}
+    ${cards}
+    <p class="hint">Sube de nivel contigo. Solo puedes llevar uno activo; cambiarlo cuesta ${GC.switchCost} tokens. Esencias y emblemas también en la Tienda.</p></section>` }
 function fHead(){ const active=(F.rar!=='all')+(F.cls!=='all')+(F.stat!=='any');
   return `<button class="btn sm${filtersOpen?' on':''}" data-act="ftoggle" aria-expanded="${filtersOpen}">Filtros${active?' ('+active+')':''}</button>${active?'<button class="btn sm" data-act="fclear">Quitar filtros</button>':''}` }
 function filtered(){
@@ -324,6 +328,8 @@ const SHOP={
   mode:{name:'Cofre de modo',info:true},
   ticket:{name:'Ticket de Laberinto'},
   bossTicket:{name:'Ticket Jefe'},
+  ess:{name:'Esencia'},
+  ev:{name:'Emblema'},
 };
 const usd=t=>(t/CFG.tokens.perUsd).toLocaleString('es-ES',{minimumFractionDigits:t%CFG.tokens.perUsd?2:0,maximumFractionDigits:2})+' $';
 const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverPrice()*n)} oro`:`${fmt(G.shopPrice(k)*n)} tokens`;
@@ -333,7 +339,7 @@ function tabShop(){
   const today=G.dayKey();
   const head=`<div class="fchips" role="tablist">${[['cofres','Cofres'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
   let body='';
-  if(shopView==='cofres') body=shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket');
+  if(shopView==='cofres') body=shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket')+shopRow('ess')+shopRow('ev');
   if(shopView==='tokens') body=`<div class="loot"><div><span>Comprados</span><b>${fmt(S.tokens)}</b></div><div><span>Ganados (retirables)</span><b>${fmt(S.won)}</b></div></div>
     ${CFG.tokens.packs.map(n=>`<div class="chest"><div><div class="cn">${fmt(n)} tokens</div></div><div class="acts"><button class="btn sm gold" data-act="tokBuy" data-k="${n}">${usd(n)}</button></div></div>`).join('')}
     <div class="ctrl"><button class="btn sm" data-act="wdAsk" ${S.won>=CFG.tokens.withdraw.min?'':'disabled'}>Retirar ganados</button></div>
@@ -384,6 +390,8 @@ function rankHTML(riv,mine,pos,show){
     rows+=`<div class="${x.me?'me':''}"><span>${i+1}</span><span>${esc(x.name)}</span><b>${show(x.score)}</b></div>`; prev=i; });
   return `<div class="rank">${rows}</div>`;
 }
+const pendText=p=>p.rew?evRewText(p.rew):'Sin premio';
+const usdTxt=t=>'≈ '+(t/CFG.tokens.perUsd).toLocaleString('es-ES',{maximumFractionDigits:2})+' $';
 const rewTable=list=>`<div class="rank evrew">${list.map((r,i)=>{ const from=i?list[i-1].to+1:1; return `<div><b>${from===r.to?r.to:from+'–'+r.to}</b><span>${evRewText(r)}</span></div>` }).join('')}</div>`;
 const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), h=Math.floor(m%1440/60); return d?`${d} d ${h} h`:h?`${h} h ${m%60} min`:`${m%60} min` };
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
@@ -391,21 +399,27 @@ const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span 
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
+  if(evView==='league') return tabLeague();
   const paused=G.evPaused(), lp=G.evPending(), bp=G.wbPending();
   const lb=G.evToday(), lpos=lb?G.evRank(G.evShownDay(),lb):null, bd=G.wbWeekDmg(), bpos=bd?G.wbRank(G.wbShownWeek(),bd):null;
   const card=(k,title,sub,tk,line,pend)=>`<button class="evcard" data-act="evOpen" data-k="${k}"><span class="evt">${title}${pend?' <sup class="nb">!</sup>':''}</span><span class="s">${sub}</span>
     <span class="evl"><span>${tk}</span><span>${line}</span></span></button>`;
-  return `<section class="panel"><h3>Eventos</h3>
+  // Modos: Campaña (Normal, Pesadilla, Infierno), Eventos (Laberinto, Liga, Jefe semanal) y PvP (próximamente)
+  const head=`<div class="fchips" role="tablist">${[['campana','Campaña'],['eventos','Eventos'],['pvp','PvP']].map(([v,l])=>`<button data-act="modview" data-v="${v}" aria-pressed="${modView===v}">${l}</button>`).join('')}</div>`;
+  if(modView==='campana') return `<section class="panel"><h3>Modos</h3>${head}<div class="mlist">${modeRows()}</div><p class="hint">Cada modo tiene ${CFG.phaseCap} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p></section>`;
+  if(modView==='pvp') return `<section class="panel"><h3>Modos</h3>${head}<div class="mcard lock"><div class="ctrl" style="justify-content:space-between"><b>PvP</b><span class="pill">Próximamente</span></div><span class="s">Combates contra otros jugadores.</span></div></section>`;
+  return `<section class="panel"><h3>Modos</h3>${head}
     ${card('lab','Laberinto','3 min de monstruos sin parar · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Sin intentos hoy',!!lp)}
+    ${(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow())}
     ${card('boss','Jefe semanal','1 min contra un jefe inmortal · ranking semanal por daño',`Entradas <b>${G.wbFreeLeft()+S.bossTickets}</b>`,paused?'En pausa':bd?`Semana ${fmt(bd)} · puesto ${bpos}`:`Cierra en ${dhm(G.weekLeft())}`,!!bp)}
   </section>`;
 }
 function tabLab(){
   const V=CFG.event, paused=G.evPaused(), d=G.evShownDay(), best=G.evToday(), pend=G.evPending(), live=G.inEvent();
   const pos=best?G.evRank(d,best):null;
-  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
+  return `<button class="banner" data-act="evBack"><span>← Modos</span></button>
   <section class="panel"><h3>Laberinto</h3>
-    ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ayer · puesto ${pend.pos}</b><button class="btn sm gold" data-act="evClaim">Recoger</button></div><span class="s">${pend.rew?evRewText(pend.rew):'Sin premio'}</span></div>`:''}
+    ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ayer · puesto ${pend.pos}</b><button class="btn sm gold" data-act="evClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
     <div class="evhead"><div><span class="s">${G.evFreeLeft()?'Gratis + tickets':'Tickets'}</span><b>${G.evFreeLeft()?'1 + ':''}${S.tickets}</b></div><div><span class="s">${paused?'Total de ayer':'Total hoy'}</span><b>${best||'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="evGo" ${(S.tickets>0||G.evFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Entrar'}</button>
@@ -414,12 +428,21 @@ function tabLab(){
     ${rankHTML(G.evRivals(d),best,pos,x=>x)}</section>
   <section class="panel"><h3>Premios del día</h3>${rewTable(V.rewards)}<p class="hint">Se reparten a las 01:00 UTC del día siguiente.</p></section>`;
 }
+// Liga mensual: puntos por gastar tokens, ver anuncios y generar oro; el bote se reparte entre todos según sus puntos
+function tabLeague(){ const n=G.leagueNow(), p=G.leaguePending(), L=CFG.league;
+  return `<button class="banner" data-act="evBack"><span>← Modos</span></button>
+  <section class="panel"><h3>Liga de ${n.name}</h3>
+    ${p?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ${p.name}</b><button class="btn sm gold" data-act="lgClaim">Recoger</button></div><span class="s">${fmt(p.tok)} tokens (${fmt(p.pts)} puntos)</span></div>`:''}
+    <div class="evhead"><div><span class="s">Tus puntos</span><b>${fmt(n.pts)}</b></div><div><span class="s">Bote</span><b>${fmt(n.pool)}</b></div><div><span class="s">Premio estimado</span><b>${fmt(n.tok)}</b></div></div>
+    <div class="loot"><div><span>Tokens gastados · ${L.ptsToken} pt</span><b>${fmt(n.spent*L.ptsToken)}</b></div><div><span>Anuncios vistos · ${L.ptsAd} pt</span><b>${fmt(n.ads*L.ptsAd)}</b></div><div><span>Horas de oro generado · ${L.ptsGoldHour.toLocaleString('es-ES')} pt</span><b>${fmt(n.goldH*L.ptsGoldHour)}</b></div></div>
+    <p class="hint">El bote es el ${Math.round(L.share*100)} % de todo lo que gastan los jugadores en el mes (${usdTxt(n.pool)}). El día 1 a las 01:00 UTC se reparte entre todos según sus puntos, en tokens ganados (se pueden retirar). Tienes el ${(n.share*100).toLocaleString('es-ES',{maximumFractionDigits:2})} % de los puntos. Quedan ${n.daysLeft} días. (Prueba: sin dinero real.)</p>
+  </section>` }
 function tabBoss(){
   const W=CFG.wboss, paused=G.evPaused(), w=G.wbShownWeek(), dmg=G.wbWeekDmg(), pend=G.wbPending(), live=G.inEvent();
   const pos=dmg?G.wbRank(w,dmg):null;
-  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
+  return `<button class="banner" data-act="evBack"><span>← Modos</span></button>
   <section class="panel"><h3>Jefe semanal</h3>
-    ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de la semana pasada · puesto ${pend.pos}</b><button class="btn sm gold" data-act="wbClaim">Recoger</button></div><span class="s">${pend.rew?evRewText(pend.rew):'Sin premio'}</span></div>`:''}
+    ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de la semana pasada · puesto ${pend.pos}</b><button class="btn sm gold" data-act="wbClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
     <div class="evhead"><div><span class="s">${G.wbFreeLeft()?'Gratis + tickets':'Tickets Jefe'}</span><b>${G.wbFreeLeft()?'1 + ':''}${S.bossTickets}</b></div><div><span class="s">Daño semana</span><b>${dmg?fmt(dmg):'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="wbGo" ${(S.bossTickets>0||G.wbFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Luchar'}</button>
@@ -470,7 +493,7 @@ const heroName=()=>S.evo>0?G.evoP().name:clsLabel(S.cls);
 function evoCostHtml(){ const c=G.evoCost(); if(!c) return '';
   const row=(n,have,need)=>`<div><span>${n}</span><b style="color:var(--${have>=need?'good':'bad'})">${fmt(Math.floor(have))} / ${fmt(need)}</b></div>`;
   return `<div class="loot">${c.ess?row(CFG.modes[c.essMode].mat,S.mats[c.essMode]||0,c.ess):''}${c.gold?row('Oro',S.gold,c.gold):''}${c.tokens?row('Tokens',G.tokens(),c.tokens):''}${c.ev?row(CFG.event.mat+'s',S.evm||0,c.ev):''}</div>
-  ${S.loot?'<p class="hint">Tienes botín de jefes sin recoger.</p>':''}${G.canEvolve()?'':`<p class="hint">Los jefes de ${CFG.modes[c.essMode].name} sueltan esencias (más cuanto más alta la fase). Los ${CFG.event.mat.toLowerCase()}s se ganan en el Evento.</p>`}` }
+  ${S.loot?'<p class="hint">Tienes botín de jefes sin recoger.</p>':''}${G.canEvolve()?'':`<p class="hint">Los jefes de ${CFG.modes[c.essMode].name} sueltan esencias (más cuanto más alta la fase). Los ${CFG.event.mat.toLowerCase()}s se ganan en Modos → Eventos.</p>`}` }
 function evoModal(){
   const E=G.nextEvo().classes[S.cls];
   showModal(`<h3>Evolución</h3>
@@ -587,15 +610,6 @@ const ACT={
   upOpen:()=>showUpgrades(),
   upClose:()=>{upOpen=false;closeModal()},
   autoToggle:()=>{G.setAuto(!S.autoPush);toast(S.autoPush?'Avance automático activado':'Avance automático desactivado: te quedas farmeando');updateHUD()},
-  // calaveras de modo: la actual abre la lista; la siguiente, si está desbloqueada, lleva a ese modo
-  modeIcon:(b,k)=>{ const m=+k, M=CFG.modes[m];
-    if(m===S.mode) return modeModal();
-    if(m<S.mode) return toast(`${M.name}: completado`);
-    if(G.inEvent()) return toast('Termina el evento primero');
-    if(m===S.mode+1&&G.canAdvanceMode()) return ACT.modeGo();
-    const prev=CFG.modes[m-1], t=CFG.evo.tiers[m-1];
-    if(M.locked) return toast(`${M.name}: próximamente`);
-    toast(t&&t.pending&&S.evo>=m-1&&m===S.mode+1?`${M.name}: próximamente`:`${M.name}: vence la fase ${CFG.phaseCap} de ${prev.name} y haz la evolución ${m}`); },
   evoOpen:()=>evoModal(),
   modeGo:()=>{ if(G.inEvent()) return toast('Termina el evento primero'); const nx=CFG.modes[S.mode+1].name;
     showModal(`<h3>¿Ir a ${nx}?</h3><p class="hint">Vuelves a la fase 1 de ${nx}. No se puede volver a ${G.modeCfg().name}.</p><div class="ctrl"><button class="btn" data-act="close">Seguir farmeando</button><button class="btn gold" data-act="modeYes">Ir a ${nx}</button></div>`) },
@@ -613,10 +627,12 @@ const ACT={
   lootClaim:()=>{ if(G.claimLoot()){ closeModal(); toast('Botín al inventario'); renderTab(); } },
   evGo:()=>{ if(G.startEvent()){ tab='up'; renderTab(); } else if(G.evPaused()) toast('Evento en pausa hasta la 01:00 UTC'); },
   wbGo:()=>{ if(G.wbStart()){ tab='up'; renderTab(); } else if(G.evPaused()) toast('Evento en pausa hasta la 01:00 UTC'); },
-  wbClaim:()=>{ const p=G.wbClaim(); if(p){ toast(p.rew?evRewText(p.rew):'Sin premio'); renderTab(); } },
+  wbClaim:()=>{ const p=G.wbClaim(); if(p){ toast(pendText(p)); renderTab(); } },
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
-  evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(p.rew?evRewText(p.rew):'Sin premio'); renderTab(); } },
+  modview:b=>{ modView=b.dataset.v; evView=null; renderTab(); },
+  lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
+  evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(pendText(p)); renderTab(); } },
   close:()=>{stopSpin();boostModalOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
   buy:(b,k)=>{if(G.buyUpgrade(k))renderTab()},
   buymax:(b,k)=>{const n=G.buyMax(k);toast(n?'+'+n+' niveles':'No tienes oro suficiente');renderTab()},
@@ -646,6 +662,13 @@ const ACT={
   sub:(b,k)=>{ if(!G.buy(k,1)) return toast('Tokens insuficientes'); toast(k==='card'?'Tarjeta mensual activada':'VIP activado'); renderTab() },
   tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k)} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
+  grimUnlock:(b,k)=>{ const r=G.grimUnlock(k); toast(r.ok?'¡Grimorio desbloqueado!':'Te faltan recursos'); renderTab() },
+  grimBuy:(b,k)=>{ const g=G.grimList().find(x=>x.id===k), p=G.grimPack();
+    showModal(`<h3>${g.name}</h3><p class="hint">Desbloquear ahora por ${fmt(p)} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="grimBuyGo" data-k="${k}" ${G.tokens()>=p?'':'disabled'}>Comprar</button></div>`) },
+  grimBuyGo:(b,k)=>{ const r=G.grimBuy(k); closeModal(); toast(r.ok?'¡Grimorio desbloqueado!':'Tokens insuficientes'); renderTab() },
+  grimSet:(b,k)=>{ const g=G.grimList().find(x=>x.id===k);
+    showModal(`<h3>Activar ${g.name}</h3><p class="hint">Cambiar de Grimorio cuesta ${CFG.grimoire.switchCost} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="grimSetGo" data-k="${k}" ${G.tokens()>=CFG.grimoire.switchCost?'':'disabled'}>Cambiar</button></div>`) },
+  grimSetGo:(b,k)=>{ const r=G.grimSet(k); closeModal(); toast(r.ok?'Grimorio activado':r.why==='event'?'Termina el evento primero':'Tokens insuficientes'); renderTab() },
   invShare:()=>{ const link=Telemetry.inviteLink(CFG), tg=window.Telegram&&Telegram.WebApp, txt='¡Juega conmigo a Idle Ascension!';
     const url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(txt);
     if(tg&&tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank') },
