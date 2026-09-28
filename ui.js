@@ -36,7 +36,7 @@ const CHEST_TYPES=['wood','silver','mode'];
 const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
-let tab='up', upOpen=false, invView='cofres', shopView='cofres', evView=null, modView=null;
+let tab='up', upOpen=false, invView='main', shopView='cofres', evView=null, modView=null;
 let expandedId=null, filtersOpen=false, forgeId=null, reforgeId=null, lockSel=[];
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -57,7 +57,7 @@ function goBack(){ if(modalOpen()){ if(canGoBack()) ACT.close(); return }
   if(tab==='ev'&&evView){ evView=null; return renderTab() }
   if(tab==='ev'&&modView){ modView=null; return renderTab() }
   if(tab==='inv'&&invView==='forja'){ invView='armas'; return renderTab() }
-  if(tab==='inv'&&(invView==='armas'||invView==='grim')){ invView='cofres'; return renderTab() }
+  if(tab==='inv'&&invView!=='main'){ invView='main'; return renderTab() }
   tab='up'; upOpen=false; renderTab() }
 let backShown=null;
 function syncBack(){ if(!TG||!TG.BackButton) return; const v=canGoBack(); if(v===backShown) return; backShown=v; try{ v?TG.BackButton.show():TG.BackButton.hide() }catch(e){} }
@@ -154,8 +154,8 @@ function renderTab(){
   // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
     el.innerHTML=(invView==='forja'?back('armas','Volver a Armas')
-      :invView==='armas'?back('cofres','Volver al inventario')+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`
-      :invView==='grim'?back('cofres','Volver al inventario')
+      :invView==='armas'?back('main','Volver al inventario')+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`
+      :invView==='grim'?back('main','Volver al inventario')
       :equipHud())+tabInv(); if(invView==='armas') renderList(); }
   if(tab==='shop') el.innerHTML=tabShop();
   if(tab==='ev') el.innerHTML=tabEv();
@@ -267,11 +267,14 @@ function equipHud(){ const w=G.equipped(), gid=S.grim&&S.grim.active, g=gid&&G.g
 function tabInv(){
   if(invView==='forja') return tabForja();
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0);
+  // pantalla principal: solo las pestañas, sin nada abierto hasta que toques una
   const head=`<div class="fchips" role="tablist">
+    <button data-act="invview" data-v="armas" aria-pressed="false">Armas (${G.invCount()})</button>
     <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">Cofres (${nc})</button>
     <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button>
 </div>`;
   if(invView==='grim') return tabGrim();
+  if(invView==='main') return `<section class="panel"><h3>Inventario</h3>${head}</section>`;
   if(invView==='cofres'){
     const row=k=>{const n=G.chestCount(k);return `<div class="chest inv">
       <div><div class="cn">${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
@@ -725,7 +728,7 @@ const ACT={
   invFull:()=>{ closeModal(); tab='inv'; invView='armas'; renderTab() },
   refopen:(b,k,id)=>{reforgeId=reforgeId===id?null:id;lockSel=[];renderTab()},
   forge:(b,k,id)=>{forgeId=id;reforgeId=null;lockSel=[];tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
-  invview:b=>{invView=b.dataset.v;renderTab()},
+  invview:b=>{const v=b.dataset.v; invView=tab==='inv'&&invView===v&&(v==='cofres'||v==='mat')?'main':v; renderTab()}, // tocar la pestaña abierta la cierra
   expand:(b,k,id)=>{expandedId=expandedId===id?null:id;renderList()},
   ftoggle:()=>{filtersOpen=!filtersOpen;renderTab()},
   fclear:()=>{F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';renderTab()},
@@ -762,7 +765,7 @@ const ACT={
   battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.shots.length=0;fx.flash=0}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},
-  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='cofres';shopView='cofres';forgeId=null;reforgeId=null;lockSel=[];expandedId=null;filtersOpen=false;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
+  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='cofres';forgeId=null;reforgeId=null;lockSel=[];expandedId=null;filtersOpen=false;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
 };
 function disToast(r){ if(r.n) toast(`${r.n} arma${r.n>1?'s':''} desmontada${r.n>1?'s':''}: +${r.v} chatarra`) }
 function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0);
@@ -771,7 +774,7 @@ function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0)
 
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
-  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='cofres'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;reforgeId=null;lockSel=[];renderTab();return}
+  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;reforgeId=null;lockSel=[];renderTab();return}
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
