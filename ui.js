@@ -642,6 +642,7 @@ const ACT={
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
   pvpSoon:()=>toast('PvP: próximamente'),
+  syncRetry:()=>location.reload(),
   modview:b=>{ modView=b.dataset.v||null; evView=null; renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
   evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(pendText(p)); renderTab(); } },
@@ -794,6 +795,7 @@ function loop(now){
 }
 
 /* ---------- arranque ---------- */
+function boot(){
 G.load(); syncS();
 if(S){
   renderShell(); G.startWave();
@@ -803,5 +805,30 @@ if(S){
   const off=G.applyOffline();
   if(off) later(()=>offlineModal(off));
 } else renderSelect();
+}
+// Dentro de Telegram: se comprueba la cuenta y se descarga la partida del servidor antes de empezar
+function syncBox(title,msg,btn){ let el=$('#syncBox'); if(!el){ el=document.createElement('div'); el.id='syncBox'; el.className='boot'; document.body.appendChild(el); }
+  el.innerHTML=`<b>${title}</b><span>${msg}</span>${btn?`<button class="btn gold" data-act="syncRetry">${btn}</button>`:''}` }
+const SAVE_KEY='idleAscension2';
+function pickSave(r){ // qué partida usar: la del servidor si es más nueva o si la del móvil es de otra cuenta
+  let local=null; try{ local=JSON.parse(storage.get(SAVE_KEY)||'null') }catch(e){}
+  const me=r.id, mine=local&&(!local.tgId||local.tgId===me);
+  if(r.save&&(!mine||(local.srvRev||0)<r.rev)){ const sv={...r.save,tgId:me,srvRev:r.rev}; storage.set(SAVE_KEY,JSON.stringify(sv)); return 'server' }
+  if(local&&!mine){ storage.del(SAVE_KEY); return 'new' }       // era de otra cuenta y esta no tiene partida: empieza de cero
+  if(local){ local.tgId=me; if(!(local.srvRev<=r.rev)) local.srvRev=r.rev; storage.set(SAVE_KEY,JSON.stringify(local)); return 'local' }
+  return 'new' }
+function start(){
+  const T=window.Telemetry;
+  if(!T||!T.canSync(CFG)) return boot();                       // fuera de Telegram (o sin servidor): partida del móvil
+  syncBox('Idle Ascension','Cargando partida…');
+  T.loadRemote(CFG).then(r=>{
+    if(r.error==='auth') return syncBox('No se pudo comprobar tu cuenta','Cierra el juego y vuelve a abrirlo desde Telegram.','Reintentar');
+    const el=$('#syncBox'); if(el) el.remove();
+    if(r.error){ boot(); if(S) toast('Sin conexión: tu partida se guardará al volver'); return }
+    pickSave(r); boot(); T.startSync(G,r.id);
+    T.onConflict=()=>{ G.S&&G.save(); syncBox('Partida en otro dispositivo','Tu partida se ha jugado en otro dispositivo. Cargando la más reciente…'); setTimeout(()=>location.reload(),2500) };
+  });
+}
+start();
 requestAnimationFrame(loop);
 })();

@@ -4,7 +4,30 @@
    Solo funciona dentro de Telegram y si CFG.server.url tiene la dirección de la función "track". */
 (function(root){
 'use strict';
-const api={refs:null, onReward:null, attach, inviteLink};
+const api={refs:null, onReward:null, onConflict:null, attach, inviteLink, canSync, loadRemote, startSync};
+/* ---------- partida en el servidor ----------
+   Al entrar se descarga la partida (y se comprueba la cuenta de Telegram). Mientras juegas se sube cada 'saveEvery' s y al
+   salir de la app. Cada partida tiene una versión (rev): solo se acepta guardar si partes de la última; si otro dispositivo la
+   cambió, hay conflicto y el juego recarga la más reciente. */
+const tgData=()=>{ const tg=root.Telegram&&root.Telegram.WebApp; return tg&&tg.initData||'' };
+function canSync(CFG){ return !!(CFG.server&&CFG.server.url&&tgData()) }
+function loadRemote(CFG){
+  return fetch(CFG.server.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tgData(),action:'load'})})
+    .then(r=>r.status===401?{error:'auth'}:r.ok?r.json():{error:'net'}).catch(()=>({error:'net'})) }
+function startSync(G,me){
+  const CFG=G.CFG, url=CFG.server.url, every=((CFG.server||{}).saveEvery||60)*1000; let busy=false, dead=false, last='';
+  function push(keep){ const S=G.S; if(!S||busy||dead) return; S.tgId=me; const save=JSON.stringify(S); if(save===last&&!keep) return;
+    const body=JSON.stringify({initData:tgData(),save:S,baseRev:S.srvRev||0}); busy=true;
+    fetch(url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep&&body.length<60000})
+      .then(r=>r.json().then(j=>({st:r.status,j}))).then(({st,j})=>{ busy=false;
+        if(j&&j.ok&&j.rev){ G.S.srvRev=j.rev; last=save; G.save(); }
+        else if(st===409){ dead=true; if(api.onConflict) api.onConflict(); } })
+      .catch(()=>{ busy=false }) }
+  setInterval(()=>push(false),every);
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) push(true) });
+  setTimeout(()=>push(false),3000);                           // primera subida al poco de entrar
+  api.push=push;
+}
 // Enlace de invitación del jugador: t.me/<bot>/<app>?startapp=ref_<id de Telegram> (null fuera de Telegram)
 function inviteLink(CFG){ const tg=root.Telegram&&root.Telegram.WebApp, u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user, base=(CFG.referral||{}).link;
   return u&&u.id&&base?base+'?startapp=ref_'+u.id:null }
