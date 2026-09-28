@@ -37,7 +37,7 @@ const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
 let tab='up', upOpen=false, invView='main', shopView='cofres', evView=null, modView=null;
-let expandedId=null, forgeId=null, reforgeId=null, lockSel=[];
+let expandedId=null, forgeId=null, lockSel=[];
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 // escribe HTML solo si cambia (evita rehacer botones mientras se tocan)
@@ -209,36 +209,39 @@ function itemCard(it){
       </div></div>`:''}
   </div>`;
 }
+// Forja: arriba el arma y Subir nivel; abajo Reforja siempre a la vista. Cada stat es una fila con su barra (mín → máx),
+// candado para fijarlo y ↑ para subir solo ese stat. Un solo botón Reforjar con el precio (sube si fijas stats).
+const LOCK_SVG=on=>`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="${on?'M8 11V7a4 4 0 0 1 8 0v4':'M8 11V7a4 4 0 0 1 7.5-2'}"/></svg>`;
+function statRow(it,x,i,opt){ const [lo,hi]=CFG.sec[x.k][it.r], top=x.v>=hi, w=hi>lo?Math.max(4,(x.v-lo)/(hi-lo)*100):100, lk=opt.lock&&lockSel.includes(i);
+  return `<div class="rstat${lk?' lock':''}${top?' top':''}">
+    ${opt.lock?`<button class="rlock" data-act="lock" data-i="${i}" aria-pressed="${lk}" aria-label="${lk?'Soltar':'Fijar'} ${CFG.sec[x.k].n}">${LOCK_SVG(lk)}</button>`:''}
+    <div class="rinfo"><div class="rtop"><span>${CFG.sec[x.k].n}</span><b>+${x.v.toLocaleString('es-ES')} %${opt.diff!=null&&opt.diff!==0?` <em class="${opt.diff>0?'up':'dn'}">${opt.diff>0?'▲':'▼'}</em>`:''} <small>/ ${hi.toLocaleString('es-ES')}</small></b></div>
+      <div class="rbar"><i style="width:${w}%;background:var(--${top?'good':'r'+it.r})"></i></div></div>
+    ${opt.imp?(top?'<span class="rmax">MÁX</span>':`<button class="btn sm rup" data-act="impAsk" data-id="${it.id}" data-k="${i}" aria-label="Subir ${CFG.sec[x.k].n}">↑</button>`):''}
+  </div>` }
 function tabForja(){
   const it=G.findItem(forgeId)||G.equipped();
   if(!it) return `<section class="panel"><h3>Forja</h3><p class="hint">Vacío.</p></section>`;
   forgeId=it.id;
   const m=G.weaponMain(it), eq=it.id===S.equippedId, own=it.cls===S.cls, max=it.lvl>=CFG.weapon.maxLvl;
   const n=G.lvlCostItems(it), sc=G.lvlCostScrap(it), have=G.fodderFor(it).length;
-  const mn=G.weaponMain({r:it.r,lvl:Math.min(CFG.weapon.maxLvl,it.lvl+1)}), rc=G.reforgeCost(it), rOpen=reforgeId===it.id;
+  const mn=G.weaponMain({r:it.r,lvl:Math.min(CFG.weapon.maxLvl,it.lvl+1)});
+  const up=(a,b)=>max?`+${pct(a)}`:`+${pct(a)} → <b style="color:var(--good)">+${pct(b)}</b>`;
+  const p=G.reforgePrice(it,lockSel.length,'scrap'), pt=lockSel.length===1&&tokOpen()?G.reforgePrice(it,1,'token'):null;
   return `<section class="panel"><h3>Forja</h3>
     <div class="wcard${eq?' eq':''}">
-      <div class="hd"><span class="nm" style="color:var(--r${it.r});font-size:16px">${wName(it)}</span><span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r]} · nv ${it.lvl}/${CFG.weapon.maxLvl}</span></div>
-      <div class="s">${clsLabel(it.cls)}</div>
-      <div class="s">Daño +${pct(m.d)}${max?'':` → <b style="color:var(--good)">+${pct(mn.d)}</b>`} · Velocidad +${pct(m.s)}${max?'':` → <b style="color:var(--good)">+${pct(mn.s)}</b>`}</div>
-      <div class="sec">${chips(it.sec,rOpen,it.r)}</div>
-      <div class="ctrl">
-        ${eq?'<span class="pill">Equipada</span>':own?`<button class="btn sm" data-act="equip" data-id="${it.id}">Equipar</button>`:''}
-        ${max?'<span class="pill">Nivel máximo</span>':`<button class="btn sm gold" data-act="lvl" data-id="${it.id}" ${have<n||S.scrap<sc?'disabled':''}>Subir a nv ${it.lvl+1}: ${n} arma${n>1?'s':''} igual${n>1?'es':''} (tienes ${have})${sc?' + '+sc+' chat.':''}</button>`}
-        <button class="btn sm" data-act="refopen" data-id="${it.id}">${rOpen?'Cerrar reforja':'Reforjar'}</button>
+      <div class="hd"><span class="nm" style="color:var(--r${it.r});font-size:16px">${wName(it)}</span>${eq?'<span class="pill">Equipada</span>':own?`<button class="btn sm" data-act="equip" data-id="${it.id}">Equipar</button>`:''}</div>
+      <div class="s">${CFG.rarName[it.r]} · ${clsLabel(it.cls)}</div>
+      <div class="fbox"><div class="fbh"><b>Nivel ${it.lvl}/${CFG.weapon.maxLvl}</b></div>
+        <div class="s">Daño ${up(m.d,mn.d)} · Velocidad ${up(m.s,mn.s)}</div>
+        ${max?'<span class="pill">Nivel máximo</span>':`<button class="btn gold" data-act="lvl" data-id="${it.id}" ${have<n||S.scrap<sc?'disabled':''}>Subir a nv ${it.lvl+1}</button>
+        <div class="s">Necesita ${n} arma${n>1?'s':''} igual${n>1?'es':''} <b style="color:var(--${have>=n?'good':'bad'})">(${have}/${n})</b>${sc?` + ${sc} chatarra`:''}</div>`}</div>
+      <div class="fbox"><div class="fbh"><b>Reforja</b><span class="s">${lockSel.length}/${G.maxLocks(it)} fijados</span></div>
+        ${it.sec.map((x,i)=>statRow(it,x,i,{lock:true,imp:true})).join('')}
+        <button class="btn gold" data-act="ref" data-id="${it.id}" data-pay="scrap" ${S.scrap<p.scrap?'disabled':''}>Reforjar · ${fmt(p.scrap)} chatarra</button>
+        ${pt?`<button class="btn sm" data-act="ref" data-id="${it.id}" data-pay="token">O con token: ${fmt(pt.scrap)} chat. + ${pt.tokens} token</button>`:''}
+        <div class="rlegend"><span>${LOCK_SVG(true)} fija un stat (cuesta más)</span><span><b>↑</b> sube solo ese stat</span></div>
       </div>
-      ${rOpen?`<div class="panel" style="padding:10px">
-        <div class="hint">Toca un stat para bloquearlo (${lockSel.length}/${G.maxLocks(it)}).</div>
-        <div class="ctrl"><button class="btn sm" data-act="ref" data-id="${it.id}" data-pay="scrap">${refLabel(it,'scrap')}</button>
-        ${lockSel.length===1&&tokOpen()?`<button class="btn sm" data-act="ref" data-id="${it.id}" data-pay="token">${refLabel(it,'token')}</button>`:''}
-        </div>
-        <div class="hint" style="margin-top:6px">Mejora automática: reforja solo el valor de un stat hasta que suba (${G.reforgeCost(it)} chat. por intento).</div>
-        <div class="ctrl">${it.sec.map((x,i)=>{ const mx=CFG.sec[x.k][it.r][1]; return x.v>=mx?`<span class="pill">${CFG.sec[x.k].n} al máximo</span>`:`<button class="btn sm" data-act="impAsk" data-id="${it.id}" data-k="${i}">${CFG.sec[x.k].n} ↑</button>` }).join('')}</div>
-        <ul class="refhelp">
-          <li><b>Reforjar</b>: cambia los stats no bloqueados al azar; luego eliges quedarte el nuevo o el actual.</li>
-          <li><b>Bloqueo con chatarra</b>: pagas el doble de chatarra y ese stat se queda igual. Si el arma solo tiene uno, cambia su valor.</li>
-          ${tokOpen()?'<li><b>Bloqueo con token</b>: pagas 1 token en vez de chatarra extra. Con los dos a la vez bloqueas 2 stats (siempre queda uno que cambia).</li>':''}
-        </ul></div>`:''}
     </div>
     ${!eq&&G.equipped()?`<button class="btn sm" data-act="forge" data-id="${S.equippedId}">Volver a mi arma equipada</button>`:''}
     </section>`;
@@ -362,20 +365,21 @@ function oddsModal(type){
 function impModal(id,i){ const it=G.findItem(id), x=it.sec[i], o=G.improveOdds(id,i);
   // límites de gasto: lo esperado, el triple o toda la chatarra (siempre al menos un intento)
   const lims=[...new Set([o.expSpend,o.expSpend*3,S.scrap].filter(Number.isFinite).map(v=>Math.max(o.cost,Math.min(S.scrap,v))))].sort((a,b)=>a-b);
-  showModal(`<h3>Mejorar ${CFG.sec[x.k].n}</h3>
-    <div class="loot"><div><span>Ahora</span><b>+${x.v.toLocaleString('es-ES')} %</b></div><div><span>Máximo</span><b>+${o.max.toLocaleString('es-ES')} %</b></div>
-    <div><span>Por intento</span><b>${o.cost} chat. · ${pct(o.p)}</b></div><div><span>Intentos esperados</span><b>≈${o.exp}</b></div><div><span>Tienes</span><b>${fmt(S.scrap)} chat.</b></div></div>
-    <p class="hint">Reforja solo el valor de este stat hasta que salga más alto. Los demás no cambian. Elige cuánto gastar como mucho:</p>
-    <div class="ctrl">${S.scrap<o.cost?'<span class="s">Te falta chatarra.</span>':lims.map(v=>`<button class="btn sm gold" data-act="impGo" data-id="${id}" data-k="${i}" data-v="${v}">Hasta ${fmt(v)}</button>`).join('')}</div>
+  showModal(`<h3>Subir ${CFG.sec[x.k].n}</h3>
+    ${statRow(it,x,i,{})}
+    <p class="hint">Se reforja solo este stat hasta que salga más alto. Cada intento: <b>${o.cost} chatarra</b> (≈${o.exp} intentos).</p>
+    <div class="s">Gastar como mucho:</div>
+    <div class="ctrl">${S.scrap<o.cost?'<span class="s">Te falta chatarra.</span>':lims.map(v=>`<button class="btn sm gold" data-act="impGo" data-id="${id}" data-k="${i}" data-v="${v}">${fmt(v)}</button>`).join('')}</div>
     <div class="ctrl"><button class="btn" data-act="close">Cancelar</button></div>`) }
-function refLabel(it,pay){ const p=G.reforgePrice(it,lockSel.length,pay); return `Reforjar: ${p.scrap} chat.${p.tokens?' + '+p.tokens+' token':''}` }
 function doReforge(id,pay){
   const res=G.reforge(id,lockSel,pay);
   if(!res.ok){ if(res.why==='scrap') toast('Te falta chatarra'); else if(res.why==='token') toast('Te falta 1 token'); else if(res.why==='locks') toast('Demasiados bloqueos'); return }
   const it=G.findItem(id); pendingReforge={id,sec:res.sec};
-  showModal(`<h3>Resultado de la reforja</h3>
-    <div class="s">Actual</div><div class="sec">${chips(it.sec,false,it.r)}</div><div class="s">Nuevo</div><div class="sec">${chips(res.sec,false,it.r)}</div>
-    <div class="ctrl"><button class="btn" data-act="close">Mantener actual</button><button class="btn gold" data-act="applyReforge">Quedarme el nuevo</button></div>`);
+  const q=l=>G.secQuality(l,it.r), better=q(res.sec)>q(it.sec);
+  showModal(`<h3>Resultado</h3>
+    <div class="rcmp"><div><div class="s">Actual</div>${it.sec.map((x,i)=>statRow(it,x,i,{})).join('')}</div>
+      <div><div class="s">Nuevo</div>${res.sec.map((x,i)=>statRow(it,x,i,{diff:it.sec[i]&&it.sec[i].k===x.k?x.v-it.sec[i].v:null})).join('')}</div></div>
+    <div class="ctrl"><button class="btn${better?'':' gold'}" data-act="close">Mantener actual</button><button class="btn${better?' gold':''}" data-act="applyReforge">Quedarme el nuevo</button></div>`);
   renderTab();
 }
 
@@ -722,8 +726,7 @@ const ACT={
     pendingDis=ids;showModal(`<h3>¿Desmontar ${ids.length} armas?</h3><p class="hint">+${v} chatarra</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`)},
   disYes:()=>{closeModal();disToast(G.dismantle(pendingDis||[]));pendingDis=null;renderTab()},
   invFull:()=>{ closeModal(); tab='inv'; invView='armas'; renderTab() },
-  refopen:(b,k,id)=>{reforgeId=reforgeId===id?null:id;lockSel=[];renderTab()},
-  forge:(b,k,id)=>{forgeId=id;reforgeId=null;lockSel=[];tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
+  forge:(b,k,id)=>{forgeId=id;lockSel=[];tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
   invview:b=>{const v=b.dataset.v; invView=tab==='inv'&&invView===v&&(v==='cofres'||v==='mat')?'main':v; renderTab()}, // tocar la pestaña abierta la cierra
   expand:(b,k,id)=>{expandedId=expandedId===id?null:id;renderList()},
   fclear:()=>{F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';renderTab()},
@@ -749,7 +752,7 @@ const ACT={
   invCopy:()=>{ const link=Telemetry.inviteLink(CFG); const ok=()=>toast('Enlace copiado'), no=()=>toast(link);
     try{ navigator.clipboard.writeText(link).then(ok,no) }catch(e){ no() } },
   wdGo:()=>{ const r=G.withdraw(S.won); closeModal(); toast(r.ok?`Retirados ${fmt(r.n)} tokens (prueba)`:'No se puede retirar'); renderTab(); },
-  lock:b=>{const i=+b.dataset.i, it=G.findItem(forgeId); if(lockSel.includes(i)) lockSel=lockSel.filter(x=>x!==i); else if(it&&lockSel.length<G.maxLocks(it)) lockSel=[...lockSel,i]; else { toast('Máximo '+(it?G.maxLocks(it):0)+' bloqueo'+(it&&G.maxLocks(it)>1?'s':'')); return } renderTab()},
+  lock:b=>{const i=+b.dataset.i, it=G.findItem(forgeId); if(lockSel.includes(i)) lockSel=lockSel.filter(x=>x!==i); else if(it&&lockSel.length<G.maxLocks(it)) lockSel=[...lockSel,i]; else { toast('Máximo '+(it?G.maxLocks(it):0)+' fijado'+(it&&G.maxLocks(it)>1?'s':'')); return } renderTab()},
   ref:(b,k,id)=>doReforge(id,b.dataset.pay),
   applyReforge:()=>{if(pendingReforge)G.applyReforge(pendingReforge.id);pendingReforge=null;closeModal();renderTab()},
   info:(b,k)=>oddsModal(k),
@@ -760,7 +763,7 @@ const ACT={
   battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.shots.length=0;fx.flash=0}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},
-  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='cofres';forgeId=null;reforgeId=null;lockSel=[];expandedId=null;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
+  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='cofres';forgeId=null;lockSel=[];expandedId=null;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
 };
 function disToast(r){ if(r.n) toast(`${r.n} arma${r.n>1?'s':''} desmontada${r.n>1?'s':''}: +${r.v} chatarra`) }
 function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0);
@@ -769,7 +772,7 @@ function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0)
 
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
-  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;reforgeId=null;lockSel=[];renderTab();return}
+  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;lockSel=[];renderTab();return}
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
