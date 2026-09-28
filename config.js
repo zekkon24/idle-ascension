@@ -112,7 +112,7 @@ const CFG = {
     ],
   },
   matDrop:{from:10,to:150,c0:0.01,c1:0.05,max0:1,max1:3,sure:[50,100]}, // sure: esos jefes de élite dan 1 esencia segura la primera vez (para el Grimorio) // todos los jefes sueltan esencia del modo: 1 % (1) en la fase 10 → 5 % (1-3) en la 150 (el de la 150 se puede farmear)
-  event:{ // Laberinto (diario): 3 min de monstruos sin parar; ranking por muertes; 1 entrada gratis al día, las demás con ticket
+  event:{ // Mazmorra (diaria): 3 min de monstruos sin parar; ranking por muertes; 1 entrada gratis al día, las demás con ticket
     dur:180, spawnEvery:1.2, walk:0.6, group:3, groupHp:2, groupGap:0.3, groupAtk:0.9, // grupos de 3 monstruos con ×2 de vida; llegan cada 0,3 s y pegan un 10 % menos
     ticketCost:100, // ticket extra en la tienda (tokens); las muertes de varios intentos del día se suman
     mat:'Emblema', pauseH:1, // pausa de 00:00 a 01:00 UTC: se terminan los intentos a medias y a la 01:00 se reparten los premios
@@ -129,7 +129,7 @@ const CFG = {
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
     curve:[[1,1200],[2,3800],[3,8700],[5,20700],[7,38100],[10,73200],[13,140300],[15,236300],[17,446900],[20,771400],[25,1585100],[30,2680400],[35,4049100],[40,5815200],[45,7649300]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
-      // ×3 del premio diario del Laberinto en el mismo puesto (solo hay uno por semana); los cofres de madera
+      // ×3 del premio diario de la Mazmorra en el mismo puesto (solo hay uno por semana); los cofres de madera
       // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca
       {to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},
       {to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],

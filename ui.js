@@ -58,7 +58,7 @@ G.on('wave',()=>{fx.shots.length=0});
 G.on('eventStart',()=>{fx.shots.length=0; fx.floats.length=0});
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
-  showModal(`<h3>${boss?'Jefe semanal':'Laberinto'}</h3>
+  showModal(`<h3>${boss?'Jefe semanal':'Mazmorra'}</h3>
     <div class="evhead"><div><span class="s">${boss?'Daño':'Muertes'}</span><b>${boss?fmt(r.dmg):r.kills}</b></div><div><span class="s">Puesto</span><b>${r.pos}</b></div><div><span class="s">${boss?'Total semana':'Total hoy'}</span><b>${boss?fmt(r.best):r.best}</b></div></div>
     ${r.died?'<p class="hint">Te han derrotado.</p>':''}${rw?`<p class="hint">Premio ${boss?'(se reparte el lunes a las 01:00 UTC)':'(se recoge mañana)'}: ${evRewText(rw)}.</p>`:''}
     <button class="btn gold" data-act="close">Continuar</button>`); }
@@ -98,7 +98,7 @@ function updateHUD(){
     :ev?`${mmss(Math.max(0,CFG.event.dur-B.t)*1000)} · ${B.kills}`:`Fase ${S.fase}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'LABERINTO'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):''; // (sin "Avanzando"/"Farmeando")
+  const tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
@@ -239,7 +239,7 @@ function tabInv(){
     const rows=[];
     if(S.scrap>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--scrap)"></i> Chatarra</span><span class="meta"><b>${fmt(S.scrap)}</b></span></div></div>`);
     if(S.evm>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--rL)"></i> ${CFG.event.mat}s</span><span class="meta"><b>${S.evm}</b></span></div></div>`);
-    if(S.tickets>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--rE)"></i> Tickets de Laberinto</span><span class="meta"><b>${S.tickets}</b></span></div></div>`);
+    if(S.tickets>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--rE)"></i> Tickets de Mazmorra</span><span class="meta"><b>${S.tickets}</b></span></div></div>`);
     if(S.bossTickets>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--bad)"></i> Tickets Jefe</span><span class="meta"><b>${S.bossTickets}</b></span></div></div>`);
     for(const [m,n] of Object.entries(S.mats||{})) if(n>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--rE)"></i> ${CFG.modes[m].mat}</span><span class="meta"><b>${n}</b></span></div></div>`);
     if(S.tokens>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--tok)"></i> Tokens comprados</span><span class="meta"><b>${fmt(S.tokens)}</b></span></div></div>`);
@@ -327,7 +327,7 @@ function doReforge(id,pay){
 const SHOP={
   silver:{name:'Cofre de plata',info:true},
   mode:{name:'Cofre de modo',info:true},
-  ticket:{name:'Ticket de Laberinto'},
+  ticket:{name:'Ticket de Mazmorra'},
   bossTicket:{name:'Ticket Jefe'},
   ess:{name:'Esencia'},
   ev:{name:'Emblema'},
@@ -396,7 +396,7 @@ const usdTxt=t=>'≈ '+(t/CFG.tokens.perUsd).toLocaleString('es-ES',{maximumFrac
 const rewTable=list=>`<div class="rank evrew">${list.map((r,i)=>{ const from=i?list[i-1].to+1:1; return `<div><b>${from===r.to?r.to:from+'–'+r.to}</b><span>${evRewText(r)}</span></div>` }).join('')}</div>`;
 const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), h=Math.floor(m%1440/60); return d?`${d} d ${h} h`:h?`${h} h ${m%60} min`:`${m%60} min` };
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
-// Pestaña Evento: paneles (Laberinto, Jefe semanal); al tocar uno se abre
+// Pestaña Evento: paneles (Mazmorra, Jefe semanal); al tocar uno se abre
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
@@ -405,13 +405,13 @@ function tabEv(){
   const lb=G.evToday(), lpos=lb?G.evRank(G.evShownDay(),lb):null, bd=G.wbWeekDmg(), bpos=bd?G.wbRank(G.wbShownWeek(),bd):null;
   const card=(k,title,sub,tk,line,pend)=>`<button class="evcard" data-act="evOpen" data-k="${k}"><span class="evt">${title}${pend?' <sup class="nb">!</sup>':''}</span><span class="s">${sub}</span>
     <span class="evl"><span>${tk}</span><span>${line}</span></span></button>`;
-  // Modos: Campaña (Normal, Pesadilla, Infierno), Eventos (Laberinto, Liga, Jefe semanal) y PvP (próximamente)
+  // Modos: Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Liga, Jefe semanal) y PvP (próximamente)
   const back=`<button class="banner" data-act="modview" data-v=""><span>← Modos</span></button>`;
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
     const big=(v,t,sub,st,lock)=>`<button class="mcard mbig${lock?' lock':''}" data-act="modview" data-v="${v}"><div class="ctrl" style="justify-content:space-between"><b>${t}</b>${st}</div><span class="s">${sub}</span></button>`;
     return `<section class="panel"><h3>Modos</h3><div class="mlist">
       ${big('campana','Campaña','Normal · Pesadilla · Infierno',`<span class="pill" style="color:var(--gold)">${M.name} · fase ${S.best}/${CFG.phaseCap}</span>`)}
-      ${big('eventos','Eventos','Laberinto · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
+      ${big('eventos','Eventos','Mazmorra · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
       ${big('pvp','PvP','Tutorial · Buscar partida','<span class="pill">Próximamente</span>')}
     </div></section>` }
   if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div><p class="hint">Cada modo tiene ${CFG.phaseCap} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p></section>`;
@@ -420,7 +420,7 @@ function tabEv(){
       <button class="mcard mbig" data-act="pvpSoon"><div class="ctrl" style="justify-content:space-between"><b>Buscar partida</b><span class="pill">Próximamente</span></div><span class="s">Lucha contra otro jugador</span></button>
     </div></section>`;
   return `${back}<section class="panel"><h3>Eventos</h3>
-    ${card('lab','Laberinto','3 min de monstruos sin parar · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Sin intentos hoy',!!lp)}
+    ${card('lab','Mazmorra','3 min de monstruos sin parar · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Sin intentos hoy',!!lp)}
     ${CFG.league&&CFG.league.show?(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow()):''}
     ${card('boss','Jefe semanal','1 min contra un jefe inmortal · ranking semanal por daño',`Entradas <b>${G.wbFreeLeft()+S.bossTickets}</b>`,paused?'En pausa':bd?`Semana ${fmt(bd)} · puesto ${bpos}`:`Cierra en ${dhm(G.weekLeft())}`,!!bp)}
   </section>`;
@@ -429,7 +429,7 @@ function tabLab(){
   const V=CFG.event, paused=G.evPaused(), d=G.evShownDay(), best=G.evToday(), pend=G.evPending(), live=G.inEvent();
   const pos=best?G.evRank(d,best):null;
   return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
-  <section class="panel"><h3>Laberinto</h3>
+  <section class="panel"><h3>Mazmorra</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ayer · puesto ${pend.pos}</b><button class="btn sm gold" data-act="evClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
     <div class="evhead"><div><span class="s">${G.evFreeLeft()?'Gratis + tickets':'Tickets'}</span><b>${G.evFreeLeft()?'1 + ':''}${S.tickets}</b></div><div><span class="s">${paused?'Total de ayer':'Total hoy'}</span><b>${best||'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
