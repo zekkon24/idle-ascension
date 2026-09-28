@@ -64,7 +64,7 @@ const CFG = {
   // Los % NO se escriben a mano: salen de las fórmulas de CHEST_PLAN (abajo del todo). Cada cofre da 1 arma.
   chests:{
     wood:{name:'Madera',from:'Jefes y eventos'},
-    silver:{name:'Plata',from:'Tienda (oro)',goldMin:5,perDay:10}, // precio: el oro de 5 min farmeando tu récord; como mucho 10 al día
+    silver:{name:'Plata',from:'Tienda (oro)',goldMin:5,perDay:null,step:0.1}, // precio: el oro de 5 min farmeando tu récord, +10 % por cada compra del día (vuelve al base cada día); sin límite
     mode:{name:'Modo',from:'Tienda',price:100}, // 100 tokens (1 $)
   },
   // Tokens = dinero: 100 tokens = 1 $. Dos saldos: comprados (no se retiran) y ganados en los pools (se pueden retirar).

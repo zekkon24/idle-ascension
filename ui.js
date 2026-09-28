@@ -394,12 +394,12 @@ const SHOP={
   ev:{name:'Emblema',desc:'Se usa para la Evolución y para desbloquear Grimorios. También se gana en los premios de Mazmorra y Jefe semanal.'},
 };
 const usd=t=>(t/CFG.tokens.perUsd).toLocaleString('es-ES',{minimumFractionDigits:t%CFG.tokens.perUsd?2:0,maximumFractionDigits:2})+' $';
-const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverPrice()*n)} oro`:`${fmt(G.shopPrice(k)*n)} tokens`;
+const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverCost(n))} oro`:`${fmt(G.shopPrice(k)*n)} tokens`;
 // ¿Se puede pagar con tokens? Hasta tener Telegram Stars no se pueden comprar: los botones en tokens salen como "Próximamente"
 // (salvo en local con herramientas de prueba o si el jugador ya tiene tokens, p. ej. ganados)
 const tokOpen=()=>!!(CFG.devTools||CFG.tokens.open||G.tokens()>0);
 const soon='<span class="pill">Próximamente</span>';
-function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name}</div>${k==='silver'?`<div class="s">Quedan ${G.silverLeft()} hoy</div>`:''}</div>
+function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name}</div>${k==='silver'?`<div class="s">${silverNote()}</div>`:''}</div>
   <div class="acts"><button class="btn sm" data-act="${it.info?'info':'shopInfo'}" data-k="${k}">Info</button>${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
 function tabShop(){
   const today=G.dayKey();
@@ -416,7 +416,9 @@ function tabShop(){
     <div class="chest"><div><div class="cn">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button>`:soon}</div></div>`;
   return `<section class="panel"><h3>Tienda</h3>${head}${body}</section>`;
 }
-function maxBuy(k){ return k==='silver'?Math.min(G.silverLeft(),Math.floor(S.gold/G.silverPrice())):Math.floor(G.tokens()/G.shopPrice(k)) }
+// plata: límite al día (si lo hay) o precio que sube con cada compra del día
+const silverNote=()=>Number.isFinite(G.silverLeft())?`Quedan ${G.silverLeft()} hoy`:CFG.chests.silver.step?'El precio sube con cada compra del día':'Sin límite';
+function maxBuy(k){ return k==='silver'?G.silverMax():Math.floor(G.tokens()/G.shopPrice(k)) }
 function buyModal(){
   const k=buyCtx.k, it=SHOP[k], n=buyCtx.n, mx=maxBuy(k), ok=n>=1&&n<=mx;
   showModal(`<h3>${it.name}</h3>
@@ -424,7 +426,7 @@ function buyModal(){
       <input type="number" id="buyQty" aria-label="Cantidad" min="1" max="${mx}" value="${n}" style="width:80px;text-align:center;font-size:16px;padding:8px">
       <button class="btn" data-act="qty" data-v="1" aria-label="Uno más">+</button></div>
     <div class="ctrl">${[1,5,10].map(v=>`<button class="btn sm" data-act="qtyset" data-v="${v}">${v}</button>`).join('')}<button class="btn sm" data-act="qtyset" data-v="${Math.max(1,mx)}">Máx. (${mx})</button></div>
-    <div class="loot"><div><span>Total</span><b id="buyTotal">${priceTxt(k,n)}</b></div><div><span>Tienes</span><b>${k==='silver'?fmt(S.gold)+' oro':fmt(G.tokens())+' tokens'}</b></div>${k==='silver'?`<div><span>Quedan hoy</span><b>${G.silverLeft()}</b></div>`:''}</div>
+    <div class="loot"><div><span>Total</span><b id="buyTotal">${priceTxt(k,n)}</b></div><div><span>Tienes</span><b>${k==='silver'?fmt(S.gold)+' oro':fmt(G.tokens())+' tokens'}</b></div>${k==='silver'&&Number.isFinite(G.silverLeft())?`<div><span>Quedan hoy</span><b>${G.silverLeft()}</b></div>`:''}</div>
     ${mx<1?`<p class="hint">${k==='silver'&&!G.silverLeft()?'Ya compraste los de hoy.':k==='silver'?'Oro insuficiente.':'Tokens insuficientes.'}</p>`:''}
     <div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="buyConfirm" id="buyOk" ${ok?'':'disabled'}>Comprar</button></div>`);
 }
