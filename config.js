@@ -70,7 +70,29 @@ const CFG = {
   // Tokens = dinero: 100 tokens = 1 $. Dos saldos: comprados (no se retiran) y ganados en los pools (se pueden retirar).
   // Al gastar se usan primero los comprados. Compras y retiros SIMULADOS hasta que haya servidor y pasarela de pago.
   // open: se pueden comprar tokens (poner a true al conectar Telegram Stars); mientras, lo que se paga con tokens sale "Próximamente"
-  tokens:{perUsd:100, open:false, packs:[100,500,1000,2500], withdraw:{fee:0.15, min:100}}, // retiro: comisión 15 %, mínimo 100 (1 $)
+  tokens:{perUsd:100, open:true, packs:[100,500,1000,2500], withdraw:{fee:0.15, min:100}}, // retiro: solo en pruebas locales (desactivado en Telegram)
+  // Misiones diarias (se renuevan cada día): cada una da oro (minutos de farmeo de tu récord) y experiencia del pase
+  missions:{list:[
+      {k:'kills',n:300,t:'Derrota 300 enemigos'},
+      {k:'chests',n:5,t:'Abre 5 cofres'},
+      {k:'upgrade',n:10,t:'Compra 10 mejoras'},
+      {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal'},
+      {k:'ad',n:1,t:'Mira 1 anuncio'}],
+    goldMin:10, xp:20},
+  // Calendario de 7 días: un premio por cada día que entras (no hace falta seguidos); tras el 7.º vuelve a empezar
+  calendar:[{gold:30},{silver:2},{ess:1},{silver:3},{ev:2},{silver:5},{mode:1}],
+  // Pase de temporada: 30 días, 30 niveles de 100 XP (las misiones dan 100 XP al día). Línea gratis y línea de pago (Stars)
+  pass:{days:30, levels:30, xp:100},
+  // Ofertas en el momento justo (se pagan con Stars; duran 'dur' horas y no vuelven a salir hasta pasadas 'cool' horas)
+  //  wall: llevas 'hours' horas sin superar tu récord · evo: tienes el nivel para evolucionar pero te faltan materiales · inv: inventario lleno
+  offers:{dur:24, cool:72,
+    wall:{stars:100, t:'Rompe el muro', b:{mode:3,silver:10}, hours:4},
+    evo:{stars:100, t:'Pack de evolución', b:{ess:3,ev:12}},
+    inv:{stars:100, t:'Inventario +25', inv:25, max:2}},
+  // Pagos con Telegram Stars (función "pay" del servidor; el precio que manda es el del servidor). 100 tokens = 50 Stars.
+  stars:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/pay', perToken:0.5,
+    first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez
+    pass:{stars:250}},
   startWeapon:'C',
   // Grimorios: 2 por clase; se desbloquean donando oro (horas de farmeo de tu récord), esencias y emblemas, o se compran con tokens.
   // El 2.º cuesta el doble. Suben de nivel contigo (nivel 1 al desbloquearlo). En el nivel 'skillLvl' dan su efecto

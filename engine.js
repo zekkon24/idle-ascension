@@ -25,7 +25,7 @@ function createGame(opts){
   const on=(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn)};
   const emit=(ev,data)=>{(handlers[ev]||[]).forEach(fn=>fn(data))};
   // Acciones importantes para la base de datos (la interfaz las envía al servidor): track {type, ...datos}
-  const track=(type,data)=>emit('track',{type,...(data||{})});
+  const track=(type,data)=>{ emit('track',{type,...(data||{})}); misHook(type,data||{}); };
 
   /* ---------- estado ---------- */
   let S=null, B=null, HS=null;
@@ -227,7 +227,7 @@ function createGame(opts){
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
   }
   function onKill(){
-    S.kills++;
+    if(!S.daily||S.daily.d!==dayKey()) daily(); S.kills++;   // el día de las misiones empieza con el primer enemigo
     const m=B.boss?CFG.econ.bossGold:3/B.count; // el oro por oleada no sube con más enemigos
     const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales y cofres)
     addXp(xpAt(S.fase)*m*heroStats().xpMult);
@@ -241,7 +241,7 @@ function createGame(opts){
   function faseClear(){
     const f=S.fase; S.wave=1;
     if(f===S.best+1){
-      S.best=f;
+      S.best=f; S.bestAt=nowFn();   // para la oferta 'rompe el muro'
       if(f%10===0){ addLoot({wood:1,scrap:bossScrap(f,false)});                  // los jefes ya no dan tokens (los tokens son dinero)
         if(!S.mode&&CFG.matDrop&&(CFG.matDrop.sure||[]).includes(f)) addLoot({mat:1}); // élite 50 y 100: 1 esencia segura
         const mat=rollMat(f);
@@ -349,7 +349,7 @@ function createGame(opts){
   function endEvent(){
     if(!B||!B.event) return null;
     const res=B.kind==='boss'?wbFinish(B.dmg,B.hp<=0):finishRun(B.kills,B.hp<=0);
-    B=null; save(); emit('eventEnd',res); startWave(); emit('change'); return res;
+    B=null; misBump('event',1); save(); emit('eventEnd',res); startWave(); emit('change'); return res;
   }
   // Ranking con rivales simulados (hasta que haya servidor): su puntuación sigue la curva de un jugador medio con tus días de juego
   const RIV={};
@@ -517,7 +517,7 @@ function createGame(opts){
   const chestCount=type=>S.chestInv[type]||0;
   function openChest(type){ const r=pick(chestProbs(type)); const cls=CLASSES[Math.floor(rand()*CLASSES.length)]; return newItem(cls,r) }
   // Inventario: como mucho weapon.invMax armas (la equipada NO cuenta: va en el Equipo). Para abrir X cofres hacen falta X huecos libres.
-  const invMax=()=>CFG.weapon.invMax||Infinity;
+  const invMax=()=>(CFG.weapon.invMax||Infinity)+(S&&S.invBonus||0);   // + huecos comprados
   const invCount=()=>S.items.filter(x=>x.id!==S.equippedId).length;
   const invFree=()=>Math.max(0,invMax()-invCount());
   // all: true = todos, false = 1, número = ese número. Si no caben, no se abre ninguno (devuelve [] con .full)
@@ -676,9 +676,55 @@ function createGame(opts){
   // El servidor manda premios pendientes: 'silver' = cofres de plata, 'won' = tokens ganados (retirables)
   function applyRewards(list){ const out=[]; if(!S||!Array.isArray(list)) return out;
     for(const r of list){ const n=Math.floor(+r.amount); if(!(n>0)) continue;
-      if(r.kind==='silver') addChest('silver',Math.min(n,100)); else if(r.kind==='won') S.won+=n; else continue;
+      if(r.kind==='silver') addChest('silver',Math.min(n,100)); else if(r.kind==='won') S.won+=n;
+      else if(r.kind==='tokens'){ S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,stars:n*CFG.stars.perToken}); }   // compra con Stars
+      else if(r.kind==='first'){ const F=CFG.stars.first; if(S.firstBuy) continue; S.firstBuy=true; newItem(S.cls,F.r); S.tokens+=F.tokens; S.stats.deposited+=F.tokens; addChest('silver',F.silver); }
+      else if(r.kind==='pass'){ S.passPrem=Math.max(S.passPrem||0,n); }   // pase de pago de la temporada n
+      else if(r.kind==='offer_inv'){ S.invBonus=(S.invBonus||0)+CFG.offers.inv.inv; }
+      else if(/^offer_(wall|evo)$/.test(r.kind)){ giveBundle(CFG.offers[r.kind.slice(6)].b); }
+      else continue;
       out.push({kind:r.kind,amount:n,reason:r.reason}); }
     if(out.length){ track('reward',{list:out}); save(); emit('change'); } return out }
+
+  /* ---------- misiones diarias, calendario de 7 días y pase de temporada ---------- */
+  // Premios: {gold: minutos de farmeo de tu récord, silver, wood, mode, ess, ev, ticket, bossTicket}
+  function giveBundle(b){ if(!b) return; if(b.gold) S.gold+=Math.max(20,farmRate(Math.max(1,S.best)).g*60*b.gold);
+    for(const k of ['silver','wood','mode']) if(b[k]) addChest(k,b[k]);
+    if(b.ess) S.mats[0]=(S.mats[0]||0)+b.ess; if(b.ev) S.evm+=b.ev; if(b.ticket) S.tickets+=b.ticket; if(b.bossTicket) S.bossTickets+=b.bossTicket; }
+  // misiones del día: progreso guardado en S.daily (se renueva cada día; los enemigos se cuentan desde el inicio del día)
+  function daily(){ const d=dayKey(); if(!S.daily||S.daily.d!==d) S.daily={d,k0:S.kills||0,p:{},c:{}}; return S.daily }
+  function misBump(k,n){ if(!S) return; const D=daily(); D.p[k]=(D.p[k]||0)+n }
+  function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1); else if(type==='ad') misBump('ad',1) }
+  function missions(){ const D=daily(); return CFG.missions.list.map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
+    return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!D.c[m.k]} }) }
+  function claimMission(k){ const m=missions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions;
+    daily().c[k]=true; giveBundle({gold:M.goldMin}); passAddXp(M.xp); track('mission',{k}); save(); emit('change'); return {gold:true,xp:M.xp} }
+  const missionsReady=()=>missions().filter(m=>m.done&&!m.claimed).length;
+  // calendario: un premio por día que entras (no hace falta seguidos)
+  function calState(){ const c=S.cal||{n:0,last:null}, L=CFG.calendar; return {day:c.n%L.length+1,can:c.last!==dayKey(),list:L} }
+  function claimCal(){ const st=calState(); if(!st.can) return null; const b=CFG.calendar[st.day-1]; S.cal={n:(S.cal?S.cal.n:0)+1,last:dayKey()};
+    giveBundle(b); track('calendar',{day:st.day}); save(); emit('change'); return b }
+  // pase: temporadas de 30 días (las mismas para todos: día UTC / 30). Nivel = XP / 100. Premios gratis y de pago por nivel.
+  const passSeason=()=>Math.floor(dayKey()/CFG.pass.days);
+  function passS(){ const s=passSeason(); if(!S.pass||S.pass.s!==s) S.pass={s,xp:0,cf:{},cp:{}}; return S.pass }
+  function passAddXp(n){ passS().xp+=n }
+  function passReward(L,prem){ const top=CFG.pass.levels;
+    if(!prem) return L%5===0?{mode:1}:L%2===0?{silver:2}:{gold:30};
+    return L===top?{mode:5,ess:5,ev:10}:L%10===0?{mode:2,ess:2}:L%5===0?{ticket:1,bossTicket:1,ev:3}:L%2===0?{silver:3,ev:1}:{silver:3} }
+  function passState(){ const P=passS(), C=CFG.pass, lvl=Math.min(C.levels,Math.floor(P.xp/C.xp));
+    return {season:P.s,xp:P.xp,lvl,into:P.xp-lvl*C.xp,need:C.xp,prem:(S.passPrem||0)===P.s,daysLeft:C.days-dayKey()%C.days,cf:P.cf,cp:P.cp} }
+  function claimPass(L,prem){ const st=passState(); if(!(L>=1&&L<=st.lvl)) return null; if(prem&&!st.prem) return null;
+    const box=prem?passS().cp:passS().cf; if(box[L]) return null; box[L]=1; const b=passReward(L,prem); giveBundle(b); track('pass',{L,prem:!!prem}); save(); emit('change'); return b }
+  function claimPassAll(){ const st=passState(); let n=0; for(let L=1;L<=st.lvl;L++){ if(claimPass(L,false)) n++; if(st.prem&&claimPass(L,true)) n++; } return n }
+  const passReady=()=>{ const st=passState(); let n=0; for(let L=1;L<=st.lvl;L++){ if(!st.cf[L]) n++; if(st.prem&&!st.cp[L]) n++; } return n };
+
+  /* ---------- ofertas en el momento justo ---------- */
+  // offerCheck(): mira si toca una oferta nueva (la activa 24 h) y la devuelve para que la pantalla la enseñe
+  function offerCheck(){ if(!S||(B&&B.event)) return null; const O=CFG.offers, t=nowFn(); S.offers=S.offers||{}; if(!S.bestAt) S.bestAt=t;
+    const want={ wall:t-S.bestAt>O.wall.hours*3600e3, evo:evoLvlOk()&&!canEvolve(), inv:invFree()===0&&(S.invBonus||0)<O.inv.inv*O.inv.max };
+    for(const k in want){ const o=S.offers[k]||{}; if(want[k]&&!(o.until>t)&&!(o.next>t)){ S.offers[k]={until:t+O.dur*3600e3,next:t+O.cool*3600e3}; save(); track('offer',{k}); return k } }
+    return null }
+  const activeOffers=()=>{ const t=nowFn(); return Object.entries(S&&S.offers||{}).filter(([k,o])=>o.until>t).map(([k,o])=>({k,left:o.until-t,...CFG.offers[k]})) };
 
   /* ---------- ajustes y pruebas ---------- */
   function setOpt(k,v){ S.opt=S.opt||{}; S.opt[k]=v; emit('change') }
@@ -701,7 +747,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, inEvent, evPhase, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

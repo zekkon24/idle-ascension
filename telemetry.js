@@ -5,7 +5,7 @@
 (function(root){
 'use strict';
 const myId=()=>{ const tg=root.Telegram&&root.Telegram.WebApp, u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user; return u&&u.id||null };
-const api={refs:null, onReward:null, onConflict:null, attach, inviteLink, canSync, loadRemote, startSync, myId, drain:null, handle:null, requeue:null};
+const api={refs:null, onReward:null, onConflict:null, attach, inviteLink, canSync, loadRemote, startSync, myId, drain:null, handle:null, requeue:null, canPay, buyStars, setCanWrite, poke:null};
 /* ---------- partida en el servidor ----------
    Al entrar se descarga la partida (y se comprueba la cuenta de Telegram). Mientras juegas se sube cada 'saveEvery' s y al
    salir de la app. Cada partida tiene una versión (rev): solo se acepta guardar si partes de la última; si otro dispositivo la
@@ -39,6 +39,18 @@ function startSync(G,me){
   setTimeout(()=>push(false),2000);                           // primera subida al poco de entrar (con el evento 'open')
   api.push=push;
 }
+/* ---------- pagos con Telegram Stars ----------
+   El servidor (función "pay") crea la factura; Telegram la muestra (openInvoice). Al pagar, Telegram avisa al servidor,
+   que deja el premio en "rewards": el juego lo recoge enviando datos (se reintenta unos segundos por si tarda). */
+function canPay(CFG){ const tg=root.Telegram&&root.Telegram.WebApp; return !!(CFG.stars&&CFG.stars.url&&tgData()&&tg&&tg.openInvoice) }
+function buyStars(CFG,item,cb){ const tg=root.Telegram.WebApp;
+  fetchT(CFG.stars.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tgData(),item})},10000)
+    .then(r=>r.json()).then(j=>{ if(!j||!j.ok||!j.link) return cb(j&&j.error==='ya comprado'?'done':'error');
+      tg.openInvoice(j.link,st=>{ cb(st); if(st==='paid'&&api.poke) [1500,5000,12000,30000].forEach(ms=>setTimeout(api.poke,ms)); }) })
+    .catch(()=>cb('error')) }
+// el jugador deja que el bot le escriba (avisos): se guarda en el servidor
+function setCanWrite(CFG,value){ if(!(CFG.stars&&CFG.stars.url&&tgData())) return;
+  fetchT(CFG.stars.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tgData(),action:'canWrite',value:!!value})},10000).catch(()=>{}) }
 // Enlace de invitación del jugador: t.me/<bot>/<app>?startapp=ref_<id de Telegram> (null fuera de Telegram)
 function inviteLink(CFG){ const tg=root.Telegram&&root.Telegram.WebApp, u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user, base=(CFG.referral||{}).link;
   return u&&u.id&&base?base+'?startapp=ref_'+u.id:null }
@@ -76,6 +88,7 @@ function attach(G){
   G.on('boss',b=>add('boss',{f:b.f,mode:b.mode,elite:b.elite,mat:b.mat||0}));
   G.on('mode',m=>add('mode',{mode:m.mode}));
   G.on('eventEnd',r=>add(r.kind==='boss'?'wboss':'lab',r.kind==='boss'?{dmg:r.dmg,week:r.best,pos:r.pos,died:r.died}:{kills:r.kills,day:r.best,pos:r.pos,died:r.died}));
+  api.poke=()=>{ add('poke',{}); if(api.syncing&&api.push) api.push(true); else flush(); };   // recoger premios ya (tras pagar)
   add('open',{});                                              // abrir la app también se apunta (va en la primera subida de la partida)
   if(!canSync(CFG)) setTimeout(flush,1500);
   document.addEventListener('visibilitychange',()=>{ if(document.hidden&&!api.syncing) flush(true) });   // con partida en el servidor, la subida al salir los lleva

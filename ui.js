@@ -142,6 +142,7 @@ function updateHUD(){
   if(bt){ bt.hidden=!bl; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
+  const mf=$('#misFab'); if(mf){ const n=G.missionsReady()+(G.calState().can?1:0)+G.passReady(); setHTML(mf,n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(misOpen&&$('#misBox')) renderMis(); }
   const ab=$('#autoBtn'); if(ab){ab.setAttribute('aria-label',S.autoPush?'Avance automático activado':'Avance automático desactivado');ab.classList.toggle('off',!S.autoPush);ab.textContent=S.autoPush?'Auto: Sí':'Auto: No';ab.setAttribute('aria-pressed',S.autoPush)}
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
@@ -404,18 +405,35 @@ const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverCost(n))} oro`:`${fmt(G.shop
 // (salvo en local con herramientas de prueba o si el jugador ya tiene tokens, p. ej. ganados)
 const tokOpen=()=>!!(CFG.devTools||CFG.tokens.open||G.tokens()>0);
 const soon='<span class="pill">Próximamente</span>';
+// Botón de pago con Stars: en Telegram abre la factura; en local (pruebas) usa el botón de prueba 'dev'
+const canPay=()=>!!(window.Telemetry&&Telemetry.canPay(CFG));
+function payBtn(item,stars,dev){ return canPay()?`<button class="btn sm gold" data-act="starBuy" data-k="${item}">${fmt(stars)} ⭐</button>`
+  :CFG.devTools&&dev?`<button class="btn sm gold" ${dev}>${fmt(stars)} ⭐ (prueba)</button>`:'<span class="pill">Solo en Telegram</span>' }
+// Ofertas en el momento: qué incluye y cuánto le queda
+const offerTxt=o=>o.k==='inv'?`${o.inv} huecos más de inventario para siempre`:bundleTxt(o.b);
+const hleft=ms=>{ const h=Math.floor(ms/3600e3), m=Math.floor(ms%3600e3/60e3); return h?h+' h '+m+' min':m+' min' };
+function offerRows(){ return G.activeOffers().map(o=>`<div class="chest offer"><div><div class="cn">${o.t}</div><div class="s">${offerTxt(o)} · quedan ${hleft(o.left)}</div></div>
+  <div class="acts">${payBtn('offer_'+o.k,o.stars,`data-act="devOffer" data-k="${o.k}"`)}</div></div>`).join('') }
+function offerModal(k){ const o=G.activeOffers().find(x=>x.k===k); if(!o) return;
+  const why={wall:'¿Atascado? Rompe el muro con más cofres.',evo:'Te faltan materiales para evolucionar.',inv:'Tu inventario está lleno.'}[k];
+  later(()=>showModal(`<h3>${o.t}</h3><p class="hint">${why}</p><div class="chest offer"><div><div class="cn">${offerTxt(o)}</div><div class="s">Oferta por ${CFG.offers.dur} h</div></div>
+    <div class="acts">${payBtn('offer_'+k,o.stars,`data-act="devOffer" data-k="${k}"`)}</div></div><button class="btn" data-act="close">Ahora no</button>`)) }
+// Oferta de bienvenida: una sola vez
+function firstOfferRow(){ const F=CFG.stars.first; if(S.firstBuy) return '';
+  return `<div class="chest offer"><div><div class="cn">Oferta de bienvenida</div><div class="s">Arma ${CFG.rarName[F.r]} de tu clase + ${F.tokens} tokens + ${F.silver} cofres de plata · solo una vez</div></div>
+    <div class="acts">${payBtn('first',F.stars,'data-act="devFirst"')}</div></div>` }
 function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name} <button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button></div>${k==='silver'?`<div class="s">${silverNote()}</div>`:''}</div>
   <div class="acts">${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
 function tabShop(){
   const today=G.dayKey();
   const head=`<div class="fchips" role="tablist">${[['cofres','Cofres'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
   let body='';
-  if(shopView==='cofres') body=shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket')+shopRow('ess')+shopRow('ev');
-  if(shopView==='tokens') body=`<div class="loot"><div><span>Comprados</span><b>${fmt(S.tokens)}</b></div><div><span>Ganados (retirables)</span><b>${fmt(S.won)}</b></div></div>
-    ${CFG.devTools?`${CFG.tokens.packs.map(n=>`<div class="chest"><div><div class="cn">${fmt(n)} tokens</div></div><div class="acts"><button class="btn sm gold" data-act="tokBuy" data-k="${n}">${usd(n)}</button></div></div>`).join('')}
-    <div class="ctrl"><button class="btn sm" data-act="wdAsk" ${S.won>=CFG.tokens.withdraw.min?'':'disabled'}>Retirar ganados</button></div>
-    <p class="hint">${CFG.tokens.perUsd} tokens = 1 $. Se gastan primero los comprados. Los ganados se pueden retirar (mínimo ${fmt(CFG.tokens.withdraw.min)}, comisión ${Math.round(CFG.tokens.withdraw.fee*100)} %). Compras y retiros de prueba (solo en local).</p>`
-    :`<div class="mcard lock"><div class="ctrl" style="justify-content:space-between"><b>Comprar tokens</b><span class="pill">Próximamente</span></div><span class="s">${CFG.tokens.perUsd} tokens = 1 $. Pronto podrás comprarlos con Telegram Stars.</span></div>`}`;
+  if(shopView==='cofres') body=offerRows()+shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket')+shopRow('ess')+shopRow('ev');
+  if(shopView==='tokens') body=`<div class="loot"><div><span>Tus tokens</span><b>${fmt(G.tokens())}</b></div></div>
+    ${firstOfferRow()}
+    ${CFG.tokens.packs.map(n=>`<div class="chest"><div><div class="cn">${fmt(n)} tokens</div></div><div class="acts">${payBtn('t'+n,n*CFG.stars.perToken,`data-act="tokBuy" data-k="${n}"`)}</div></div>`).join('')}
+    ${CFG.devTools?`<div class="ctrl"><button class="btn sm" data-act="wdAsk" ${S.won>=CFG.tokens.withdraw.min?'':'disabled'}>Retirar ganados (prueba)</button></div>`:''}
+    <p class="hint">Se pagan con Telegram Stars ⭐.</p>`;
   if(shopView==='subs') body=`
     <div class="chest"><div><div class="cn">Tarjeta mensual</div><div class="s">+${Math.round(CFG.cardGold*100)} % oro · 30 días${G.hasCard()?' · quedan '+(S.cardUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="card">${fmt(CFG.cardPrice)} tokens</button>`:soon}</div></div>
     <div class="chest"><div><div class="cn">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button>`:soon}</div></div>`;
@@ -432,7 +450,7 @@ function buyModal(){
       <button class="btn" data-act="qty" data-v="1" aria-label="Uno más">+</button></div>
     <div class="ctrl">${[1,5,10].map(v=>`<button class="btn sm" data-act="qtyset" data-v="${v}">${v}</button>`).join('')}<button class="btn sm" data-act="qtyset" data-v="${Math.max(1,mx)}">Máx. (${mx})</button></div>
     <div class="loot"><div><span>Total</span><b id="buyTotal">${priceTxt(k,n)}</b></div><div><span>Tienes</span><b>${k==='silver'?fmt(S.gold)+' oro':fmt(G.tokens())+' tokens'}</b></div>${k==='silver'&&Number.isFinite(G.silverLeft())?`<div><span>Quedan hoy</span><b>${G.silverLeft()}</b></div>`:''}</div>
-    ${mx<1?`<p class="hint">${k==='silver'&&!G.silverLeft()?'Ya compraste los de hoy.':k==='silver'?'Oro insuficiente.':'Tokens insuficientes.'}</p>`:''}
+    ${mx<1?`<p class="hint">${k==='silver'&&!G.silverLeft()?'Ya compraste los de hoy.':k==='silver'?'Oro insuficiente.':'Tokens insuficientes. <button class="btn sm gold" data-act="goTokens">Conseguir tokens</button>'}</p>`:''}
     <div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="buyConfirm" id="buyOk" ${ok?'':'disabled'}>Comprar</button></div>`);
 }
 function doBuy(){
@@ -539,6 +557,39 @@ function tabBoss(){
 /* ---------- potenciadores por anuncios ---------- */
 const mmss=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 let boostModalOpen=false, adTimer=null;
+/* ---------- misiones, calendario y pase ---------- */
+let misOpen=false, misView='mis', misKey='';
+// avisos del bot: Telegram pide permiso al jugador (requestWriteAccess) y el servidor lo apunta
+const canNotify=()=>!!(TG&&TG.requestWriteAccess&&window.Telemetry&&Telemetry.canPay(CFG));
+function askNotify(){ if(!canNotify()) return; S.opt=S.opt||{}; S.opt.askW=1;
+  try{ TG.requestWriteAccess(ok=>{ S.opt.notify=!!ok; G.save(); Telemetry.setCanWrite(CFG,!!ok); toast(ok?'Avisos activados':'Sin avisos'); if(tab==='dev') renderTab(); }) }catch(e){} }
+function notifyOffer(){ if(!canNotify()||(S.opt&&S.opt.askW)) return; S.opt=S.opt||{}; S.opt.askW=1; G.save();
+  later(()=>showModal(`<h3>¿Te avisamos?</h3><p class="hint">El bot te escribe cuando tu héroe llena el tiempo sin conexión, para que no pierdas oro.</p>
+    <div class="ctrl"><button class="btn" data-act="close">No, gracias</button><button class="btn gold" data-act="notifyYes">Sí, avísame</button></div>`)) }
+const bundleTxt=b=>Object.entries(b).map(([k,v])=>k==='gold'?`oro de ${v} min`:({silver:'plata',wood:'madera',mode:'cofre de modo',ess:'esencia',ev:'emblema',ticket:'ticket Mazmorra',bossTicket:'ticket Jefe'})[k]+(v>1?' ×'+v:'')).join(' + ');
+function renderMis(force){
+  const P=G.passState(), C=G.calState(), M=G.missions();
+  const key=misView+JSON.stringify([M.map(m=>[m.prog,m.claimed]),C.can,C.day,P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length]);
+  if(!force&&key===misKey&&$('#misBox')) return; misKey=key;
+  const chips=`<div class="fchips">${[['mis','Diarias',G.missionsReady()],['cal','Calendario',C.can?1:0],['pass','Pase',G.passReady()]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
+  let body='';
+  if(misView==='mis') body=M.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · oro + ${CFG.missions.xp} XP del pase</span></div>
+      ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="misClaim" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('')+'<p class="hint">Se renuevan cada día.</p>';
+  if(misView==='cal') body=`<div class="calg">${C.list.map((b,i)=>{ const d=i+1, got=d<C.day||(d===C.day&&!C.can), now=d===C.day&&C.can;
+      return `<div class="cald${got?' got':''}${now?' now':''}"><span class="s">Día ${d}</span><b>${bundleTxt(b)}</b>${got?'<span class="rmax">✓</span>':''}</div>` }).join('')}</div>
+    <button class="btn gold" data-act="calClaim" ${C.can?'':'disabled'}>${C.can?'Recoger día '+C.day:'Vuelve mañana'}</button>`;
+  if(misView==='pass'){ const L=CFG.pass.levels, rows=[]; for(let l=1;l<=L;l++){ const open=l<=P.lvl;
+      const cell=(prem)=>{ const got=prem?P.cp[l]:P.cf[l], lock=prem&&!P.prem; return `<div class="pc${got?' got':''}${open&&!got&&!lock?' can':''}${lock?' lock':''}">${bundleTxt(G.passReward(l,prem))}${got?' ✓':''}</div>` };
+      rows.push(`<div class="prow${open?' open':''}"><span class="pl">${l}</span>${cell(false)}${cell(true)}</div>`) }
+    body=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${P.lvl}/${L}</b><span class="s">Quedan ${P.daysLeft} días</span></div>
+      <div class="rbar"><i style="width:${P.lvl>=L?100:P.into/P.need*100}%;background:var(--gold)"></i></div><span class="s">${P.lvl>=L?'¡Pase completo!':P.into+'/'+P.need+' XP · las misiones dan XP'}</span>
+      ${P.prem?'':`<div class="chest offer"><div><div class="cn">Pase de pago</div><div class="s">Desbloquea la columna dorada de esta temporada</div></div><div class="acts">${payBtn('pass',CFG.stars.pass.stars,'data-act="devPass"')}</div></div>`}
+      <div class="prow ph"><span class="pl">Nv</span><div class="pc">Gratis</div><div class="pc">De pago</div></div>
+      <div class="plist">${rows.join('')}</div>
+      <button class="btn gold" data-act="passAll" ${G.passReady()?'':'disabled'}>Recoger todo (${G.passReady()})</button>`; }
+  const html=`<h3>Misiones</h3>${chips}<div id="misBox" class="mlist">${body}</div><button class="btn" data-act="misClose">Cerrar</button>`;
+  if($('#misBox')&&modalOpen()) setHTML($('#modal .box'),html); else showModal(html);
+}
 const adTimerOn=()=>adTimer!==null;
 function boostModal(){
   boostModalOpen=true;
@@ -649,7 +700,7 @@ function spinDone(){
 /* ---------- Ajustes ---------- */
 function tabDev(){
   const on=battery(), ad=!!(S.opt&&S.opt.autoDis);
-  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
+  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
   ${inviteRow()}
   <div class="row"><div><div class="t">Desmontar Comunes de otras clases</div><div class="s">Al abrir cofres, directamente a chatarra</div></div><div class="acts"><button class="btn sm${ad?' gold':''}" data-act="autoDis" aria-pressed="${ad}">${ad?'Activado':'Desactivado'}</button></div></div></section>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
@@ -663,7 +714,11 @@ function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG
   return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">Tu amigo recibe ${R.giftSilver} cofre de plata. Tú, ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}${R.buyPct?` y el ${Math.round(R.buyPct*100)} % de sus compras en tokens`:''}.</div></div>
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
 const REW_T={invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
-if(window.Telemetry) Telemetry.onReward=list=>later(()=>showModal(`<h3>¡Premio por invitar!</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||'Premio'}</span><b>+${fmt(r.amount)} ${r.kind==='silver'?'cofre'+(r.amount>1?'s':'')+' de plata':'tokens'}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`));
+// premios del servidor: por invitar o compras con Stars
+const rewTxt=r=>r.kind==='silver'?`+${fmt(r.amount)} cofre${r.amount>1?'s':''} de plata`:r.kind==='tokens'||r.kind==='won'?`+${fmt(r.amount)} tokens`
+  :r.kind==='first'?`Arma ${CFG.rarName[CFG.stars.first.r]} + ${CFG.stars.first.tokens} tokens + ${CFG.stars.first.silver} platas`:r.kind==='pass'?'Pase de pago activado':'';
+if(window.Telemetry) Telemetry.onReward=list=>{ const paid=list.some(r=>/^stars:/.test(r.reason||'')); if(paid) haptic('ok');
+  later(()=>showModal(`<h3>${paid?'¡Compra recibida!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
 function renderSelect(){
   $('#nav').hidden=true; $('#upFab').hidden=true; upOpen=false;
   $('#app').classList.remove('home');
@@ -692,6 +747,15 @@ const ACT={
   nameSave:()=>{ const n=($('#nameIn')||{}).value; if(!G.setName(n)) return toast('Escribe tu nombre (3-16 letras)'); closeModal(); toast('Nombre guardado'); updateHUD(); if(tab==='dev') renderTab(); },
   upOpen:()=>showUpgrades(),
   upClose:()=>{upOpen=false;closeModal()},
+  misOpen:()=>{ misOpen=true; misView=G.calState().can?'cal':G.missionsReady()||!G.passReady()?'mis':'pass'; renderMis(true) },
+  misClose:()=>{ misOpen=false; closeModal() },
+  misView:b=>{ misView=b.dataset.v; renderMis(true) },
+  misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast('+ oro y '+CFG.missions.xp+' XP del pase'); } renderMis(true) },
+  calClaim:()=>{ const r=G.calState().day, b=G.claimCal(); if(b){ haptic('ok'); toast('Día '+r+': '+bundleTxt(b)); } renderMis(true); if(b) notifyOffer() },
+  notifyYes:()=>{ closeModal(); askNotify() },
+  notifyAsk:()=>askNotify(),
+  passAll:()=>{ const n=G.claimPassAll(); if(n){ haptic('ok'); toast('+'+n+' premios del pase'); } renderMis(true) },
+  devPass:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'pass',amount:G.passState().season,reason:'stars:pass'}]); renderMis(true) },
   autoToggle:()=>{G.setAuto(!S.autoPush);toast(S.autoPush?'Avance automático activado':'Avance automático desactivado: te quedas farmeando');updateHUD()},
   evoOpen:()=>evoModal(),
   modeGo:()=>{ if(G.inEvent()) return toast('Termina el evento primero'); const nx=CFG.modes[S.mode+1].name;
@@ -744,6 +808,11 @@ const ACT={
   qtyset:b=>{buyCtx.n=Math.max(1,Math.min(maxBuy(buyCtx.k)||1,+b.dataset.v));buyModal()},
   buyConfirm:()=>doBuy(),
   sub:(b,k)=>{ if(!G.buy(k,1)) return toast('Tokens insuficientes'); toast(k==='card'?'Tarjeta mensual activada':'VIP activado'); renderTab() },
+  starBuy:(b,k)=>{ b.disabled=true; Telemetry.buyStars(CFG,k,st=>{ b.disabled=false;
+      if(st==='paid') toast('¡Pago hecho! Recibiendo tu compra…'); else if(st==='done') toast('Ya lo compraste'); else if(st==='error') toast('No se pudo abrir el pago. Prueba otra vez.'); }) },
+  devOffer:(b,k)=>{ if(!CFG.devTools) return; closeModal(); G.applyRewards([{kind:'offer_'+k,amount:1,reason:'stars:offer_'+k}]); toast('Oferta (prueba)'); renderTab() },
+  devFirst:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'first',amount:1,reason:'stars:first'}]); toast('Oferta de bienvenida (prueba)'); renderTab() },
+  goTokens:()=>{ closeModal(); tab='shop'; shopView='tokens'; renderTab() },
   tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k)} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
   grimUnlock:(b,k)=>{ const r=G.grimUnlock(k); toast(r.ok?'¡Grimorio desbloqueado!':'Te faltan recursos'); renderTab() },
@@ -854,7 +923,7 @@ function draw(dt){
 }
 
 /* ---------- bucle ---------- */
-let last=performance.now(), hudT=0, drawT=0;
+let last=performance.now(), hudT=0, drawT=0, offT=0;
 function loop(now){
   const real=Math.min(0.25,(now-last)/1000); last=now;
   if(S&&G.B&&!window.GAME_PAUSED){                        // en mantenimiento o actualizando, el juego se para
@@ -865,6 +934,7 @@ function loop(now){
     if(tab!=='up'){fx.shots.length=0;fx.floats.length=0}
     drawT+=real; if(!battery()||drawT>=0.1){draw(drawT);drawT=0}
     hudT+=real; if(hudT>0.25){hudT=0;updateHUD()}
+    offT+=real; if(offT>5){ offT=0; const k=G.offerCheck(); if(k) offerModal(k); }
     syncBack();
   }
   requestAnimationFrame(loop);
