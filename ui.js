@@ -13,6 +13,7 @@ const storage={
 const G=createGame({cfg:window.CFG,storage});
 window.G=G; // útil para depurar desde la consola
 if(window.Telemetry) Telemetry.attach(G); // envío a la base de datos (solo dentro de Telegram y con servidor)
+if(window.Control) Control.attach(G);     // mantenimiento y actualizaciones obligatorias (solo en la versión publicada)
 const CFG=G.CFG, R=G.R, CLASSES=G.CLASSES;
 let S=null; // alias de G.S (se actualiza al cargar, crear o borrar partida)
 const syncS=()=>{S=G.S};
@@ -769,7 +770,7 @@ function draw(dt){
 let last=performance.now(), hudT=0, drawT=0;
 function loop(now){
   const real=Math.min(0.25,(now-last)/1000); last=now;
-  if(S&&G.B){
+  if(S&&G.B&&!window.GAME_PAUSED){                        // en mantenimiento o actualizando, el juego se para
     G.tickBoost(real*1000); // el ×2 solo se gasta mientras se juega
     let sim=real*(S.speed||1)*G.speedMult();
     while(sim>0){const d=Math.min(0.02,sim);G.step(d);sim-=d}
