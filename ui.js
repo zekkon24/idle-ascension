@@ -295,13 +295,18 @@ function tabInv(){
     if(S.won>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--good)"></i> Tokens ganados (retirables)</span><span class="meta"><b>${fmt(S.won)}</b></span></div></div>`);
     return `<section class="panel"><h3>Inventario</h3>${head}${rows.join('')||'<p class="hint">Vacío.</p>'}</section>`;
   }
-  const statOpts=Object.entries(CFG.sec).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
+  // solo salen las opciones que tienes (rarezas, clases y stats de tus armas); si la elegida ya no existe, vuelve a "todas"
+  const have=S.items.filter(x=>x.id!==S.equippedId), hasStat=k=>have.some(x=>x.sec.some(y=>y.k===k));
+  if(F.rar!=='all'&&!have.some(x=>x.r===F.rar)) F.rar='all';
+  if(F.cls!=='all'&&!have.some(x=>x.cls===F.cls)) F.cls='all';
+  if(F.stat!=='any'&&!hasStat(F.stat)) F.stat='any';
+  const statOpts=Object.entries(CFG.sec).filter(([k])=>hasStat(k)).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
   return `<section class="panel"><h3>Armas (${G.invCount()}/${G.invMax()})</h3>
     ${disRarityBox()}
     <div class="ctrl" id="fHead">${fHead()}</div>
     ${filtersOpen?`<div class="filters fpanel">
-      <div class="frow"><select id="fRar" aria-label="Rareza">${['all',...R].map(r=>`<option value="${r}" ${F.rar===r?'selected':''}>${r==='all'?'Todas las rarezas':CFG.rarName[r]}</option>`).join('')}</select>
-        <select id="fCls" aria-label="Clase">${['all',...clsAZ()].map(c=>`<option value="${c}" ${F.cls===c?'selected':''}>${c==='all'?'Todas las clases':clsLabel(c)}</option>`).join('')}</select></div>
+      <div class="frow"><select id="fRar" aria-label="Rareza">${['all',...R.filter(r=>have.some(x=>x.r===r))].map(r=>`<option value="${r}" ${F.rar===r?'selected':''}>${r==='all'?'Todas las rarezas':CFG.rarName[r]}</option>`).join('')}</select>
+        <select id="fCls" aria-label="Clase">${['all',...clsAZ().filter(c=>have.some(x=>x.cls===c))].map(c=>`<option value="${c}" ${F.cls===c?'selected':''}>${c==='all'?'Todas las clases':clsLabel(c)}</option>`).join('')}</select></div>
       <div class="frow"><label for="fStat">Stat</label><select id="fStat"><option value="any">Cualquiera</option>${statOpts}</select>
         <label for="fMin">entre</label><input type="number" id="fMin" inputmode="decimal" placeholder="mín %" value="${esc(F.min)}">
         <label for="fMax">y</label><input type="number" id="fMax" inputmode="decimal" placeholder="máx %" value="${esc(F.max)}"></div>
@@ -327,9 +332,10 @@ function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(),
 const clsAZ=()=>[...CLASSES].sort((a,b)=>clsLabel(a).localeCompare(clsLabel(b),'es')); // Arquero, Asesino, Clérigo, Guerrero, Mago
 let disCls=null; // filtro de clase al desmontar por rareza (null = todas)
 const RAR_PL={C:'Comunes',U:'Poco comunes',R:'Raras',E:'Épicas',L:'Legendarias',M:'Míticas'};
-function disRarityBox(){ const btns=R.map(r=>{ const n=G.byRarity(r,disCls).length; return n?`<button class="btn sm" data-act="disRar" data-k="${r}" style="color:var(--r${r})">${RAR_PL[r]} (${n})</button>`:'' }).join('');
+function disRarityBox(){ if(disCls&&!R.some(r=>G.byRarity(r,disCls).length)) disCls=null; // la clase elegida ya no tiene armas: vuelve a Todas
+  const btns=R.map(r=>{ const n=G.byRarity(r,disCls).length; return n?`<button class="btn sm" data-act="disRar" data-k="${r}" style="color:var(--r${r})">${RAR_PL[r]} (${n})</button>`:'' }).join('');
   return `<div class="panel" style="padding:10px"><b>Desmontar por rareza</b>
-    <div class="ctrl"><select id="disClsSel" aria-label="Clase">${[null,...clsAZ()].map(c=>`<option value="${c||''}" ${disCls===c?'selected':''}>${c?clsLabel(c):'Todas las clases'}</option>`).join('')}</select>${btns||'<span class="s">Nada que desmontar.</span>'}</div>
+    <div class="ctrl"><select id="disClsSel" aria-label="Clase">${[null,...clsAZ().filter(c=>R.some(r=>G.byRarity(r,c).length))].map(c=>`<option value="${c||''}" ${disCls===c?'selected':''}>${c?clsLabel(c):'Todas las clases'}</option>`).join('')}</select>${btns||'<span class="s">Nada que desmontar.</span>'}</div>
     <p class="hint" style="margin:0">Tienes ${G.invCount()}/${G.invMax()} armas (la equipada no cuenta). Las bloqueadas con ★ no se desmontan.</p></div>` }
 function fHead(){ const active=(F.rar!=='all')+(F.cls!=='all')+(F.stat!=='any');
   return `<button class="btn sm${filtersOpen?' on':''}" data-act="ftoggle" aria-expanded="${filtersOpen}">Filtros${active?' ('+active+')':''}</button>${active?'<button class="btn sm" data-act="fclear">Quitar filtros</button>':''}` }
