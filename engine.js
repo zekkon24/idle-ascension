@@ -587,6 +587,14 @@ function createGame(opts){
   function claimOfflineBonus(){ const b=S.offBonus; if(!b) return 0; S.gold+=b; S.offBonus=null; const a=adsState(); a.n.off=(a.n.off||0)+1;
     S.stats.ads++; S.stats.adGold+=b; track('ad',{boost:'offline',gold:b}); emit('change'); return b }
 
+  /* ---------- premios del servidor (referidos) ---------- */
+  // El servidor manda premios pendientes: 'silver' = cofres de plata, 'won' = tokens ganados (retirables)
+  function applyRewards(list){ const out=[]; if(!S||!Array.isArray(list)) return out;
+    for(const r of list){ const n=Math.floor(+r.amount); if(!(n>0)) continue;
+      if(r.kind==='silver') addChest('silver',Math.min(n,100)); else if(r.kind==='won') S.won+=n; else continue;
+      out.push({kind:r.kind,amount:n,reason:r.reason}); }
+    if(out.length){ track('reward',{list:out}); save(); emit('change'); } return out }
+
   /* ---------- ajustes y pruebas ---------- */
   function setOpt(k,v){ S.opt=S.opt||{}; S.opt[k]=v; emit('change') }
   function dev(k){
@@ -615,7 +623,7 @@ function createGame(opts){
     // cofres y tienda
     chestProbs, addChest, chestCount, openChests, buy, shopPrice, silverPrice, silverLeft, tokens, spend, buyTokens, withdraw,
     // otros
-    applyOffline, claimOfflineBonus, offlineCap, offlineAdLeft, setOpt, dev,
+    applyOffline, claimOfflineBonus, offlineCap, offlineAdLeft, setOpt, dev, applyRewards,
     // anuncios
     adsState, watchAd, boostLeft, tickBoost, speedMult, boostUsesLeft, goldBoostHours, goldBoostValue,
   };

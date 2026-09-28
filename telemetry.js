@@ -4,6 +4,10 @@
    Solo funciona dentro de Telegram y si CFG.server.url tiene la dirección de la función "track". */
 (function(root){
 'use strict';
+const api={refs:null, onReward:null, attach, inviteLink};
+// Enlace de invitación del jugador: t.me/<bot>/<app>?startapp=ref_<id de Telegram> (null fuera de Telegram)
+function inviteLink(CFG){ const tg=root.Telegram&&root.Telegram.WebApp, u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user, base=(CFG.referral||{}).link;
+  return u&&u.id&&base?base+'?startapp=ref_'+u.id:null }
 function attach(G){
   const CFG=G.CFG, SV=CFG.server||{};
   const tg=root.Telegram&&root.Telegram.WebApp, initData=tg&&tg.initData;
@@ -24,7 +28,9 @@ function attach(G){
   function flush(keep){ clearTimeout(timer); timer=null; if(!queue.length) return; const events=queue; queue=[];
     const body=JSON.stringify({initData,snap:snap(),events});
     fetch(SV.url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep})
-      .then(r=>{ if(!r.ok&&r.status>=500) queue=events.concat(queue).slice(-200) })   // fallo del servidor: se reintenta con lo siguiente
+      .then(r=>{ if(!r.ok){ if(r.status>=500) queue=events.concat(queue).slice(-200); return null } return r.json() })   // fallo del servidor: se reintenta con lo siguiente
+      .then(j=>{ if(!j) return; if(typeof j.refs==='number') api.refs=j.refs;
+        const got=G.applyRewards(j.rewards); if(got.length&&api.onReward) api.onReward(got); })
       .catch(()=>{ queue=events.concat(queue).slice(-200) }); }
 
   G.on('track',e=>{ const {type,...d}=e; add(type,d) });
@@ -33,8 +39,8 @@ function attach(G){
   G.on('boss',b=>add('boss',{f:b.f,mode:b.mode,elite:b.elite,mat:b.mat||0}));
   G.on('mode',m=>add('mode',{mode:m.mode}));
   G.on('eventEnd',r=>add(r.kind==='boss'?'wboss':'lab',r.kind==='boss'?{dmg:r.dmg,week:r.best,pos:r.pos,died:r.died}:{kills:r.kills,day:r.best,pos:r.pos,died:r.died}));
-  add('open',{});                                              // abrir la app también se apunta
+  add('open',{}); setTimeout(flush,1500);                      // abrir la app también se apunta (y recoge premios pendientes), tras cargar la partida
   document.addEventListener('visibilitychange',()=>{ if(document.hidden) flush(true) });
 }
-root.Telemetry={attach};
+root.Telemetry=api;
 })(typeof window!=='undefined'?window:globalThis);

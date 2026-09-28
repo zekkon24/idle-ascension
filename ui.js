@@ -543,6 +543,7 @@ function spinDone(){
 function tabDev(){
   const on=battery(), ad=!!(S.opt&&S.opt.autoDis);
   return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
+  ${inviteRow()}
   <div class="row"><div><div class="t">Desmontar Comunes de otras clases</div><div class="s">Al abrir cofres, directamente a chatarra</div></div><div class="acts"><button class="btn sm${ad?' gold':''}" data-act="autoDis" aria-pressed="${ad}">${ad?'Activado':'Desactivado'}</button></div></div></section>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
   <div class="ctrl">Velocidad: ${[1,2,5,20].map(v=>`<button class="btn sm ${S.speed===v?'gold':''}" data-act="speed" data-v="${v}">×${v}</button>`).join('')}</div>
@@ -550,6 +551,12 @@ function tabDev(){
   </section>`:''}
 `;
 }
+// Invitar amigos: solo dentro de Telegram (hace falta el id del jugador y el enlace de la mini app)
+function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG.referral; if(!link) return '';
+  return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">Tu amigo recibe ${R.giftSilver} cofre de plata. Tú, ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase} y el ${Math.round(R.buyPct*100)} % de sus compras en tokens.</div></div>
+    <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
+const REW_T={invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
+if(window.Telemetry) Telemetry.onReward=list=>later(()=>showModal(`<h3>¡Premio por invitar!</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||'Premio'}</span><b>+${fmt(r.amount)} ${r.kind==='silver'?'cofre'+(r.amount>1?'s':'')+' de plata':'tokens'}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`));
 function renderSelect(){
   $('#nav').hidden=true; $('#upFab').hidden=true; upOpen=false;
   $('#app').classList.remove('home');
@@ -639,6 +646,11 @@ const ACT={
   sub:(b,k)=>{ if(!G.buy(k,1)) return toast('Tokens insuficientes'); toast(k==='card'?'Tarjeta mensual activada':'VIP activado'); renderTab() },
   tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k)} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
+  invShare:()=>{ const link=Telemetry.inviteLink(CFG), tg=window.Telegram&&Telegram.WebApp, txt='¡Juega conmigo a Idle Ascension!';
+    const url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(txt);
+    if(tg&&tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank') },
+  invCopy:()=>{ const link=Telemetry.inviteLink(CFG); const ok=()=>toast('Enlace copiado'), no=()=>toast(link);
+    try{ navigator.clipboard.writeText(link).then(ok,no) }catch(e){ no() } },
   wdGo:()=>{ const r=G.withdraw(S.won); closeModal(); toast(r.ok?`Retirados ${fmt(r.n)} tokens (prueba)`:'No se puede retirar'); renderTab(); },
   lock:b=>{const i=+b.dataset.i, it=G.findItem(forgeId); if(lockSel.includes(i)) lockSel=lockSel.filter(x=>x!==i); else if(it&&lockSel.length<G.maxLocks(it)) lockSel=[...lockSel,i]; else { toast('Máximo '+(it?G.maxLocks(it):0)+' bloqueo'+(it&&G.maxLocks(it)>1?'s':'')); return } renderTab()},
   ref:(b,k,id)=>doReforge(id,b.dataset.pay),
