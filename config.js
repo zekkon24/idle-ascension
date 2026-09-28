@@ -68,7 +68,8 @@ const CFG = {
   },
   // Tokens = dinero: 100 tokens = 1 $. Dos saldos: comprados (no se retiran) y ganados en los pools (se pueden retirar).
   // Al gastar se usan primero los comprados. Compras y retiros SIMULADOS hasta que haya servidor y pasarela de pago.
-  tokens:{perUsd:100, packs:[100,500,1000,2500], withdraw:{fee:0.15, min:100}}, // retiro: comisión 15 %, mínimo 100 (1 $)
+  // open: se pueden comprar tokens (poner a true al conectar Telegram Stars); mientras, lo que se paga con tokens sale "Próximamente"
+  tokens:{perUsd:100, open:false, packs:[100,500,1000,2500], withdraw:{fee:0.15, min:100}}, // retiro: comisión 15 %, mínimo 100 (1 $)
   startWeapon:'C',
   // Grimorios: 2 por clase; se desbloquean donando oro (horas de farmeo de tu récord), esencias y emblemas, o se compran con tokens.
   // El 2.º cuesta el doble. Suben de nivel contigo (nivel 1 al desbloquearlo). En el nivel 'skillLvl' dan su efecto
@@ -145,7 +146,7 @@ const CFG = {
   // Mantenimiento y actualizaciones obligatorias (control.js): la versión se mira en GitHub cada 'every' s; el mantenimiento, al abrir/volver a la app y, con la clave pública, al instante
   control:{every:300, maintEvery:15},
   supabase:{url:'https://xdtxdaywotkppzssrjni.supabase.co', key:'sb_publishable_60pnk9ALWaV_ks2oAJ7TnA_IFHSG5qH'}, // key: clave pública (publishable/anon) para el aviso en directo
-  server:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track', every:10, saveEvery:60}, // saveEvery: subir la partida cada 60 s // base de datos: dirección de la función "track" de Supabase (vacía = no se envía nada); envía como mucho cada 10 s
+  server:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track', every:10, saveEvery:120}, // saveEvery: subir la partida cada 2 min (lleva los eventos) // base de datos: dirección de la función "track" de Supabase (vacía = no se envía nada); envía como mucho cada 10 s
   devTools:false, // herramientas de prueba (velocidad, +oro, avanzar día…): poner a false al publicar en Telegram
   phaseCap:150, // cada modo tiene 150 fases; tras vencer la 150 y evolucionar se pasa al siguiente modo
   modes:[ // upPer: mejoras de Vida/Defensa que gana de media el jugador por fase en ese modo (números pequeños: baja el ataque enemigo; estimado, recalibrar al desbloquear)

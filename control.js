@@ -30,8 +30,9 @@ function attach(G){
     const r=+c.reiniciar||0; if(restartSeen===null) restartSeen=r; else if(r!==restartSeen) update(null,'El juego se va a reiniciar.') }
   // Para gastar poco: la versión se mira en GitHub (version.json, gratis) cada 'every' s; el estado de Supabase solo al abrir
   // y al volver a la app (y al instante por Realtime si hay clave pública). Con el juego en mantenimiento, se mira cada 'every' s.
-  const checkVersion=()=>fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>{ if(j&&j.v&&V!=='DEV'&&j.v!==V) update(j.v) }).catch(()=>{});
-  const checkControl=()=>{ if(SV.url) fetch(SV.url,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{ if(c&&c.now&&root.setServerTime) root.setServerTime(c.now); apply(c) }).catch(()=>{}) };
+  const checkVersion=()=>get('version.json?t='+Date.now(),8000).then(r=>r.json()).then(j=>{ if(j&&j.v&&V!=='DEV'&&j.v!==V) update(j.v) }).catch(()=>{});
+  const get=(u,ms)=>{ const a=root.AbortController?new AbortController():null, t=a&&setTimeout(()=>a.abort(),ms); return fetch(u,{cache:'no-store',signal:a&&a.signal}).finally(()=>t&&clearTimeout(t)) };
+  const checkControl=()=>{ if(SV.url) get(SV.url,8000).then(r=>r.ok?r.json():null).then(c=>{ if(c&&c.now&&root.setServerTime) root.setServerTime(c.now); apply(c) }).catch(()=>{}) };
   // al abrir: la pantalla de carga ya consultó el mantenimiento (BOOT_CONTROL) y la versión; si no, se consultan ahora
   if(root.BOOT_CONTROL){ const b=root.BOOT_CONTROL; root.BOOT_CONTROL=null; if(b.now&&root.setServerTime) root.setServerTime(b.now); apply(b) }
   else { checkVersion(); checkControl(); }

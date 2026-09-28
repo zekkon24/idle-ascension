@@ -11,18 +11,22 @@ const api={refs:null, onReward:null, onConflict:null, attach, inviteLink, canSyn
    salir de la app. Cada partida tiene una versión (rev): solo se acepta guardar si partes de la última; si otro dispositivo la
    cambió, hay conflicto y el juego recarga la más reciente. */
 const tgData=()=>{ const tg=root.Telegram&&root.Telegram.WebApp; return tg&&tg.initData||'' };
+// fetch con tiempo máximo: con mala conexión no se queda esperando para siempre
+function fetchT(url,opts,ms){ const c=root.AbortController?new AbortController():null, t=c&&setTimeout(()=>c.abort(),ms||10000);
+  return fetch(url,{...opts,signal:c&&c.signal}).finally(()=>t&&clearTimeout(t)) }
 function canSync(CFG){ return !!(CFG.server&&CFG.server.url&&tgData()) }
 function loadRemote(CFG){
-  return fetch(CFG.server.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tgData(),action:'load'})})
+  return fetchT(CFG.server.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tgData(),action:'load'})},8000)
     .then(r=>r.status===401?{error:'auth'}:r.ok?r.json():{error:'net'}).catch(()=>({error:'net'})) }
 function startSync(G,me){
-  const CFG=G.CFG, url=CFG.server.url, every=((CFG.server||{}).saveEvery||60)*1000; let busy=false, dead=false, last='', again=false;
+  const CFG=G.CFG, url=CFG.server.url, every=((CFG.server||{}).saveEvery||120)*1000; let busy=false, dead=false, last='', again=false;
+  api.syncing=true;                                           // los eventos viajan con la partida (no hay envíos aparte)
   // La subida de la partida lleva también los eventos pendientes (una petición en vez de dos)
-  function push(keep){ const S=G.S; if(!S||dead) return; if(busy){ again=again||keep||true; return }
-    S.tgId=me; const save=JSON.stringify(S), ev=api.drain?api.drain():null; if(save===last&&!keep&&!ev) return;
-    const body=JSON.stringify({initData:tgData(),save:S,baseRev:S.srvRev||0,...(ev||{})}); busy=true;
+  function push(keep){ const S=G.S; if(!S||dead) return; if(busy){ if(keep) again=true; return }   // al salir con una subida en curso, se repite
+    S.tgId=me; const P=G.packed(), save=JSON.stringify(P), ev=api.drain?api.drain():null; if(save===last&&!keep&&!ev) return;
+    const body=JSON.stringify({initData:tgData(),save:P,baseRev:S.srvRev||0,...(ev||{})}); busy=true;
     const done=()=>{ busy=false; if(again){ again=false; push(true) } };   // si al salir había una subida en curso, se repite
-    fetch(url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep&&body.length<60000})
+    fetchT(url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep&&body.length<60000},15000)
       .then(r=>r.json().then(j=>({st:r.status,j}))).then(({st,j})=>{
         if(j&&j.now&&root.setServerTime) root.setServerTime(j.now);
         if(j&&j.ok&&j.rev){ G.S.srvRev=j.rev; last=save; G.save(); if(api.handle&&api.handle(j)) { busy=false; return push(false) } } // premios recibidos: se suben ya
@@ -49,7 +53,7 @@ function attach(G){
     if(type==='upgrade'){ const u=queue.find(e=>e.type==='upgrade'&&e.k===data.k); if(u){ u.n+=data.n; u.gold+=data.gold; u.to=S.up[data.k]; return schedule(); } data={...data,to:S.up[data.k]}; }
     if(type==='level'){ const l=queue.find(e=>e.type==='level'); if(l){ l.to=data.to; return schedule(); } }
     queue.push({type,t,...data}); schedule(); }
-  function schedule(){ if(!timer) timer=setTimeout(flush,every) }
+  function schedule(){ if(!timer&&!api.syncing) timer=setTimeout(flush,every) }   // con la partida en el servidor, van con la subida
   function snap(){ const S=G.S; if(!S) return null; const w=G.equipped(), st=S.stats||{}, d=G.dayKey();
     return {name:S.name,cls:S.cls,evo:S.evo,lvl:S.lvl,mode:S.mode,best:S.best,fase:S.fase,gold:S.gold,tokens:S.tokens,won:S.won,scrap:S.scrap,
       emblems:S.evm,up_atk:S.up.atk,up_hp:S.up.hp,up_df:S.up.df,up_spd:S.up.spd,weapon:w?w.r+w.lvl:null,kills:S.kills,
@@ -61,7 +65,7 @@ function attach(G){
   api.handle=j=>{ if(typeof j.refs==='number') api.refs=j.refs; const got=G.applyRewards(j.rewards); if(got.length&&api.onReward) api.onReward(got); return got.length>0 };
   function flush(keep){ clearTimeout(timer); timer=null; if(!queue.length) return; const events=queue; queue=[];
     const body=JSON.stringify({initData,snap:snap(),events});
-    fetch(SV.url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep})
+    fetchT(SV.url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep},15000)
       .then(r=>{ if(!r.ok){ if(r.status>=500) queue=events.concat(queue).slice(-200); return null } return r.json() })   // fallo del servidor: se reintenta con lo siguiente
       .then(j=>{ if(!j) return; if(j.now&&root.setServerTime) root.setServerTime(j.now); if(api.handle(j)&&api.push) api.push(false) })  // premios recibidos: se sube la partida ya
       .catch(()=>{ queue=events.concat(queue).slice(-200) }); }
@@ -74,7 +78,7 @@ function attach(G){
   G.on('eventEnd',r=>add(r.kind==='boss'?'wboss':'lab',r.kind==='boss'?{dmg:r.dmg,week:r.best,pos:r.pos,died:r.died}:{kills:r.kills,day:r.best,pos:r.pos,died:r.died}));
   add('open',{});                                              // abrir la app también se apunta (va en la primera subida de la partida)
   if(!canSync(CFG)) setTimeout(flush,1500);
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden) flush(true) });
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden&&!api.syncing) flush(true) });   // con partida en el servidor, la subida al salir los lleva
 }
 root.Telemetry=api;
 })(typeof window!=='undefined'?window:globalThis);
