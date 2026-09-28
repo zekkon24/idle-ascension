@@ -70,7 +70,10 @@ const CFG = {
   // Tokens = dinero: 100 tokens = 1 $. Dos saldos: comprados (no se retiran) y ganados en los pools (se pueden retirar).
   // Al gastar se usan primero los comprados. Compras y retiros SIMULADOS hasta que haya servidor y pasarela de pago.
   // open: se pueden comprar tokens (poner a true al conectar Telegram Stars); mientras, lo que se paga con tokens sale "Próximamente"
-  tokens:{perUsd:100, open:true, packs:[100,500,1000,2500], withdraw:{fee:0.15, min:100}}, // retiro: solo en pruebas locales (desactivado en Telegram)
+  // Paquetes de tokens con descuento por cantidad: bonus = tokens de regalo (500: +5 %, 1000: +10 %, 2500: +20 %).
+  // Reparto de cada compra (en valor de tokens a precio base, 2 tokens por Star): 30 % para ti; el 70 % restante vuelve a
+  // los jugadores = regalo del paquete + lo que va al bote (bote = 70 % − regalo). Así el descuento sale del bote, no de tu 30 %.
+  tokens:{perUsd:100, open:true, packs:[100,500,1000,2500], bonus:{500:25,1000:100,2500:500}, keep:0.3, withdraw:{fee:0.15, min:100}}, // retiro: solo en pruebas locales (desactivado en Telegram)
   // Misiones diarias (se renuevan cada día): cada una da oro (minutos de farmeo de tu récord) y experiencia del pase
   missions:{list:[
       {k:'kills',n:300,t:'Derrota 300 enemigos'},

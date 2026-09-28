@@ -568,7 +568,7 @@ function createGame(opts){
 
   // Comprar un paquete de tokens con dinero (simulado)
   // Compra y retiro de PRUEBA: solo con las herramientas de prueba (en local). En la versión publicada, hasta tener pagos reales, no se puede.
-  function buyTokens(n){ if(!CFG.devTools||!CFG.tokens.packs.includes(n)) return false; S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,usd:n/CFG.tokens.perUsd}); save(); emit('change'); return true }
+  function buyTokens(n){ if(!CFG.devTools||!CFG.tokens.packs.includes(n)) return false; n+=(CFG.tokens.bonus||{})[n]||0; S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,usd:n/CFG.tokens.perUsd}); save(); emit('change'); return true }
   // Retirar tokens ganados: comisión y mínimo (simulado: no mueve dinero real)
   function withdraw(n){ const W=CFG.tokens.withdraw; n=Math.floor(n); if(!CFG.devTools) return {ok:false,why:'off'};
     if(!(n>=W.min)||n>S.won) return {ok:false,why:n>S.won?'won':'min'};

@@ -431,7 +431,7 @@ function tabShop(){
   if(shopView==='cofres') body=offerRows()+shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket')+shopRow('ess')+shopRow('ev');
   if(shopView==='tokens') body=`<div class="loot"><div><span>Tus tokens</span><b>${fmt(G.tokens())}</b></div></div>
     ${firstOfferRow()}
-    ${CFG.tokens.packs.map(n=>`<div class="chest"><div><div class="cn">${fmt(n)} tokens</div></div><div class="acts">${payBtn('t'+n,n*CFG.stars.perToken,`data-act="tokBuy" data-k="${n}"`)}</div></div>`).join('')}
+    ${CFG.tokens.packs.map(n=>{ const bn=(CFG.tokens.bonus||{})[n]||0; return `<div class="chest${bn?' deal':''}"><div><div class="cn">${fmt(n+bn)} tokens${bn?` <span class="pill" style="color:var(--good);white-space:nowrap;vertical-align:3px">+${Math.round(bn/n*100)} %</span>`:''}</div>${bn?`<div class="s">${fmt(n)} + ${fmt(bn)} de regalo</div>`:''}</div><div class="acts">${payBtn('t'+n,n*CFG.stars.perToken,`data-act="tokBuy" data-k="${n}"`)}</div></div>` }).join('')}
     ${CFG.devTools?`<div class="ctrl"><button class="btn sm" data-act="wdAsk" ${S.won>=CFG.tokens.withdraw.min?'':'disabled'}>Retirar ganados (prueba)</button></div>`:''}
     <p class="hint">Se pagan con Telegram Stars ⭐.</p>`;
   if(shopView==='subs') body=`
@@ -813,7 +813,7 @@ const ACT={
   devOffer:(b,k)=>{ if(!CFG.devTools) return; closeModal(); G.applyRewards([{kind:'offer_'+k,amount:1,reason:'stars:offer_'+k}]); toast('Oferta (prueba)'); renderTab() },
   devFirst:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'first',amount:1,reason:'stars:first'}]); toast('Oferta de bienvenida (prueba)'); renderTab() },
   goTokens:()=>{ closeModal(); tab='shop'; shopView='tokens'; renderTab() },
-  tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k)} tokens (prueba)`); renderTab(); } },
+  tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k+((CFG.tokens.bonus||{})[k]||0))} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
   grimUnlock:(b,k)=>{ const r=G.grimUnlock(k); toast(r.ok?'¡Grimorio desbloqueado!':'Te faltan recursos'); renderTab() },
   grimBuy:(b,k)=>{ const g=G.grimList().find(x=>x.id===k), p=G.grimPack();
