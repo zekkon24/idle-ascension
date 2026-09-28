@@ -34,7 +34,7 @@ const CHEST_TYPES=['wood','silver','mode'];
 const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
-let tab='up', upOpen=false, invView='armas', shopView='cofres', evView=null, modView='eventos';
+let tab='up', upOpen=false, invView='armas', shopView='cofres', evView=null, modView=null;
 let expandedId=null, filtersOpen=false, forgeId=null, reforgeId=null, lockSel=[];
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -406,10 +406,17 @@ function tabEv(){
   const card=(k,title,sub,tk,line,pend)=>`<button class="evcard" data-act="evOpen" data-k="${k}"><span class="evt">${title}${pend?' <sup class="nb">!</sup>':''}</span><span class="s">${sub}</span>
     <span class="evl"><span>${tk}</span><span>${line}</span></span></button>`;
   // Modos: Campaña (Normal, Pesadilla, Infierno), Eventos (Laberinto, Liga, Jefe semanal) y PvP (próximamente)
-  const head=`<div class="fchips" role="tablist">${[['campana','Campaña'],['eventos','Eventos'],['pvp','PvP']].map(([v,l])=>`<button data-act="modview" data-v="${v}" aria-pressed="${modView===v}">${l}</button>`).join('')}</div>`;
-  if(modView==='campana') return `<section class="panel"><h3>Modos</h3>${head}<div class="mlist">${modeRows()}</div><p class="hint">Cada modo tiene ${CFG.phaseCap} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p></section>`;
-  if(modView==='pvp') return `<section class="panel"><h3>Modos</h3>${head}<div class="mcard lock"><div class="ctrl" style="justify-content:space-between"><b>PvP</b><span class="pill">Próximamente</span></div><span class="s">Combates contra otros jugadores.</span></div></section>`;
-  return `<section class="panel"><h3>Modos</h3>${head}
+  const back=`<button class="banner" data-act="modview" data-v=""><span>← Modos</span></button>`;
+  if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(G.leaguePending()?1:0), M=G.modeCfg();
+    const big=(v,t,sub,st,lock)=>`<button class="mcard mbig${lock?' lock':''}" data-act="modview" data-v="${v}"><div class="ctrl" style="justify-content:space-between"><b>${t}</b>${st}</div><span class="s">${sub}</span></button>`;
+    return `<section class="panel"><h3>Modos</h3><div class="mlist">
+      ${big('campana','Campaña','Normal · Pesadilla · Infierno',`<span class="pill" style="color:var(--gold)">${M.name} · fase ${S.best}/${CFG.phaseCap}</span>`)}
+      ${big('eventos','Eventos','Laberinto · Liga · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
+      ${big('pvp','PvP','Combates contra otros jugadores','<span class="pill">Próximamente</span>',true)}
+    </div></section>` }
+  if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div><p class="hint">Cada modo tiene ${CFG.phaseCap} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p></section>`;
+  if(modView==='pvp') return `${back}<section class="panel"><h3>PvP</h3><div class="mcard lock"><div class="ctrl" style="justify-content:space-between"><b>PvP</b><span class="pill">Próximamente</span></div><span class="s">Combates contra otros jugadores.</span></div></section>`;
+  return `${back}<section class="panel"><h3>Eventos</h3>
     ${card('lab','Laberinto','3 min de monstruos sin parar · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Sin intentos hoy',!!lp)}
     ${(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow())}
     ${card('boss','Jefe semanal','1 min contra un jefe inmortal · ranking semanal por daño',`Entradas <b>${G.wbFreeLeft()+S.bossTickets}</b>`,paused?'En pausa':bd?`Semana ${fmt(bd)} · puesto ${bpos}`:`Cierra en ${dhm(G.weekLeft())}`,!!bp)}
@@ -418,7 +425,7 @@ function tabEv(){
 function tabLab(){
   const V=CFG.event, paused=G.evPaused(), d=G.evShownDay(), best=G.evToday(), pend=G.evPending(), live=G.inEvent();
   const pos=best?G.evRank(d,best):null;
-  return `<button class="banner" data-act="evBack"><span>← Modos</span></button>
+  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
   <section class="panel"><h3>Laberinto</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ayer · puesto ${pend.pos}</b><button class="btn sm gold" data-act="evClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
@@ -431,7 +438,7 @@ function tabLab(){
 }
 // Liga mensual: puntos por gastar tokens, ver anuncios y generar oro; el bote se reparte entre todos según sus puntos
 function tabLeague(){ const n=G.leagueNow(), p=G.leaguePending(), L=CFG.league;
-  return `<button class="banner" data-act="evBack"><span>← Modos</span></button>
+  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
   <section class="panel"><h3>Liga de ${n.name}</h3>
     ${p?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ${p.name}</b><button class="btn sm gold" data-act="lgClaim">Recoger</button></div><span class="s">${fmt(p.tok)} tokens (${fmt(p.pts)} puntos)</span></div>`:''}
     <div class="evhead"><div><span class="s">Tus puntos</span><b>${fmt(n.pts)}</b></div><div><span class="s">Bote</span><b>${fmt(n.pool)}</b></div><div><span class="s">Premio estimado</span><b>${fmt(n.tok)}</b></div></div>
@@ -441,7 +448,7 @@ function tabLeague(){ const n=G.leagueNow(), p=G.leaguePending(), L=CFG.league;
 function tabBoss(){
   const W=CFG.wboss, paused=G.evPaused(), w=G.wbShownWeek(), dmg=G.wbWeekDmg(), pend=G.wbPending(), live=G.inEvent();
   const pos=dmg?G.wbRank(w,dmg):null;
-  return `<button class="banner" data-act="evBack"><span>← Modos</span></button>
+  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
   <section class="panel"><h3>Jefe semanal</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de la semana pasada · puesto ${pend.pos}</b><button class="btn sm gold" data-act="wbClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
@@ -631,7 +638,7 @@ const ACT={
   wbClaim:()=>{ const p=G.wbClaim(); if(p){ toast(pendText(p)); renderTab(); } },
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
-  modview:b=>{ modView=b.dataset.v; evView=null; renderTab(); },
+  modview:b=>{ modView=b.dataset.v||null; evView=null; renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
   evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(pendText(p)); renderTab(); } },
   close:()=>{stopSpin();boostModalOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
@@ -693,7 +700,7 @@ function openChests(k,all){ const n0=G.chestCount(k), l=G.openChests(k,all); if(
 
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
-  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev") evView=null; /* tocar Evento estando dentro vuelve a la lista */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();tab=b.dataset.tab;reforgeId=null;lockSel=[];renderTab();return}
+  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();tab=b.dataset.tab;reforgeId=null;lockSel=[];renderTab();return}
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
