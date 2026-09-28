@@ -37,7 +37,7 @@ const CFG = {
   rarName:{C:'Común',U:'Poco común',R:'Rara',E:'Épica',L:'Legendaria',M:'Mítica'},
   weapon:{ // daño%, velocidad%, nº stats
     C:[0.06,0.02,1],U:[0.11,0.036,2],R:[0.20,0.065,2],E:[0.36,0.12,3],L:[0.65,0.21,3],M:[1.15,0.37,4],
-    invMax:50, // inventario: como mucho 50 armas (la equipada cuenta); para abrir cofres hacen falta huecos libres
+    invMax:50, // inventario: como mucho 50 armas (la equipada no cuenta: va en el Equipo); para abrir cofres hacen falta huecos libres
     lvlPct:0.25,maxLvl:5, // nv5 = ×2 del base: una nv5 supera un poco a la siguiente rareza nv1; nivel N -> N+1 cuesta N armas iguales + chatarra
     scrapLvl:{C:0,U:10,R:30,E:60,L:120,M:240},
     scrapDis:{C:2,U:5,R:15,E:40,L:100,M:250},

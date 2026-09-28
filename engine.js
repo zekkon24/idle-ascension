@@ -515,9 +515,10 @@ function createGame(opts){
   function addChest(type,n){ S.chestInv[type]=(S.chestInv[type]||0)+n }
   const chestCount=type=>S.chestInv[type]||0;
   function openChest(type){ const r=pick(chestProbs(type)); const cls=CLASSES[Math.floor(rand()*CLASSES.length)]; return newItem(cls,r) }
-  // Inventario: como mucho weapon.invMax armas (la equipada cuenta). Para abrir X cofres hacen falta X huecos libres.
+  // Inventario: como mucho weapon.invMax armas (la equipada NO cuenta: va en el Equipo). Para abrir X cofres hacen falta X huecos libres.
   const invMax=()=>CFG.weapon.invMax||Infinity;
-  const invFree=()=>Math.max(0,invMax()-S.items.length);
+  const invCount=()=>S.items.filter(x=>x.id!==S.equippedId).length;
+  const invFree=()=>Math.max(0,invMax()-invCount());
   // all: true = todos, false = 1, número = ese número. Si no caben, no se abre ninguno (devuelve [] con .full)
   function openChests(type,all){
     let n=all===true?chestCount(type):typeof all==='number'?Math.min(all|0,chestCount(type)):Math.min(1,chestCount(type));
@@ -699,7 +700,7 @@ function createGame(opts){
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,
     // cofres y tienda
-    chestProbs, addChest, chestCount, openChests, invFree, invMax, byRarity, dismantleRarity, buy, shopPrice, silverPrice, silverLeft, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
+    chestProbs, addChest, chestCount, openChests, invFree, invMax, invCount, byRarity, dismantleRarity, buy, shopPrice, silverPrice, silverLeft, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
     // otros
     applyOffline, claimOfflineBonus, offlineCap, offlineAdLeft, setOpt, dev, applyRewards,
     // grimorios

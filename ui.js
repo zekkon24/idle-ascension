@@ -149,7 +149,7 @@ function renderTab(){
   if(tab==='up') el.innerHTML='';
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||G.inEvent();
   if(upOpen) showUpgrades();
-  if(tab==='inv'){ el.innerHTML=(invView==='forja'?`<button class="banner" data-act="invview" data-v="armas"><span>← Volver al inventario</span></button>`:`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`)+tabInv(); if(invView==='armas') renderList(); }
+  if(tab==='inv'){ el.innerHTML=(invView==='forja'?`<button class="banner" data-act="invview" data-v="armas"><span>← Volver al inventario</span></button>`:equipHud()+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`)+tabInv(); if(invView==='armas') renderList(); }
   if(tab==='shop') el.innerHTML=tabShop();
   if(tab==='ev') el.innerHTML=tabEv();
   if(tab==='dev') el.innerHTML=tabDev();
@@ -236,11 +236,32 @@ function tabForja(){
     ${!eq&&G.equipped()?`<button class="btn sm" data-act="forge" data-id="${S.equippedId}">Volver a mi arma equipada</button>`:''}
     </section>`;
 }
+/* ---------- Equipo: silueta de tu clase, arma equipada y Grimorio activo ---------- */
+// Siluetas sencillas por clase (color de la clase): Guerrero con espada y escudo, Mago con sombrero y báculo,
+// Arquero con capucha y arco, Asesino con capa y dagas, Clérigo con mitra y maza
+function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy="30" r="12"/><path d="M34 46h32l6 44H28z"/><path d="M36 90h11v38H36zM53 90h11v38H53z"/>`;
+  const extra={
+    Guerrero:`<path d="M38 20q12-14 24 0v6H38z"/><path d="M76 18l4 2-6 54h-5z"/><rect x="70" y="70" width="14" height="4" rx="1"/><path d="M12 50h18v26q-9 8-18 0z"/>`,
+    Mago:`<path d="M36 22l14-22 14 22z"/><path d="M28 46h44l10 82H18z" opacity=".85"/><rect x="80" y="20" width="4" height="100" rx="2"/><circle cx="82" cy="18" r="7"/>`,
+    Arquero:`<path d="M36 34q0-26 14-26t14 26l-4-2q-2-16-10-16t-10 16z"/><path d="M16 22q20 38 0 76" fill="none" stroke="${c}" stroke-width="4"/><path d="M16 22v76" stroke="${c}" stroke-width="1"/><rect x="66" y="40" width="8" height="30" rx="2"/>`,
+    Asesino:`<path d="M34 34q0-28 16-28t16 28l-2 10H36z"/><path d="M30 46l-12 70h16l6-50zM70 46l12 70H66l-6-50z" opacity=".8"/><path d="M22 70l-8 14 4 2 8-14zM78 70l8 14-4 2-8-14z"/>`,
+    Clerigo:`<path d="M40 22l10-18 10 18z"/><path d="M28 46h44l8 82H20z" opacity=".85"/><circle cx="50" cy="30" r="17" fill="none" stroke="${c}" stroke-width="2" opacity=".6"/><rect x="78" y="44" width="4" height="40" rx="2"/><circle cx="80" cy="42" r="7"/>`,
+  }[cls]||'';
+  return `<svg class="silh" viewBox="0 0 100 130" width="92" height="120" aria-hidden="true" fill="${c}">${body}${extra}</svg>` }
+function equipHud(){ const w=G.equipped(), gid=S.grim&&S.grim.active, g=gid&&G.grimList().find(x=>x.id===gid);
+  const wm=w&&G.weaponMain(w);
+  const wslot=w?`<button class="eslot" data-act="forge" data-id="${w.id}" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
+      <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span></button>`
+    :`<div class="eslot"><span class="s">Arma</span><b>Sin arma</b></div>`;
+  const gslot=g?`<button class="eslot" data-act="invview" data-v="grim" style="--rc:var(--rE)"><span class="s">Grimorio</span><b style="color:var(--rE)">${g.name.replace('Grimorio ','')}</b>
+      <span class="s">${g.role} · nv ${G.grimLevel(g.id)}</span></button>`
+    :`<button class="eslot empty" data-act="invview" data-v="grim"><span class="s">Grimorio</span><b>Vacío</b><span class="s">Toca para desbloquear</span></button>`;
+  return `<section class="panel equip"><div class="equip-in">${classSVG(S.cls)}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}${gslot}</div></div></section>` }
 function tabInv(){
   if(invView==='forja') return tabForja();
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0);
   const head=`<div class="fchips" role="tablist">
-    <button data-act="invview" data-v="armas" aria-pressed="${invView==='armas'}">Armas (${S.items.length}/${G.invMax()})</button>
+    <button data-act="invview" data-v="armas" aria-pressed="${invView==='armas'}">Armas (${G.invCount()}/${G.invMax()})</button>
     <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">Cofres (${nc})</button>
     <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button>
     <button data-act="invview" data-v="grim" aria-pressed="${invView==='grim'}">Grimorio</button></div>`;
@@ -300,12 +321,13 @@ function disRarityBox(){ const btns=R.map(r=>{ const n=G.byRarity(r,disMine).len
   return `<div class="panel" style="padding:10px"><div class="ctrl" style="justify-content:space-between"><b>Desmontar por rareza</b>
     <label class="s" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="disMine" ${disMine?'checked':''}> Solo mi clase</label></div>
     <div class="ctrl">${btns||'<span class="s">Nada que desmontar.</span>'}</div>
-    <p class="hint" style="margin:0">Tienes ${S.items.length}/${G.invMax()} armas. La equipada y las bloqueadas con ★ no se desmontan.</p></div>` }
+    <p class="hint" style="margin:0">Tienes ${G.invCount()}/${G.invMax()} armas (la equipada no cuenta). Las bloqueadas con ★ no se desmontan.</p></div>` }
 function fHead(){ const active=(F.rar!=='all')+(F.cls!=='all')+(F.stat!=='any');
   return `<button class="btn sm${filtersOpen?' on':''}" data-act="ftoggle" aria-expanded="${filtersOpen}">Filtros${active?' ('+active+')':''}</button>${active?'<button class="btn sm" data-act="fclear">Quitar filtros</button>':''}` }
 function filtered(){
   const mn=F.min===''?-Infinity:+F.min, mx=F.max===''?Infinity:+F.max;
   return S.items.filter(it=>{
+    if(it.id===S.equippedId) return false;                     // la equipada está en el Equipo, no en la lista
     if(F.rar!=='all'&&it.r!==F.rar) return false;
     if(F.cls==='mine'&&it.cls!==S.cls) return false;
     if(F.cls!=='all'&&F.cls!=='mine'&&it.cls!==F.cls) return false;
@@ -316,8 +338,8 @@ function filtered(){
 function renderList(){
   const el=$('#invList'); if(!el) return; setHTML($('#fHead'),fHead());
   const list=filtered(), dis=list.filter(x=>x.id!==S.equippedId&&!x.fav);
-  const bulk=$('#bulk'); if(bulk) bulk.innerHTML=`<div class="ctrl"><span class="s">${list.length} de ${S.items.length} armas</span><button class="btn sm" data-act="disAsk" ${dis.length?'':'disabled'}>Desmontar las filtradas (${dis.length})</button></div>`;
-  el.innerHTML=`${list.slice(0,80).map(itemCard).join('')||(S.items.length?'<p class="hint">Sin resultados.</p>':'<p class="hint">Vacío.</p>')}
+  const bulk=$('#bulk'); if(bulk) bulk.innerHTML=`<div class="ctrl"><span class="s">${list.length} de ${G.invCount()} armas</span><button class="btn sm" data-act="disAsk" ${dis.length?'':'disabled'}>Desmontar las filtradas (${dis.length})</button></div>`;
+  el.innerHTML=`${list.slice(0,80).map(itemCard).join('')||(G.invCount()?'<p class="hint">Sin resultados.</p>':'<p class="hint">Vacío.</p>')}
     ${list.length>80?`<p class="hint">+${list.length-80} más</p>`:''}`;
   updateHUD();
 }
@@ -738,7 +760,7 @@ const ACT={
 };
 function disToast(r){ if(r.n) toast(`${r.n} arma${r.n>1?'s':''} desmontada${r.n>1?'s':''}: +${r.v} chatarra`) }
 function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0);
-  if(need>G.invFree()) return showModal(`<h3>Inventario lleno</h3><p class="hint">Para abrir ${need} cofre${need>1?'s':''} necesitas ${need} hueco${need>1?'s':''} libre${need>1?'s':''} y tienes ${G.invFree()} (${S.items.length}/${G.invMax()} armas). Libera espacio desmontando armas.</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button><button class="btn gold" data-act="invFull">Ir a Armas</button></div>`);
+  if(need>G.invFree()) return showModal(`<h3>Inventario lleno</h3><p class="hint">Para abrir ${need} cofre${need>1?'s':''} necesitas ${need} hueco${need>1?'s':''} libre${need>1?'s':''} y tienes ${G.invFree()} (${G.invCount()}/${G.invMax()} armas). Libera espacio desmontando armas.</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button><button class="btn gold" data-act="invFull">Ir a Armas</button></div>`);
   const l=G.openChests(k,all); if(!l.length) return; haptic('medium'); renderTab(); spin(k,l,n0-G.chestCount(k)) }
 
 document.addEventListener('click',e=>{
