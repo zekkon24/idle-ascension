@@ -13,7 +13,7 @@ const storage={
 // Hora: la del servidor cuando se conoce (Telegram + Supabase); si no, la del móvil. Así adelantar el reloj no da ventajas.
 let clockOff=0; window.setServerTime=t=>{ if(Number.isFinite(t)) clockOff=t-Date.now() };
 const G=createGame({cfg:window.CFG,storage,now:()=>Date.now()+clockOff});
-window.G=G; // útil para depurar desde la consola
+if(window.CFG.devTools) window.G=G; // solo en local (herramientas de prueba): en la versión publicada no se puede tocar desde la consola
 if(window.Telemetry) Telemetry.attach(G); // envío a la base de datos (solo dentro de Telegram y con servidor)
 if(window.Control) Control.attach(G);     // mantenimiento y actualizaciones obligatorias (solo en la versión publicada)
 const CFG=G.CFG, R=G.R, CLASSES=G.CLASSES;
@@ -344,9 +344,10 @@ function tabShop(){
   let body='';
   if(shopView==='cofres') body=shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket')+shopRow('ess')+shopRow('ev');
   if(shopView==='tokens') body=`<div class="loot"><div><span>Comprados</span><b>${fmt(S.tokens)}</b></div><div><span>Ganados (retirables)</span><b>${fmt(S.won)}</b></div></div>
-    ${CFG.tokens.packs.map(n=>`<div class="chest"><div><div class="cn">${fmt(n)} tokens</div></div><div class="acts"><button class="btn sm gold" data-act="tokBuy" data-k="${n}">${usd(n)}</button></div></div>`).join('')}
+    ${CFG.devTools?`${CFG.tokens.packs.map(n=>`<div class="chest"><div><div class="cn">${fmt(n)} tokens</div></div><div class="acts"><button class="btn sm gold" data-act="tokBuy" data-k="${n}">${usd(n)}</button></div></div>`).join('')}
     <div class="ctrl"><button class="btn sm" data-act="wdAsk" ${S.won>=CFG.tokens.withdraw.min?'':'disabled'}>Retirar ganados</button></div>
-    <p class="hint">${CFG.tokens.perUsd} tokens = 1 $. Se gastan primero los comprados. Los ganados en los pools se pueden retirar (mínimo ${fmt(CFG.tokens.withdraw.min)}, comisión ${Math.round(CFG.tokens.withdraw.fee*100)} %). Compras y retiros de prueba.</p>`;
+    <p class="hint">${CFG.tokens.perUsd} tokens = 1 $. Se gastan primero los comprados. Los ganados se pueden retirar (mínimo ${fmt(CFG.tokens.withdraw.min)}, comisión ${Math.round(CFG.tokens.withdraw.fee*100)} %). Compras y retiros de prueba (solo en local).</p>`
+    :`<div class="mcard lock"><div class="ctrl" style="justify-content:space-between"><b>Comprar tokens</b><span class="pill">Próximamente</span></div><span class="s">${CFG.tokens.perUsd} tokens = 1 $. Pronto podrás comprarlos con Telegram Stars.</span></div>`}`;
   if(shopView==='subs') body=`
     <div class="row"><div><div class="t">Tarjeta mensual</div><div class="s">+${Math.round(CFG.cardGold*100)} % oro · 30 días${G.hasCard()?' · quedan '+(S.cardUntil-today)+' días':''}</div></div><div class="acts"><button class="btn sm gold" data-act="sub" data-k="card">${fmt(CFG.cardPrice)} tokens</button></div></div>
     <div class="row"><div><div class="t">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts"><button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button></div></div>`;
@@ -589,7 +590,7 @@ function tabDev(){
 }
 // Invitar amigos: solo dentro de Telegram (hace falta el id del jugador y el enlace de la mini app)
 function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG.referral; if(!link) return '';
-  return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">Tu amigo recibe ${R.giftSilver} cofre de plata. Tú, ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase} y el ${Math.round(R.buyPct*100)} % de sus compras en tokens.</div></div>
+  return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">Tu amigo recibe ${R.giftSilver} cofre de plata. Tú, ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}${R.buyPct?` y el ${Math.round(R.buyPct*100)} % de sus compras en tokens`:''}.</div></div>
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
 const REW_T={invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
 if(window.Telemetry) Telemetry.onReward=list=>later(()=>showModal(`<h3>¡Premio por invitar!</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||'Premio'}</span><b>+${fmt(r.amount)} ${r.kind==='silver'?'cofre'+(r.amount>1?'s':'')+' de plata':'tokens'}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`));
@@ -827,7 +828,7 @@ function start(){
     if(r.now) setServerTime(r.now);
     if(r.error==='auth') return syncBox('No se pudo comprobar tu cuenta','Cierra el juego y vuelve a abrirlo desde Telegram.','Reintentar');
     const el=$('#syncBox'); if(el) el.remove();
-    if(r.error){ boot(); if(S) toast('Sin conexión: tu partida se guardará al volver'); return }
+    if(r.error){ boot(); if(S) toast('Sin conexión: tu partida se guardará al volver'); T.startSync(G,T.myId()); return }
     pickSave(r); boot(); T.startSync(G,r.id);
     T.onConflict=()=>{ G.S&&G.save(); syncBox('Partida en otro dispositivo','Tu partida se ha jugado en otro dispositivo. Cargando la más reciente…'); setTimeout(()=>location.reload(),2500) };
   });

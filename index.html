@@ -235,7 +235,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609281432-8d3facc';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609281456-cf3eb28';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
@@ -243,25 +243,29 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
     s.onload=function(){ load(i+1) }; s.onerror=function(){ document.getElementById('bootMsg').textContent='No se pudo cargar. Revisa tu conexión.' };
     document.body.appendChild(s) }
   if(APP_VERSION==='DEV'||!window.fetch) return load(0);
-  var CONTROL_URL='https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track';   // estado de mantenimiento (tabla control)
-  var done=false, go=function(){ if(!done){ done=true; checkMaint() } };
+  // Primero config.js (de ahí sale la dirección del servidor); luego se comprueban versión y mantenimiento; luego el resto
+  var s0=document.createElement('script'); s0.src=FILES[0]+'?v='+APP_VERSION; s0.charset='utf-8'; s0.onerror=function(){ load(0) };
+  s0.onload=function(){ var done=false, go=function(){ if(!done){ done=true; checkMaint() } };
+    setTimeout(go,3000);                                      // sin respuesta en 3 s: sigue con lo que hay
+    fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ return r.json() }).then(function(j){
+      if(done) return;
+      var key='upd_'+j.v, tried=false; try{ tried=sessionStorage.getItem(key) }catch(e){}
+      if(j&&j.v&&j.v!==APP_VERSION&&!tried){                 // hay versión nueva: recarga (una sola vez, para no entrar en bucle)
+        done=true; try{ sessionStorage.setItem(key,'1') }catch(e){}
+        document.getElementById('bootMsg').textContent='Actualizando…';
+        var u=new URL(location.href); u.searchParams.set('v',j.v); location.replace(u.toString());  // conserva los datos de Telegram (#…)
+      } else go();
+    }).catch(go); };
+  document.body.appendChild(s0);
   // Mantenimiento ANTES de entrar: si está activo, se queda en esta pantalla y mira cada 15 s; al quitarlo, entra.
-  function checkMaint(){ var ok=false, t=setTimeout(function(){ if(!ok){ ok=true; load(0) } },3000);   // sin respuesta en 3 s: entra
-    fetch(CONTROL_URL,{cache:'no-store'}).then(function(r){ return r.ok?r.json():null }).then(function(c){ if(ok) return; ok=true; clearTimeout(t);
+  // El resultado se deja en window.BOOT_CONTROL para que control.js no repita la consulta.
+  function checkMaint(){ var url=window.CFG&&CFG.server&&CFG.server.url; if(!url) return load(1);
+    var ok=false, t=setTimeout(function(){ if(!ok){ ok=true; load(1) } },3000);   // sin respuesta en 3 s: entra
+    fetch(url,{cache:'no-store'}).then(function(r){ return r.ok?r.json():null }).then(function(c){ if(ok) return; ok=true; clearTimeout(t);
       if(c&&c.mantenimiento){ var b=document.querySelector('#boot b'); b.textContent='En mantenimiento';
         document.getElementById('bootMsg').textContent=String(c.mensaje||'Vuelve en unos minutos.');
         setTimeout(function(){ location.reload() },15000); }
-      else load(0);
-    }).catch(function(){ if(!ok){ ok=true; clearTimeout(t); load(0) } }) }
-  setTimeout(go,3000);                                        // sin respuesta en 3 s: sigue con lo que hay
-  fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){ return r.json() }).then(function(j){
-    if(done) return;
-    var key='upd_'+j.v, tried=false; try{ tried=sessionStorage.getItem(key) }catch(e){}
-    if(j&&j.v&&j.v!==APP_VERSION&&!tried){                   // hay versión nueva: recarga (una sola vez, para no entrar en bucle)
-      done=true; try{ sessionStorage.setItem(key,'1') }catch(e){}
-      document.getElementById('bootMsg').textContent='Actualizando…';
-      var u=new URL(location.href); u.searchParams.set('v',j.v); location.replace(u.toString());  // conserva los datos de Telegram (#…)
-    } else go();
-  }).catch(go);
+      else { window.BOOT_CONTROL=c; load(1) }
+    }).catch(function(){ if(!ok){ ok=true; clearTimeout(t); load(1) } }) }
 })();
 </script>

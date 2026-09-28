@@ -330,7 +330,7 @@ function createGame(opts){
     if(evPending()) claimEvent();                         // cobra antes el premio de un día anterior
     if(evFreeLeft()) S.evFree=dayKey(); else S.tickets--; const h=heroStats();
     S.evRun={day:dayKey(),kills:0};                       // el intento se guarda: si se cierra la app, cuenta lo que llevaba
-    B={event:true,t:0,boss:false,count:0,spawned:0,kills:0,nextSpawn:0,enemies:[],hp:h.hp,th:null,over:false,wait:0};
+    B={event:true,t:0,boss:false,count:0,spawned:0,kills:0,nextSpawn:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     save(); emit('eventStart',B); emit('change'); return true;
   }
   // Apunta las muertes de un intento en el día en que EMPEZÓ (un intento puede acabar pasada la medianoche)
@@ -389,7 +389,7 @@ function createGame(opts){
     if(wbPending()) wbClaim();
     if(wbFreeLeft()) S.wbFree=weekKey(); else S.bossTickets--; const h=heroStats(), s=wbStats(1), V=CFG.event;
     S.wbRun={week:weekKey(),dmg:0};
-    B={event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0};
+    B={event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     B.enemies.push({hp:Infinity,max:Infinity,atk:s.atk,df:s.df,spawn:0,walk:V.walk,arrive:V.walk,next:V.walk,first:false,dead:false,immortal:true});
     save(); emit('eventStart',B); emit('change'); return true;
   }
@@ -551,9 +551,10 @@ function createGame(opts){
       share:leaguePts(L)/leagueTotal(L)} }
 
   // Comprar un paquete de tokens con dinero (simulado)
-  function buyTokens(n){ if(!CFG.tokens.packs.includes(n)) return false; S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,usd:n/CFG.tokens.perUsd}); save(); emit('change'); return true }
+  // Compra y retiro de PRUEBA: solo con las herramientas de prueba (en local). En la versión publicada, hasta tener pagos reales, no se puede.
+  function buyTokens(n){ if(!CFG.devTools||!CFG.tokens.packs.includes(n)) return false; S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,usd:n/CFG.tokens.perUsd}); save(); emit('change'); return true }
   // Retirar tokens ganados: comisión y mínimo (simulado: no mueve dinero real)
-  function withdraw(n){ const W=CFG.tokens.withdraw; n=Math.floor(n);
+  function withdraw(n){ const W=CFG.tokens.withdraw; n=Math.floor(n); if(!CFG.devTools) return {ok:false,why:'off'};
     if(!(n>=W.min)||n>S.won) return {ok:false,why:n>S.won?'won':'min'};
     const fee=Math.ceil(n*W.fee); S.won-=n; S.withdrawn=(S.withdrawn||0)+n; S.stats.withdrawNet+=(n-fee)/CFG.tokens.perUsd;
     track('withdraw',{tokens:n,fee,usd:(n-fee)/CFG.tokens.perUsd}); save(); emit('change');
