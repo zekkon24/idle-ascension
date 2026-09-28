@@ -33,7 +33,8 @@ function attach(G){
   const checkVersion=()=>fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>{ if(j&&j.v&&V!=='DEV'&&j.v!==V) update(j.v) }).catch(()=>{});
   const checkControl=()=>{ if(SV.url) fetch(SV.url,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(apply).catch(()=>{}) };
   checkVersion(); checkControl();
-  setInterval(()=>{ checkVersion(); if(inMaint) checkControl() },(C.every||300)*1000);
+  setInterval(checkVersion,(C.every||300)*1000);
+  setInterval(()=>{ if(inMaint) checkControl() },(C.maintEvery||15)*1000);   // en mantenimiento: mira cada 15 s si ya se puede volver
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ checkVersion(); checkControl() } });
   // Aviso en directo (Supabase Realtime): cambios en la tabla control
   const K=(CFG.supabase||{}).key, U=(CFG.supabase||{}).url;
