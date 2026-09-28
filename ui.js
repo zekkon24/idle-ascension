@@ -36,7 +36,7 @@ const CHEST_TYPES=['wood','silver','mode'];
 const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
-let tab='up', upOpen=false, invView='armas', shopView='cofres', evView=null, modView=null;
+let tab='up', upOpen=false, invView='cofres', shopView='cofres', evView=null, modView=null;
 let expandedId=null, filtersOpen=false, forgeId=null, reforgeId=null, lockSel=[];
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -57,6 +57,7 @@ function goBack(){ if(modalOpen()){ if(canGoBack()) ACT.close(); return }
   if(tab==='ev'&&evView){ evView=null; return renderTab() }
   if(tab==='ev'&&modView){ modView=null; return renderTab() }
   if(tab==='inv'&&invView==='forja'){ invView='armas'; return renderTab() }
+  if(tab==='inv'&&(invView==='armas'||invView==='grim')){ invView='cofres'; return renderTab() }
   tab='up'; upOpen=false; renderTab() }
 let backShown=null;
 function syncBack(){ if(!TG||!TG.BackButton) return; const v=canGoBack(); if(v===backShown) return; backShown=v; try{ v?TG.BackButton.show():TG.BackButton.hide() }catch(e){} }
@@ -149,7 +150,12 @@ function renderTab(){
   if(tab==='up') el.innerHTML='';
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||G.inEvent();
   if(upOpen) showUpgrades();
-  if(tab==='inv'){ el.innerHTML=(invView==='forja'?`<button class="banner" data-act="invview" data-v="armas"><span>← Volver al inventario</span></button>`:equipHud()+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`)+tabInv(); if(invView==='armas') renderList(); }
+  // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
+  if(tab==='inv'){ const back=(v,t)=>`<button class="banner" data-act="invview" data-v="${v}"><span>← ${t}</span></button>`;
+    el.innerHTML=(invView==='forja'?back('armas','Volver a Armas')
+      :invView==='armas'?back('cofres','Volver al inventario')+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`
+      :invView==='grim'?back('cofres','Volver al inventario')
+      :equipHud())+tabInv(); if(invView==='armas') renderList(); }
   if(tab==='shop') el.innerHTML=tabShop();
   if(tab==='ev') el.innerHTML=tabEv();
   if(tab==='dev') el.innerHTML=tabDev();
@@ -250,22 +256,21 @@ function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy
   return `<svg class="silh" viewBox="0 0 100 130" width="92" height="120" aria-hidden="true" fill="${c}">${body}${extra}</svg>` }
 function equipHud(){ const w=G.equipped(), gid=S.grim&&S.grim.active, g=gid&&G.grimList().find(x=>x.id===gid);
   const wm=w&&G.weaponMain(w);
-  const wslot=w?`<button class="eslot" data-act="forge" data-id="${w.id}" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
-      <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span></button>`
-    :`<div class="eslot"><span class="s">Arma</span><b>Sin arma</b></div>`;
+  const wslot=w?`<button class="eslot" data-act="invview" data-v="armas" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
+      <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`
+    :`<button class="eslot" data-act="invview" data-v="armas"><span class="s">Arma</span><b>Sin arma</b><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`;
   const gslot=g?`<button class="eslot" data-act="invview" data-v="grim" style="--rc:var(--rE)"><span class="s">Grimorio</span><b style="color:var(--rE)">${g.name.replace('Grimorio ','')}</b>
-      <span class="s">${g.role} · nv ${G.grimLevel(g.id)}</span></button>`
+      <span class="s">${g.role} · nv ${G.grimLevel(g.id)} · Toca para verlos</span></button>`
     :`<button class="eslot empty" data-act="invview" data-v="grim"><span class="s">Grimorio</span><b>Vacío</b><span class="s">Toca para desbloquear</span></button>`;
   return `<section class="panel equip"><div class="equip-in">${classSVG(S.cls)}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}${gslot}</div></div></section>` }
 function tabInv(){
   if(invView==='forja') return tabForja();
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0);
   const head=`<div class="fchips" role="tablist">
-    <button data-act="invview" data-v="armas" aria-pressed="${invView==='armas'}">Armas (${G.invCount()}/${G.invMax()})</button>
     <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">Cofres (${nc})</button>
     <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button>
-    <button data-act="invview" data-v="grim" aria-pressed="${invView==='grim'}">Grimorio</button></div>`;
-  if(invView==='grim') return `<section class="panel"><h3>Inventario</h3>${head}</section>${tabGrim()}`;
+</div>`;
+  if(invView==='grim') return tabGrim();
   if(invView==='cofres'){
     const row=k=>{const n=G.chestCount(k);return `<div class="chest">
       <div><div class="cn">${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
@@ -287,7 +292,7 @@ function tabInv(){
     return `<section class="panel"><h3>Inventario</h3>${head}${rows.join('')||'<p class="hint">Vacío.</p>'}</section>`;
   }
   const statOpts=Object.entries(CFG.sec).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
-  return `<section class="panel"><h3>Inventario</h3>${head}
+  return `<section class="panel"><h3>Armas (${G.invCount()}/${G.invMax()})</h3>
     ${disRarityBox()}
     <div class="ctrl" id="fHead">${fHead()}</div>
     ${filtersOpen?`<div class="filters fpanel">
@@ -756,7 +761,7 @@ const ACT={
   battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.shots.length=0;fx.flash=0}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},
-  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='armas';shopView='cofres';forgeId=null;reforgeId=null;lockSel=[];expandedId=null;filtersOpen=false;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
+  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='cofres';shopView='cofres';forgeId=null;reforgeId=null;lockSel=[];expandedId=null;filtersOpen=false;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
 };
 function disToast(r){ if(r.n) toast(`${r.n} arma${r.n>1?'s':''} desmontada${r.n>1?'s':''}: +${r.v} chatarra`) }
 function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0);
@@ -765,7 +770,7 @@ function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0)
 
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
-  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();tab=b.dataset.tab;reforgeId=null;lockSel=[];renderTab();return}
+  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='cofres'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;reforgeId=null;lockSel=[];renderTab();return}
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
