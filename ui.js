@@ -103,7 +103,7 @@ function renderShell(){
     <span title="Chatarra"><i class="dot" style="background:var(--scrap)"></i><b id="rScrap"></b></span></div></div>
   <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
   <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
-    <div class="hbar"><span>Vida</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>Exp</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
+    <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
     </div>
   </div>
   <div id="tab"></div>`;
@@ -652,7 +652,6 @@ function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
 const REW_T={invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
 if(window.Telemetry) Telemetry.onReward=list=>later(()=>showModal(`<h3>¡Premio por invitar!</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||'Premio'}</span><b>+${fmt(r.amount)} ${r.kind==='silver'?'cofre'+(r.amount>1?'s':'')+' de plata':'tokens'}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`));
-const num1=v=>v.toLocaleString('es-ES',{maximumFractionDigits:1});
 function renderSelect(){
   $('#nav').hidden=true; $('#upFab').hidden=true; upOpen=false;
   $('#app').classList.remove('home');
@@ -660,8 +659,7 @@ function renderSelect(){
   <label class="namebox"><span class="s">Tu nombre</span><input id="pNameIn" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(pendingName)}"></label>
   <p class="hint">Elige tu clase</p>
   <div class="classes">${Object.entries(CFG.classes).map(([k,c])=>`<button class="ccard" data-act="pick" data-c="${k}">
-    <span class="chd"><span class="cn">${clsLabel(k)}</span><span class="pill" style="color:${c.color}">${c.role}</span></span>
-    <span class="cs">Vida ${Math.round(c.hp)} · Daño ${Math.round(c.atk)} · Def ${num1(c.df)} · Velocidad ${c.spd.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}/s${c.cr?` · Crít ${Math.round(c.cr*100)} %`:''}</span>
+    <span class="cn">${clsLabel(k)}</span>
     <span class="cs">${c.passive}</span></button>`).join('')}</div>`;
 }
 
