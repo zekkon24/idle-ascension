@@ -37,7 +37,7 @@ function attach(G){
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ checkVersion(); checkControl() } });
   // Aviso en directo (Supabase Realtime): cambios en la tabla control
   const K=(CFG.supabase||{}).key, U=(CFG.supabase||{}).url;
-  if(K&&U){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  if(K&&U){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js';
     s.onload=()=>{ try{ const sb=root.supabase.createClient(U,K);
       sb.channel('control').on('postgres_changes',{event:'*',schema:'public',table:'control'},p=>apply(p.new)).subscribe() }catch(e){} };
     document.head.appendChild(s); }
