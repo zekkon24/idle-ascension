@@ -103,7 +103,7 @@ function renderShell(){
     <span title="Chatarra"><i class="dot" style="background:var(--scrap)"></i><b id="rScrap"></b></span></div></div>
   <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
   <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
-    <div class="bar"><i id="hpBar"></i></div><div class="bar xp"><i id="xpBar"></i></div>
+    <div class="hbar"><span>Vida</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>Exp</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
     </div>
   </div>
   <div id="tab"></div>`;
@@ -125,8 +125,9 @@ function updateHUD(){
   const es=$('#evoSlot'); if(es){ const can=!ev&&G.evoLvlOk(), key=can+'|'+S.mode+'|'+(S.lvl>=G.lvlCap())+'|'+ev;
     if(es.dataset.k!==key){ es.dataset.k=key; es.innerHTML=can?'<button class="btn sm gold" data-act="evoOpen">Evolucionar</button>'
       :(G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap()?'<span class="pill">Evolución: próximamente</span>':''); } }
-  $('#hpBar').style.width=(B?Math.max(0,B.hp/h.hp*100):100)+'%';
-  $('#xpBar').style.width=Math.min(100,S.xp/G.xpReq(S.lvl)*100)+'%';
+  const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
+  $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#hpTxt').textContent=fmt(Math.ceil(hpv));
+  $('#xpBar').style.width=xpp+'%'; $('#xpTxt').textContent=Math.floor(xpp)+' %';
   const hs=$('#hStats'); if(hs) hs.innerHTML=`<div class="sl">
       <span>Vida <b>${fmt(h.hp)}</b></span><span>Def <b>${fmt(h.df)}</b></span>${h.ls?`<span>Robo <b>${pct(h.ls)}</b></span>`:''}${h.ev?`<span>Evasión <b>${pct(h.ev)}</b></span>`:''}</div>
     <div class="sl"><span>Daño <b>${fmt(h.atk)}</b></span><span>Vel <b>${h.spd.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}/s</b></span><span>Crít <b>${pct(h.cr)}</b></span><span>D. crít <b>+${Math.round(h.cd*100)} %</b></span>${h.bd?`<span>Jefes <b>+${pct(h.bd)}</b></span>`:''}</div>`;
@@ -151,7 +152,7 @@ function renderTab(){
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||G.inEvent();
   if(upOpen) showUpgrades();
   // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
-  if(tab==='inv'){ const back=(v,t)=>`<button class="banner" data-act="invview" data-v="${v}"><span>← ${t}</span></button>`;
+  if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
     el.innerHTML=(invView==='forja'?back('armas','Volver a Armas')
       :invView==='armas'?back('cofres','Volver al inventario')+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`
       :invView==='grim'?back('cofres','Volver al inventario')
@@ -194,12 +195,12 @@ function itemCard(it){
   const m=G.weaponMain(it), eq=it.id===S.equippedId, own=it.cls===S.cls, open=expandedId===it.id, up=own&&!eq&&betterThanEquipped(it);
   return `<div class="irow${eq?' eq':''}${open?' open':''}">
     <div class="ihd" data-act="expand" data-id="${it.id}" role="button" tabindex="0" aria-expanded="${open}">
-      <span class="nm" style="color:var(--r${it.r})">${wName(it)} <span class="s">nv ${it.lvl}</span>${eq?' <span class="pill">Equipada</span>':''}${up?' <span class="better" title="Mejor que tu arma equipada" aria-label="Mejor que tu arma equipada">▲</span>':''}</span>
+      <span class="nm" style="color:var(--r${it.r})">${wName(it)} <span class="s">nv ${it.lvl}/${CFG.weapon.maxLvl}</span>${eq?' <span class="pill">Equipada</span>':''}${up?' <span class="better" title="Mejor que tu arma equipada" aria-label="Mejor que tu arma equipada">▲</span>':''}</span>
       <span class="meta"><span class="s">${clsLabel(it.cls)}</span><span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r]}</span>
       <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear: no se desmonta ni se usa para forjar'}" title="Bloquear: no se desmonta ni se usa para forjar">★</button></span>
     </div>
     ${open?`<div class="idet">
-      <div class="s">Daño +${pct(m.d)} · Velocidad +${pct(m.s)} · nivel ${it.lvl}/${CFG.weapon.maxLvl}</div>
+      <div class="s">Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div>
       <div class="sec">${chips(it.sec,false,it.r)}</div>
       <div class="ctrl">
         ${eq?'':own?`<button class="btn sm" data-act="equip" data-id="${it.id}">Equipar</button>`:'<span class="s">Otra clase: no se puede equipar</span>'}
@@ -218,7 +219,7 @@ function tabForja(){
   return `<section class="panel"><h3>Forja</h3>
     <div class="wcard${eq?' eq':''}">
       <div class="hd"><span class="nm" style="color:var(--r${it.r});font-size:16px">${wName(it)}</span><span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r]} · nv ${it.lvl}/${CFG.weapon.maxLvl}</span></div>
-      <div class="s">${clsLabel(it.cls)}${eq?' · equipada':''}</div>
+      <div class="s">${clsLabel(it.cls)}</div>
       <div class="s">Daño +${pct(m.d)}${max?'':` → <b style="color:var(--good)">+${pct(mn.d)}</b>`} · Velocidad +${pct(m.s)}${max?'':` → <b style="color:var(--good)">+${pct(mn.s)}</b>`}</div>
       <div class="sec">${chips(it.sec,rOpen,it.r)}</div>
       <div class="ctrl">
@@ -272,11 +273,11 @@ function tabInv(){
 </div>`;
   if(invView==='grim') return tabGrim();
   if(invView==='cofres'){
-    const row=k=>{const n=G.chestCount(k);return `<div class="chest">
+    const row=k=>{const n=G.chestCount(k);return `<div class="chest inv">
       <div><div class="cn">${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
       <div class="acts"><button class="btn sm" data-act="info" data-k="${k}">Info</button>
         <button class="btn sm gold" data-act="open1" data-k="${k}">Abrir 1</button>
-        ${n>1?`<button class="btn sm" data-act="openAll" data-k="${k}">Abrir todos</button>`:''}</div></div>`};
+        <button class="btn sm" data-act="openAll" data-k="${k}" ${n>1?'':'disabled'}>Abrir todos</button></div></div>`}; // siempre los 3 botones: quedan alineados entre filas
     const owned=CHEST_TYPES.filter(k=>G.chestCount(k)>0);
     return `<section class="panel"><h3>Inventario</h3>${head}${owned.map(row).join('')||'<p class="hint">Vacío.</p>'}</section>`;
   }
@@ -382,10 +383,10 @@ function doReforge(id,pay){
 const SHOP={
   silver:{name:'Cofre de plata',info:true},
   mode:{name:'Cofre de modo',info:true},
-  ticket:{name:'Ticket de Mazmorra'},
-  bossTicket:{name:'Ticket Jefe'},
-  ess:{name:'Esencia'},
-  ev:{name:'Emblema'},
+  ticket:{name:'Ticket de Mazmorra',desc:'Una entrada más a la Mazmorra, además de la gratis del día.'},
+  bossTicket:{name:'Ticket Jefe',desc:'Una entrada más al Jefe semanal, además de la gratis de la semana.'},
+  ess:{name:'Esencia',desc:'Se usa para la Evolución y para desbloquear Grimorios. También la sueltan los jefes.'},
+  ev:{name:'Emblema',desc:'Se usa para la Evolución y para desbloquear Grimorios. También se gana en los premios de Mazmorra y Jefe semanal.'},
 };
 const usd=t=>(t/CFG.tokens.perUsd).toLocaleString('es-ES',{minimumFractionDigits:t%CFG.tokens.perUsd?2:0,maximumFractionDigits:2})+' $';
 const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverPrice()*n)} oro`:`${fmt(G.shopPrice(k)*n)} tokens`;
@@ -394,7 +395,7 @@ const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverPrice()*n)} oro`:`${fmt(G.sh
 const tokOpen=()=>!!(CFG.devTools||CFG.tokens.open||G.tokens()>0);
 const soon='<span class="pill">Próximamente</span>';
 function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name}</div>${k==='silver'?`<div class="s">Quedan ${G.silverLeft()} hoy</div>`:''}</div>
-  <div class="acts">${it.info?`<button class="btn sm" data-act="info" data-k="${k}">Info</button>`:''}${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
+  <div class="acts"><button class="btn sm" data-act="${it.info?'info':'shopInfo'}" data-k="${k}">Info</button>${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
 function tabShop(){
   const today=G.dayKey();
   const head=`<div class="fchips" role="tablist">${[['cofres','Cofres'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
@@ -406,8 +407,8 @@ function tabShop(){
     <p class="hint">${CFG.tokens.perUsd} tokens = 1 $. Se gastan primero los comprados. Los ganados se pueden retirar (mínimo ${fmt(CFG.tokens.withdraw.min)}, comisión ${Math.round(CFG.tokens.withdraw.fee*100)} %). Compras y retiros de prueba (solo en local).</p>`
     :`<div class="mcard lock"><div class="ctrl" style="justify-content:space-between"><b>Comprar tokens</b><span class="pill">Próximamente</span></div><span class="s">${CFG.tokens.perUsd} tokens = 1 $. Pronto podrás comprarlos con Telegram Stars.</span></div>`}`;
   if(shopView==='subs') body=`
-    <div class="row"><div><div class="t">Tarjeta mensual</div><div class="s">+${Math.round(CFG.cardGold*100)} % oro · 30 días${G.hasCard()?' · quedan '+(S.cardUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="card">${fmt(CFG.cardPrice)} tokens</button>`:soon}</div></div>
-    <div class="row"><div><div class="t">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button>`:soon}</div></div>`;
+    <div class="chest"><div><div class="cn">Tarjeta mensual</div><div class="s">+${Math.round(CFG.cardGold*100)} % oro · 30 días${G.hasCard()?' · quedan '+(S.cardUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="card">${fmt(CFG.cardPrice)} tokens</button>`:soon}</div></div>
+    <div class="chest"><div><div class="cn">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button>`:soon}</div></div>`;
   return `<section class="panel"><h3>Tienda</h3>${head}${body}</section>`;
 }
 function maxBuy(k){ return k==='silver'?Math.min(G.silverLeft(),Math.floor(S.gold/G.silverPrice())):Math.floor(G.tokens()/G.shopPrice(k)) }
@@ -466,7 +467,7 @@ function tabEv(){
   const card=(k,title,sub,tk,line,pend)=>`<button class="evcard" data-act="evOpen" data-k="${k}"><span class="evt">${title}${pend?' <sup class="nb">!</sup>':''}</span><span class="s">${sub}</span>
     <span class="evl"><span>${tk}</span><span>${line}</span></span></button>`;
   // Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Jefe semanal; la Liga está oculta) y PvP (próximamente)
-  const back=`<button class="banner" data-act="modview" data-v=""><span>← Modos</span></button>`;
+  const back=`<button class="back" data-act="modview" data-v="">← Modos</button>`;
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
     const big=(v,t,sub,st,lock)=>`<button class="mcard mbig${lock?' lock':''}" data-act="modview" data-v="${v}"><div class="ctrl" style="justify-content:space-between"><b>${t}</b>${st}</div><span class="s">${sub}</span></button>`;
     return `<section class="panel"><h3>Modos</h3><div class="mlist">
@@ -480,7 +481,7 @@ function tabEv(){
       <button class="mcard mbig" data-act="pvpSoon"><div class="ctrl" style="justify-content:space-between"><b>Buscar partida</b><span class="pill">Próximamente</span></div><span class="s">Lucha contra otro jugador</span></button>
     </div></section>`;
   return `${back}<section class="panel"><h3>Eventos</h3>
-    ${card('lab','Mazmorra','3 min de monstruos sin parar · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Sin intentos hoy',!!lp)}
+    ${card('lab','Mazmorra','3 min de monstruos sin parar · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
     ${CFG.league&&CFG.league.show?(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow()):''}
     ${card('boss','Jefe semanal','1 min contra un jefe inmortal · ranking semanal por daño',`Entradas <b>${G.wbFreeLeft()+S.bossTickets}</b>`,paused?'En pausa':bd?`Semana ${fmt(bd)} · puesto ${bpos}`:`Cierra en ${dhm(G.weekLeft())}`,!!bp)}
   </section>`;
@@ -488,7 +489,7 @@ function tabEv(){
 function tabLab(){
   const V=CFG.event, paused=G.evPaused(), d=G.evShownDay(), best=G.evToday(), pend=G.evPending(), live=G.inEvent();
   const pos=best?G.evRank(d,best):null;
-  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
+  return `<button class="back" data-act="evBack">← Eventos</button>
   <section class="panel"><h3>Mazmorra</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ayer · puesto ${pend.pos}</b><button class="btn sm gold" data-act="evClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
@@ -501,7 +502,7 @@ function tabLab(){
 }
 // Liga mensual: puntos por gastar tokens, ver anuncios y generar oro; el bote se reparte entre todos según sus puntos
 function tabLeague(){ const n=G.leagueNow(), p=G.leaguePending(), L=CFG.league;
-  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
+  return `<button class="back" data-act="evBack">← Eventos</button>
   <section class="panel"><h3>Liga de ${n.name}</h3>
     ${p?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ${p.name}</b><button class="btn sm gold" data-act="lgClaim">Recoger</button></div><span class="s">${fmt(p.tok)} tokens (${fmt(p.pts)} puntos)</span></div>`:''}
     <div class="evhead"><div><span class="s">Tus puntos</span><b>${fmt(n.pts)}</b></div><div><span class="s">Bote</span><b>${fmt(n.pool)}</b></div><div><span class="s">Premio estimado</span><b>${fmt(n.tok)}</b></div></div>
@@ -511,7 +512,7 @@ function tabLeague(){ const n=G.leagueNow(), p=G.leaguePending(), L=CFG.league;
 function tabBoss(){
   const W=CFG.wboss, paused=G.evPaused(), w=G.wbShownWeek(), dmg=G.wbWeekDmg(), pend=G.wbPending(), live=G.inEvent();
   const pos=dmg?G.wbRank(w,dmg):null;
-  return `<button class="banner" data-act="evBack"><span>← Eventos</span></button>
+  return `<button class="back" data-act="evBack">← Eventos</button>
   <section class="panel"><h3>Jefe semanal</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de la semana pasada · puesto ${pend.pos}</b><button class="btn sm gold" data-act="wbClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
@@ -651,6 +652,7 @@ function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
 const REW_T={invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
 if(window.Telemetry) Telemetry.onReward=list=>later(()=>showModal(`<h3>¡Premio por invitar!</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||'Premio'}</span><b>+${fmt(r.amount)} ${r.kind==='silver'?'cofre'+(r.amount>1?'s':'')+' de plata':'tokens'}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`));
+const num1=v=>v.toLocaleString('es-ES',{maximumFractionDigits:1});
 function renderSelect(){
   $('#nav').hidden=true; $('#upFab').hidden=true; upOpen=false;
   $('#app').classList.remove('home');
@@ -658,8 +660,8 @@ function renderSelect(){
   <label class="namebox"><span class="s">Tu nombre</span><input id="pNameIn" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(pendingName)}"></label>
   <p class="hint">Elige tu clase</p>
   <div class="classes">${Object.entries(CFG.classes).map(([k,c])=>`<button class="ccard" data-act="pick" data-c="${k}">
-    <span class="pill" style="color:${c.color}">${c.role}</span><span class="cn">${clsLabel(k)}</span>
-    <span class="cs">Vida ${c.hp} · Daño ${c.atk} · Def ${c.df}<br>Velocidad ${c.spd.toFixed(2)}/s${c.cr?` · Crít ${Math.round(c.cr*100)} %`:''}</span>
+    <span class="chd"><span class="cn">${clsLabel(k)}</span><span class="pill" style="color:${c.color}">${c.role}</span></span>
+    <span class="cs">Vida ${Math.round(c.hp)} · Daño ${Math.round(c.atk)} · Def ${num1(c.df)} · Velocidad ${c.spd.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}/s${c.cr?` · Crít ${Math.round(c.cr*100)} %`:''}</span>
     <span class="cs">${c.passive}</span></button>`).join('')}</div>`;
 }
 
@@ -755,6 +757,7 @@ const ACT={
   ref:(b,k,id)=>doReforge(id,b.dataset.pay),
   applyReforge:()=>{if(pendingReforge)G.applyReforge(pendingReforge.id);pendingReforge=null;closeModal();renderTab()},
   info:(b,k)=>oddsModal(k),
+  shopInfo:(b,k)=>showModal(`<h3>${SHOP[k].name}</h3><p class="hint">${SHOP[k].desc}</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button></div>`),
   open1:(b,k)=>openChests(k,false),
   openAll:(b,k)=>openChests(k,true),
   autoDis:()=>{G.setOpt('autoDis',!(S.opt&&S.opt.autoDis));renderTab()},

@@ -66,6 +66,9 @@ canvas{display:block;width:100%;height:300px}
 .bar{height:8px;border-radius:5px;background:var(--panel2);overflow:hidden;grid-column:1 / -1}
 .bar i{display:block;height:100%;background:var(--good);width:0%}
 .bar.xp i{background:var(--tok)}
+.hbar{grid-column:1 / -1;display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hbar .bar{grid-column:auto}
+.hbar b{color:var(--ink);min-width:44px;text-align:right}
 .statline{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 .statline b{color:var(--ink);font-weight:800}
 #hStats{flex-direction:column;gap:4px}
@@ -106,6 +109,9 @@ canvas{display:block;width:100%;height:300px}
 .chest{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;background:var(--panel2)}
 .chest .cn{font-family:var(--display);font-size:17px}
 .chest .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chest.inv .acts{flex-wrap:nowrap} /* los 3 botones en una línea, alineados entre filas */
+.chest.inv>div:first-child{min-width:0}
+@media (max-width:374px){.chest.inv{grid-template-columns:1fr}}
 .demo{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:.6px;text-transform:uppercase}
 .odds-t{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
 .odds-t th,.odds-t td{padding:5px 4px;border-bottom:1px solid var(--line);text-align:right}
@@ -114,7 +120,8 @@ canvas{display:block;width:100%;height:300px}
 .odds-t tr.here td{color:var(--gold);font-weight:800}
 .odds-t td,.odds-t th{white-space:nowrap}
 .odds-t th{font-size:10px}
-.classes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.classes{display:grid;grid-template-columns:1fr;gap:10px} /* una clase por fila: la etiqueta cabe en una línea */
+.ccard .chd{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .ccard{text-align:left;border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--panel);display:flex;flex-direction:column;gap:6px}
 .ccard:hover{border-color:var(--gold)}
 .ccard .cn{font-family:var(--display);font-size:19px}
@@ -172,13 +179,11 @@ input[type=number]{width:64px}
 .ihd .meta .rar{font-size:11px}
 .idet{padding:0 10px 9px;display:flex;flex-direction:column;gap:6px}
 .fpanel{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2)}
-.fabs{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:1fr 1fr;align-items:center;pointer-events:none}
+.fabs{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center;pointer-events:none} /* Mejoras y Auto juntos, mismo ancho */
 .fabs .fab{pointer-events:auto}
-.fabs .fab:first-child{justify-self:start}
-.fabs .fab:nth-child(2){justify-self:end}
+.fabs .fab{justify-self:stretch}
 /* calaveras de modo: centradas abajo, dentro del marco del juego (debajo de la pelea) */
 .fasetxt{position:absolute;right:10px;bottom:-1px;z-index:3;font-family:var(--display);font-weight:800;font-size:14px;white-space:nowrap;padding:3px 9px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
-.fabs .fab:last-child{justify-self:end}
 .fab.small{padding:8px 12px;font-size:12px;border-radius:12px}
 .fab.off{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
 .mlist{display:flex;flex-direction:column;gap:8px}
@@ -189,6 +194,10 @@ input[type=number]{width:64px}
 .fab{background:var(--gold);color:var(--gold-ink);border:0;border-radius:14px;padding:12px 16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.45)}
 .modal .panel{border:0;padding:0;background:none}
 .banner{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:10px;border-radius:14px;border:1px solid var(--gold);background:linear-gradient(90deg,rgba(232,176,74,.22),rgba(232,176,74,.06));color:var(--ink);font-weight:800;font-size:16px;text-align:left}
+#tab{display:flex;flex-direction:column;gap:10px} /* separa los paneles */
+#tab .banner{margin-bottom:0}
+.back{align-self:flex-start;background:none;border:0;padding:4px 2px;color:var(--muted);font-weight:800;font-size:14px}
+.back:hover{color:var(--ink)}
 .banner:hover{background:linear-gradient(90deg,rgba(232,176,74,.32),rgba(232,176,74,.1))}
 .calbtn{position:absolute;right:10px;top:8px;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;padding:0}
 .better{color:var(--good);font-size:12px}
@@ -241,7 +250,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609281620-cd270d1';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609281643-f996cfd';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
