@@ -37,7 +37,7 @@ const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
 let tab='up', upOpen=false, invView='main', shopView='cofres', evView=null, modView=null;
-let expandedId=null, forgeId=null, lockSel=[];
+let expandedId=null, forgeId=null, lockSel=[], forjaBack='armas'; // forjaBack: adónde vuelve "← Volver" desde la Forja
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 // escribe HTML solo si cambia (evita rehacer botones mientras se tocan)
@@ -56,7 +56,7 @@ function canGoBack(){ if(!S) return false; if(modalOpen()) return !pendingSpin&&
 function goBack(){ if(modalOpen()){ if(canGoBack()) ACT.close(); return }
   if(tab==='ev'&&evView){ evView=null; return renderTab() }
   if(tab==='ev'&&modView){ modView=null; return renderTab() }
-  if(tab==='inv'&&invView==='forja'){ invView='armas'; return renderTab() }
+  if(tab==='inv'&&invView==='forja'){ invView=forjaBack; return renderTab() }
   if(tab==='inv'&&invView!=='main'){ invView='main'; return renderTab() }
   tab='up'; upOpen=false; renderTab() }
 let backShown=null;
@@ -153,7 +153,7 @@ function renderTab(){
   if(upOpen) showUpgrades();
   // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
-    el.innerHTML=(invView==='forja'?back('armas','Volver a Armas')
+    el.innerHTML=(invView==='forja'?back(forjaBack,forjaBack==='main'?'Volver al inventario':'Volver a Armas')
       :invView==='armas'?back('main','Volver al inventario')+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`
       :invView==='grim'?back('main','Volver al inventario')
       :equipHud())+tabInv(); if(invView==='armas') renderList(); }
@@ -260,8 +260,8 @@ function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy
   return `<svg class="silh" viewBox="0 0 100 130" width="92" height="120" aria-hidden="true" fill="${c}">${body}${extra}</svg>` }
 function equipHud(){ const w=G.equipped(), gid=S.grim&&S.grim.active, g=gid&&G.grimList().find(x=>x.id===gid);
   const wm=w&&G.weaponMain(w);
-  const wslot=w?`<button class="eslot" data-act="invview" data-v="armas" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
-      <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`
+  const wslot=w?`<button class="eslot" data-act="forge" data-id="${w.id}" data-from="main" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
+      <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span><span class="s">Toca para forjar</span></button>`
     :`<button class="eslot" data-act="invview" data-v="armas"><span class="s">Arma</span><b>Sin arma</b><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`;
   const gslot=g?`<button class="eslot" data-act="invview" data-v="grim" style="--rc:var(--rE)"><span class="s">Grimorio</span><b style="color:var(--rE)">${g.name.replace('Grimorio ','')}</b>
       <span class="s">${g.role} · nv ${G.grimLevel(g.id)} · Toca para verlos</span></button>`
@@ -726,8 +726,8 @@ const ACT={
     pendingDis=ids;showModal(`<h3>¿Desmontar ${ids.length} armas?</h3><p class="hint">+${v} chatarra</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`)},
   disYes:()=>{closeModal();disToast(G.dismantle(pendingDis||[]));pendingDis=null;renderTab()},
   invFull:()=>{ closeModal(); tab='inv'; invView='armas'; renderTab() },
-  forge:(b,k,id)=>{forgeId=id;lockSel=[];tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
-  invview:b=>{const v=b.dataset.v; invView=tab==='inv'&&invView===v&&(v==='cofres'||v==='mat')?'main':v; renderTab()}, // tocar la pestaña abierta la cierra
+  forge:(b,k,id)=>{forgeId=id;lockSel=[];forjaBack=b.dataset.from||'armas';tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
+  invview:b=>{const v=b.dataset.v; if(v==='forja') forjaBack='armas'; invView=tab==='inv'&&invView===v&&(v==='cofres'||v==='mat')?'main':v; renderTab()}, // tocar la pestaña abierta la cierra
   expand:(b,k,id)=>{expandedId=expandedId===id?null:id;renderList()},
   fclear:()=>{F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';renderTab()},
   rlskip:()=>spinDone(),
