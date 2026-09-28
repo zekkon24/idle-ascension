@@ -46,6 +46,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .res{display:flex;gap:10px;font-variant-numeric:tabular-nums;font-weight:800}
 .res span{display:flex;align-items:center;gap:4px}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.ic{width:15px;height:15px;flex:none}
 [hidden]{display:none!important}
 .battle{display:flex;flex-direction:column;gap:10px}
 .stage{position:relative;border-radius:14px;overflow:visible;border:1px solid var(--line);background:#0e1017;margin-bottom:1px} /* visible: las calaveras y la fase salen unos píxeles por debajo del borde */
@@ -123,6 +124,8 @@ canvas{display:block;width:100%;height:300px}
 .chip.top small{color:var(--good)}
 .chest{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;background:var(--panel2)}
 .chest .cn{font-family:var(--display);font-size:17px}
+.ibtn{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:11px;font-weight:800;font-family:var(--body);padding:0;vertical-align:2px;margin-left:4px}
+.ibtn:hover{color:var(--ink);border-color:var(--gold)}
 .chest .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .chest.inv .acts{flex-wrap:nowrap} /* los 3 botones en una línea, alineados entre filas */
 .chest.inv>div:first-child{min-width:0}
@@ -190,7 +193,8 @@ input[type=number]{width:64px}
 .irow{border:1px solid var(--line);border-radius:9px;background:var(--panel2)}
 .irow.eq{border-color:var(--gold)}
 .ihd{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 10px;cursor:pointer}
-.ihd .nm{font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.ihd .nm{font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.ihd .nm .wn{overflow:hidden;text-overflow:ellipsis}
 .ihd .meta{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .ihd .meta .rar{font-size:11px}
 .idet{padding:0 10px 9px;display:flex;flex-direction:column;gap:6px}
@@ -201,6 +205,7 @@ input[type=number]{width:64px}
 /* calaveras de modo: centradas abajo, dentro del marco del juego (debajo de la pelea) */
 .fasetxt{position:absolute;right:10px;bottom:-1px;z-index:3;font-family:var(--display);font-weight:800;font-size:14px;white-space:nowrap;padding:3px 9px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .fab.small{padding:8px 12px;font-size:12px;border-radius:12px}
+#autoBtn:not(.off){background:var(--good);color:#0e1a12} /* Auto encendido: verde; apagado: gris */
 .fab.off{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
 .mlist{display:flex;flex-direction:column;gap:8px}
 .mcard{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
@@ -209,6 +214,11 @@ input[type=number]{width:64px}
 .mcard .btn{align-self:flex-start}
 .fab{background:var(--gold);color:var(--gold-ink);border:0;border-radius:14px;padding:12px 16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.45)}
 .modal .panel{border:0;padding:0;background:none}
+.fold summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.fold summary::-webkit-details-marker{display:none}
+.fold summary::after{content:'▾';color:var(--muted);font-size:14px;transition:transform .2s}
+.fold[open] summary::after{transform:rotate(180deg)}
+.fold:not([open]){gap:0}
 .banner{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;margin-bottom:10px;border-radius:14px;border:1px solid var(--gold);background:linear-gradient(90deg,rgba(232,176,74,.22),rgba(232,176,74,.06));color:var(--ink);font-weight:800;font-size:16px;text-align:left}
 #tab{display:flex;flex-direction:column;gap:10px} /* separa los paneles */
 #tab .banner{margin-bottom:0}
@@ -266,7 +276,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609281753-a2558d7';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609281813-34ddf22';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

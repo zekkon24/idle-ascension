@@ -95,12 +95,17 @@ function lootHTML(list){
 }
 
 /* ---------- estructura ---------- */
+// iconos de las monedas de arriba: moneda de oro, token (rombo) y chatarra (engranaje)
+const ICON={
+  gold:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--gold)"/><circle cx="8" cy="8" r="4.2" fill="none" stroke="#0005" stroke-width="1.4"/></svg>',
+  tok:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l6 7-6 7-6-7z" fill="var(--tok)"/><path d="M8 4l3 4-3 4-3-4z" fill="#fff4"/></svg>',
+  scrap:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path fill="var(--scrap)" d="M7 1h2l.4 2 1.5.6 1.7-1.2 1.4 1.4-1.2 1.7.6 1.5 2 .4v2l-2 .4-.6 1.5 1.2 1.7-1.4 1.4-1.7-1.2-1.5.6L9 15H7l-.4-2-1.5-.6-1.7 1.2-1.4-1.4 1.2-1.7-.6-1.5L1 9V7l2-.4.6-1.5-1.2-1.7 1.4-1.4 1.7 1.2 1.5-.6z"/><circle cx="8" cy="8" r="2.4" fill="#0006"/></svg>'};
 function renderShell(){
   $('#app').innerHTML=`
   <div class="top"><div class="uname" id="uName"></div>
-    <div class="res"><span title="Oro"><i class="dot" style="background:var(--gold)"></i><b id="rGold"></b></span>
-    <span title="Tokens (comprados + ganados)"><i class="dot" style="background:var(--tok)"></i><b id="rTok"></b></span>
-    <span title="Chatarra"><i class="dot" style="background:var(--scrap)"></i><b id="rScrap"></b></span></div></div>
+    <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
+    <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
+    <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
   <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
   <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
     <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
@@ -114,8 +119,8 @@ function updateHUD(){
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
-  setHTML($('#faseTxt'),ev&&B.kind==='boss'?`${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · ${fmt(B.dmg)}`
-    :ev?`${mmss(Math.max(0,CFG.event.dur-B.t)*1000)} · ${B.kills}`:`Fase ${S.fase}`);
+  setHTML($('#faseTxt'),ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
+    :ev?`⏱ ${mmss(Math.max(0,CFG.event.dur-B.t)*1000)} · Muertes ${B.kills}`:`Fase ${S.fase}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   const tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):''; // (sin "Avanzando"/"Farmeando")
@@ -137,7 +142,7 @@ function updateHUD(){
   if(bt){ bt.hidden=!bl; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
-  const ab=$('#autoBtn'); if(ab){ab.setAttribute('aria-label',S.autoPush?'Avance automático activado':'Avance automático desactivado');ab.classList.toggle('off',!S.autoPush);ab.setAttribute('aria-pressed',S.autoPush)}
+  const ab=$('#autoBtn'); if(ab){ab.setAttribute('aria-label',S.autoPush?'Avance automático activado':'Avance automático desactivado');ab.classList.toggle('off',!S.autoPush);ab.textContent=S.autoPush?'Auto: Sí':'Auto: No';ab.setAttribute('aria-pressed',S.autoPush)}
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
   setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Modos<sup class="nb">${n}</sup>`:'Modos')(S.tickets+S.bossTickets+G.evFreeLeft()+G.wbFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
@@ -154,7 +159,7 @@ function renderTab(){
   // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
     el.innerHTML=(invView==='forja'?back(forjaBack,forjaBack==='main'?'Volver al inventario':'Volver a Armas')
-      :invView==='armas'?back('main','Volver al inventario')+`<button class="banner" data-act="invview" data-v="forja"><span>Ir a la Forja</span><span aria-hidden="true">→</span></button>`
+      :invView==='armas'?back('main','Volver al inventario')
       :invView==='grim'?back('main','Volver al inventario')
       :equipHud())+tabInv(); if(invView==='armas') renderList(); }
   if(tab==='shop') el.innerHTML=tabShop();
@@ -168,11 +173,11 @@ function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev'||(tab==='inv'&&invVie
 function showUpgrades(){upOpen=true;showModal(tabUp()+'<button class="btn gold" data-act="upClose">Cerrar</button>');updateHUD()}
 function tabUp(){
   const rows=Object.entries(CFG.upgrades).map(([k,u])=>{
-    const c=G.upCost(k), dv=G.upgradeGain(k);
-    const eff=k==='spd'?'+'+pct(dv/G.heroStats().spd):'+'+fmt(dv);
-    return `<div class="row"><div><div class="t">${u.name} <span class="s">nv ${S.up[k]}</span></div><div class="s">${eff}</div></div>
+    const c=G.upCost(k), dv=G.upgradeGain(k), v=G.heroStats()[k];
+    const nv=x=>k==='spd'?x.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+'/s':fmt(x);
+    return `<div class="row"><div><div class="t">${u.name}</div><div class="s">${nv(v)} → <b style="color:var(--good)">${nv(v+dv)}</b></div></div>
       <div class="acts"><button class="btn sm gold" data-act="buy" data-k="${k}" data-need="gold:${c}">${fmt(c)} oro</button><button class="btn sm" data-act="buymax" data-k="${k}">Máx.</button></div></div>`}).join('');
-  return `<section class="panel"><h3>Mejoras</h3><div class="statline" id="hStats"></div>${rows}</section>`;
+  return `<section class="panel"><h3>Mejoras</h3>${rows}</section>`;
 }
 // Modos: Normal, Pesadilla, Infierno. Muestra dónde estás, qué da cada uno y qué hace falta para pasar al siguiente.
 function nameModal(){ showModal(`<h3>Tu nombre</h3><input id="nameIn" class="nameinp" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(S.name||'')}">
@@ -195,7 +200,7 @@ function itemCard(it){
   const m=G.weaponMain(it), eq=it.id===S.equippedId, own=it.cls===S.cls, open=expandedId===it.id, up=own&&!eq&&betterThanEquipped(it);
   return `<div class="irow${eq?' eq':''}${open?' open':''}">
     <div class="ihd" data-act="expand" data-id="${it.id}" role="button" tabindex="0" aria-expanded="${open}">
-      <span class="nm" style="color:var(--r${it.r})">${wName(it)} <span class="s">nv ${it.lvl}/${CFG.weapon.maxLvl}</span>${eq?' <span class="pill">Equipada</span>':''}${up?' <span class="better" title="Mejor que tu arma equipada" aria-label="Mejor que tu arma equipada">▲</span>':''}</span>
+      <span class="nm" style="color:var(--r${it.r})"><span class="wn">${wName(it)}</span> <span class="s">nv${it.lvl}</span>${eq?' <span class="pill">Equipada</span>':''}${up?' <span class="better" title="Mejor que tu arma equipada" aria-label="Mejor que tu arma equipada">▲</span>':''}</span>
       <span class="meta"><span class="s">${clsLabel(it.cls)}</span><span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r]}</span>
       <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear: no se desmonta ni se usa para forjar'}" title="Bloquear: no se desmonta ni se usa para forjar">★</button></span>
     </div>
@@ -203,9 +208,9 @@ function itemCard(it){
       <div class="s">Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div>
       <div class="sec">${chips(it.sec,false,it.r)}</div>
       <div class="ctrl">
-        ${eq?'':own?`<button class="btn sm" data-act="equip" data-id="${it.id}">Equipar</button>`:'<span class="s">Otra clase: no se puede equipar</span>'}
+        ${eq?'':`<button class="btn sm" data-act="equip" data-id="${it.id}" ${own?'':'disabled title="Es de otra clase"'}>Equipar</button>`}
         <button class="btn sm gold" data-act="forge" data-id="${it.id}">Forjar</button>
-        ${eq||it.fav?'':`<button class="btn sm" data-act="dis1" data-id="${it.id}">Desmontar (+${G.disValue(it)} chatarra)</button>`}
+        ${eq||it.fav?'':`<button class="btn sm" data-act="dis1" data-id="${it.id}">Desmontar +${G.disValue(it)}</button>`}
       </div></div>`:''}
   </div>`;
 }
@@ -312,13 +317,14 @@ function tabInv(){
         <input type="number" id="fMin" aria-label="Mínimo %" inputmode="decimal" placeholder="mín" value="${esc(F.min)}">
         <input type="number" id="fMax" aria-label="Máximo %" inputmode="decimal" placeholder="máx" value="${esc(F.max)}"></div>
       <div id="bulk"></div>
-      <p class="hint" style="margin:0">La equipada no cuenta en las ${G.invMax()}. Las bloqueadas con ★ no se desmontan.</p>
     </div>
     <div id="invList" class="ilist"></div></section>`;
 }
 // Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Por ahora sin efecto.
+// coste: si lo tienes, "124 ✓" en verde; si no, "tienes / pide" en rojo
+const costRow=(n,have,v)=>`<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${have>=v?fmt(v)+' ✓':fmt(Math.floor(have))+' / '+fmt(v)}</b></div>`;
 function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(), act=S.grim&&S.grim.active;
-  const need=(n,have,v)=>`<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${fmt(Math.floor(have))} / ${fmt(v)}</b></div>`;
+  const need=costRow;
   const cards=G.grimList().map(g=>{ const own=G.grimOwned(g.id), on=act===g.id, lv=G.grimLevel(g.id);
     return `<div class="wcard${on?' eq':''}"><div class="hd"><span class="nm" style="font-size:16px;color:var(--rE)">${g.name}</span><span class="rar">${g.role}</span></div>
       <div class="s">${g.desc}</div>
@@ -328,8 +334,7 @@ function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(),
   const locked=G.grimList().some(g=>!G.grimOwned(g.id));
   return `<section class="panel"><h3>Grimorio</h3>
     ${locked?`<p class="hint">Desbloquear ${Object.keys(S.grim&&S.grim.owned||{}).length?'el segundo':'uno'} cuesta:</p><div class="loot">${need('Oro',S.gold,c.gold)}${need(CFG.modes[0].mat+'s',S.mats[0]||0,c.ess)}${need(CFG.event.mat+'s',S.evm||0,c.ev)}</div>`:''}
-    ${cards}
-    <p class="hint">Sube de nivel contigo. Solo puedes llevar uno activo; cambiarlo cuesta ${GC.switchCost} tokens.${tokOpen()?' Esencias y emblemas también en la Tienda.':''}</p></section>` }
+    ${cards}</section>` }
 // Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.
 const clsAZ=()=>[...CLASSES].sort((a,b)=>clsLabel(a).localeCompare(clsLabel(b),'es')); // Arquero, Asesino, Clérigo, Guerrero, Mago
 function fHead(){ const active=(F.rar!=='all')+(F.cls!=='all')+(F.stat!=='any');
@@ -388,7 +393,7 @@ function doReforge(id,pay){
 const SHOP={
   silver:{name:'Cofre de plata',info:true},
   mode:{name:'Cofre de modo',info:true},
-  ticket:{name:'Ticket de Mazmorra',desc:'Una entrada más a la Mazmorra, además de la gratis del día.'},
+  ticket:{name:'Ticket Mazmorra',desc:'Una entrada más a la Mazmorra, además de la gratis del día.'},
   bossTicket:{name:'Ticket Jefe',desc:'Una entrada más al Jefe semanal, además de la gratis de la semana.'},
   ess:{name:'Esencia',desc:'Se usa para la Evolución y para desbloquear Grimorios. También la sueltan los jefes.'},
   ev:{name:'Emblema',desc:'Se usa para la Evolución y para desbloquear Grimorios. También se gana en los premios de Mazmorra y Jefe semanal.'},
@@ -399,8 +404,8 @@ const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverCost(n))} oro`:`${fmt(G.shop
 // (salvo en local con herramientas de prueba o si el jugador ya tiene tokens, p. ej. ganados)
 const tokOpen=()=>!!(CFG.devTools||CFG.tokens.open||G.tokens()>0);
 const soon='<span class="pill">Próximamente</span>';
-function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name}</div>${k==='silver'?`<div class="s">${silverNote()}</div>`:''}</div>
-  <div class="acts"><button class="btn sm" data-act="${it.info?'info':'shopInfo'}" data-k="${k}">Info</button>${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
+function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name} <button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button></div>${k==='silver'?`<div class="s">${silverNote()}</div>`:''}</div>
+  <div class="acts">${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
 function tabShop(){
   const today=G.dayKey();
   const head=`<div class="fchips" role="tablist">${[['cofres','Cofres'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
@@ -417,7 +422,7 @@ function tabShop(){
   return `<section class="panel"><h3>Tienda</h3>${head}${body}</section>`;
 }
 // plata: límite al día (si lo hay) o precio que sube con cada compra del día
-const silverNote=()=>Number.isFinite(G.silverLeft())?`Quedan ${G.silverLeft()} hoy`:CFG.chests.silver.step?'El precio sube con cada compra del día':'Sin límite';
+const silverNote=()=>Number.isFinite(G.silverLeft())?`Quedan ${G.silverLeft()} hoy`:CFG.chests.silver.step?`+${Math.round(CFG.chests.silver.step*100)} % por cada compra hoy`:'Sin límite';
 function maxBuy(k){ return k==='silver'?G.silverMax():Math.floor(G.tokens()/G.shopPrice(k)) }
 function buyModal(){
   const k=buyCtx.k, it=SHOP[k], n=buyCtx.n, mx=maxBuy(k), ok=n>=1&&n<=mx;
@@ -500,12 +505,12 @@ function tabLab(){
   <section class="panel"><h3>Mazmorra</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de ayer · puesto ${pend.pos}</b><button class="btn sm gold" data-act="evClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
-    <div class="evhead"><div><span class="s">${G.evFreeLeft()?'Gratis + tickets':'Tickets'}</span><b>${G.evFreeLeft()?'1 + ':''}${S.tickets}</b></div><div><span class="s">${paused?'Total de ayer':'Total hoy'}</span><b>${best||'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
+    <div class="evhead"><div><span class="s">Entradas</span><b>${G.evFreeLeft()+S.tickets}</b></div><div><span class="s">${paused?'Total de ayer':'Total hoy'}</span><b>${best||'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="evGo" ${(S.tickets>0||G.evFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Entrar'}</button>
     ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="ticket">+1 ticket · ${V.ticketCost} tok</button>`:''}</div>
-    <p class="hint">${V.dur/60} min de monstruos sin parar, cada vez más fuertes. Las muertes de todos tus intentos del día se suman. 1 entrada gratis al día; las demás, con ticket.</p>
+    <p class="hint">${V.dur/60} min de monstruos · suma las muertes de tus intentos del día</p>
     ${rankHTML(G.evRivals(d),best,pos,x=>x)}</section>
-  <section class="panel"><h3>Premios del día</h3>${rewTable(V.rewards)}<p class="hint">Se reparten a las 01:00 UTC del día siguiente.</p></section>`;
+  <details class="panel fold"><summary><h3>Premios del día</h3></summary>${rewTable(V.rewards)}<p class="hint">Se reparten a las 01:00 UTC del día siguiente.</p></details>`;
 }
 // Liga mensual: puntos por gastar tokens, ver anuncios y generar oro; el bote se reparte entre todos según sus puntos
 function tabLeague(){ const n=G.leagueNow(), p=G.leaguePending(), L=CFG.league;
@@ -523,12 +528,12 @@ function tabBoss(){
   <section class="panel"><h3>Jefe semanal</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de la semana pasada · puesto ${pend.pos}</b><button class="btn sm gold" data-act="wbClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
-    <div class="evhead"><div><span class="s">${G.wbFreeLeft()?'Gratis + tickets':'Tickets Jefe'}</span><b>${G.wbFreeLeft()?'1 + ':''}${S.bossTickets}</b></div><div><span class="s">Daño semana</span><b>${dmg?fmt(dmg):'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
+    <div class="evhead"><div><span class="s">Entradas</span><b>${G.wbFreeLeft()+S.bossTickets}</b></div><div><span class="s">Daño semana</span><b>${dmg?fmt(dmg):'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="wbGo" ${(S.bossTickets>0||G.wbFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Luchar'}</button>
     ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="bossTicket">+1 ticket · ${W.ticketCost} tok</button>`:''}</div>
-    <p class="hint">${W.dur} s contra un jefe inmortal que pega cada vez más fuerte. Cuenta el daño que le haces; se suma el de todos tus intentos de la semana. Cierra en ${dhm(G.weekLeft())}. 1 entrada gratis por semana; las demás, con Ticket Jefe.</p>
+    <p class="hint">${W.dur} s contra el jefe · suma tu daño de la semana · cierra en ${dhm(G.weekLeft())}</p>
     ${rankHTML(G.wbRivals(w),dmg,pos,x=>fmt(x))}</section>
-  <section class="panel"><h3>Premios de la semana</h3>${rewTable(W.rewards)}<p class="hint">Se reparten el lunes a las 01:00 UTC.</p></section>`;
+  <details class="panel fold"><summary><h3>Premios de la semana</h3></summary>${rewTable(W.rewards)}<p class="hint">Se reparten el lunes a las 01:00 UTC.</p></details>`;
 }
 
 /* ---------- potenciadores por anuncios ---------- */
@@ -539,16 +544,16 @@ function boostModal(){
   boostModalOpen=true;
   const B=CFG.boosts, a=G.adsState(), row=(k,t,sub)=>{const left=G.boostUsesLeft(k);
     return `<div class="row"><div><div class="t">${t}</div><div class="s" id="bs_${k}">${sub}</div></div>
-      <div class="acts"><button class="btn sm gold" data-act="adWatch" data-k="${k}" ${left>0?'':'disabled'}>Anuncio ${a.p[k]||0}/${B[k].ads}</button></div></div>`};
+      <div class="acts"><button class="btn sm gold" data-act="adWatch" data-k="${k}" ${left>0?'':'disabled'}>Ver anuncio (${a.p[k]||0}/${B[k].ads})</button></div></div>`};
   showModal(`<h3>Potenciadores</h3>
     ${row('speed',`Velocidad ×${B.speed.mult} · ${B.speed.min} min`,boostSub('speed'))}
-    ${row('gold',`Oro · ${G.goldBoostHours()>=1?G.goldBoostHours()+' h':G.goldBoostHours()*60+' min'}`,boostSub('gold'))}
+    ${row('gold',`+${fmt(G.goldBoostValue())} oro`,boostSub('gold'))}
     <button class="btn" data-act="boostClose">Cerrar</button>`);
 }
 function boostSub(k){
   const left=G.boostUsesLeft(k), bl=G.boostLeft();
   if(k==='speed') return `Quedan ${left} hoy${bl?` · activo ${mmss(bl)}`:''}`;
-  return `+${fmt(G.goldBoostValue())} · quedan ${left} hoy`;
+  return `Oro de ${G.goldBoostHours()>=1?G.goldBoostHours()+' h':G.goldBoostHours()*60+' min'} al instante · quedan ${left} hoy`;
 }
 function updateBoostModal(){ const e=$('#bs_speed'); if(e) e.textContent=boostSub('speed') }
 // Anuncio simulado hasta que haya proveedor real de anuncios
@@ -570,7 +575,7 @@ function playAd(done){
 const heroName=()=>S.evo>0?G.evoP().name:clsLabel(S.cls);
 // Coste: lo que tienes / lo que pide (en rojo si falta)
 function evoCostHtml(){ const c=G.evoCost(); if(!c) return '';
-  const row=(n,have,need)=>`<div><span>${n}</span><b style="color:var(--${have>=need?'good':'bad'})">${fmt(Math.floor(have))} / ${fmt(need)}</b></div>`;
+  const row=costRow;
   return `<div class="loot">${c.ess?row(CFG.modes[c.essMode].mat,S.mats[c.essMode]||0,c.ess):''}${c.gold?row('Oro',S.gold,c.gold):''}${c.tokens?row('Tokens',G.tokens(),c.tokens):''}${c.ev?row(CFG.event.mat+'s',S.evm||0,c.ev):''}</div>
   ${S.loot?'<p class="hint">Tienes botín de jefes sin recoger.</p>':''}${G.canEvolve()?'':`<p class="hint">Los jefes de ${CFG.modes[c.essMode].name} sueltan esencias (más cuanto más alta la fase). Los ${CFG.event.mat.toLowerCase()}s se ganan en Modos → Eventos.</p>`}` }
 function evoModal(){
@@ -725,7 +730,7 @@ const ACT={
     renderTab()},
   dis1:(b,k,id)=>{ const it=G.findItem(id); if(!it) return; if(R.indexOf(it.r)>=2||it.lvl>1){ pendingDis=[id]; return showModal(`<h3>¿Desmontar ${esc(wName(it))}?</h3><p class="hint">${CFG.rarName[it.r]} nv ${it.lvl} · +${G.disValue(it)} chatarra</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`) } disToast(G.dismantle([id]));renderTab()},
   disAsk:()=>{const ids=filtered().filter(x=>x.id!==S.equippedId&&!x.fav).map(x=>x.id);const v=ids.reduce((s,id)=>s+G.disValue(G.findItem(id)),0);
-    pendingDis=ids;showModal(`<h3>¿Desmontar ${ids.length} armas?</h3><p class="hint">+${v} chatarra</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`)},
+    pendingDis=ids;showModal(`<h3>¿Desmontar ${ids.length} armas?</h3><p class="hint">+${v} chatarra · la equipada y las ★ se quedan</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`)},
   disYes:()=>{closeModal();disToast(G.dismantle(pendingDis||[]));pendingDis=null;renderTab()},
   invFull:()=>{ closeModal(); tab='inv'; invView='armas'; renderTab() },
   forge:(b,k,id)=>{forgeId=id;lockSel=[];forjaBack=b.dataset.from||'armas';tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
@@ -806,13 +811,14 @@ function draw(dt){
   const CW=C.w||cv.clientWidth, CH=C.h||cv.clientHeight, dpr=battery()?1:Math.min(2,window.devicePixelRatio||1);
   if(!CW||!CH) return;
   if(cv.width!==Math.round(CW*dpr)||cv.height!==Math.round(CH*dpr)){cv.width=Math.round(CW*dpr);cv.height=Math.round(CH*dpr)}
-  const sc=Math.max(1,Math.min(1.5,CH/230)), W=CW/sc, H=CH/sc; // escala los dibujos al tamaño de la pantalla
+  const sc=Math.max(1,Math.min(2.2,CH/200,CW/200)), W=CW/sc, H=CH/sc; // escala los dibujos al tamaño de la pantalla (el ancho manda: caben los enemigos)
   const g=C.ctx; g.setTransform(dpr*sc,0,0,dpr*sc,0,0);
   const bars=!battery();
   const tier=Math.floor((S.fase-1)/10), hue=(220+tier*37)%360, gk=hue+'|'+H;
   if(C.gk!==gk){ C.gk=gk; C.grd=g.createLinearGradient(0,0,0,H); C.grd.addColorStop(0,`hsl(${hue} 30% 16%)`); C.grd.addColorStop(1,`hsl(${hue} 25% 9%)`); }
   g.fillStyle=C.grd; g.fillRect(0,0,W,H);
-  const gy=Math.min(H-42,Math.round(H*0.66)); g.fillStyle=`hsl(${hue} 20% 22%)`; g.fillRect(0,gy,W,H-gy);
+  // suelo más abajo que antes: menos franja vacía
+  const gy=Math.min(H-30,Math.round(H*0.72)); g.fillStyle=`hsl(${hue} 20% 22%)`; g.fillRect(0,gy,W,H-gy);
   g.fillStyle=`hsl(${hue} 20% 28%)`; for(let x=(bars?-(performance.now()/40)%24:0);x<W;x+=24) g.fillRect(x,gy+6,10,3); // en modo batería el suelo no se mueve
   const hx=W*0.24, c=CFG.classes[S.cls];
   g.save(); g.translate(hx,gy); if(fx.flash>0){g.globalAlpha=0.6}
