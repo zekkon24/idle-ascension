@@ -31,7 +31,7 @@ function attach(G){
   // Para gastar poco: la versión se mira en GitHub (version.json, gratis) cada 'every' s; el estado de Supabase solo al abrir
   // y al volver a la app (y al instante por Realtime si hay clave pública). Con el juego en mantenimiento, se mira cada 'every' s.
   const checkVersion=()=>fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>{ if(j&&j.v&&V!=='DEV'&&j.v!==V) update(j.v) }).catch(()=>{});
-  const checkControl=()=>{ if(SV.url) fetch(SV.url,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(apply).catch(()=>{}) };
+  const checkControl=()=>{ if(SV.url) fetch(SV.url,{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{ if(c&&c.now&&root.setServerTime) root.setServerTime(c.now); apply(c) }).catch(()=>{}) };
   checkVersion(); checkControl();
   setInterval(checkVersion,(C.every||300)*1000);
   setInterval(()=>{ if(inMaint) checkControl() },(C.maintEvery||15)*1000);   // en mantenimiento: mira cada 15 s si ya se puede volver

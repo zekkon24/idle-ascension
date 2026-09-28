@@ -10,7 +10,9 @@ const storage={
   set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},
   del:k=>{try{localStorage.removeItem(k)}catch(e){}},
 };
-const G=createGame({cfg:window.CFG,storage});
+// Hora: la del servidor cuando se conoce (Telegram + Supabase); si no, la del móvil. Así adelantar el reloj no da ventajas.
+let clockOff=0; window.setServerTime=t=>{ if(Number.isFinite(t)) clockOff=t-Date.now() };
+const G=createGame({cfg:window.CFG,storage,now:()=>Date.now()+clockOff});
 window.G=G; // útil para depurar desde la consola
 if(window.Telemetry) Telemetry.attach(G); // envío a la base de datos (solo dentro de Telegram y con servidor)
 if(window.Control) Control.attach(G);     // mantenimiento y actualizaciones obligatorias (solo en la versión publicada)
@@ -93,7 +95,7 @@ function updateHUD(){
   if(!S||!$('#rGold')) return;
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
-  // a la derecha de las calaveras: la fase (o, en un evento, el tiempo y la puntuación)
+  // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   setHTML($('#faseTxt'),ev&&B.kind==='boss'?`${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · ${fmt(B.dmg)}`
     :ev?`${mmss(Math.max(0,CFG.event.dur-B.t)*1000)} · ${B.kills}`:`Fase ${S.fase}`);
   setHTML($('#uName'),esc(S.name||''));
@@ -379,7 +381,7 @@ function lootRows(L){ const r=[]; if(L.scrap) r.push(`<div><span>Chatarra</span>
 function lootModal(){ if(!S.loot) return; const n=S.loot.n; showModal(`<h3>Botín${n?` · ${n} jefe${n>1?'s':''}`:''}</h3><div class="loot">${lootRows(S.loot)}</div>
   <div class="ctrl"><button class="btn" data-act="close">Cerrar</button><button class="btn gold" data-act="lootClaim">Recoger</button></div>`) }
 
-/* ---------- Evento ---------- */
+/* ---------- Modos: Campaña, Eventos (Mazmorra, Jefe semanal) y PvP ---------- */
 const CH_N={wood:'madera',silver:'plata',mode:'modo'};
 const RAR_S={C:'Com',U:'PCom',R:'Rara',E:'Épi',L:'Leg',M:'Mít'}; // abreviaturas para tablas estrechas
 function evRewText(r){ return [r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.ch?`${r.n||1} cofre${(r.n||1)>1?'s':''} de ${CH_N[r.ch]}`:''].filter(Boolean).join(' + ') }
@@ -396,7 +398,7 @@ const usdTxt=t=>'≈ '+(t/CFG.tokens.perUsd).toLocaleString('es-ES',{maximumFrac
 const rewTable=list=>`<div class="rank evrew">${list.map((r,i)=>{ const from=i?list[i-1].to+1:1; return `<div><b>${from===r.to?r.to:from+'–'+r.to}</b><span>${evRewText(r)}</span></div>` }).join('')}</div>`;
 const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), h=Math.floor(m%1440/60); return d?`${d} d ${h} h`:h?`${h} h ${m%60} min`:`${m%60} min` };
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
-// Pestaña Evento: paneles (Mazmorra, Jefe semanal); al tocar uno se abre
+// Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
@@ -405,7 +407,7 @@ function tabEv(){
   const lb=G.evToday(), lpos=lb?G.evRank(G.evShownDay(),lb):null, bd=G.wbWeekDmg(), bpos=bd?G.wbRank(G.wbShownWeek(),bd):null;
   const card=(k,title,sub,tk,line,pend)=>`<button class="evcard" data-act="evOpen" data-k="${k}"><span class="evt">${title}${pend?' <sup class="nb">!</sup>':''}</span><span class="s">${sub}</span>
     <span class="evl"><span>${tk}</span><span>${line}</span></span></button>`;
-  // Modos: Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Liga, Jefe semanal) y PvP (próximamente)
+  // Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Jefe semanal; la Liga está oculta) y PvP (próximamente)
   const back=`<button class="banner" data-act="modview" data-v=""><span>← Modos</span></button>`;
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
     const big=(v,t,sub,st,lock)=>`<button class="mcard mbig${lock?' lock':''}" data-act="modview" data-v="${v}"><div class="ctrl" style="justify-content:space-between"><b>${t}</b>${st}</div><span class="s">${sub}</span></button>`;
@@ -822,6 +824,7 @@ function start(){
   if(!T||!T.canSync(CFG)) return boot();                       // fuera de Telegram (o sin servidor): partida del móvil
   syncBox('Idle Ascension','Cargando partida…');
   T.loadRemote(CFG).then(r=>{
+    if(r.now) setServerTime(r.now);
     if(r.error==='auth') return syncBox('No se pudo comprobar tu cuenta','Cierra el juego y vuelve a abrirlo desde Telegram.','Reintentar');
     const el=$('#syncBox'); if(el) el.remove();
     if(r.error){ boot(); if(S) toast('Sin conexión: tu partida se guardará al volver'); return }

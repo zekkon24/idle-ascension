@@ -38,7 +38,7 @@ function createGame(opts){
     return {v:3,cls,name:cleanName(name),lvl:1,xp:0,gold:0,tokens:0,won:0,withdrawn:0,scrap:0,up:{atk:0,hp:0,df:0,spd:0},
       best:0,fase:1,wave:1,push:true,autoPush:true,farmClears:0,
       items:[],nextId:1,equippedId:null,chestInv:{},opt:{},
-      calStart:null,cardUntil:0,vipUntil:0,
+      startDay:null,cardUntil:0,vipUntil:0,          // startDay: día en que empezó la partida (para los rivales simulados)
       lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{owned:{},active:null},
       stats:{deposited:0,withdrawNet:0,adGold:0,ads:0,offGold:0}}; // registro para la base de datos: tokens comprados, $ retirados (neto), oro de anuncios, anuncios vistos, oro sin conexión
   }
@@ -57,6 +57,7 @@ function createGame(opts){
     for(const k of Object.keys(st.chestInv)) if(k.includes('|')){ const t=k.split('|')[0]; st.chestInv[t]=(st.chestInv[t]||0)+st.chestInv[k]; delete st.chestInv[k]; } // cofres: ya no guardan su calidad
     if(st.boostUntil!=null){ st.boostMs=Math.max(0,st.boostUntil-nowFn()); delete st.boostUntil; } st.boostMs=st.boostMs||0; st.evo=st.evo||0; st.absorb=st.absorb||{}; st.mode=st.mode||0; delete st.rare;
     delete st.pity; delete st.firstDone; delete st.gps; delete st.xps; delete st.calLast; delete st.mis; delete st.week; // (calendario y misiones ya no existen)
+    if(st.calStart!=null&&st.startDay==null) st.startDay=st.calStart; delete st.calStart;
     st.v=3; return st;
   }
   // lastSeen nunca retrocede: atrasar y adelantar el reloj no regala tiempo sin conexión
@@ -71,7 +72,7 @@ function createGame(opts){
   const validName=n=>cleanName(n).length>=3;
   // El nombre es permanente: solo se puede poner si la partida aún no tiene (partidas antiguas)
   function setName(n){ const c=cleanName(n); if(c.length<3||S.name) return false; S.name=c; save(); emit('change'); return true }
-  function newGame(cls,name){ S=newState(cls,name); HS=null; S.equippedId=newItem(cls,CFG.startWeapon||'C').id; S.calStart=dayKey(); startWave(); track('start',{cls,name:S.name}); emit('change'); return S }
+  function newGame(cls,name){ S=newState(cls,name); HS=null; S.equippedId=newItem(cls,CFG.startWeapon||'C').id; S.startDay=dayKey(); startWave(); track('start',{cls,name:S.name}); emit('change'); return S }
 
   /* ---------- fórmulas ---------- */
   const hasCard=()=>dayKey()<S.cardUntil, hasVip=()=>dayKey()<S.vipUntil;
@@ -346,9 +347,9 @@ function createGame(opts){
   }
   // Ranking con rivales simulados (hasta que haya servidor): su puntuación sigue la curva de un jugador medio con tus días de juego
   const RIV={};
-  function evRivals(d){ const key=d+'|'+S.calStart; if(RIV.k===key) return RIV.v; RIV.k=key; RIV.v=makeRivals(CFG.event,d*7919,d-(S.calStart==null?d:S.calStart)+1); return RIV.v }
+  function evRivals(d){ const key=d+'|'+S.startDay; if(RIV.k===key) return RIV.v; RIV.k=key; RIV.v=makeRivals(CFG.event,d*7919,d-(S.startDay==null?d:S.startDay)+1); return RIV.v }
   function makeRivals(V,seed,age){
-    const r=mulberry32(seed+(S.calStart||0)*104729), c=V.curve;
+    const r=mulberry32(seed+(S.startDay||0)*104729), c=V.curve;
     const seg=c.findIndex((p,i)=>i>0&&age<p[0]), i=seg<0?c.length-1:seg, [a,x]=c[i-1], [b,y]=c[i], base=(x+(y-x)*(Math.max(1,age)-a)/(b-a))*(V.rivalBase||1); // interpola (y extrapola tras el último punto)
     const syl=['ka','ro','mi','zu','the','lan','dor','vi','sha','gar','nel','to','ria','bel','xo','ur','fen','ly','ash','mor'];
     const out=[]; for(let i=0;i<V.rivals;i++){ const g=Math.sqrt(-2*Math.log(r()+1e-9))*Math.cos(2*Math.PI*r());
@@ -399,8 +400,8 @@ function createGame(opts){
     return {kind:'boss',dmg,best:S.wbLog.dmg,runs:S.wbLog.runs,pos:wbRank(w,S.wbLog.dmg),died,week:w};
   }
   const RIVW={};
-  function wbRivals(w){ const key=w+'|'+S.calStart; if(RIVW.k===key) return RIVW.v; RIVW.k=key;
-    const end=w*7, age=end-(S.calStart==null?end:S.calStart)+1;           // días de juego a mitad de esa semana (jueves)
+  function wbRivals(w){ const key=w+'|'+S.startDay; if(RIVW.k===key) return RIVW.v; RIVW.k=key;
+    const end=w*7, age=end-(S.startDay==null?end:S.startDay)+1;           // días de juego a mitad de esa semana (jueves)
     RIVW.v=makeRivals(CFG.wboss,w*104723+17,Math.max(1,age)); return RIVW.v }
   const wbRank=(w,dmg)=>1+wbRivals(w).filter(x=>x.score>dmg).length;
   function wbReward(pos){ for(const r of CFG.wboss.rewards) if(pos<=r.to) return r; return null }

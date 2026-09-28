@@ -20,6 +20,7 @@ function startSync(G,me){
     const body=JSON.stringify({initData:tgData(),save:S,baseRev:S.srvRev||0}); busy=true;
     fetch(url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep&&body.length<60000})
       .then(r=>r.json().then(j=>({st:r.status,j}))).then(({st,j})=>{ busy=false;
+        if(j&&j.now&&root.setServerTime) root.setServerTime(j.now);
         if(j&&j.ok&&j.rev){ G.S.srvRev=j.rev; last=save; G.save(); }
         else if(st===409){ dead=true; if(api.onConflict) api.onConflict(); } })
       .catch(()=>{ busy=false }) }
@@ -52,7 +53,7 @@ function attach(G){
     const body=JSON.stringify({initData,snap:snap(),events});
     fetch(SV.url,{method:'POST',headers:{'content-type':'application/json'},body,keepalive:!!keep})
       .then(r=>{ if(!r.ok){ if(r.status>=500) queue=events.concat(queue).slice(-200); return null } return r.json() })   // fallo del servidor: se reintenta con lo siguiente
-      .then(j=>{ if(!j) return; if(typeof j.refs==='number') api.refs=j.refs;
+      .then(j=>{ if(!j) return; if(j.now&&root.setServerTime) root.setServerTime(j.now); if(typeof j.refs==='number') api.refs=j.refs;
         const got=G.applyRewards(j.rewards); if(got.length&&api.onReward) api.onReward(got); })
       .catch(()=>{ queue=events.concat(queue).slice(-200) }); }
 
