@@ -415,7 +415,7 @@ function createGame(opts){
   // Mazmorra infinita: cada ramp.every segundos los grupos son más grandes, salen antes, andan y pegan más rápido
   function evRamp(){ const V=CFG.event, R=V.ramp, r=R?Math.floor(B.t/R.every):0;
     if(!R) return {group:V.group||1,every:V.spawnEvery,walk:V.walk,spd:1,r:0};
-    return {group:Math.min(R.groupMax||99,(V.group||1)+r*R.group), every:Math.max(R.spawnMin,V.spawnEvery*Math.pow(R.spawn,r)),
+    return {group:Math.min(R.groupMax||99,Math.floor((V.group||1)+r*R.group)), every:Math.max(R.spawnMin,V.spawnEvery*Math.pow(R.spawn,r)),
       walk:Math.max(R.walkMin,V.walk*Math.pow(R.walk,r)), spd:1+r*R.spd, r}; }
   function evSpawn(){ const V=CFG.event, alive=B.enemies.some(e=>!e.dead);
     if(alive&&B.t<B.nextSpawn) return;

@@ -171,14 +171,15 @@ const CFG = {
   },
   matDrop:{from:10,to:150,c0:0.01,c1:0.05,max0:1,max1:3,sure:[50,100]}, // sure: esos jefes de élite dan 1 esencia segura la primera vez (para el Grimorio) // todos los jefes sueltan esencia del modo: 1 % (1) en la fase 10 → 5 % (1-3) en la 150 (el de la 150 se puede farmear)
   event:{ // Mazmorra (diaria): infinita, monstruos sin parar hasta que mueres; ranking por muertes; 1 entrada gratis al día, las demás con ticket
-    // cada ramp.every s: +ramp.group monstruos por grupo, salen más a menudo (×spawn), andan más rápido (×walk) y pegan más rápido (+spd)
-    dur:0, maxDur:1800, ramp:{every:30, group:1, groupMax:10, spawn:0.9, spawnMin:0.5, walk:0.9, walkMin:0.25, spd:0.1},
+    // cada ramp.every s sube de nivel: +ramp.group monstruos por grupo, salen más a menudo (×spawn), andan más rápido (×walk) y pegan más rápido (+spd)
+    // máximo maxDur s (5 min): si sigues vivo, el intento acaba ahí (simulado: nadie llega; los más fuertes del día 60 ≈ 3:30)
+    dur:0, maxDur:300, ramp:{every:15, group:0.5, groupMax:12, spawn:0.95, spawnMin:0.5, walk:0.95, walkMin:0.25, spd:0.06},
     spawnEvery:1.2, walk:0.6, group:3, groupHp:2, groupGap:0.3, groupAtk:0.9, // grupos de 3 monstruos con ×2 de vida; llegan cada 0,3 s y pegan un 10 % menos
     ticketCost:100, // ticket extra en la tienda (tokens); las muertes de varios intentos del día se suman
     mat:'Emblema', pauseH:1, // pausa de 00:00 a 01:00 UTC: se terminan los intentos a medias y a la 01:00 se reparten los premios
     rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.84, // prob. de que un rival haga un 2º y un 3er intento; rivalBase ajusta la curva para que el jugador medio quede hacia el puesto 50
                           // rivales simulados: jugador medio de tus mismos días × dispersión
-    curve:[[1,1],[2,10],[3,53],[5,132],[7,194],[10,266],[13,315],[15,330],[17,348],[20,384],[25,418],[30,437]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
+    curve:[[1,1],[2,10],[3,52],[5,130],[7,192],[10,250],[13,291],[15,301],[17,308],[20,335],[25,370],[30,393]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
     rewards:[                                     // premio según tu puesto del día (se cobra al día siguiente)
       {to:1,em:5,ch:'mode',n:1},{to:3,em:4,ch:'mode',n:1},{to:10,em:3,ch:'silver',n:2},
       {to:25,em:2,ch:'silver',n:1},{to:50,em:1,ch:'wood',n:2},{to:100,em:1,ch:'wood',n:1}],
