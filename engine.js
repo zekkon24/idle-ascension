@@ -531,7 +531,9 @@ function createGame(opts){
     if(b.t==='pas'){ const p=boonPas(b); return {kind:'Grimorio',name:p.name,desc:p.passive,r:'L'} }
     if(b.t==='leg'){ const d=CFG.weapon.legend[b.cls]; return {kind:'Objeto',name:d.name,desc:d.desc,r:'L'} }
     const k=CFG.skills[b.src][b.cls]; return {kind:'Hechizo',name:k.name,desc:k.desc,r:'L'} }
-  function towerNodes(f){ const T=CFG.tower; if(f%T.boss.every===0) return ['boss'];
+  function towerNodes(f){ const T=CFG.tower, Hd=T.hard; if(f%T.boss.every===0) return ['boss'];
+    // pisos sin escapatoria: solo combates (a veces solo élite)
+    if(Hd&&f>=Hd.forcedFrom&&rand()<Hd.forced){ const r=rand(); return r<0.3?['elite']:r<0.65?['elite','elite']:['elite','fight'] }
     const types=Object.keys(T.nodes), w=types.map(k=>T.nodes[k]), n=2+(rand()<0.5?1:0), out=[];
     for(let i=0;i<n;i++){ let r=rand()*w.reduce((a,b)=>a+b,0), j=0; for(;j<types.length-1;j++){ r-=w[j]; if(r<0) break; } out.push(types[j]); }
     if(!out.some(t=>t==='fight'||t==='elite')) out[0]='fight'; return out }
@@ -553,7 +555,8 @@ function createGame(opts){
       let cand=pool.filter(b=>boonRar(b)===want); if(!cand.length) cand=pool; const b=cand[Math.floor(rand()*cand.length)];
       o.push(b); for(let i=pool.length-1;i>=0;i--) if(boonKey(pool[i])===boonKey(b)) pool.splice(i,1); } return o }
   function towerFight(k){ const T=CFG.tower, run=S.tower.run, f=run.floor, c=normalCurve(Math.max(1,Math.min(S.best||1,CAP())));
-    const hm=T.hp0*Math.pow(T.hpG,f-1), am=T.atk0*Math.pow(T.atkG,f-1), h=heroStats();
+    const Hd=T.hard||{}, jump=Hd.jumpEvery?Math.pow(Hd.jump,Math.floor(f/Hd.jumpEvery)):1, eUp=k==='elite'&&Hd.eliteFrom&&f>=Hd.eliteFrom?Math.pow(Hd.eliteUp,1+Math.floor((f-Hd.eliteFrom)/Hd.eliteEvery)):1;
+    const hm=T.hp0*Math.pow(T.hpG,f-1)*jump*eUp, am=T.atk0*Math.pow(T.atkG,f-1)*jump*Math.sqrt(eUp), h=heroStats();   // saltos: cada 25 pisos y élites desde el 20
     B={event:true,kind:'tower',node:k,t:0,boss:k==='boss',count:0,spawned:0,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     const add=(n,hpM,atkM,boss)=>{ for(let i=0;i<n;i++){ const at=CFG.enemy.walk*0.6+Math.floor(i/T.group)*1.2+(i%T.group)*0.35, hp=c.hp*hm*hpM;
       B.enemies.push({hp,max:hp,atk:c.atk*am*atkM,df:c.df,spawn:B.t,walk:at,arrive:at,next:at,first:false,dead:false,spd:boss?1:1+Math.min(0.3,f*0.01)}); } };

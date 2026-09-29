@@ -132,6 +132,9 @@ const CFG = {
   // × hp0·hpG^(piso−1) de vida y × atk0·atkG^(piso−1) de ataque. Premios la 1.ª vez que llegas a cada piso.
   tower:{lives:3, lifeCost:50, hp0:0.5, hpG:1.12, atk0:0.6, atkG:1.08, count0:4, countEvery:5, countMax:10, group:3,
     elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:2,atk:2}, maxSkills:2,
+    // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
+    // todo sube de golpe (×jump); desde 'forcedFrom', a veces (forced) el piso solo ofrece combates (élite y/o combate, sin hoguera ni cofre)
+    hard:{eliteFrom:20, eliteEvery:10, eliteUp:1.5, jumpEvery:25, jump:1.4, forcedFrom:10, forced:0.3},
     nodes:{fight:50,elite:20,treasure:15,rest:15}, // peso de cada tipo de camino
     rewards:[{every:50,b:{mode:1}},{every:25,b:{silver:1}},{every:5,b:{wood:1}}],
     // rareza de las cartas: C común, R rara, L legendaria (las pasivas de camino, objetos y hechizos existentes son legendarias)
