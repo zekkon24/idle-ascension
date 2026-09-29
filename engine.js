@@ -135,7 +135,8 @@ function createGame(opts){
     const E=CFG.enemy, mc=modeCurve(S?S.mode||0:0,f);
     let hp=mc.hp*(1+E.waveHp*(w-1)), atk=mc.atk, df=mc.df;
     // Jefes: su vida se mide en "oleadas" (la vida de toda la oleada de su fase) y su ataque en enemigos (×1 = un enemigo normal)
-    if(boss){ const per=perWave(f), M=modeCfg();
+    if(!boss&&WV()){ const V=WV(); hp*=perOld(f)/perWave(f)*(V.hpMul||1); atk*=Math.pow(V.atkG||1,groupAt(f)-1); }
+    if(boss){ const per=perOld(f), M=modeCfg();
       const m=f%50===0?(M.off?((M.walls&&M.walls[f])||{hp:E.eliteHp,atk:E.eliteAtk}):eliteMult(f)):bossBand(f); hp*=per*m.hp; atk*=m.atk; }
     return {hp,atk,df};
   }
@@ -152,7 +153,13 @@ function createGame(opts){
   function xpReq(l){ l=Math.max(1,l|0); while(XPC.length<=l){ const L=XPC.length; if(L===1){XPC.push(CFG.econ.xpReq);continue}
       let g=CFG.econ.xpReqG; for(const [a,gg,step] of (CFG.econ.xpBands||[])){ if(L>=a) g=gg; if(L===a&&step) g*=step; } XPC.push(XPC[L-1]*g); } return XPC[l] } // [desde, crecimiento, salto opcional al entrar]
   const upCost=k=>{const u=CFG.upgrades[k];return u.base*Math.pow(u.g,S.up[k])};
-  const perWave=f=>3+Math.floor((f-1)/CFG.enemy.extraEvery);
+  // Oleadas progresivas (enemy.waves): según sube la fase hay más enemigos por oleada, salen varios a la vez y andan y pegan
+  // más rápido. La vida de la oleada entera no cambia (cada enemigo tiene su parte): perOld es el reparto antiguo (3-5).
+  const perOld=f=>3+Math.floor((f-1)/CFG.enemy.extraEvery);
+  const WV=()=>CFG.enemy.waves;
+  const perWave=f=>{ const V=WV(); return V?Math.min(V.nMax,V.n0+Math.floor((f-1)/V.nEvery)):perOld(f) };
+  const groupAt=f=>{ const V=WV(); return V?Math.min(V.gMax,V.g0+Math.floor((f-1)/V.gEvery)):1 };   // cuántos salen a la vez
+  const eSpd=f=>{ const V=WV(); return V?1+V.spd*Math.min(1,(effF(f)-1)/149):1 };                    // velocidad (andar y pegar)
   // mientras quede una evolución pendiente, el nivel no pasa de evo.lvl (la barra se queda llena)
   const evoTiers=()=>(CFG.evo&&CFG.evo.tiers)||[];
   const nextEvo=()=>evoTiers()[S.evo]||null;              // la próxima evolución (o null si ya no quedan)
@@ -186,11 +193,13 @@ function createGame(opts){
     const boss=(S.wave===10 && S.fase%10===0 && (S.fase===S.best+1 || (S.fase===CAP() && S.best>=CAP())));
     const h=heroStats();
     B={t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
-    spawnEnemy(); emit('wave',B);
+    const g=boss?1:Math.min(B.count,groupAt(S.fase)); for(let i=0;i<g;i++) spawnEnemy(i*((WV()||{}).gap||0)); emit('wave',B);
   }
-  function spawnEnemy(){
-    const e=enemyStats(S.fase,S.wave,B.boss), W=CFG.enemy.walk; // (enemyStats ya aplica el modo)
-    B.enemies.push({hp:e.hp,max:e.hp,atk:e.atk,df:e.df,spawn:B.t,arrive:B.t+W,next:B.t+W,first:true,dead:false});
+  // Embestida: los de cuerpo a cuerpo saltan al enemigo, así que esperan menos a que llegue (× enemy.dash)
+  const walkT=()=>CFG.enemy.walk/eSpd(S.fase)*(heroStats().ranged?1:(CFG.enemy.dash||1));
+  function spawnEnemy(late){   // late: sale un poco después (los del mismo grupo llegan escalonados)
+    const e=enemyStats(S.fase,S.wave,B.boss), W=walkT()+(late||0); // (enemyStats ya aplica el modo)
+    B.enemies.push({hp:e.hp,max:e.hp,atk:e.atk,df:e.df,spawn:B.t,walk:W,arrive:B.t+W,next:B.t+W,first:true,dead:false,spd:B.boss?1:eSpd(S.fase)});
     B.spawned++;
   }
   function endWave(delay){ B.over=true; B.wait=delay }
@@ -240,10 +249,11 @@ function createGame(opts){
       if(BUF.clone&&CT<BUF.clone.until&&!tg.dead){ const c=d*BUF.clone.mult; tg.hp-=c; B.mD+=c; if(B.kind==='boss') addDmg(c); emit('hit',{e:tg,d:c,crit,clone:true}); }   // Clon de sombra
       if(GR==='escarcha'&&!tg.dead&&(tg.shards=(tg.shards||0)+1)>=GF.need){ tg.shards=0; const x=dmgF(h.atk,tg.df*(1-GF.ignoreDf))*GF.mult*(B.boss?1+h.bd:1)*buffMul('atk'); tg.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x);   // Escarcha: 3 esquirlas → daño y congela
         tg.frozen=B.t+GF.freeze; emit('hit',{e:tg,d:x,crit:false,frost:true}); emit('fx',{k:'congelar',e:tg}); }
-      if(LG&&LG.id==='tajo'){ const o=B.enemies.find(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5); if(o){ const x=d*LG.mult; o.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); emit('hit',{e:o,d:x,crit:false,cleave:true}); if(o.hp<=0) kill(o); } }   // Tajo partido
       if(LG&&LG.id==='llamarada'&&(B.flare=(B.flare||0)+1)%LG.every===0) for(const e of B.enemies){ if(e.dead) continue; e.dot=B.t+LG.dur; e.dotDps=LG.pct*d; e.dotKind='fuego'; }   // Llamarada solar
       if(GR==='veneno'){ tg.poison=(tg.poison||[]).filter(x=>x.until>B.t); tg.poison.push({until:B.t+GF.dur,dps:GF.pct*d}); if(tg.poison.length>GF.max) tg.poison.shift(); }
       if(tg.hp<=0) kill(tg);
+      // Tajo partido (después de matar: también alcanza al que acaba de salir)
+      if(LG&&LG.id==='tajo'){ const o=B.enemies.find(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5); if(o){ const x=d*LG.mult; o.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); emit('hit',{e:o,d:x,crit:false,cleave:true}); if(o.hp<=0) kill(o); } }
     };
     const canHit=e=>!e.dead&&((h.ranged&&!B.event)||e.arrive<=B.t); // en el evento nadie dispara antes de que llegue (igual para todas las clases)
     // habilidades: las pedidas a mano (B.cast) y, en la campaña, las que estén listas
@@ -294,7 +304,7 @@ function createGame(opts){
         if(P&&P.double&&!tg.dead&&rand()<P.double){ hitOnce(tg); if(P.dblBuff){ B.dblSt=(B.dblSt||[]).filter(u=>u>B.t); if(B.dblSt.length<P.dblMax) B.dblSt.push(B.t+P.dblDur); } } // Tirador: disparo doble
         B.th+=1/(h.spd*buffMul('spd'));
       }
-    } else B.th=null;
+    } else if(B.event||(B.th!==null&&B.th<=B.t)) B.th=null;   // en campaña, sin objetivo, el siguiente golpe respeta la cadencia (cuerpo a cuerpo: no es instantáneo al llegar)
     for(const e of B.enemies){
       if(!e.dead&&e.frozen>B.t){ if(e.arrive>B.t){ e.spawn+=dt; e.arrive+=dt; } e.next=Math.max(e.next,e.frozen); continue; }   // congelado
       if(e.dead||e.arrive>B.t) continue;
@@ -724,11 +734,12 @@ function createGame(opts){
   /* ---------- sin conexión ---------- */
   // Ganancia por segundo farmeando una fase, calculada solo con fórmulas (la usará también el servidor).
   function farmRate(f){
-    const h=computeStats(), per=perWave(f);
+    const h=computeStats(), per=perWave(f), grp=groupAt(f), sp=eSpd(f);
     let t=0; for(let w=1;w<=10;w++){ const e=enemyStats(f,w,false);
-      const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*dpsK(h), K=Math.max(1,Math.ceil(e.hp/hit))/h.spd, W=CFG.enemy.walk;
-      // a distancia se dispara mientras se acercan; cuerpo a cuerpo cada enemigo sale cuando el anterior llega y hay que esperarlo
-      t+=(h.ranged?per*K:W+K+(per-1)*Math.max(W,K)) + CFG.delays.wave; }
+      // golpes para matar a cada uno (con el extra medido: quemaduras, área…) + lo que se pierde de media al rematar (0,6 golpes)
+      const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*dpsK(h), K=Math.max(1,e.hp/hit+0.6)/h.spd, W=CFG.enemy.walk/sp*(h.ranged?1:(CFG.enemy.dash||1));
+      // a distancia se dispara mientras se acercan; cuerpo a cuerpo cada enemigo sale cuando el anterior llega y hay que esperarlo (menos si salen varios a la vez)
+      t+=(h.ranged?per*K:W+K+(per-1)*Math.max(W/grp,K)) + CFG.delays.wave; }
     return {g:goldAt(f)*3*10*(hasCard()?1+CFG.cardGold:1)/t, x:xpAt(f)*(3+(CFG.econ.waveXp||0))*10*h.xpMult/t};
   }
   // Farmeo sin conexión: hasta offlineCapH horas (offlineVipH con VIP). Si se llenó el tope, queda un extra

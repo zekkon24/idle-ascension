@@ -6,11 +6,11 @@ const CFG = {
   // de daño con dmgTaken, el Clérigo se regenera con regen) y en su habilidad. La pasiva llega con el camino de la 1.ª evolución.
   classes: {
     Guerrero:{hp:250.6,ghp:2.105,   // +30 % de vida (tanque)
-     atk:19.82,gatk:0.2663,df:12.35,gdf:0.1049,spd:0.8,cr:0,cd:1.0,ev:0,ranged:false,color:'#d9774a',dmgTaken:0.95, role:'Tanque · cuerpo a cuerpo'},
-    Mago:{hp:138.82,ghp:1.0977,atk:27.22,gatk:0.2774,df:4.12,gdf:0.035,spd:0.7,cr:0,cd:1.0,ev:0,ranged:true,color:'#8f7cf0', role:'Daño · a distancia'},
-    Arquero:{hp:131.06,ghp:1.1558,atk:13.82,gatk:0.1101,df:5.15,gdf:0.0437,spd:1.365,cr:0.05,cd:1.0,ev:0.05,ranged:true,color:'#5fb86a', role:'Daño · a distancia'},
-    Asesino:{hp:142.29,ghp:0.9114,atk:18.43,gatk:0.1648,df:4.12,gdf:0.035,spd:1.0,cr:0.10,cd:1.5,ev:0.15,ranged:false,color:'#c95a8a', role:'Daño · cuerpo a cuerpo'},
-    Clerigo:{hp:228.46,ghp:1.4863,atk:18.11,gatk:0.2622,df:12.35,gdf:0.105,   // +50 % de defensa (tanque)
+     atk:20.811,gatk:0.2796,df:12.35,gdf:0.1049,spd:0.72,cr:0,cd:1.0,ev:0,ranged:false,color:'#d9774a',dmgTaken:0.95, role:'Tanque · cuerpo a cuerpo'},
+    Mago:{hp:138.82,ghp:1.0977,atk:20.959,gatk:0.3051,df:4.12,gdf:0.035,spd:0.84,cr:0,cd:1.0,ev:0,ranged:true,color:'#8f7cf0', role:'Daño · a distancia'},
+    Arquero:{hp:131.06,ghp:1.1558,atk:24,gatk:0.09,df:5.15,gdf:0.0437,spd:1.365,cr:0.05,cd:1.0,ev:0.05,ranged:true,color:'#5fb86a', role:'Daño · a distancia'},
+    Asesino:{hp:142.29,ghp:0.9114,atk:21.194,gatk:0.1895,df:4.12,gdf:0.035,spd:1.0,cr:0.10,cd:1.5,ev:0.15,ranged:false,color:'#c95a8a', role:'Daño · cuerpo a cuerpo'},
+    Clerigo:{hp:228.46,ghp:1.4863,atk:16.2,gatk:0.3015,df:12.35,gdf:0.105,   // +50 % de defensa (tanque)
      spd:0.8,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo'},
   },
   enemy:{hp:45,hpG:1.0358,atk:6,atkG:1.026,earlyTo:50,hpG0:1.035,atkG0:1.024, // hasta la fase 50 crecen con hpG0/atkG0
@@ -20,7 +20,12 @@ const CFG = {
          bossHp:1.5,bossAtk:1.5,   // (respaldo: bossBands manda) jefe cada 10 fases: vida en oleadas (1 = toda la oleada de su fase), ataque en enemigos (1 = un enemigo)
          bossBands:[[1,1.5,1.5],[51,2.0,1.7],[101,1.7,1.6],[151,1.6,1.55]], // [desde fase, vida, ataque]: los jefes normales frenan unas horas en cada tramo
          eliteHp:3,eliteAtk:2,     // (respaldo: walls manda) jefe de élite cada 50 fases (mismas unidades)
-         extraEvery:50,spd:0.8,walk:2.0,
+         extraEvery:50,spd:0.8,walk:2.0,dash:0.05, // dash: Embestida de los de cuerpo a cuerpo (esperan el 5 % del camino)
+         // Oleadas progresivas: n0 enemigos (+1 cada nEvery fases, máx. nMax); salen g0 a la vez (+1 cada gEvery fases, máx. gMax),
+         // separados gap s; andan y pegan hasta un spd más rápido en la fase 150. La vida de la oleada entera es la de siempre
+         // (repartida entre más enemigos) × hpMul; atkG: ataque de cada enemigo × atkG por cada uno de más que sale a la vez.
+         waves:{n0:3,nEvery:25,nMax:8,g0:1,gEvery:50,gMax:3,gap:0.35,spd:0.2,hpMul:1.12,atkG:0.85},
+        
          // Números pequeños: el ataque enemigo baja lo mismo que la vida y la defensa del héroe, × (1,008 / 1,0226)^u,
          // con u = nivel medio de mejoras de Vida/Defensa con que se vence cada fase (medido con simulaciones). [fase, u]
          atkShrink:[[1,0],[10,0],[20,8],[30,14],[40,23],[49,31],[50,59],[60,60],[70,64],[80,69],[90,77],[100,93],[110,100],[120,115],[130,128],[140,142],[150,151]]},
@@ -113,7 +118,7 @@ const CFG = {
   grimoire:{levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
     up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
     names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},
-    fx:{fortaleza:{df:0.3,boss:0.4}, escarcha:{need:3,mult:1.5,freeze:2,ignoreDf:0.5}, cazador:{boss:0.5}, veneno:{pct:0.10,dur:8,max:8}, sacrificio:{cost:0.02,atk:0.3,lsMax:0.4,single:true}}},
+    fx:{fortaleza:{df:0.1,boss:0.5}, escarcha:{need:3,mult:2.1,freeze:2,ignoreDf:0.5}, cazador:{boss:0.4}, veneno:{pct:0.35,dur:8,max:8}, sacrificio:{cost:0.02,atk:0.4,lsMax:0.2,single:true}}},
   // Habilidades activas (elegidas por el diseñador): la de clase es directa (golpe/cura al momento); la de evolución da un efecto unos segundos. En los eventos se usan a mano;
   // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
   skills:{
@@ -121,20 +126,20 @@ const CFG = {
       Guerrero:{id:'muro', name:'Muro de escudos', cd:18, shield:3, dmgDef:3, desc:'Escudo según su defensa y golpe en área con parte de su defensa'},
       Mago:{id:'bola', name:'Bola de fuego', cd:12, targets:3, mult:3, burn:0.5, dur:4, desc:'300 % en área hasta a 3 enemigos y los quema'},
       Arquero:{id:'perforante', name:'Disparo perforante', cd:15, mult:3, desc:'Disparo que atraviesa a todos (300 %)'},
-      Asesino:{id:'ejecutar', name:'Ejecutar', cd:12, mult:6, refund:0.5, desc:'Golpe del 600 %; si mata, la recarga baja a la mitad'},
-      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:3, mult:1.2, back:0.6, heal:0.1, desc:'3 golpes de luz (120 %) que luego vuelven y le curan (10 % de vida cada uno)'}},
+      Asesino:{id:'ejecutar', name:'Ejecutar', cd:12, mult:7, refund:0.5, desc:'Golpe del 700 %; si mata, la recarga baja a la mitad'},
+      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:3, mult:0.8, back:0.6, heal:0.1, desc:'3 golpes de luz (80 %) que luego vuelven y le curan (10 % de vida cada uno)'}},
     evo:{
-      Guerrero:{id:'sed', name:'Sed de sangre', cd:28, cost:0.2, shield:0.5, ls:0.2, dur:8, desc:'Pierde el 20 % de su vida: escudo de la mitad y +20 % de robo de vida 8 s'},
+      Guerrero:{id:'sed', name:'Sed de sangre', cd:28, cost:0.2, shield:0.5, ls:0.4, dur:12, desc:'Pierde el 20 % de su vida: escudo de la mitad y +40 % de robo de vida 12 s'},
       Mago:{id:'combustion', name:'Combustión', cd:28, dur:8, burnUp:0.5, desc:'8 s: las quemaduras hacen +50 % y los que mueren quemados la pasan a otro'},
-      Arquero:{id:'rapido', name:'Fuego rápido', cd:28, dur:6, spd:2, desc:'6 s con el doble de velocidad de ataque'},
-      Asesino:{id:'clon', name:'Clon de sombra', cd:28, dur:8, mult:0.5, desc:'8 s: un clon copia sus golpes al 50 %'},
-      Clerigo:{id:'juicio', name:'Luz del juicio', cd:30, dur:6, heal:0.05, dps:0.5, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}},
+      Arquero:{id:'rapido', name:'Fuego rápido', cd:28, dur:6, spd:1.75, desc:'6 s con +75 % de velocidad de ataque'},
+      Asesino:{id:'clon', name:'Clon de sombra', cd:28, dur:8, mult:0.3, desc:'8 s: un clon copia sus golpes al 30 %'},
+      Clerigo:{id:'juicio', name:'Luz del juicio', cd:30, dur:6, heal:0.05, dps:1.5, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}},
     // habilidad de evolución del camino B: POR DECIDIR (null = aún no hay)
     evoB:{
-      Guerrero:{id:'baluarte', name:'Baluarte', cd:28, dur:8, df:2, reflect:1.5, desc:'8 s: el doble de defensa y devuelve el 150 % del daño que recibe'},
+      Guerrero:{id:'baluarte', name:'Baluarte', cd:45, dur:8, df:1.25, reflect:0.75, desc:'8 s: +25 % de defensa y devuelve el 75 % del daño que recibe'},
       Mago:{id:'armaduraHielo', name:'Armadura de hielo', cd:28, dur:8, shards:2, burst:4, desc:'Lanza 4 esquirlas a todos; 8 s: quien le pega recibe 2 esquirlas'},
-      Arquero:{id:'marca', name:'Marca del cazador', cd:25, dur:8, mult:0.5, desc:'8 s: el objetivo recibe +50 % de daño'},
-      Asesino:{id:'nube', name:'Nube tóxica', cd:28, dur:6, pct:0.2, extra:6, desc:'6 s: una nube envenena a todos cada segundo (veneno doble, +6 acumulaciones)'},
+      Arquero:{id:'marca', name:'Marca del cazador', cd:35, dur:8, mult:0.5, desc:'8 s: el objetivo recibe +50 % de daño'},
+      Asesino:{id:'nube', name:'Nube tóxica', cd:35, dur:3, pct:0.05, extra:3, desc:'3 s: una nube envenena a todos cada segundo (+3 acumulaciones)'},
       Clerigo:{id:'sacrificio', name:'Sacrificio', cd:28, cost:0.3, dur:8, atk:0.6, single:true, desc:'Consume el 30 % de su vida: +60 % de daño a los jefes durante 8 s'}}},
   matShop:{ess:50, ev:25}, // tienda: Esencia 50 tokens, Emblema 25 tokens
   boosts:{ // potenciadores por anuncios (cada uso pide 'ads' anuncios; 'perDay' usos al día)
@@ -144,19 +149,19 @@ const CFG = {
   evo:{ // evoluciones: al llegar al nivel de cada una se gana su pasiva y el nivel sigue (hasta evolucionar, ese nivel es el tope)
     tiers:[
       {lvl:150, cost:{ess:3,gold:10000,ev:12}, bonus:{hp:0.15,atk:0.15}, classes:{ // cost: esencias del modo Normal + oro + material del evento · bonus: extra de vida y daño
-        Guerrero:{name:'Berserker',passive:'Furia: +1 % de daño por cada golpe recibido en la oleada (máx. +25 %)',rage:0.01,rageCap:0.25},
-        Mago:{name:'Archimago',passive:'Fuego: cada golpe quema al enemigo; la quemadura se acumula hasta 5 veces',burnPct:0.24,burnDur:3,burnMax:5},
-        Arquero:{name:'Tirador',passive:'Disparo doble: 20 % de probabilidad de disparar dos veces',double:0.2},
+        Guerrero:{name:'Berserker',passive:'Furia: +1 % de daño por cada golpe recibido en la oleada (máx. +45 %)',rage:0.01,rageCap:0.45},
+        Mago:{name:'Archimago',passive:'Fuego: cada golpe quema al enemigo; la quemadura se acumula hasta 5 veces',burnPct:0.3,burnDur:3,burnMax:5},
+        Arquero:{name:'Tirador',passive:'Disparo doble: 15 % de probabilidad de disparar dos veces',double:0.15},
         Asesino:{name:'Sombra',passive:'Instinto: tras un crítico, el siguiente golpe hace +100 % de daño',critNext:1.0},
         Clerigo:{name:'Oráculo',passive:'Luz interior: al bajar del 50 % de vida, la regeneración se triplica 10 s (1 vez por oleada)',lightHp:0.5,lightMult:3,lightDur:10},
       },
       // camino B (el opuesto): su pasiva es un efecto de grimorio (grimoire.fx[grim])
       alt:{
-        Guerrero:{name:'Guardián',grim:'fortaleza',passive:'Fortaleza: +30 % de defensa y +40 % de daño a los jefes'},
-        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 150 % ignorando el 50 % de su defensa y lo congela 2 s (no se mueve ni ataca)'},
-        Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +50 % de daño a los jefes'},
-        Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (10 % por s, 8 s), hasta 8 veces: brilla en peleas largas'},
-        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: solo se cura robando vida, y cuanta menos vida tiene, más roba (hasta el 40 % del daño). Cada golpe le cuesta el 2 % de su vida y hace +30 % de daño a los jefes'},
+        Guerrero:{name:'Guardián',grim:'fortaleza',passive:'Fortaleza: +10 % de defensa y +50 % de daño a los jefes'},
+        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 210 % ignorando el 50 % de su defensa y lo congela 2 s (no se mueve ni ataca)'},
+        Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +40 % de daño a los jefes'},
+        Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (35 % por s, 8 s), hasta 8 veces: brilla en peleas largas'},
+        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: solo se cura robando vida, y cuanta menos vida tiene, más roba (hasta el 20 % del daño). Cada golpe le cuesta el 2 % de su vida y hace +40 % de daño a los jefes'},
       }},
       // Evolución 2: mejora la pasiva de clase (base) y añade un efecto nuevo; se suma a la pasiva de la evolución 1
       {lvl:300, pending:true, cost:{ess:5,gold:400000,ev:30}, // pending: bloqueada ("próximamente"), pide Esencia de pesadilla
@@ -179,7 +184,7 @@ const CFG = {
     mat:'Emblema', pauseH:1, // pausa de 00:00 a 01:00 UTC: se terminan los intentos a medias y a la 01:00 se reparten los premios
     rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.84, // prob. de que un rival haga un 2º y un 3er intento; rivalBase ajusta la curva para que el jugador medio quede hacia el puesto 50
                           // rivales simulados: jugador medio de tus mismos días × dispersión
-    curve:[[1,1],[2,10],[3,52],[5,130],[7,192],[10,250],[13,291],[15,301],[17,308],[20,335],[25,370],[30,393]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
+    curve:[[1,1],[2,10],[3,57],[5,143],[7,214],[10,263],[13,296],[15,308],[17,314],[20,327],[25,370],[30,399]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
     rewards:[                                     // premio según tu puesto del día (se cobra al día siguiente)
       {to:1,em:5,ch:'mode',n:1},{to:3,em:4,ch:'mode',n:1},{to:10,em:3,ch:'silver',n:2},
       {to:25,em:2,ch:'silver',n:1},{to:50,em:1,ch:'wood',n:2},{to:100,em:1,ch:'wood',n:1}],
@@ -188,7 +193,7 @@ const CFG = {
     dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
     ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
-    curve:[[1,1200],[2,3800],[3,8700],[5,20700],[7,38100],[10,73200],[13,140300],[15,236300],[17,446900],[20,771400],[25,1585100],[30,2680400],[35,4049100],[40,5815200],[45,7649300]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
+    curve:[[1,2300],[2,5800],[3,12600],[5,31200],[7,65500],[10,119700],[13,198100],[15,305700],[17,414500],[20,930300],[25,1933500],[30,3082700],[35,4348000],[40,5687100],[45,6896700]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
       // ×3 del premio diario de la Mazmorra en el mismo puesto (solo hay uno por semana); los cofres de madera
       // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca
