@@ -154,7 +154,15 @@ const CFG = {
       explosion:{r:'L',name:'Explosión',desc:'Los enemigos que mueren explotan: 30 % de su vida a los cercanos',pct:0.3},
       eco:{r:'L',name:'Eco',desc:'Tus hechizos de la Torre se lanzan dos veces'},
       maestria:{r:'L',name:'Maestría',desc:'Tus pasivas de la Torre son un 50 % más fuertes',mult:1.5},
-      pacto:{r:'L',name:'Pacto',desc:'Pierdes 1 vida de la partida y eliges 2 mejoras más'}}},
+      pacto:{r:'L',name:'Pacto',desc:'Pierdes 1 vida de la partida y eliges 2 mejoras más'},
+      // objetos de la Torre (obj:true)
+      afilar:{r:'C',obj:true,name:'Piedra de afilar',desc:'Los 3 primeros golpes de cada combate son críticos',n:3},
+      talisman:{r:'C',obj:true,name:'Talismán de piedra',desc:'Recibes un 10 % menos de daño',taken:0.1},
+      hielo:{r:'R',obj:true,name:'Orbe de hielo',desc:'15 % de congelar 1 s al enemigo que golpeas',chance:0.15,dur:1},
+      colmillo:{r:'R',obj:true,name:'Colmillo',desc:'Los críticos te curan el 2 % de tu vida',heal:0.02},
+      corona:{r:'L',obj:true,name:'Corona del rey',desc:'+1 vida en la partida'},
+      reloj:{r:'L',obj:true,name:'Reloj de arena',desc:'Cada 20 s todas tus habilidades se recargan al instante',every:20},
+      martillo:{r:'L',obj:true,name:'Martillo del trueno',desc:'Cada 8 s un rayo golpea a todos los enemigos (200 % de tu daño)',every:8,mult:2}}},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
