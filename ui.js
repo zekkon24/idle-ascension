@@ -543,21 +543,18 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{
 // Dentro de Telegram el servidor elige el rival (jugadores reales con puntos parecidos; si no hay, bot) y guarda los puntos.
 // Fuera de Telegram: bots (tu partida con otra clase) y puntos solo en el móvil.
 const pvpOnline=()=>!!(window.Telemetry&&Telemetry.canSync&&Telemetry.canSync(CFG));
-let PVI=null, pvpBusy=false, pvpLast=null;
+let PVI=null, pvpBusy=false;
 function pvpLoad(){ if(!pvpOnline()) return; Telemetry.pvp(CFG,'pvpInfo').then(j=>{ if(!j||!j.ok) return; PVI=j; G.pvpSync(j.me); if(tab==='ev'&&modView==='pvp') renderTab(); }) }
 const clName=c=>CFG.classes[c]?clsLabel(c):(c||'');   // nombre de la clase (con tilde); '' si el servidor no la sabe
-const pvpOdds=r=>{ const P=G.pvpState(), E=1/(1+Math.pow(10,(r.rating-P.rating)/400)), K=P.games<CFG.pvp.newGames?CFG.pvp.kNew:CFG.pvp.k; return `ganar +${Math.round(K*(1-E))} · perder ${Math.round(-K*E)}` };
-function tabPvp(){ const P=G.pvpState(), r=P.rival, on=pvpOnline(), left=on&&PVI?PVI.me.left:G.pvpLeft();
-  const head=`<div class="evhead"><div><span class="s">Puntos</span><b>${fmt(P.rating)}</b></div><div><span class="s">Puesto</span><b>${on&&PVI?PVI.me.rank:'–'}</b></div><div><span class="s">Victorias</span><b>${P.wins}/${P.games}</b></div><div><span class="s">Combates hoy</span><b>${left}/${CFG.pvp.daily}</b></div></div>`;
+function tabPvp(){ const P=G.pvpState(), on=pvpOnline();
+  const head=`<div class="evhead"><div><span class="s">Puntos</span><b>${fmt(P.rating)}</b></div><div><span class="s">Puesto</span><b>${on&&PVI?PVI.me.rank:'–'}</b></div><div><span class="s">Victorias</span><b>${P.wins}/${P.games}</b></div></div>`;
   const busy=G.inEvent()||pvpBusy;
-  const riv=r?`<div class="misTop"><b>${esc(r.name)}${r.bot?' <span class="pill">bot</span>':''}</b><span class="s">${clName(r.cls)}${r.path?' · camino '+r.path:''} · nivel ${r.lvl||'?'} · ${fmt(r.rating)} puntos<br>${pvpOdds(r)}</span></div>
-      <div class="ctrl"><button class="btn gold" style="flex:1" data-act="pvpGo" ${left>0&&!busy?'':'disabled'}>Luchar</button><button class="btn" data-act="pvpFind" ${left>0&&!busy&&G.pvpRerolls()?'':'disabled'}>Otro rival (${G.pvpRerolls()})</button></div>`
-    :`<button class="btn gold" data-act="pvpFind" ${left>0&&!busy?'':'disabled'}>${pvpBusy?'Buscando…':'Buscar rival'}</button>`;
+  const riv=`<button class="btn gold" data-act="pvpGo" ${busy?'disabled':''}>${pvpBusy?'Buscando rival…':'Luchar'}</button>`;
   const top=on?(PVI?`<h3>Ranking</h3><div class="rank">${PVI.top.map((x,i)=>`<div class="${x.me?'me':''}"><span>${i+1}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''}</span><b>${fmt(x.rating)}</b></div>`).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}</div>`:'<p class="hint">Cargando ranking…</p>'):'<p class="hint">El ranking y los rivales reales están dentro de Telegram. Aquí luchas contra bots.</p>';
   const defs=on&&PVI&&PVI.log.length?`<h3>Te han atacado</h3><div class="rank">${PVI.log.map(x=>`<div><span style="color:${x.won?'var(--bad)':'var(--good)'}">${x.won?'✗':'✓'}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''} ${x.won?'ganó a tu fantasma':'perdió contra tu fantasma'}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
   const hist=P.hist.length?`<h3>Tus combates</h3><div class="rank">${P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''} · ${clName(x.cls)}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
-  return `<section class="panel"><h3>PvP</h3>${head}${left<=0?'<p class="hint" style="color:var(--bad)">No te quedan combates hoy.</p>':''}${riv}
-    <p class="hint">Luchas contra el fantasma de otro jugador: su héroe con todo lo suyo (arma, mejoras, evolución, grimorio y habilidades) manejado por la IA. Sin tiempo real: tu fantasma también defiende cuando no estás. Máx. ${CFG.pvp.maxT} s; si nadie cae, gana quien tenga más % de vida.</p>
+  return `<section class="panel"><h3>PvP</h3>${head}${riv}
+    <p class="hint">Sin límite de combates. Te toca el jugador más cercano a ti en puntos (no repites rival hasta pasados ${CFG.pvp.recent} duelos). Luchas contra su fantasma: su héroe con todo lo suyo (arma, mejoras, evolución, grimorio y habilidades) manejado por la IA. Tu fantasma también defiende cuando no estás. Máx. ${CFG.pvp.maxT} s; si nadie cae, gana quien tenga más % de vida.</p>
     ${top}${defs}${hist}</section>` }
 function tabEv(){
   if(evView==='lab') return tabLab();
@@ -906,16 +903,15 @@ const ACT={
   wbClaim:()=>{ const p=G.wbClaim(); if(p){ toast(p.rew?evRewPlain(p.rew):'Sin premio'); renderTab(); } },
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
-  pvpFind:()=>{ if(pvpBusy||G.inEvent()) return; const P=G.pvpState(), avoid=P.rival&&P.rival.id||pvpLast;
-    if(P.rival&&!G.pvpRerolls()) return toast('Ya no puedes cambiar de rival: lucha contra este');
-    if(!pvpOnline()){ G.pvpBot(); renderTab(); return }
+  pvpGo:()=>{ if(pvpBusy||G.inEvent()) return;
+    const go=()=>{ if(G.pvpFight()){ tab='up'; renderTab(); } else renderTab() };
+    if(!pvpOnline()){ G.pvpBot(); return go() }                  // fuera de Telegram: bot
     pvpBusy=true; renderTab();
-    Telemetry.pvp(CFG,'pvpFind',{avoid}).then(j=>{ pvpBusy=false;
-      if(!j) toast('Sin conexión'); else if(j.error==='limit') toast('No te quedan combates hoy'); else if(j.error==='rerolls') toast('Ya no puedes cambiar de rival: lucha contra este');
-      else if(j.ok&&j.bot){ const r=G.pvpBot(); if(r){ r.rating=j.rating; r.match=j.match; G.save(); } }
-      else if(j.ok&&j.rival) G.pvpSetRival({...j.rival,match:j.match});
-      renderTab(); }) },
-  pvpGo:()=>{ const r=G.pvpState().rival; if(G.pvpFight()){ pvpLast=r&&r.id; if(r&&r.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpStart',{match:r.match}); tab='up'; renderTab(); } },
+    Telemetry.pvp(CFG,'pvpFind').then(j=>{ pvpBusy=false;       // el servidor elige: el más cercano en puntos (sin repetir los últimos)
+      if(!j||!j.ok){ toast('Sin conexión'); return renderTab() }
+      if(j.bot){ const r=G.pvpBot(); r.rating=j.rating; r.match=j.match; }
+      else if(!G.pvpSetRival({...j.rival,match:j.match})) return renderTab();
+      go(); }) },
   syncRetry:()=>location.reload(),
   modview:b=>{ modView=b.dataset.v||null; evView=null; if(modView==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },

@@ -178,8 +178,8 @@ const CFG = {
   // ttk: la vida de los dos en el duelo se multiplica igual, para que solo con ataques normales se tarde ~ttk s (con habilidades, menos)
   // cls: multiplicador del daño que hace cada clase en PvP. Calibrado (días 4-60, mejoras al azar) para ganar de media:
   // Mago 55 %, Asesino 52 %, Arquero 50 %, Clérigo 48 %, Guerrero 45 % (el Mago tiene ventaja: es su modo)
-  // rerolls: veces que puedes pedir otro rival antes de luchar
-  pvp:{daily:10, rerolls:3, maxT:90, ttk:45, cls:{Guerrero:1.84,Mago:0.86,Arquero:1.31,Asesino:1.11,Clerigo:0.44}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+  // Sin límite de combates. Rival: el jugador más cercano en puntos, sin repetir ninguno de tus últimos 'recent' duelos (lo decide el servidor)
+  pvp:{recent:5, maxT:90, ttk:45, cls:{Guerrero:1.84,Mago:0.86,Arquero:1.31,Asesino:1.11,Clerigo:0.44}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
