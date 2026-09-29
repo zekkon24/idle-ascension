@@ -268,14 +268,14 @@ function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy
     Clerigo:`<path d="M40 22l10-18 10 18z"/><path d="M28 46h44l8 82H20z" opacity=".85"/><circle cx="50" cy="30" r="17" fill="none" stroke="${c}" stroke-width="2" opacity=".6"/><rect x="78" y="44" width="4" height="40" rx="2"/><circle cx="80" cy="42" r="7"/>`,
   }[cls]||'';
   return `<svg class="silh" viewBox="0 0 100 130" width="92" height="120" aria-hidden="true" fill="${c}">${body}${extra}</svg>` }
-function equipHud(){ const w=G.equipped(), gid=S.grim&&S.grim.active, g=gid&&G.grimList().find(x=>x.id===gid);
+function equipHud(){ const w=G.equipped();
   const wm=w&&G.weaponMain(w);
   const wslot=w?`<button class="eslot" data-act="forge" data-id="${w.id}" data-from="main" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
       <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span><span class="s">Toca para forjar</span></button>`
     :`<button class="eslot" data-act="invview" data-v="armas"><span class="s">Arma</span><b>Sin arma</b><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`;
-  const gslot=g?`<button class="eslot" data-act="invview" data-v="grim" style="--rc:var(--rE)"><span class="s">Grimorio</span><b style="color:var(--rE)">${g.name.replace('Grimorio ','')}</b>
-      <span class="s">${g.role} · nv ${G.grimLevel(g.id)} · Toca para verlos</span></button>`
-    :`<button class="eslot empty" data-act="invview" data-v="grim"><span class="s">Grimorio</span><b>Vacío</b><span class="s">Toca para desbloquear</span></button>`;
+  const gslot=!G.grimOwned()?`<button class="eslot empty" data-act="invview" data-v="grim"><span class="s">Grimorio</span><b>Sin grimorio</b><span class="s">Llave de la evolución · toca para verlo</span></button>`
+    :`<button class="eslot" data-act="invview" data-v="grim" style="--rc:var(--rE)"><span class="s">Grimorio</span><b style="color:var(--rE)">${S.evo>=1?G.evoPaths()[S.path].name:'Nivel '+G.grimLevel()+'/'+CFG.grimoire.levels}</b>
+      <span class="s">${S.evo>=1?'Tu camino':G.grimDone()?'Aprendido · listo para evolucionar':'Cerrado · súbelo luchando'}</span></button>`;
   return `<section class="panel equip"><div class="equip-in">${classSVG(S.cls)}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}${gslot}</div></div></section>` }
 function tabInv(){
   if(invView==='forja') return tabForja();
@@ -328,18 +328,28 @@ function tabInv(){
 // Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Efecto desde el nivel 25 del grimorio.
 // coste: si lo tienes, "124 ✓" en verde; si no, "tienes / pide" en rojo
 const costRow=(n,have,v)=>`<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${have>=v?fmt(v)+' ✓':fmt(Math.floor(have))+' / '+fmt(v)}</b></div>`;
-function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(), act=S.grim&&S.grim.active;
-  const need=costRow;
-  const cards=G.grimList().map(g=>{ const own=G.grimOwned(g.id), on=act===g.id, lv=G.grimLevel(g.id);
-    return `<div class="wcard${on?' eq':''}"><div class="hd"><span class="nm" style="font-size:16px;color:var(--rE)">${g.name}</span><span class="rar">${g.role}</span></div>
-      <div class="s">${g.desc}</div>
-      <div class="s">${own?`Nivel <b>${lv}</b> · ${lv>=GC.skillLvl?(on?'<b style="color:var(--good)">efecto activo</b>':'efecto listo (actívalo)'):'efecto en el nivel '+GC.skillLvl}`:`Efecto desde el nivel ${GC.skillLvl} del grimorio`}</div>
-      <div class="ctrl">${own?(on?'<span class="pill">Activo</span>':tokOpen()?`<button class="btn sm" data-act="grimSet" data-k="${g.id}">Activar · ${GC.switchCost} tokens</button>`:'<span class="pill">Cambiar: próximamente</span>')
-        :`<button class="btn sm gold" data-act="grimUnlock" data-k="${g.id}" ${Object.keys(miss).length?'disabled':''}>Desbloquear</button>${tokOpen()?`<button class="btn sm" data-act="grimBuy" data-k="${g.id}">${fmt(G.grimPack())} tokens</button>`:''}`}</div></div>` }).join('');
-  const locked=G.grimList().some(g=>!G.grimOwned(g.id));
-  return `<section class="panel"><h3>Grimorio</h3>
-    ${locked?`<p class="hint">Desbloquear ${Object.keys(S.grim&&S.grim.owned||{}).length?'el segundo':'uno'} cuesta:</p><div class="loot">${need('Oro',S.gold,c.gold)}${need(CFG.modes[0].mat+'s',S.mats[0]||0,c.ess)}${need(CFG.event.mat+'s',S.evm||0,c.ev)}</div>`:''}
-    ${cards}</section>` }
+const hms=sec=>{ sec=Math.max(0,Math.ceil(sec)); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60); return h?h+' h '+m+' min':m+' min' };
+// camino: nombre, pasiva y habilidad de evolución (la del camino B puede estar por decidir)
+function pathCard(k,P,cur){ const sk=(k==='B'?(CFG.skills.evoB||{}):CFG.skills.evo)[S.cls];
+  return `<div class="wcard${cur?' eq':''}"><div class="hd"><span class="nm" style="font-size:16px;color:var(--rE)">${P.name}</span><span class="rar">Camino ${k}</span></div>
+    <div class="s">${P.passive}</div><div class="s">Habilidad: <b>${sk?sk.name:'por decidir'}</b>${sk?' · '+sk.desc:''}</div>${cur?'<span class="pill">Tu camino</span>':''}</div>` }
+function tabGrim(){ const GC=CFG.grimoire, P=G.evoPaths(), lv=G.grimLevel();
+  let top='';
+  if(!G.grimOwned()){ const c=G.grimCost(), miss=G.grimMissing();
+    top=`<p class="hint">Es la llave de tu 1.ª evolución. Se consigue cerrado y se sube luchando hasta el nivel ${GC.levels}.</p>
+      <div class="loot">${costRow('Oro',S.gold,c.gold)}${costRow(CFG.modes[0].mat+'s',S.mats[0]||0,c.ess)}${costRow(CFG.event.mat+'s',S.evm||0,c.ev)}</div>
+      <div class="ctrl"><button class="btn gold" data-act="grimUnlock" ${Object.keys(miss).length?'disabled':''}>Conseguir</button>${tokOpen()?`<button class="btn" data-act="grimBuy">${fmt(G.grimPack())} tokens</button>`:''}</div>`; }
+  else if(!G.grimDone()){ const u=G.grimUpInfo();
+    top=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${lv}/${GC.levels} · cerrado</b><span class="s">${u.ready?'¡Listo para subir!':'Falta '+hms(u.need-u.xp)+' luchando'}</span></div>
+      <div class="rbar"><i style="width:${u.xp/u.need*100}%;background:var(--rE)"></i></div>
+      <div class="loot">${costRow('Oro',S.gold,u.cost.gold)}${costRow(CFG.modes[0].mat+'s',S.mats[0]||0,u.cost.ess)}${costRow(CFG.event.mat+'s',S.evm||0,u.cost.ev)}</div>
+      <button class="btn gold" data-act="grimUp" ${u.ready&&!Object.keys(u.missing).length?'':'disabled'}>Subir a nivel ${u.to}</button>
+      <p class="hint">Gana tiempo mientras luchas (también sin conexión). En el nivel ${GC.levels} abre la evolución.</p>`; }
+  else if(!(S.evo>=1)) top=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${GC.levels} · aprendido</b><span class="pill" style="color:var(--good)">Llave lista</span></div>
+      <p class="hint">${G.evoLvlOk()?'¡Ya puedes evolucionar y elegir camino!':`Evoluciona al llegar al nivel ${CFG.evo.tiers[0].lvl} y elige camino.`}</p>${G.evoLvlOk()?'<button class="btn gold" data-act="evoOpen">Evolucionar</button>':''}`;
+  else top=`<div class="ctrl" style="justify-content:space-between"><b>Camino elegido: ${P[S.path].name}</b></div>
+      ${tokOpen()?`<button class="btn" data-act="pathAsk">Cambiar a ${P[S.path==='B'?'A':'B'].name} · ${GC.switchCost} tokens</button>`:''}`;
+  return `<section class="panel"><h3>${G.grimName()}</h3>${top}<h3 style="font-size:15px">Los 2 caminos</h3>${pathCard('A',P.A,S.evo>=1&&S.path==='A')}${pathCard('B',P.B,S.evo>=1&&S.path==='B')}</section>` }
 // Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.
 const clsAZ=()=>[...CLASSES].sort((a,b)=>clsLabel(a).localeCompare(clsLabel(b),'es')); // Arquero, Asesino, Clérigo, Guerrero, Mago
 function fHead(){ const active=(F.rar!=='all')+(F.cls!=='all')+(F.stat!=='any');
@@ -638,6 +648,13 @@ function evoCostHtml(){ const c=G.evoCost(); if(!c) return '';
   return `<div class="loot">${c.ess?row(CFG.modes[c.essMode].mat,S.mats[c.essMode]||0,c.ess):''}${c.gold?row('Oro',S.gold,c.gold):''}${c.tokens?row('Tokens',G.tokens(),c.tokens):''}${c.ev?row(CFG.event.mat+'s',S.evm||0,c.ev):''}</div>
   ${S.loot?'<p class="hint">Tienes botín de jefes sin recoger.</p>':''}${G.canEvolve()?'':`<p class="hint">Los jefes de ${CFG.modes[c.essMode].name} sueltan esencias (más cuanto más alta la fase). Los ${CFG.event.mat.toLowerCase()}s se ganan en Modos → Eventos.</p>`}` }
 function evoModal(){
+  if(S.evo===0){ const P=G.evoPaths(), ok=G.canEvolve();
+    return showModal(`<h3>Evolución: elige camino</h3>
+    ${G.evoKeyOk()?'':`<p class="hint">Necesitas el ${G.grimName()} en el nivel ${CFG.grimoire.levels}.</p>`}
+    ${pathCard('A',P.A)}<button class="btn gold" data-act="evoGo" data-k="A" ${ok?'':'disabled'}>Ser ${P.A.name}</button>
+    ${pathCard('B',P.B)}<button class="btn gold" data-act="evoGo" data-k="B" ${ok?'':'disabled'}>Ser ${P.B.name}</button>
+    ${evoCostHtml()}<p class="hint">Podrás cambiar de camino más adelante por ${CFG.grimoire.switchCost} tokens.</p>
+    <button class="btn" data-act="close">Ahora no</button>`) }
   const E=G.nextEvo().classes[S.cls];
   showModal(`<h3>Evolución</h3>
     <div class="win-card" style="--rc:var(--gold)"><span class="s">${heroName()} →</span><b>${E.name}</b><span class="s">${E.passive}</span></div>
@@ -772,7 +789,7 @@ const ACT={
   modeGo:()=>{ if(G.inEvent()) return toast('Termina el evento primero'); const nx=CFG.modes[S.mode+1].name;
     showModal(`<h3>¿Ir a ${nx}?</h3><p class="hint">Vuelves a la fase 1 de ${nx}. No se puede volver a ${G.modeCfg().name}.</p><div class="ctrl"><button class="btn" data-act="close">Seguir farmeando</button><button class="btn gold" data-act="modeYes">Ir a ${nx}</button></div>`) },
   modeYes:()=>{ closeModal(); if(G.advanceMode()) updateHUD(); },
-  evoGo:()=>{ const r=G.evolve(); if(!r.ok) return; haptic('ok'); closeModal(); showModal(`<h3>¡Ahora eres ${G.evoP().name}!</h3><p class="hint">${G.evoP().passive}</p><button class="btn gold" data-act="close">Continuar</button>`); updateHUD(); },
+  evoGo:(b,k)=>{ const r=G.evolve(k); if(!r.ok) return; haptic('ok'); closeModal(); showModal(`<h3>¡Ahora eres ${G.evoP().name}!</h3><p class="hint">${G.evoP().passive}</p><button class="btn gold" data-act="close">Continuar</button>`); updateHUD(); },
   boostOpen:()=>boostModal(),
   boostClose:()=>{boostModalOpen=false;closeModal()},
   adWatch:(b,k)=>showAd(k),
@@ -835,13 +852,13 @@ const ACT={
   goTokens:()=>{ closeModal(); tab='shop'; shopView='tokens'; renderTab() },
   tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k+((CFG.tokens.bonus||{})[k]||0))} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
-  grimUnlock:(b,k)=>{ const r=G.grimUnlock(k); toast(r.ok?'¡Grimorio desbloqueado!':'Te faltan recursos'); renderTab() },
-  grimBuy:(b,k)=>{ const g=G.grimList().find(x=>x.id===k), p=G.grimPack();
-    showModal(`<h3>${g.name}</h3><p class="hint">Desbloquear ahora por ${fmt(p)} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="grimBuyGo" data-k="${k}" ${G.tokens()>=p?'':'disabled'}>Comprar</button></div>`) },
-  grimBuyGo:(b,k)=>{ const r=G.grimBuy(k); closeModal(); toast(r.ok?'¡Grimorio desbloqueado!':'Tokens insuficientes'); renderTab() },
-  grimSet:(b,k)=>{ const g=G.grimList().find(x=>x.id===k);
-    showModal(`<h3>Activar ${g.name}</h3><p class="hint">Cambiar de Grimorio cuesta ${CFG.grimoire.switchCost} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="grimSetGo" data-k="${k}" ${G.tokens()>=CFG.grimoire.switchCost?'':'disabled'}>Cambiar</button></div>`) },
-  grimSetGo:(b,k)=>{ const r=G.grimSet(k); closeModal(); toast(r.ok?'Grimorio activado':r.why==='event'?'Termina el evento primero':'Tokens insuficientes'); renderTab() },
+  grimUnlock:()=>{ const r=G.grimUnlock(); toast(r.ok?'¡Grimorio conseguido! Súbelo luchando':'Te faltan recursos'); renderTab() },
+  grimBuy:()=>{ const p=G.grimPack(); showModal(`<h3>${G.grimName()}</h3><p class="hint">Conseguirlo ahora por ${fmt(p)} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="grimBuyGo" ${G.tokens()>=p?'':'disabled'}>Comprar</button></div>`) },
+  grimBuyGo:()=>{ const r=G.grimBuy(); closeModal(); toast(r.ok?'¡Grimorio conseguido!':'Tokens insuficientes'); renderTab() },
+  grimUp:()=>{ const r=G.grimUp(); if(r.ok){ haptic('ok'); toast(r.lvl>=CFG.grimoire.levels?'¡Grimorio aprendido! Ya puedes evolucionar':'Grimorio nivel '+r.lvl) } else toast(r.why==='xp'?'Sigue luchando':'Te faltan recursos'); renderTab() },
+  pathAsk:()=>{ const P=G.evoPaths(), to=P[S.path==='B'?'A':'B'];
+    showModal(`<h3>Cambiar a ${to.name}</h3><p class="hint">${to.passive}</p><p class="hint">Cuesta ${CFG.grimoire.switchCost} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="pathGo" ${G.tokens()>=CFG.grimoire.switchCost?'':'disabled'}>Cambiar</button></div>`) },
+  pathGo:()=>{ const r=G.pathSwitch(); closeModal(); toast(r.ok?'Ahora eres '+G.evoP().name:r.why==='event'?'Termina el evento primero':'Tokens insuficientes'); updateHUD(); renderTab() },
   invShare:()=>{ const link=Telemetry.inviteLink(CFG), tg=window.Telegram&&Telegram.WebApp, txt='¡Juega conmigo a Idle Ascension!';
     const url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(txt);
     if(tg&&tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank') },

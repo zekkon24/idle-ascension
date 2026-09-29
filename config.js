@@ -99,25 +99,14 @@ const CFG = {
     first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez
     pass:{stars:250}},
   startWeapon:'C',
-  // Grimorios: 2 por clase; se desbloquean donando oro (horas de farmeo de tu récord), esencias y emblemas, o se compran con tokens.
-  // El 2.º cuesta el doble. Suben de nivel contigo (nivel 1 al desbloquearlo). En el nivel 'skillLvl' dan su efecto
-  // Solo uno activo; cambiarlo cuesta switchCost tokens.
-  // fx: números de cada efecto (activo desde el nivel skillLvl del grimorio)
-  grimoire:{skillLvl:25, switchCost:250,
-    fx:{fortaleza:{df:0.3}, furia:{df:-0.3,atk:0.4}, fuego:{pct:0.2,dur:3,cr:0.25}, escarcha:{need:3,mult:2,freeze:2}, cazador:{boss:0.5},
-        rebote:{mult:0.7}, veneno:{pct:0.15,dur:5,max:5}, filo:{cd:1.0}, luz:{pct:0.2,every:10}, sacrificio:{cost:0.02,atk:0.5}}, cost:[{goldH:2,ess:2,ev:4},{goldH:4,ess:4,ev:8}], pack:[300,600],
-    classes:{
-      Guerrero:[{id:'fortaleza',name:'Grimorio de la Fortaleza',role:'Muro',desc:'+30 % de defensa'},
-                {id:'furia',name:'Grimorio de la Furia',role:'Furia',desc:'−30 % de defensa pero +40 % de daño'}],
-      Mago:[{id:'fuego',name:'Grimorio del Fuego',role:'Fuego',desc:'Sus golpes queman (20 % por s, 3 s); pegar a un enemigo quemado da +25 % de crítico'},
-            {id:'escarcha',name:'Grimorio de la Escarcha',role:'Escarcha',desc:'Ya no quema: clava esquirlas; con 3, hace 200 % y lo congela 2 s (no se mueve ni ataca)'}],
-      Arquero:[{id:'cazador',name:'Grimorio del Cazador',role:'Cazador',desc:'+50 % de daño a los jefes'},
-               {id:'rebote',name:'Grimorio del Rebote',role:'Rebote',desc:'Sus flechas rebotan y golpean a un enemigo más (70 %)'}],
-      Asesino:[{id:'veneno',name:'Grimorio del Veneno',role:'Veneno',desc:'Cada golpe envenena (15 % por s, 5 s); se acumula hasta 5 veces'},
-               {id:'filo',name:'Grimorio del Filo',role:'Filo',desc:'+100 % de daño crítico'}],
-      Clerigo:[{id:'luz',name:'Grimorio de la Luz',role:'Luz',desc:'Escudo del 20 % de su vida que se recarga cada 10 s'},
-               {id:'sacrificio',name:'Grimorio del Sacrificio',role:'Sacrificio',desc:'Cada golpe le cuesta el 2 % de su vida pero hace +50 % de daño'}],
-    }},
+  // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube
+  // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.
+  // Con el grimorio en el nivel 5 y el héroe en el nivel de la evolución, se evoluciona eligiendo uno de 2 caminos (evo.tiers[0]).
+  // Cambiar de camino después cuesta switchCost tokens. fx: números de la pasiva de cada camino B. SIN BALANCEAR.
+  grimoire:{levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
+    up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
+    names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},
+    fx:{fortaleza:{df:0.3}, escarcha:{need:3,mult:2,freeze:2}, cazador:{boss:0.5}, veneno:{pct:0.15,dur:5,max:5}, sacrificio:{cost:0.02,atk:0.5}}},
   // Habilidades activas (elegidas por el diseñador): la de clase es directa (golpe/cura al momento); la de evolución da un efecto unos segundos. En los eventos se usan a mano;
   // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
   skills:{
@@ -132,7 +121,9 @@ const CFG = {
       Mago:{id:'combustion', name:'Combustión', cd:40, dur:8, desc:'8 s: los enemigos que mueren quemados pasan la quemadura a otro'},
       Arquero:{id:'rapido', name:'Fuego rápido', cd:40, dur:6, spd:2, desc:'6 s con el doble de velocidad de ataque'},
       Asesino:{id:'clon', name:'Clon de sombra', cd:40, dur:8, mult:0.5, desc:'8 s: un clon copia sus golpes al 50 %'},
-      Clerigo:{id:'juicio', name:'Luz del juicio', cd:45, dur:6, heal:0.05, dps:0.5, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}}},
+      Clerigo:{id:'juicio', name:'Luz del juicio', cd:45, dur:6, heal:0.05, dps:0.5, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}},
+    // habilidad de evolución del camino B: POR DECIDIR (null = aún no hay)
+    evoB:{Guerrero:null, Mago:null, Arquero:null, Asesino:null, Clerigo:null}},
   matShop:{ess:50, ev:25}, // tienda: Esencia 50 tokens, Emblema 25 tokens
   boosts:{ // potenciadores por anuncios (cada uso pide 'ads' anuncios; 'perDay' usos al día)
     speed:{ads:2,min:15,mult:2,perDay:3}, // combate ×2 durante 15 min reales (se acumula si ya está activo)
@@ -146,6 +137,14 @@ const CFG = {
         Arquero:{name:'Tirador',passive:'Disparo doble: 20 % de probabilidad de disparar dos veces',double:0.2},
         Asesino:{name:'Sombra',passive:'Instinto: tras un crítico, el siguiente golpe hace +100 % de daño',critNext:1.0},
         Clerigo:{name:'Oráculo',passive:'Luz interior: al bajar del 50 % de vida, la regeneración se triplica 10 s (1 vez por oleada)',lightHp:0.5,lightMult:3,lightDur:10},
+      },
+      // camino B (el opuesto): su pasiva es un efecto de grimorio (grimoire.fx[grim])
+      alt:{
+        Guerrero:{name:'Guardián',grim:'fortaleza',passive:'Fortaleza: +30 % de defensa'},
+        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 200 % y congela 2 s (no se mueve ni ataca)'},
+        Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +50 % de daño a los jefes'},
+        Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (15 % por s, 5 s), hasta 5 veces'},
+        Clerigo:{name:'Mártir',grim:'sacrificio',passive:'Sacrificio: cada golpe le cuesta el 2 % de su vida pero hace +50 % de daño'},
       }},
       // Evolución 2: mejora la pasiva de clase (base) y añade un efecto nuevo; se suma a la pasiva de la evolución 1
       {lvl:300, pending:true, cost:{ess:5,gold:400000,ev:30}, // pending: bloqueada ("próximamente"), pide Esencia de pesadilla

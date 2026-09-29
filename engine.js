@@ -39,13 +39,13 @@ function createGame(opts){
       best:0,fase:1,wave:1,push:true,autoPush:true,farmClears:0,
       items:[],nextId:1,equippedId:null,chestInv:{},opt:{},
       startDay:null,cardUntil:0,vipUntil:0,          // startDay: día en que empezó la partida (para los rivales simulados)
-      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{owned:{},active:null},
+      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{lvl:0,xp:0},
       stats:{deposited:0,withdrawNet:0,adGold:0,ads:0,offGold:0}}; // registro para la base de datos: tokens comprados, $ retirados (neto), oro de anuncios, anuncios vistos, oro sin conexión
   }
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
     if(!st||!CFG.classes[st.cls]) return null;
-    { const OLD={orden:'fuego',caos:'escarcha',espinas:'fortaleza',trueno:'furia',invocador:'fuego',hielo:'escarcha',plaga:'cazador',viento:'rebote',almas:'veneno',sangre:'filo',tiempo:'luz',juicio:'sacrificio'}, G=st.grim;   // grimorios renovados
-      if(G&&G.owned){ for(const k in OLD) if(G.owned[k]!=null){ G.owned[OLD[k]]=G.owned[k]; delete G.owned[k]; } if(OLD[G.active]) G.active=OLD[G.active]; } }
+    { const G=st.grim; if(G&&G.owned){ const had=Object.keys(G.owned).length>0; st.grim={lvl:had?((st.evo||0)>=1?5:1):0,xp:0}; } }   // grimorios antiguos → la llave
+    if((st.evo||0)>=1&&!st.path) st.path='A';                                                                              // evolución antigua = camino A
     const d=newState(st.cls);
     for(const k in d) if(st[k]===undefined) st[k]=d[k];
     st.up={...d.up,...(st.up||{})}; st.stats={...d.stats,...(st.stats||{})}; for(const k in st.up) if(!Number.isFinite(st.up[k])) st.up[k]=0;
@@ -91,15 +91,15 @@ function createGame(opts){
   function computeStats(){
     const c=CFG.classes[S.cls], L=S.lvl-1, u=S.up, U=CFG.upgrades, w=equipped(), ps={...(c.p||{}),...evoBase()}, A=S.absorb||{};
     const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}; let wd=0,ws=0;
-    const gr=grimFx(), gf=gr?CFG.grimoire.fx[gr]:{};                    // grimorio activo: defensa, daño o crítico
-    if(gr==='fortaleza'||gr==='furia') sec.dfp+=gf.df; if(gr==='filo') sec.cd+=gf.cd; if(gr==='cazador') sec.bd+=gf.boss;
+    const gr=grimFx(), gf=gr?CFG.grimoire.fx[gr]:{};                    // camino B: defensa (Guardián) o daño a jefes (Cazador)
+    if(gr==='fortaleza') sec.dfp+=gf.df; if(gr==='cazador') sec.bd+=gf.boss;
     if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
     return {
       // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida,
       // el Aura del Santo y el daño por defensa del Titán se escalan con ellas para que sigan valiendo lo mismo.
       hpK:Math.pow(U.hp.mult/(U.hp.ref||U.hp.mult),u.hp), dfK:Math.pow(U.df.mult/(U.df.ref||U.df.mult),u.df),
       hp:(c.hp+(A.hp||0)+c.ghp*L)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp'),
-      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(gr==='furia'?1+gf.atk:1),
+      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk'),
       df:(c.df+(A.df||0)+c.gdf*L)*Math.pow(U.df.mult,u.df)*(1+sec.dfp),
       spd:c.spd*(ps.spd||1)*Math.pow(U.spd.mult,u.spd)*(1+ws),
       cr:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
@@ -164,12 +164,12 @@ function createGame(opts){
   function buffAdd(k){ let a=0; for(const b of BUF.list) if(b.until>CT) a+=b[k]||0; return a }
   function skillDef(k){ const K=CFG.skills;
     if(k==='cls') return K.cls[S.cls]||null;
-    if(k==='evo') return S.evo>=1?K.evo[S.cls]||null:null; return null }
+    if(k==='evo') return S.evo>=1?(S.path==='B'?(K.evoB||{})[S.cls]:K.evo[S.cls])||null:null; return null }
   const SLOTS=['cls','evo'];
   const skillSlots=()=>SLOTS.filter(skillDef);
   // estado para la pantalla: nombre, recarga y si está lista. Las bloqueadas dicen cómo se consiguen.
   function skills(){ return SLOTS.map(k=>{ const d=skillDef(k); return d?{slot:k,id:d.id,name:d.name,desc:d.desc,cd:d.cd,left:Math.max(0,(CD[k]||0)-CT),ready:CT>=(CD[k]||0)}
-    :{slot:k,locked:true,name:(CFG.skills.evo[S.cls]||{}).name,desc:'Se desbloquea al evolucionar'} }) }
+    :{slot:k,locked:true,name:S.evo>=1?'Por decidir':'Evolución',desc:S.evo>=1?'Habilidad de este camino: aún por decidir':'Se desbloquea al evolucionar'} }) }
   function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'};
     if(CT<(CD[k]||0)) return {ok:false,why:'cd',left:CD[k]-CT};
     CD[k]=CT+d.cd; (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
@@ -195,7 +195,7 @@ function createGame(opts){
     if(!S||!B) return;
     if(B.over){ B.wait-=dt; if(B.wait<=0) startWave(); return }
     const h=heroStats(), P=evoP(), GR=grimFx(), GF=GR&&CFG.grimoire.fx[GR];
-    B.t+=dt; CT+=dt;
+    B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); }
     else if(B.event){ if(B.t>=CFG.event.dur||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
@@ -215,7 +215,6 @@ function createGame(opts){
       const d=e.dotDps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     if(GR==='veneno') for(const e of B.enemies){ if(e.dead||!e.poison) continue; e.poison=e.poison.filter(x=>x.until>B.t); // Veneno: acumulaciones
       const d=e.poison.reduce((a,x)=>a+x.dps,0)*dt; if(!d) continue; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
-    if(GR==='luz'&&CT>=(B.luzNext||0)){ BUF.gshield=Math.max(BUF.gshield||0,GF.pct*h.hp); B.luzNext=CT+GF.every; }   // Luz: escudo que se recarga
     const hitOnce=tg=>{
       let d=dmgF(h.atk+(P&&P.defDmg?P.defDmg*h.df/h.dfK:0),tg.df)*(B.boss?1+h.bd:1), crit=false; // Titán: daño extra según su defensa (en la escala antigua)
       if(P&&P.rage) d*=1+Math.min(P.rageCap,(B.rage||0)*P.rage);        // Berserker: furia por golpes recibidos
@@ -224,19 +223,15 @@ function createGame(opts){
       d*=buffMul('atk');                                                        // habilidades: +daño
       if(GR==='sacrificio'&&B.hp>1){ B.hp=Math.max(1,B.hp-GF.cost*h.hp); d*=1+GF.atk; }   // Sacrificio: vida por daño
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
-      const burning=(tg.dot>B.t&&tg.dotKind==='fuego')||(tg.burn&&tg.burn.some(u=>u>B.t));
-      // Fuego: más crítico contra enemigos quemados
-      if(forced||rand()<h.cr+(B.critAcc||0)+(GR==='fuego'&&burning?GF.cr:0)){ d*=1+h.cd; crit=true; B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
+      if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
       else if(P&&P.critStack) B.critAcc=Math.min(P.critStackMax||1,(B.critAcc||0)+P.critStack); // Segador: cada golpe sin crítico suma probabilidad de crítico
       tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls'))*h.hpK); if(B.kind==='boss') addDmg(d);   // robo de vida: cura la misma parte de tu vida máxima que antes
       if(P&&P.burnPct&&GR!=='escarcha'){ tg.burn=tg.burn||[]; if(tg.burn.length>=P.burnMax) tg.burn.shift(); tg.burn.push(B.t+P.burnDur); }
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
       if(BUF.clone&&CT<BUF.clone.until&&!tg.dead){ const c=d*BUF.clone.mult; tg.hp-=c; B.mD+=c; if(B.kind==='boss') addDmg(c); emit('hit',{e:tg,d:c,crit,clone:true}); }   // Clon de sombra
-      if(GR==='fuego'&&!tg.dead){ tg.dot=B.t+GF.dur; tg.dotDps=GF.pct*d; tg.dotKind='fuego'; }      // Fuego: quema
       if(GR==='escarcha'&&!tg.dead&&(tg.shards=(tg.shards||0)+1)>=GF.need){ tg.shards=0; const x=d*GF.mult; tg.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x);   // Escarcha: 3 esquirlas → daño y congela
         tg.frozen=B.t+GF.freeze; emit('hit',{e:tg,d:x,crit:false,frost:true}); emit('fx',{k:'congelar',e:tg}); }
       if(GR==='veneno'){ tg.poison=(tg.poison||[]).filter(x=>x.until>B.t); tg.poison.push({until:B.t+GF.dur,dps:GF.pct*d}); if(tg.poison.length>GF.max) tg.poison.shift(); }
-      if(GR==='rebote'&&!tg.bounce){ const o=B.enemies.find(e=>!e.dead&&e!==tg); if(o){ const dd=d*GF.mult; o.hp-=dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); emit('hit',{e:o,d:dd,crit:false,bounce:true}); if(o.hp<=0) kill(o); } }   // Rebote
       if(tg.hp<=0) kill(tg);
     };
     const canHit=e=>!e.dead&&((h.ranged&&!B.event)||e.arrive<=B.t); // en el evento nadie dispara antes de que llegue (igual para todas las clases)
@@ -340,11 +335,12 @@ function createGame(opts){
   // pasiva de la clase evolucionada (null si aún no ha evolucionado)
   // extra de estadísticas de las evoluciones hechas (multiplicativo): tier.bonus={hp,atk}
   // la pasiva de clase mejorada por las evoluciones hechas (p. ej. Piel dura 5 % → 7,5 %)
-  function evoBase(){ const o={}; if(S&&S.evo) for(const t of evoTiers().slice(0,S.evo)) Object.assign(o,(t.classes[S.cls]||{}).base||{}); return o }
+  function evoBase(){ const o={}; if(S&&S.evo) evoTiers().slice(0,S.evo).forEach((t,i)=>Object.assign(o,(tierCls(t,i)||{}).base||{})); return o }
   function evoBonus(k){ let m=1; if(S&&S.evo) for(const t of evoTiers().slice(0,S.evo)) m*=1+((t.bonus||{})[k]||0); return m }
   // pasivas acumuladas de las evoluciones hechas (la última da el nombre)
   let EP=null, EPk=''; // caché de la pasiva (se llama en cada paso del combate)
-  function evoP(){ if(!S.evo) return null; const k=S.cls+S.evo; if(EPk===k) return EP; const o={}; for(const t of evoTiers().slice(0,S.evo)) Object.assign(o,t.classes[S.cls]); EP=o; EPk=k; return o }
+  const tierCls=(t,i)=>i===0&&S.path==='B'&&t.alt?{...t.alt[S.cls],grim:undefined}:t.classes[S.cls];   // la 1.ª evolución depende del camino
+  function evoP(){ if(!S.evo) return null; const k=S.cls+S.evo+(S.path||''); if(EPk===k) return EP; const o={}; evoTiers().slice(0,S.evo).forEach((t,i)=>Object.assign(o,tierCls(t,i))); EP=o; EPk=k; return o }
   // cuánto sube el daño medio por la pasiva: estimación que solo se usa hasta tener DPS medido (dpsK)
   function evoDps(h){ const P=evoP(); if(!P) return 1; let m=1;
     if(P.double) m*=1+P.double; if(P.critNext) m*=1+h.cr*P.critNext; if(P.rage) m*=1+P.rageCap*0.5;
@@ -356,9 +352,11 @@ function createGame(opts){
   function evoMissing(){ const c=evoCost(); if(!c) return {}; const o={};
     if((S.mats[c.essMode]||0)<c.ess) o.ess=c.ess-(S.mats[c.essMode]||0); if(S.gold<c.gold) o.gold=c.gold-S.gold; if(tokens()<c.tokens) o.tokens=c.tokens-tokens(); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o }
   const evoLvlOk=()=>{ const t=nextEvo(); return !!t&&!t.pending&&S.lvl>=t.lvl };
-  const canEvolve=()=>evoLvlOk()&&Object.keys(evoMissing()).length===0;
-  function evolve(){
+  const evoKeyOk=()=>S.evo>0||grimDone();                                  // la 1.ª evolución pide el grimorio en el nivel 5
+  const canEvolve=()=>evoLvlOk()&&evoKeyOk()&&Object.keys(evoMissing()).length===0;
+  function evolve(path){
     if(!canEvolve()||inEvent()) return {ok:false};
+    if(S.evo===0){ if(path!=='A'&&path!=='B') path='A'; S.path=path; }     // 1.ª evolución: se elige camino
     const c=evoCost(); if(c){ if(c.ess) S.mats[c.essMode]-=c.ess; S.gold-=c.gold; spend(c.tokens); S.evm-=c.ev; }
     S.evo++; S.dpsM=null; statsDirty(); save();                 // con la nueva pasiva se vuelve a medir el DPS
     emit('evolve',{evo:S.evo,name:evoP().name}); emit('change'); return {ok:true};
@@ -713,7 +711,7 @@ function createGame(opts){
     if(inEvent()) return null;                                 // durante el evento el tiempo está en pausa: no se farmea a la vez
     if(!(el>60&&(S.best>0||S.mode>0))) return null;
     const f=Math.max(1,Math.min(S.fase,S.best)), r=farmRate(f), l0=S.lvl;
-    const g=r.g*el, x=r.x*el; S.gold+=g; addGoldH(g); addXp(x); S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
+    const g=r.g*el, x=r.x*el; S.gold+=g; addGoldH(g); addXp(x); grimXp(el);   // el grimorio también gana tiempo sin conexión S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
     const capped=raw>=cap; if(capped&&offlineAdLeft()>0) S.offBonus=g*(CFG.offlineAdMult-1);
     emit('change');
     return {secs:el,fase:f,gold:g,xp:x,lvlFrom:l0,lvlTo:S.lvl,capped,bonus:S.offBonus||0};
@@ -723,29 +721,37 @@ function createGame(opts){
   function claimOfflineBonus(){ const b=S.offBonus; if(!b) return 0; S.gold+=b; S.offBonus=null; const a=adsState(); a.n.off=(a.n.off||0)+1;
     S.stats.ads++; addAd(); S.stats.adGold+=b; addGoldH(b); track('ad',{boost:'offline',gold:b}); emit('change'); return b }
 
-  /* ---------- grimorios ---------- */
-  // 2 por clase. Se desbloquean donando oro + esencias + emblemas (o con tokens); el 2.º cuesta el doble. Suben con tu
-  // nivel (nivel 1 al desbloquearlo). Por ahora SIN EFECTO en combate: solo existen. Solo uno activo; cambiarlo cuesta tokens.
+  /* ---------- grimorio (llave de la 1.ª evolución) ---------- */
+  // Uno por clase. Se consigue cerrado (nivel 1) y se sube hasta el 5: cada subida pide tiempo luchando (xp en segundos,
+  // también sin conexión) y recursos. En el 5 abre la evolución, donde se elige camino (A o B).
   const GC=()=>CFG.grimoire;
-  const grimList=()=>(GC()&&GC().classes[S.cls])||[];
-  const grimState=()=>S.grim=S.grim||{owned:{},active:null};
-  const grimOwned=id=>grimState().owned[id]!=null;
-  const grimLevel=id=>grimOwned(id)?Math.max(1,S.lvl-grimState().owned[id]+1):0;
-  // grimorio con efecto ahora mismo: el activo, si ya llegó al nivel skillLvl (si no, null)
-  function grimFx(){ const G=S&&S.grim, id=G&&G.active; return id&&CFG.grimoire.fx&&CFG.grimoire.fx[id]&&grimLevel(id)>=CFG.grimoire.skillLvl?id:null }
-  const grimSkill=id=>grimLevel(id)>=GC().skillLvl;
-  const grimTier=()=>Math.min(Object.keys(grimState().owned).length,GC().cost.length-1);
-  function grimCost(){ const c=GC().cost[grimTier()]; return {gold:Math.round(c.goldH*3600*farmRate(Math.max(1,S.best)).g),ess:c.ess,ev:c.ev} }
-  const grimPack=()=>GC().pack[grimTier()];
-  function grimMissing(){ const c=grimCost(), o={}; if(S.gold<c.gold) o.gold=c.gold-S.gold; if((S.mats[0]||0)<c.ess) o.ess=c.ess-(S.mats[0]||0); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o }
-  function grimGet(id,how){ const G=grimState(); G.owned[id]=S.lvl; if(!G.active) G.active=id; statsDirty(); track('grimoire',{id,how}); save(); emit('change'); return {ok:true} }
-  function grimUnlock(id){ if(!grimList().some(g=>g.id===id)||grimOwned(id)) return {ok:false,why:'id'};
-    if(Object.keys(grimMissing()).length) return {ok:false,why:'cost'}; const c=grimCost();
-    S.gold-=c.gold; S.mats[0]-=c.ess; S.evm-=c.ev; return grimGet(id,'recursos') }
-  function grimBuy(id){ if(!grimList().some(g=>g.id===id)||grimOwned(id)) return {ok:false,why:'id'}; const p=grimPack();
-    if(!spend(p)) return {ok:false,why:'tokens'}; return grimGet(id,'tokens') }
-  function grimSet(id){ const G=grimState(); if(!grimOwned(id)||G.active===id) return {ok:false}; if(inEvent()) return {ok:false,why:'event'};
-    if(!spend(GC().switchCost)) return {ok:false,why:'tokens'}; G.active=id; statsDirty(); track('grimoire',{id,how:'cambio'}); save(); emit('change'); return {ok:true} }
+  const grimState=()=>S.grim=S.grim||{lvl:0,xp:0};
+  const grimOwned=()=>grimState().lvl>0;
+  const grimLevel=()=>grimState().lvl;
+  const grimDone=()=>grimLevel()>=GC().levels;
+  const grimName=()=>GC().names[S.cls];
+  const goldH=h=>Math.round(h*3600*farmRate(Math.max(1,S.best)).g);
+  function grimCost(){ const c=GC().cost; return {gold:goldH(c.goldH),ess:c.ess,ev:c.ev} }
+  const grimPack=()=>GC().pack;
+  const missOf=c=>{ const o={}; if(S.gold<c.gold) o.gold=c.gold-S.gold; if((S.mats[0]||0)<c.ess) o.ess=c.ess-(S.mats[0]||0); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o };
+  const grimMissing=()=>missOf(grimCost());
+  function grimGet(how){ grimState().lvl=1; grimState().xp=0; track('grimoire',{how}); save(); emit('change'); return {ok:true} }
+  function grimUnlock(){ if(grimOwned()) return {ok:false,why:'owned'}; if(Object.keys(grimMissing()).length) return {ok:false,why:'cost'};
+    const c=grimCost(); S.gold-=c.gold; S.mats[0]-=c.ess; S.evm-=c.ev; return grimGet('recursos') }
+  function grimBuy(){ if(grimOwned()) return {ok:false,why:'owned'}; if(!spend(grimPack())) return {ok:false,why:'tokens'}; return grimGet('tokens') }
+  // siguiente subida: tiempo que falta y recursos
+  function grimUpInfo(){ const G=grimState(); if(!G.lvl||grimDone()) return null; const u=GC().up[G.lvl-1];
+    const cost={gold:goldH(u.goldH),ess:u.ess,ev:u.ev}; return {to:G.lvl+1,xp:G.xp,need:u.secs,ready:G.xp>=u.secs,cost,missing:missOf(cost)} }
+  function grimXp(secs){ const G=S&&S.grim; if(!G||!G.lvl||G.lvl>=GC().levels) return; const u=GC().up[G.lvl-1]; G.xp=Math.min(u.secs,G.xp+secs) }
+  function grimUp(){ const u=grimUpInfo(); if(!u) return {ok:false,why:'max'}; if(!u.ready) return {ok:false,why:'xp'}; if(Object.keys(u.missing).length) return {ok:false,why:'cost'};
+    S.gold-=u.cost.gold; S.mats[0]-=u.cost.ess; S.evm-=u.cost.ev; const G=grimState(); G.lvl++; G.xp=0; track('grimoire',{how:'nivel',lvl:G.lvl}); save(); emit('change'); return {ok:true,lvl:G.lvl} }
+  // pasiva de grimorio en combate: la del camino B, si se eligió
+  function grimFx(){ if(!S||!(S.evo>=1)||S.path!=='B') return null; const a=(evoTiers()[0].alt||{})[S.cls]; return a&&a.grim||null }
+  // los 2 caminos de la 1.ª evolución
+  function evoPaths(){ const t=evoTiers()[0]; return {A:t.classes[S.cls],B:(t.alt||{})[S.cls]} }
+  // cambiar de camino (tras evolucionar): cuesta tokens
+  function pathSwitch(){ if(!(S.evo>=1)) return {ok:false,why:'evo'}; if(inEvent()) return {ok:false,why:'event'}; if(!spend(GC().switchCost)) return {ok:false,why:'tokens'};
+    S.path=S.path==='B'?'A':'B'; S.dpsM=null; EPk=''; statsDirty(); track('path',{path:S.path}); save(); emit('change'); return {ok:true,path:S.path} }
 
   /* ---------- premios del servidor (referidos) ---------- */
   // El servidor manda premios pendientes: 'silver' = cofres de plata, 'won' = tokens ganados (retirables)
@@ -822,7 +828,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, inEvent, evPhase, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, grimFx, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,
@@ -831,7 +837,7 @@ function createGame(opts){
     // otros
     applyOffline, claimOfflineBonus, offlineCap, offlineAdLeft, setOpt, dev, applyRewards,
     // grimorios
-    grimList, grimOwned, grimLevel, grimSkill, grimCost, grimPack, grimMissing, grimUnlock, grimBuy, grimSet,
+    grimOwned, grimLevel, grimCost, grimPack, grimMissing, grimUnlock, grimBuy,
     // anuncios
     adsState, watchAd, boostLeft, tickBoost, speedMult, boostUsesLeft, goldBoostHours, goldBoostValue,
   };
