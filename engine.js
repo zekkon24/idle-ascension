@@ -528,7 +528,7 @@ function createGame(opts){
     return out.filter(b=>!(b.t==='fx'&&T.fx[b.id].r==='C')&&have.has(boonKey(b))?false:!mine.has(boonKey(b))&&!(b.t==='sk'&&nSk>=T.maxSkills)&&!(b.t==='fx'&&b.id==='pacto'&&run.lives<=1)) }
   const boonKey=b=>b.t==='fx'?'fx:'+b.id:b.t==='pas'?'pas:'+b.cls+':'+b.path:b.t==='leg'?'leg:'+b.cls:'sk:'+b.src+':'+b.cls;
   function boonInfo(b){ if(b.t==='fx'){ const d=CFG.tower.fx[b.id]; return {kind:(d.obj?'Objeto · ':'')+{C:'Común',R:'Rara',L:'Legendaria'}[d.r],name:d.name,desc:d.desc,r:d.r} }
-    if(b.t==='pas'){ const p=boonPas(b); return {kind:'Pasiva',name:p.name,desc:p.passive,r:'L'} }
+    if(b.t==='pas'){ const p=boonPas(b); return {kind:'Grimorio',name:p.name,desc:p.passive,r:'L'} }
     if(b.t==='leg'){ const d=CFG.weapon.legend[b.cls]; return {kind:'Objeto',name:d.name,desc:d.desc,r:'L'} }
     const k=CFG.skills[b.src][b.cls]; return {kind:'Hechizo',name:k.name,desc:k.desc,r:'L'} }
   function towerNodes(f){ const T=CFG.tower; if(f%T.boss.every===0) return ['boss'];
@@ -541,12 +541,14 @@ function createGame(opts){
   function towerAbandon(){ const T=towerState(); if(inEvent()) return false; T.run=null; save(); emit('change'); return true }
   // elegir camino: combate (normal/élite/jefe) o directo a la recompensa (tesoro/descanso)
   function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k) return false;
-    if(k==='treasure'){ run.pick=towerOffer(3); run.after='next'; save(); emit('change'); return {k} }
+    if(k==='treasure'){ run.pick=towerOffer(3,false,'obj'); run.cat='obj'; run.after='next'; save(); emit('change'); return {k} }
     // descanso: vida al máximo (si ya estaba llena, solo te ahorras el combate)
     if(k==='rest'){ const full=!(run.hp<1); run.hp=1; towerNext(); save(); emit('change'); return {k,full} }
     towerFight(k); return {k} }
   const boonRar=b=>b.t==='fx'?CFG.tower.fx[b.id].r:'L';
-  function towerOffer(n,better){ const pool=boonPool(), o=[], P=CFG.tower.rarity[better?'better':'normal'];
+  // tipo de carta: 'upg' mejoras (efectos de la Torre y hechizos) · 'obj' objetos (de la Torre y de armas legendarias) · 'grim' grimorios (pasivas de camino)
+  const boonCat=b=>b.t==='pas'?'grim':b.t==='leg'||(b.t==='fx'&&CFG.tower.fx[b.id].obj)?'obj':'upg';
+  function towerOffer(n,better,cat){ let pool=boonPool(); if(cat){ const f=pool.filter(b=>boonCat(b)===cat); if(f.length) pool=f; } const o=[], P=CFG.tower.rarity[better?'better':'normal'];
     while(o.length<n&&pool.length){ let r=rand()*(P.C+P.R+P.L); const want=r<P.C?'C':r<P.C+P.R?'R':'L';
       let cand=pool.filter(b=>boonRar(b)===want); if(!cand.length) cand=pool; const b=cand[Math.floor(rand()*cand.length)];
       o.push(b); for(let i=pool.length-1;i>=0;i--) if(boonKey(pool[i])===boonKey(b)) pool.splice(i,1); } return o }
@@ -564,7 +566,7 @@ function createGame(opts){
     B.clockAt=CT+CFG.tower.fx.reloj.every; B.hammerAt=CT+CFG.tower.fx.martillo.every;
     emit('eventStart',B); emit('change') }
   function towerEnd(won){ const run=S.tower.run, k=B.node, frac=Math.max(0,B.hp/heroStats().hp); B=null; BUF.crits=0; statsDirty(); let res;
-    if(won){ run.hp=Math.min(1,frac+CFG.tower.fx.aliento.heal*tfxRun('aliento')); run.pick=towerOffer(3,k==='elite'||k==='boss'); run.after='next'; if(k==='elite') run.extra=1; res={won:true,floor:run.floor,k,hp:run.hp} }
+    if(won){ run.hp=Math.min(1,frac+CFG.tower.fx.aliento.heal*tfxRun('aliento')); run.cat=k==='elite'?'grim':'upg'; run.pick=towerOffer(3,k==='elite'||k==='boss',run.cat); run.after='next'; if(k==='elite') run.extra=1; res={won:true,floor:run.floor,k,hp:run.hp} }
     else { run.lives--; run.hp=1; res={won:false,floor:run.floor,lives:run.lives} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
   // elegir mejora (o saltarla si no quedan); después, al siguiente piso
@@ -573,7 +575,7 @@ function createGame(opts){
     if(b&&b.t==='fx'&&b.id==='aguante'){ const g=CFG.tower.fx.aguante.hp, m0=1+g*(tfxRun('aguante')-1); run.hp=Math.min(1,((run.hp==null?1:run.hp)*m0+g)/(m0+g)); }   // (se suma: cura la parte nueva)
     if(b&&b.t==='fx'&&b.id==='pacto'&&run.lives>1){ run.lives--; run.extra=(run.extra||0)+2; }
     if(b&&b.t==='fx'&&b.id==='corona') run.lives++;
-    if(run.extra){ run.extra--; run.pick=towerOffer(3); if(run.pick.length){ save(); emit('change'); return true } }
+    if(run.extra){ run.extra--; run.pick=towerOffer(3,false,run.cat); if(run.pick.length){ save(); emit('change'); return true } }
     run.pick=null; towerNext(); return true }
   function towerNext(){ const T=towerState(), run=T.run; run.floor++; const f=run.floor-1;
     let got=null; if(f>T.best){ T.best=f; for(const r of CFG.tower.rewards) if(f%r.every===0){ got=r.b; giveBundle(r.b); break } }

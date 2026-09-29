@@ -78,7 +78,7 @@ G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+f
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{fx.shots.length=0});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡El jefe se enfurece!':'¡El jefe llama refuerzos!'); });
-G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab(); later(()=>showModal(r.won?`<h3>¡Piso ${r.floor} superado!</h3><p class="hint">${r.k==='elite'?'Élite: eliges 2 mejoras.':'Elige tu mejora en la Torre.'}</p><button class="btn gold" data-act="close">Elegir</button>`
+G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab(); later(()=>showModal(r.won?`<h3>¡Piso ${r.floor} superado!</h3><p class="hint">${r.k==='elite'?'Élite: eliges 2 grimorios.':'Elige tu mejora en la Torre.'}</p><button class="btn gold" data-act="close">Elegir</button>`
   :`<h3>Derrota en el piso ${r.floor}</h3><p class="hint">${r.lives>0?`Te quedan ${r.lives} vida${r.lives>1?'s':''}: vuelve a intentarlo.`:'Sin vidas: puedes comprar una o terminar la partida.'}</p><button class="btn gold" data-act="close">Vale</button>`)); });
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
@@ -521,7 +521,7 @@ const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), 
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 /* ---------- Torre (roguelike) ---------- */
-const NODE={fight:['⚔️','Combate','Enemigos normales · 1 mejora'],elite:['💀','Élite','Pocos y muy duros · 2 mejoras'],treasure:['🎁','Tesoro','Elige una mejora sin luchar'],rest:['🔥','Descanso','Te curas del todo (si ya estás al máximo, te saltas el combate)'],boss:['👑','Jefe','Jefe del piso · 1 mejora']};
+const NODE={fight:['⚔️','Combate','Enemigos normales · elige 1 mejora'],elite:['💀','Élite','Pocos y muy duros · elige 2 grimorios (pasivas de camino)'],treasure:['🎁','Cofre','Sin luchar · elige 1 objeto'],rest:['🔥','Hoguera','Te curas del todo (si ya estás al máximo, te saltas el combate)'],boss:['👑','Jefe','Jefe del piso · elige 1 mejora']};
 const RARC={C:'var(--rC)',R:'var(--rR)',L:'var(--rL)'};
 function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of TC.rewards) if(f%r.every===0) return {f,b:r.b} })();
@@ -845,7 +845,7 @@ const ACT={
   towerStart:()=>{ G.towerStart(); renderTab() },
   towerQuit:()=>showModal(`<h3>¿Terminar la partida?</h3><p class="hint">Pierdes las mejoras de esta partida. El récord y los premios se quedan.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="towerQuitYes">Terminar</button></div>`),
   towerQuitYes:()=>{ G.towerAbandon(); closeModal(); renderTab() },
-  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Descansas: te saltas el combate':'Descansas: vida al máximo'); if(G.inEvent()){ tab='up'; } renderTab() },
+  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Hoguera: te saltas el combate':'Hoguera: vida al máximo'); if(G.inEvent()){ tab='up'; } renderTab() },
   towerPick:(b,k)=>{ if(G.towerPick(+k)) haptic('ok'); closeModal(); renderTab() },
   towerLife:()=>{ if(G.towerBuyLife()){ toast('+1 vida'); renderTab() } else toast('Tokens insuficientes') },
   wheelOpen:()=>wheelModal(),
