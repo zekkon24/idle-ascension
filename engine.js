@@ -241,7 +241,7 @@ function createGame(opts){
       if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
       if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return }
       if(e.wander){ giveBundle(CFG.surprise.wander.reward); SUR.kind=null; emit('surprise',{k:'wanderWin',reward:CFG.surprise.wander.reward}); }
-      onKill(); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
+      onKill(e); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
     if(B.auraPool>0){ const d=B.auraPool*Math.min(1,dt/P.auraDur); B.auraPool-=d;                    // Santo: aura sagrada (en área)
       for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const dd=d*(B.boss?1+h.bd:1); e.hp-=dd; B.auraDmg=(B.auraDmg||0)+dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); if(e.hp<=0) kill(e); } }
     if(P&&P.burnPct) for(const e of B.enemies){ // Archimago: quemaduras (cada acumulación hace burnPct del daño por segundo)
@@ -327,6 +327,13 @@ function createGame(opts){
         B.th+=1/(h.spd*buffMul('spd'));
       }
     } else if(B.event||(B.th!==null&&B.th<=B.t)) B.th=null;   // en campaña, sin objetivo, el siguiente golpe respeta la cadencia (cuerpo a cuerpo: no es instantáneo al llegar)
+    // jefes con fases: al bajar de la mitad de vida se enfurecen o invocan ayudantes (al azar)
+    if(B.boss&&!B.event&&CFG.bossPhase) for(const e of B.enemies){ if(e.dead||e.minion||e.phase||e.hp>CFG.bossPhase.at*e.max) continue;
+      const P=CFG.bossPhase; e.phase=rand()<0.5?'rage':'summon';
+      if(e.phase==='rage'){ e.atk*=P.rage; e.spd=(e.spd||1)*P.rage; }
+      else { const n=P.summon[0]+Math.floor(rand()*(P.summon[1]-P.summon[0]+1)), m=enemyStats(S.fase,1,false), W=walkT();
+        for(let i=0;i<n;i++) B.enemies.push({hp:m.hp,max:m.hp,atk:m.atk,df:m.df,spawn:B.t,walk:W+i*0.3,arrive:B.t+W+i*0.3,next:B.t+W+i*0.3,first:false,dead:false,minion:true,spd:eSpd(S.fase)}); }
+      emit('bossPhase',{k:e.phase}); }
     for(const e of B.enemies){
       if(!e.dead&&e.frozen>B.t){ if(e.arrive>B.t){ e.spawn+=dt; e.arrive+=dt; } e.next=Math.max(e.next,e.frozen); continue; }   // congelado
       if(e.dead||e.arrive>B.t) continue;
@@ -350,9 +357,9 @@ function createGame(opts){
     if(B.event){ if(B.enemies.length>40) B.enemies=B.enemies.filter(e=>!e.dead); return }
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
   }
-  function onKill(){
+  function onKill(e){
     if(!S.daily||S.daily.d!==dayKey()) daily(); S.kills++;   // el día de las misiones empieza con el primer enemigo
-    const m=B.boss?CFG.econ.bossGold:3/B.count; // el oro por oleada no sube con más enemigos
+    const m=e&&e.minion?3/perWave(S.fase):B.boss?CFG.econ.bossGold:3/B.count; // el oro por oleada no sube con más enemigos (los invocados dan como uno normal)
     STK.n++; if(STK.n%CFG.streak.per===0) emit('streak',{n:STK.n});
     const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1)*streakMul()*(hordeOn()?CFG.surprise.horde.gold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales y cofres)
     addXp(xpAt(S.fase)*m*heroStats().xpMult);
