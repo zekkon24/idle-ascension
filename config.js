@@ -101,20 +101,39 @@ const CFG = {
   startWeapon:'C',
   // Grimorios: 2 por clase; se desbloquean donando oro (horas de farmeo de tu récord), esencias y emblemas, o se compran con tokens.
   // El 2.º cuesta el doble. Suben de nivel contigo (nivel 1 al desbloquearlo). En el nivel 'skillLvl' dan su efecto
-  // (POR AHORA SIN EFECTO: solo existen). Solo uno activo; cambiarlo cuesta switchCost tokens.
-  grimoire:{skillLvl:25, switchCost:250, cost:[{goldH:2,ess:2,ev:4},{goldH:4,ess:4,ev:8}], pack:[300,600],
+  // Solo uno activo; cambiarlo cuesta switchCost tokens.
+  // fx: números de cada efecto (activo desde el nivel skillLvl del grimorio)
+  grimoire:{skillLvl:25, switchCost:250,
+    fx:{espinas:{reflect:0.8}, trueno:{every:4,jumps:2,mult:1}, invocador:{every:20,dur:8,dmg:0.5,hp:0.3},
+        hielo:{slow:1.5}, plaga:{dps:0.2,dur:4}, viento:{every:15,push:0.6}, almas:{per:0.06,max:0.3},
+        sangre:{dps:0.3,dur:3,heal:0.5}, tiempo:{back:5,min:0.2}, juicio:{max:0.25}}, cost:[{goldH:2,ess:2,ev:4},{goldH:4,ess:4,ev:8}], pack:[300,600],
     classes:{
-      Guerrero:[{id:'espinas',name:'Grimorio de Espinas',role:'Castigador',desc:'Devuelve el 40 % del daño que recibe al que le pega'},
+      Guerrero:[{id:'espinas',name:'Grimorio de Espinas',role:'Castigador',desc:'Devuelve el 80 % del daño que recibe al que le pega'},
                 {id:'trueno',name:'Grimorio del Trueno',role:'Limpiador',desc:'Cada 4.º golpe lanza un rayo que salta a 2 enemigos más'}],
       Mago:[{id:'invocador',name:'Grimorio del Invocador',role:'Invocador',desc:'Cada 20 s invoca un esqueleto 8 s que pega por él y se lleva los golpes'},
-            {id:'hielo',name:'Grimorio de Hielo',role:'Control',desc:'Sus golpes ralentizan: los enemigos atacan un 30 % más despacio'}],
+            {id:'hielo',name:'Grimorio de Hielo',role:'Control',desc:'Sus golpes ralentizan: los enemigos atacan un 50 % más despacio'}],
       Arquero:[{id:'plaga',name:'Grimorio de la Plaga',role:'Contagio',desc:'Sus flechas envenenan; al morir, el enemigo pasa el veneno al siguiente'},
                {id:'viento',name:'Grimorio del Viento',role:'Kiting',desc:'Cada 15 s empuja a los enemigos atrás: tienen que volver a caminar'}],
-      Asesino:[{id:'almas',name:'Grimorio de las Almas',role:'Bola de nieve',desc:'Cada enemigo que mata le da +3 % de daño hasta acabar la oleada (máx. +30 %)'},
+      Asesino:[{id:'almas',name:'Grimorio de las Almas',role:'Bola de nieve',desc:'Cada enemigo que mata le da +6 % de daño hasta acabar la oleada (máx. +30 %)'},
                {id:'sangre',name:'Grimorio de Sangre',role:'Duelista',desc:'Sus críticos hacen sangrar 3 s y roban vida'}],
       Clerigo:[{id:'tiempo',name:'Grimorio del Tiempo',role:'Segunda oportunidad',desc:'Una vez por combate, al morir retrocede 5 s y revive con la vida que tenía'},
-               {id:'juicio',name:'Grimorio del Juicio',role:'Paladín',desc:'Cuanta más vida tiene, más daño hace (hasta +50 % con la vida llena)'}],
+               {id:'juicio',name:'Grimorio del Juicio',role:'Paladín',desc:'Cuanta más vida tiene, más daño hace (hasta +25 % con la vida llena)'}],
     }},
+  // Habilidades activas (elegidas por el diseñador): la de clase es directa (golpe/cura al momento); la de evolución da un efecto unos segundos. En los eventos se usan a mano;
+  // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
+  skills:{
+    cls:{
+      Guerrero:{id:'muro', name:'Muro de escudos', cd:30, shield:3, dmgDef:3, desc:'Escudo según su defensa y golpe en área con parte de su defensa'},
+      Mago:{id:'bola', name:'Bola de fuego', cd:20, targets:3, mult:2, burn:0.3, dur:4, desc:'Daño en área hasta a 3 enemigos y los quema'},
+      Arquero:{id:'perforante', name:'Disparo perforante', cd:25, mult:2.5, desc:'Disparo que atraviesa a todos (250 %)'},
+      Asesino:{id:'ejecutar', name:'Ejecutar', cd:20, mult:4, refund:0.5, desc:'Golpe fuerte; si mata, la recarga baja a la mitad'},
+      Clerigo:{id:'luz', name:'Luz sanadora', cd:30, heal:0.4, desc:'Cura el 40 % de su vida'}},
+    evo:{
+      Guerrero:{id:'sed', name:'Sed de sangre', cd:40, cost:0.2, shield:0.5, ls:0.2, dur:8, desc:'Pierde el 20 % de su vida: escudo de la mitad y +20 % de robo de vida 8 s'},
+      Mago:{id:'combustion', name:'Combustión', cd:40, dur:8, desc:'8 s: los enemigos que mueren quemados pasan la quemadura a otro'},
+      Arquero:{id:'rapido', name:'Fuego rápido', cd:40, dur:6, spd:2, desc:'6 s con el doble de velocidad de ataque'},
+      Asesino:{id:'clon', name:'Clon de sombra', cd:40, dur:8, mult:0.5, desc:'8 s: un clon copia sus golpes al 50 %'},
+      Clerigo:{id:'juicio', name:'Luz del juicio', cd:45, dur:6, heal:0.05, dps:0.5, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}}},
   matShop:{ess:50, ev:25}, // tienda: Esencia 50 tokens, Emblema 25 tokens
   boosts:{ // potenciadores por anuncios (cada uso pide 'ads' anuncios; 'perDay' usos al día)
     speed:{ads:2,min:15,mult:2,perDay:3}, // combate ×2 durante 15 min reales (se acumula si ya está activo)

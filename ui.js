@@ -106,7 +106,7 @@ function renderShell(){
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
     <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
-  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
+  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
   <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
     <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
     </div>
@@ -142,6 +142,10 @@ function updateHUD(){
   if(bt){ bt.hidden=!bl; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
+  const sb=$('#skBar'); if(sb){ const L=G.skills(), man=G.manualSkills(), key=L.map(x=>x.slot+(x.locked?'L':'')).join()+man;
+    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.innerHTML=L.map(x=>`<button class="skb${x.locked?' lock':''}" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}"><span class="skn">${esc((x.name||'').split(' ')[0])}</span><i class="skcd"></i><b class="skt"></b></button>`).join('')+`<span class="skmode">${man?'¡Tócalas!':'Auto'}</span>`; }
+    L.forEach((x,i)=>{ const b=sb.children[i]; if(!b||x.locked) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
+      b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; b.querySelector('.skt').textContent=x.ready?'':Math.ceil(x.left); }); }
   const mf=$('#misFab'); if(mf){ const n=G.missionsReady()+(G.calState().can?1:0)+G.passReady(); setHTML(mf,n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(misOpen&&$('#misBox')) renderMis(); }
   const ab=$('#autoBtn'); if(ab){ab.setAttribute('aria-label',S.autoPush?'Avance automático activado':'Avance automático desactivado');ab.classList.toggle('off',!S.autoPush);ab.textContent=S.autoPush?'Auto: Sí':'Auto: No';ab.setAttribute('aria-pressed',S.autoPush)}
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
@@ -321,7 +325,7 @@ function tabInv(){
     </div>
     <div id="invList" class="ilist"></div></section>`;
 }
-// Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Por ahora sin efecto.
+// Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Efecto desde el nivel 25 del grimorio.
 // coste: si lo tienes, "124 ✓" en verde; si no, "tienes / pide" en rojo
 const costRow=(n,have,v)=>`<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${have>=v?fmt(v)+' ✓':fmt(Math.floor(have))+' / '+fmt(v)}</b></div>`;
 function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(), act=S.grim&&S.grim.active;
@@ -329,7 +333,7 @@ function tabGrim(){ const GC=CFG.grimoire, c=G.grimCost(), miss=G.grimMissing(),
   const cards=G.grimList().map(g=>{ const own=G.grimOwned(g.id), on=act===g.id, lv=G.grimLevel(g.id);
     return `<div class="wcard${on?' eq':''}"><div class="hd"><span class="nm" style="font-size:16px;color:var(--rE)">${g.name}</span><span class="rar">${g.role}</span></div>
       <div class="s">${g.desc}</div>
-      <div class="s">${own?`Nivel <b>${lv}</b> · efecto ${lv>=GC.skillLvl?'activo':'en el nivel '+GC.skillLvl}`:`Efecto en el nivel ${GC.skillLvl}`} · <i>efecto próximamente</i></div>
+      <div class="s">${own?`Nivel <b>${lv}</b> · ${lv>=GC.skillLvl?(on?'<b style="color:var(--good)">efecto activo</b>':'efecto listo (actívalo)'):'efecto en el nivel '+GC.skillLvl}`:`Efecto desde el nivel ${GC.skillLvl} del grimorio`}</div>
       <div class="ctrl">${own?(on?'<span class="pill">Activo</span>':tokOpen()?`<button class="btn sm" data-act="grimSet" data-k="${g.id}">Activar · ${GC.switchCost} tokens</button>`:'<span class="pill">Cambiar: próximamente</span>')
         :`<button class="btn sm gold" data-act="grimUnlock" data-k="${g.id}" ${Object.keys(miss).length?'disabled':''}>Desbloquear</button>${tokOpen()?`<button class="btn sm" data-act="grimBuy" data-k="${g.id}">${fmt(G.grimPack())} tokens</button>`:''}`}</div></div>` }).join('');
   const locked=G.grimList().some(g=>!G.grimOwned(g.id));
@@ -704,7 +708,7 @@ function spinDone(){
 /* ---------- Ajustes ---------- */
 function tabDev(){
   const on=battery(), ad=!!(S.opt&&S.opt.autoDis);
-  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
+  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña se lanzan solas; en los eventos, siempre a mano</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
   ${inviteRow()}
   <div class="row"><div><div class="t">Desmontar Comunes de otras clases</div><div class="s">Al abrir cofres, directamente a chatarra</div></div><div class="acts"><button class="btn sm${ad?' gold':''}" data-act="autoDis" aria-pressed="${ad}">${ad?'Activado':'Desactivado'}</button></div></div></section>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
@@ -751,6 +755,9 @@ const ACT={
   nameSave:()=>{ const n=($('#nameIn')||{}).value; if(!G.setName(n)) return toast('Escribe tu nombre (3-16 letras)'); closeModal(); toast('Nombre guardado'); updateHUD(); if(tab==='dev') renderTab(); },
   upOpen:()=>showUpgrades(),
   upClose:()=>{upOpen=false;closeModal()},
+  skill:(b,k)=>{ const x=G.skills().find(s=>s.slot===k); if(!x) return; if(x.locked) return toast(`${x.name}: ${x.desc}`);
+    const r=G.useSkill(k); if(r.ok){ haptic('medium'); toast(x.name) } else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate') },
+  autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
   misOpen:()=>{ misOpen=true; misView=G.calState().can?'cal':G.missionsReady()||!G.passReady()?'mis':'pass'; renderMis(true) },
   misClose:()=>{ misOpen=false; closeModal() },
   misView:b=>{ misView=b.dataset.v; renderMis(true) },
