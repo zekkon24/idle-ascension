@@ -123,11 +123,11 @@ const CFG = {
   // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
   skills:{
     cls:{
-      Guerrero:{id:'muro', name:'Muro de escudos', cd:18, shield:3, dmgDef:3, desc:'Escudo según su defensa y golpe en área con parte de su defensa'},
+      Guerrero:{id:'muro', name:'Muro de escudos', cd:18, shield:3, dmgDef:5, desc:'Escudo según su defensa y golpe en área con parte de su defensa'},
       Mago:{id:'bola', name:'Bola de fuego', cd:12, targets:3, mult:3, burn:0.5, dur:4, desc:'300 % en área hasta a 3 enemigos y los quema'},
       Arquero:{id:'perforante', name:'Disparo perforante', cd:15, mult:3, desc:'Disparo que atraviesa a todos (300 %)'},
       Asesino:{id:'ejecutar', name:'Ejecutar', cd:12, mult:9, refund:0.5, desc:'Golpe del 900 %; si mata, la recarga baja a la mitad'},
-      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:3, mult:0.4, back:0.6, heal:0.1, desc:'3 golpes de luz (40 %) que luego vuelven y le curan (10 % de vida cada uno)'}},
+      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:6, mult:0.8, spread:true, back:0.6, heal:0.1, desc:'Hasta 6 golpes de luz (80 %), uno por enemigo, que luego vuelven y le curan (10 % de vida cada uno)'}},
     evo:{
       Guerrero:{id:'sed', name:'Sed de sangre', cd:28, cost:0.2, shield:0.5, ls:0.4, dur:12, desc:'Pierde el 20 % de su vida: escudo de la mitad y +40 % de robo de vida 12 s'},
       Mago:{id:'combustion', name:'Combustión', cd:28, dur:8, burnUp:0.5, desc:'8 s: las quemaduras hacen +50 % y los que mueren quemados la pasan a otro'},
@@ -184,7 +184,7 @@ const CFG = {
     mat:'Emblema', pauseH:1, // pausa de 00:00 a 01:00 UTC: se terminan los intentos a medias y a la 01:00 se reparten los premios
     rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.84, // prob. de que un rival haga un 2º y un 3er intento; rivalBase ajusta la curva para que el jugador medio quede hacia el puesto 50
                           // rivales simulados: jugador medio de tus mismos días × dispersión
-    curve:[[1,1],[2,10],[3,54],[5,139],[7,209],[10,258],[13,289],[15,310],[17,317],[20,332],[25,369],[30,402]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
+    curve:[[1,1],[2,10],[3,55],[5,141],[7,212],[10,261],[13,292],[15,310],[17,317],[20,333],[25,374],[30,404]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
     rewards:[                                     // premio según tu puesto del día (se cobra al día siguiente)
       {to:1,em:5,ch:'mode',n:1},{to:3,em:4,ch:'mode',n:1},{to:10,em:3,ch:'silver',n:2},
       {to:25,em:2,ch:'silver',n:1},{to:50,em:1,ch:'wood',n:2},{to:100,em:1,ch:'wood',n:1}],
@@ -193,7 +193,7 @@ const CFG = {
     dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
     ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
-    curve:[[1,2200],[2,5600],[3,12400],[5,30400],[7,64900],[10,119200],[13,230300],[15,340100],[17,467600],[20,975200],[25,1973800],[30,3108100],[35,4378700],[40,5722500],[45,6931300]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
+    curve:[[1,2200],[2,5700],[3,12500],[5,30600],[7,65600],[10,120700],[13,234600],[15,343100],[17,471100],[20,980600],[25,1997500],[30,3158900],[35,4463700],[40,5806700],[45,7021800]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
       // ×3 del premio diario de la Mazmorra en el mismo puesto (solo hay uno por semana); los cofres de madera
       // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca
