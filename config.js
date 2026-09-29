@@ -94,7 +94,7 @@ const CFG = {
       {k:'upgrade',n:10,t:'Compra 10 mejoras',ch:{wood:1}},
       {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal',ch:{silver:1}},
       {k:'ad',n:5,t:'Mira 5 anuncios',ch:{silver:1}}],
-    goldMin:10, xp:20, bonus:{silver:1,wood:2}, // bonus: al recoger todas las diarias del día
+    goldMin:10, xp:20, bonus:{gold:60,silver:1,wood:2}, // bonus: al recoger todas las diarias del día (gold = minutos de farmeo)
     // Misiones semanales (de lunes a domingo): cada una da oro de goldMin minutos + xp del pase (o los suyos propios)
     weekly:{list:[
       {k:'kills',n:5000,t:'Derrota 5.000 enemigos',ch:{silver:2}},
@@ -103,7 +103,7 @@ const CFG = {
       {k:'event',n:5,t:'Juega 5 veces la Mazmorra o el Jefe semanal',ch:{silver:3}},
       {k:'alldays',n:7,t:'Completa todas las misiones diarias cada día',goldMin:180,xp:120,ch:{silver:5}},   // la que más da (un día cuenta al recoger las 5 diarias)
       {k:'ad',n:30,t:'Mira 30 anuncios',ch:{silver:3}}],
-      goldMin:60, xp:40, bonus:{silver:3}}}, // bonus: al recoger todas las semanales
+      goldMin:60, xp:40, bonus:{gold:120,silver:3}}}, // bonus: al recoger todas las semanales
   // Calendario de 7 días: un premio por cada día que entras (no hace falta seguidos); tras el 7.º vuelve a empezar
   calendar:[{gold:30,wood:2},{silver:2},{ess:1,wood:2},{silver:3},{ev:2,wood:3},{silver:5},{mode:1}],
   // Pase de temporada: 30 días, 50 niveles de 85 XP (diarias 100 XP/día + semanales 320 XP/semana ≈ nivel 50 hacia el día 29).
