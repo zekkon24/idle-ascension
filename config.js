@@ -2,17 +2,14 @@
    Todos los números del juego viven aquí. Lo usan el motor (engine.js) y la interfaz (ui.js). */
 (function(root){
 const CFG = {
+  // Clases: sin pasivas propias; lo que las hace distintas va en sus estadísticas base (el Guerrero recibe un 5 % menos
+  // de daño con dmgTaken, el Clérigo se regenera con regen) y en su habilidad. La pasiva llega con el camino de la 1.ª evolución.
   classes: {
-    Guerrero:{hp:192.76,ghp:1.6193,atk:19.82,gatk:0.2663,df:12.35,gdf:0.1049,spd:0.8,cr:0,cd:1.0,ev:0,ranged:false,color:'#d9774a',p:{dmgTaken:0.95},
-      passive:'Piel dura: recibe un 5 % menos de daño', role:'Tanque · cuerpo a cuerpo'},
-    Mago:{hp:138.82,ghp:1.0977,atk:27.22,gatk:0.2774,df:4.12,gdf:0.035,spd:0.7,cr:0,cd:1.0,ev:0,ranged:true,color:'#8f7cf0',p:{xp:1.1},
-      passive:'Erudito: +10 % de experiencia', role:'Daño · a distancia'},
-    Arquero:{hp:131.06,ghp:1.1558,atk:13.82,gatk:0.1101,df:5.15,gdf:0.0437,spd:1.3,cr:0.05,cd:1.0,ev:0.05,ranged:true,color:'#5fb86a',p:{spd:1.05},
-      passive:'Pulso firme: +5 % de velocidad de ataque', role:'Daño · a distancia'},
-    Asesino:{hp:142.29,ghp:0.9114,atk:18.43,gatk:0.1648,df:4.12,gdf:0.035,spd:1.0,cr:0.10,cd:1.0,ev:0.15,ranged:false,color:'#c95a8a',p:{cd:0.5},
-      passive:'Letal: +50 % de daño crítico', role:'Daño · cuerpo a cuerpo'},
-    Clerigo:{hp:228.46,ghp:1.4863,atk:18.11,gatk:0.2622,df:8.23,gdf:0.0699,spd:0.8,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',p:{regen:0.005},
-      passive:'Fe: regenera el 0,5 % de su vida por segundo', role:'Tanque · a distancia', label:'Clérigo'},
+    Guerrero:{hp:192.76,ghp:1.6193,atk:19.82,gatk:0.2663,df:12.35,gdf:0.1049,spd:0.8,cr:0,cd:1.0,ev:0,ranged:false,color:'#d9774a',dmgTaken:0.95, role:'Tanque · cuerpo a cuerpo'},
+    Mago:{hp:138.82,ghp:1.0977,atk:27.22,gatk:0.2774,df:4.12,gdf:0.035,spd:0.7,cr:0,cd:1.0,ev:0,ranged:true,color:'#8f7cf0', role:'Daño · a distancia'},
+    Arquero:{hp:131.06,ghp:1.1558,atk:13.82,gatk:0.1101,df:5.15,gdf:0.0437,spd:1.365,cr:0.05,cd:1.0,ev:0.05,ranged:true,color:'#5fb86a', role:'Daño · a distancia'},
+    Asesino:{hp:142.29,ghp:0.9114,atk:18.43,gatk:0.1648,df:4.12,gdf:0.035,spd:1.0,cr:0.10,cd:1.5,ev:0.15,ranged:false,color:'#c95a8a', role:'Daño · cuerpo a cuerpo'},
+    Clerigo:{hp:228.46,ghp:1.4863,atk:18.11,gatk:0.2622,df:8.23,gdf:0.0699,spd:0.8,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo'},
   },
   enemy:{hp:45,hpG:1.0358,atk:6,atkG:1.026,earlyTo:50,hpG0:1.035,atkG0:1.024, // hasta la fase 50 crecen con hpG0/atkG0
          hpBands:[[101,1.051,1.036]], // de la fase 101 a la 150 los enemigos crecen más: la fase 150 llega hacia el día 13

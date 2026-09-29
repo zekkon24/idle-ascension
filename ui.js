@@ -752,7 +752,7 @@ function renderSelect(){
   <p class="hint">Elige tu clase</p>
   <div class="classes">${Object.entries(CFG.classes).map(([k,c])=>`<button class="ccard" data-act="pick" data-c="${k}">
     <span class="cn">${clsLabel(k)}</span>
-    <span class="cs">${c.passive}</span></button>`).join('')}</div>`;
+    <span class="cs">Habilidad: <b>${CFG.skills.cls[k].name}</b> · ${CFG.skills.cls[k].desc}</span></button>`).join('')}</div>`;
 }
 
 /* ---------- modal y avisos ---------- */

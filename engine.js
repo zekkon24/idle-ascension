@@ -104,7 +104,7 @@ function createGame(opts){
       spd:c.spd*(ps.spd||1)*Math.pow(U.spd.mult,u.spd)*(1+ws),
       cr:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
       ls:Math.min(CFG.caps.ls,sec.ls), bd:sec.bd, ranged:c.ranged,
-      regen:ps.regen||0, dmgTaken:ps.dmgTaken||1, xpMult:ps.xp||1,
+      regen:ps.regen||c.regen||0, dmgTaken:ps.dmgTaken||c.dmgTaken||1, xpMult:ps.xp||1,
     };
   }
   // Modos (Normal, Pesadilla, Infierno): la fase f de un modo usa los enemigos de la fase f+off
