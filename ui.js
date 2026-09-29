@@ -129,9 +129,11 @@ function updateHUD(){
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
-  const es=$('#evoSlot'); if(es){ const can=!ev&&G.evoLvlOk(), key=can+'|'+S.mode+'|'+(S.lvl>=G.lvlCap())+'|'+ev;
-    if(es.dataset.k!==key){ es.dataset.k=key; es.innerHTML=can?''
-      :(G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap()?'<span class="pill">Evolución: próximamente</span>':''); } }
+  // Grimorio y evolución en Inicio: aparece al desbloquearse (fase 50 superada o grimorio conseguido); «Evolucionar» cuando ya se puede
+  const es=$('#evoSlot'); if(es){ const shown=!ev&&(G.grimOwned()||S.best>=CFG.grimoire.showAt||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk(),
+      soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(), key=[shown,evoNow,soon,ev].join('|');
+    if(es.dataset.k!==key){ es.dataset.k=key; es.innerHTML=evoNow?'<button class="btn sm gold" data-act="evoOpen">Evolucionar</button>'
+      :shown?'<button class="btn sm" data-act="grimOpen">Grimorio</button>':(soon?'<span class="pill">Evolución: próximamente</span>':''); } }
   const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
   $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#hpTxt').textContent=fmt(Math.ceil(hpv));
   $('#xpBar').style.width=xpp+'%'; $('#xpTxt').textContent=Math.floor(xpp)+' %';
@@ -277,10 +279,7 @@ function equipHud(){ const w=G.equipped();
   const wslot=w?`<button class="eslot" data-act="forge" data-id="${w.id}" data-from="main" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
       <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span><span class="s">Toca para forjar</span></button>`
     :`<button class="eslot" data-act="invview" data-v="armas"><span class="s">Arma</span><b>Sin arma</b><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`;
-  const gslot=!G.grimOwned()?`<button class="eslot empty" data-act="invview" data-v="grim"><span class="s">Grimorio</span><b>Sin grimorio</b><span class="s">Llave de la evolución · toca para verlo</span></button>`
-    :`<button class="eslot" data-act="invview" data-v="grim" style="--rc:var(--rE)"><span class="s">Grimorio</span><b style="color:var(--rE)">${S.evo>=1?G.evoPaths()[S.path].name:'Nivel '+G.grimLevel()+'/'+CFG.grimoire.levels}</b>
-      <span class="s">${S.evo>=1?'Tu camino':G.grimDone()?'Aprendido · listo para evolucionar':'Cerrado · súbelo luchando'}</span></button>`;
-  return `<section class="panel equip"><div class="equip-in">${classSVG(S.cls)}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}${gslot}</div></div></section>` }
+  return `<section class="panel equip"><div class="equip-in">${classSVG(S.cls)}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}</div></div></section>` }
 function tabInv(){
   if(invView==='forja') return tabForja();
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0);
@@ -290,7 +289,7 @@ function tabInv(){
     <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">Cofres (${nc})</button>
     <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button>
 </div>`;
-  if(invView==='grim') return tabGrim();
+  if(invView==='grim') return `<section class="panel">${tabGrim()}</section>`;
   if(invView==='main') return `<section class="panel"><h3>Inventario</h3>${head}</section>`;
   if(invView==='cofres'){
     const row=k=>{const n=G.chestCount(k);return `<div class="chest inv">
@@ -351,7 +350,9 @@ function tabGrim(){ const GC=CFG.grimoire, P=G.evoPaths(), lv=G.grimLevel();
       <p class="hint">${G.evoLvlOk()?'¡Ya puedes evolucionar y elegir camino!':`Evoluciona al llegar al nivel ${CFG.evo.tiers[0].lvl} y elige camino.`}</p>${G.evoLvlOk()?'<button class="btn gold" data-act="evoOpen">Evolucionar</button>':''}`;
   else top=`<div class="ctrl" style="justify-content:space-between"><b>Camino elegido: ${P[S.path].name}</b></div>
       ${tokOpen()?`<button class="btn" data-act="pathAsk">Cambiar a ${P[S.path==='B'?'A':'B'].name} · ${GC.switchCost} tokens</button>`:''}`;
-  return `<section class="panel"><h3>${G.grimName()}</h3>${top}<h3 style="font-size:15px">Los 2 caminos</h3>${pathCard('A',P.A,S.evo>=1&&S.path==='A')}${pathCard('B',P.B,S.evo>=1&&S.path==='B')}</section>` }
+  return `<h3>${G.grimName()}</h3>${top}<h3 style="font-size:15px">Los 2 caminos</h3>${pathCard('A',P.A,S.evo>=1&&S.path==='A')}${pathCard('B',P.B,S.evo>=1&&S.path==='B')}` }
+let grimOpen=false;
+const showGrim=()=>{ grimOpen=true; showModal(tabGrim()+'<button class="btn" data-act="grimClose">Cerrar</button>') };
 // Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.
 function fHead(){ const active=(F.rar!=='all')+(F.stat!=='any');
   return `<b>Filtros${active?' ('+active+')':''}</b>${active?'<button class="btn sm" data-act="fclear">Quitar filtros</button>':''}` }
@@ -818,7 +819,7 @@ const ACT={
   modview:b=>{ modView=b.dataset.v||null; evView=null; renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
   evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(pendText(p)); renderTab(); } },
-  close:()=>{stopSpin();boostModalOpen=false;upOpen=false;misOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
+  close:()=>{stopSpin();boostModalOpen=false;upOpen=false;misOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
   buy:(b,k)=>{if(G.buyUpgrade(k))renderTab()},
   buymax:(b,k)=>{const n=G.buyMax(k);toast(n?'+'+n+' niveles':'No tienes oro suficiente');renderTab()},
   equip:(b,k,id)=>{if(G.equip(id))renderTab()},
@@ -860,10 +861,12 @@ const ACT={
   goTokens:()=>{ closeModal(); if(!CFG.shopTab) return toast('La tienda llegará más adelante'); tab='shop'; shopView='tokens'; renderTab() },
   tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k+((CFG.tokens.bonus||{})[k]||0))} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
-  grimUnlock:()=>{ const r=G.grimUnlock(); toast(r.ok?'¡Grimorio conseguido! Súbelo luchando':'Te faltan recursos'); renderTab() },
+  grimOpen:()=>showGrim(),
+  grimClose:()=>{ grimOpen=false; closeModal() },
+  grimUnlock:()=>{ const r=G.grimUnlock(); toast(r.ok?'¡Grimorio conseguido! Súbelo luchando':'Te faltan recursos'); renderTab(); if(grimOpen) showGrim() },
   grimBuy:()=>{ const p=G.grimPack(); showModal(`<h3>${G.grimName()}</h3><p class="hint">Conseguirlo ahora por ${fmt(p)} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="grimBuyGo" ${G.tokens()>=p?'':'disabled'}>Comprar</button></div>`) },
   grimBuyGo:()=>{ const r=G.grimBuy(); closeModal(); toast(r.ok?'¡Grimorio conseguido!':'Tokens insuficientes'); renderTab() },
-  grimUp:()=>{ const r=G.grimUp(); if(r.ok){ haptic('ok'); toast(r.lvl>=CFG.grimoire.levels?'¡Grimorio aprendido! Ya puedes evolucionar':'Grimorio nivel '+r.lvl) } else toast(r.why==='xp'?'Sigue luchando':'Te faltan recursos'); renderTab() },
+  grimUp:()=>{ const r=G.grimUp(); if(r.ok){ haptic('ok'); toast(r.lvl>=CFG.grimoire.levels?'¡Grimorio aprendido! Ya puedes evolucionar':'Grimorio nivel '+r.lvl) } else toast(r.why==='xp'?'Sigue luchando':'Te faltan recursos'); renderTab(); if(grimOpen) showGrim() },
   pathAsk:()=>{ const P=G.evoPaths(), to=P[S.path==='B'?'A':'B'];
     showModal(`<h3>Cambiar a ${to.name}</h3><p class="hint">${to.passive}</p><p class="hint">Cuesta ${CFG.grimoire.switchCost} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="pathGo" ${G.tokens()>=CFG.grimoire.switchCost?'':'disabled'}>Cambiar</button></div>`) },
   pathGo:()=>{ const r=G.pathSwitch(); closeModal(); toast(r.ok?'Ahora eres '+G.evoP().name:r.why==='event'?'Termina el evento primero':'Tokens insuficientes'); updateHUD(); renderTab() },

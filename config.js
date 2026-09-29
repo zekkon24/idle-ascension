@@ -116,7 +116,8 @@ const CFG = {
   // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.
   // Con el grimorio en el nivel 5 y el héroe en el nivel de la evolución, se evoluciona eligiendo uno de 2 caminos (evo.tiers[0]).
   // Cambiar de camino después cuesta switchCost tokens. fx: números de la pasiva de cada camino B. SIN BALANCEAR.
-  grimoire:{levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
+  grimoire:{showAt:50, // botón «Grimorio» en Inicio al superar esta fase (o si ya se tiene)
+    levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
     up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
     names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},
     fx:{fortaleza:{df:0.1,boss:0.5}, escarcha:{need:3,mult:2.1,freeze:2,ignoreDf:0.5}, cazador:{boss:0.4}, veneno:{pct:0.7,dur:8,max:8}, sacrificio:{cost:0.02,atk:0.6,lsMax:0.2,single:true}}},
