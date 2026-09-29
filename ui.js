@@ -42,7 +42,7 @@ let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyC
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 // escribe HTML solo si cambia (evita rehacer botones mientras se tocan)
 const setHTML=(el,h)=>{ if(el&&el.__h!==h){ el.__h=h; el.innerHTML=h; } };
-const F={rar:'all',cls:'all',stat:'any',min:'',max:''};
+const F={rar:'all',stat:'any',min:'',max:''};
 const fx={shots:[],floats:[],flash:0};
 
 /* ---------- Telegram: colores, vibración y botón atrás ---------- */
@@ -91,7 +91,7 @@ function chips(list,lockable,r){
 }
 function lootHTML(list){
   const sorted=[...list].sort((a,b)=>R.indexOf(b.r)-R.indexOf(a.r)||(a.cls===S.cls?-1:1));
-  return `<div class="loot">${sorted.map(x=>`<div><span style="color:var(--r${x.r})">${wName(x)}</span><span class="s">${clsLabel(x.cls)}${x.cls===S.cls?' · <b style="color:var(--gold)">tu clase</b>':''}${x.autoEq?' · equipada':''}${x.auto?' · desmontada (+'+x.auto+')':''}</span></div>`).join('')}</div>`;
+  return `<div class="loot">${sorted.map(x=>`<div><span style="color:var(--r${x.r})">${wName(x)}</span><span class="s">${x.autoEq?'equipada':''}${x.auto?' · desmontada (+'+x.auto+')':''}</span></div>`).join('')}</div>`;
 }
 
 /* ---------- estructura ---------- */
@@ -206,7 +206,7 @@ function itemCard(it){
   return `<div class="irow${eq?' eq':''}${open?' open':''}">
     <div class="ihd" data-act="expand" data-id="${it.id}" role="button" tabindex="0" aria-expanded="${open}">
       <span class="nm" style="color:var(--r${it.r})"><span class="wn">${wName(it)}</span> <span class="s">nv${it.lvl}</span>${eq?' <span class="pill">Equipada</span>':''}${up?' <span class="better" title="Mejor que tu arma equipada" aria-label="Mejor que tu arma equipada">▲</span>':''}</span>
-      <span class="meta"><span class="s">${clsLabel(it.cls)}</span><span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r]}</span>
+      <span class="meta"><span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r]}</span>
       <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear: no se desmonta ni se usa para forjar'}" title="Bloquear: no se desmonta ni se usa para forjar">★</button></span>
     </div>
     ${open?`<div class="idet">
@@ -241,7 +241,7 @@ function tabForja(){
   return `<section class="panel"><h3>Forja</h3>
     <div class="wcard${eq?' eq':''}">
       <div class="hd"><span class="nm" style="color:var(--r${it.r});font-size:16px">${wName(it)}</span>${eq?'<span class="pill">Equipada</span>':own?`<button class="btn sm" data-act="equip" data-id="${it.id}">Equipar</button>`:''}</div>
-      <div class="s">${CFG.rarName[it.r]} · ${clsLabel(it.cls)}</div>
+      <div class="s">${CFG.rarName[it.r]}</div>
       <div class="fbox"><div class="fbh"><b>Nivel ${it.lvl}/${CFG.weapon.maxLvl}</b></div>
         <div class="s">Daño ${up(m.d,mn.d)} · Velocidad ${up(m.s,mn.s)}</div>
         ${max?'<span class="pill">Nivel máximo</span>':`<button class="btn gold" data-act="lvl" data-id="${it.id}" ${have<n||S.scrap<sc?'disabled':''}>Subir a nv ${it.lvl+1}</button>
@@ -311,15 +311,13 @@ function tabInv(){
   // solo salen las opciones que tienes (rarezas, clases y stats de tus armas); si la elegida ya no existe, vuelve a "todas"
   const have=S.items.filter(x=>x.id!==S.equippedId), hasStat=k=>have.some(x=>x.sec.some(y=>y.k===k));
   if(F.rar!=='all'&&!have.some(x=>x.r===F.rar)) F.rar='all';
-  if(F.cls!=='all'&&!have.some(x=>x.cls===F.cls)) F.cls='all';
   if(F.stat!=='any'&&!hasStat(F.stat)) F.stat='any';
   const statOpts=Object.entries(CFG.sec).filter(([k])=>hasStat(k)).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
   return `<section class="panel"><h3>Armas (${G.invCount()}/${G.invMax()})</h3>
     <div class="filters fpanel"><div class="ctrl" id="fHead">${fHead()}</div>
       <div class="frow"><select id="fRar" aria-label="Rareza">${['all',...R.filter(r=>have.some(x=>x.r===r))].map(r=>`<option value="${r}" ${F.rar===r?'selected':''}>${r==='all'?'Rareza':CFG.rarName[r]}</option>`).join('')}</select>
-        <select id="fCls" aria-label="Clase">${['all',...clsAZ().filter(c=>have.some(x=>x.cls===c))].map(c=>`<option value="${c}" ${F.cls===c?'selected':''}>${c==='all'?'Clase':clsLabel(c)}</option>`).join('')}</select></div>
-      <div class="frow"><select id="fStat" aria-label="Stat"><option value="any">Cualquier stat</option>${statOpts}</select>
-        <input type="number" id="fMin" aria-label="Mínimo %" inputmode="decimal" placeholder="mín" value="${esc(F.min)}">
+        <select id="fStat" aria-label="Stat"><option value="any">Cualquier stat</option>${statOpts}</select></div>
+      <div class="frow"><input type="number" id="fMin" aria-label="Mínimo %" inputmode="decimal" placeholder="mín" value="${esc(F.min)}">
         <input type="number" id="fMax" aria-label="Máximo %" inputmode="decimal" placeholder="máx" value="${esc(F.max)}"></div>
       <div id="bulk"></div>
     </div>
@@ -351,16 +349,13 @@ function tabGrim(){ const GC=CFG.grimoire, P=G.evoPaths(), lv=G.grimLevel();
       ${tokOpen()?`<button class="btn" data-act="pathAsk">Cambiar a ${P[S.path==='B'?'A':'B'].name} · ${GC.switchCost} tokens</button>`:''}`;
   return `<section class="panel"><h3>${G.grimName()}</h3>${top}<h3 style="font-size:15px">Los 2 caminos</h3>${pathCard('A',P.A,S.evo>=1&&S.path==='A')}${pathCard('B',P.B,S.evo>=1&&S.path==='B')}</section>` }
 // Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.
-const clsAZ=()=>[...CLASSES].sort((a,b)=>clsLabel(a).localeCompare(clsLabel(b),'es')); // Arquero, Asesino, Clérigo, Guerrero, Mago
-function fHead(){ const active=(F.rar!=='all')+(F.cls!=='all')+(F.stat!=='any');
+function fHead(){ const active=(F.rar!=='all')+(F.stat!=='any');
   return `<b>Filtros${active?' ('+active+')':''}</b>${active?'<button class="btn sm" data-act="fclear">Quitar filtros</button>':''}` }
 function filtered(){
   const mn=F.min===''?-Infinity:+F.min, mx=F.max===''?Infinity:+F.max;
   return S.items.filter(it=>{
     if(it.id===S.equippedId) return false;                     // la equipada está en el Equipo, no en la lista
     if(F.rar!=='all'&&it.r!==F.rar) return false;
-    if(F.cls==='mine'&&it.cls!==S.cls) return false;
-    if(F.cls!=='all'&&F.cls!=='mine'&&it.cls!==F.cls) return false;
     if(F.stat!=='any'){const s=it.sec.find(x=>x.k===F.stat); if(!s||s.v<mn||s.v>mx) return false;}
     return true;
   }).sort((a,b)=>(b.id===S.equippedId)-(a.id===S.equippedId)||(a.cls===S.cls?0:1)-(b.cls===S.cls?0:1)||R.indexOf(b.r)-R.indexOf(a.r)||b.lvl-a.lvl);
@@ -673,7 +668,7 @@ function offlineModal(off){
 }
 
 /* ---------- ruleta al abrir cofres ---------- */
-function tileHTML(x){return `<div class="tile" style="--rc:var(--r${x.r})"><span class="tr" style="color:var(--r${x.r})">${CFG.rarName[x.r]}</span><span class="tn">${wName(x)}</span><span class="tc">${clsLabel(x.cls)}</span></div>`}
+function tileHTML(x){return `<div class="tile" style="--rc:var(--r${x.r})"><span class="tr" style="color:var(--r${x.r})">${CFG.rarName[x.r]}</span><span class="tn">${wName(x)}</span></div>`}
 const CHEST_COL={wood:['#8a5a34','#5e3a1f'],silver:['#b9c0cc','#6f7787'],mode:['#c86bff','#6a2aa8']};
 // Las casillas de relleno son solo decoración: usan Math.random para no gastar el azar del motor.
 function fakePick(probs){const tot=probs.reduce((a,b)=>a+b,0);let x=Math.random()*tot;for(let i=0;i<probs.length;i++){x-=probs[i];if(x<0)return R[i]}return R[0]}
@@ -717,7 +712,7 @@ function spinDone(){
   const rl=$('#rl'), box=$('#cbox'); if(box) box.hidden=true;
   if(rl&&rl.hidden){rl.hidden=false;$('#rlStrip').style.transform=`translateX(${rl.clientWidth/2-(8+42*94+44)}px)`}
   const tile=$('#rlStrip').children[42]; if(tile) tile.classList.add('win');
-  out.innerHTML=`<div class="win-card" style="--rc:var(--r${best.r})"><span class="rar" style="color:var(--r${best.r})">${CFG.rarName[best.r]}</span><b>${wName(best)}</b><span class="s">${clsLabel(best.cls)}${best.cls===S.cls?' · tu clase':''}${best.autoEq?' · equipada':''}</span></div>
+  out.innerHTML=`<div class="win-card" style="--rc:var(--r${best.r})"><span class="rar" style="color:var(--r${best.r})">${CFG.rarName[best.r]}</span><b>${wName(best)}</b>${best.autoEq?'<span class="s">equipada</span>':''}</div>
     ${loot.length>1?lootHTML(loot):''}
     <button class="btn gold" data-act="close">Continuar</button>`;
 }
@@ -828,7 +823,7 @@ const ACT={
   forge:(b,k,id)=>{forgeId=id;lockSel=[];forjaBack=b.dataset.from||'armas';tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
   invview:b=>{const v=b.dataset.v; if(v==='forja') forjaBack='armas'; invView=tab==='inv'&&invView===v&&(v==='cofres'||v==='mat')?'main':v; renderTab()}, // tocar la pestaña abierta la cierra
   expand:(b,k,id)=>{expandedId=expandedId===id?null:id;renderList()},
-  fclear:()=>{F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';renderTab()},
+  fclear:()=>{F.rar='all';F.stat='any';F.min='';F.max='';renderTab()},
   rlskip:()=>spinDone(),
   shopview:b=>{shopView=b.dataset.v;renderTab()},
   buyAsk:(b,k)=>{buyCtx={k,n:1};buyModal()},
@@ -875,7 +870,7 @@ const ACT={
   battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.shots.length=0;fx.flash=0}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},
-  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='cofres';forgeId=null;lockSel=[];expandedId=null;F.rar='all';F.cls='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
+  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='cofres';forgeId=null;lockSel=[];expandedId=null;F.rar='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
 };
 function disToast(r){ if(r.n) toast(`${r.n} arma${r.n>1?'s':''} desmontada${r.n>1?'s':''}: +${r.v} chatarra`) }
 function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0);
@@ -888,7 +883,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
-document.addEventListener('change',e=>{ if(e.target.id==='fStat'){F.stat=e.target.value;renderList()} if(e.target.id==='fRar'||e.target.id==='fCls'){F[e.target.id==='fRar'?'rar':'cls']=e.target.value;$('#fHead').innerHTML=fHead();renderList()} });
+document.addEventListener('change',e=>{ if(e.target.id==='fStat'){F.stat=e.target.value;renderList()} if(e.target.id==='fRar'){F.rar=e.target.value;$('#fHead').innerHTML=fHead();renderList()} });
 document.addEventListener('input',e=>{
   if(e.target.id==='buyQty'&&buyCtx){const n=Math.floor(+e.target.value||0);buyCtx.n=n;const mx=maxBuy(buyCtx.k);$('#buyTotal').textContent=priceTxt(buyCtx.k,Math.max(0,n));$('#buyOk').disabled=!(n>=1&&n<=mx)}
   if(e.target.id==='fMin'){F.min=e.target.value;renderList()}
