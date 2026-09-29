@@ -94,13 +94,13 @@ const CFG = {
       {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal'},
       {k:'ad',n:5,t:'Mira 5 anuncios'}],
     goldMin:10, xp:20,
-    // Misiones semanales (de lunes a domingo): cada una da oro de goldMin minutos + xp del pase
+    // Misiones semanales (de lunes a domingo): cada una da oro de goldMin minutos + xp del pase (o los suyos propios)
     weekly:{list:[
       {k:'kills',n:5000,t:'Derrota 5.000 enemigos'},
       {k:'chests',n:25,t:'Abre 25 cofres'},
       {k:'upgrade',n:60,t:'Compra 60 mejoras'},
       {k:'event',n:5,t:'Juega 5 veces la Mazmorra o el Jefe semanal'},
-      {k:'dailies',n:20,t:'Completa 20 misiones diarias'},
+      {k:'alldays',n:7,t:'Completa todas las misiones diarias cada día',goldMin:180,xp:120},   // la que más da (un día cuenta al recoger las 5 diarias)
       {k:'ad',n:30,t:'Mira 30 anuncios'}],
       goldMin:60, xp:40}},
   // Calendario de 7 días: un premio por cada día que entras (no hace falta seguidos); tras el 7.º vuelve a empezar

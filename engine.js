@@ -823,13 +823,13 @@ function createGame(opts){
   function weekMissions(){ const W=weekly(), L=(CFG.missions.weekly||{}).list||[]; return L.map(m=>{ const v=m.k==='kills'?(S.kills||0)-W.k0:(W.p[m.k]||0);
     return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!W.c[m.k]} }) }
   function claimWeekly(k){ const m=weekMissions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions.weekly;
-    weekly().c[k]=true; giveBundle({gold:M.goldMin}); passAddXp(M.xp); track('weekly',{k}); save(); emit('change'); return {gold:true,xp:M.xp} }
+    const gm=m.goldMin||M.goldMin, xp=m.xp||M.xp; weekly().c[k]=true; giveBundle({gold:gm}); passAddXp(xp); track('weekly',{k}); save(); emit('change'); return {gold:true,xp} }
   const weeklyReady=()=>weekMissions().filter(m=>m.done&&!m.claimed).length;
   function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1) }
   function missions(){ const D=daily(); return CFG.missions.list.map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
     return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!D.c[m.k]} }) }
   function claimMission(k){ const m=missions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions;
-    daily().c[k]=true; { const W=weekly(); W.p.dailies=(W.p.dailies||0)+1; } giveBundle({gold:M.goldMin}); passAddXp(M.xp); track('mission',{k}); save(); emit('change'); return {gold:true,xp:M.xp} }
+    daily().c[k]=true; if(missions().every(x=>x.claimed)){ const W=weekly(); W.p.alldays=(W.p.alldays||0)+1; } giveBundle({gold:M.goldMin}); passAddXp(M.xp); track('mission',{k}); save(); emit('change'); return {gold:true,xp:M.xp} }
   const missionsReady=()=>missions().filter(m=>m.done&&!m.claimed).length;
   // calendario: un premio por día que entras (no hace falta seguidos)
   function calState(){ const c=S.cal||{n:0,last:null}, L=CFG.calendar; return {day:c.n%L.length+1,can:c.last!==dayKey(),list:L} }
