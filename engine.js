@@ -45,6 +45,7 @@ function createGame(opts){
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
     if(!st||!CFG.classes[st.cls]) return null;
     { const G=st.grim; if(G&&G.owned){ const had=Object.keys(G.owned).length>0; st.grim={lvl:had?((st.evo||0)>=1?5:1):0,xp:0}; } }   // grimorios antiguos → la llave
+    st.autoPush=true;   // siempre intenta subir de fase (ya no hay botón Auto Sí/No)
     if((st.evo||0)>=1&&!st.path) st.path='A';                                                                              // evolución antigua = camino A
     const d=newState(st.cls);
     for(const k in d) if(st[k]===undefined) st[k]=d[k];
@@ -366,7 +367,7 @@ function createGame(opts){
     S.wave=1; emit('defeat',{fase:S.fase,kind:msg}); endWave(CFG.delays.defeat);
   }
   function setAuto(v){ S.autoPush=v; if(B&&B.event){ emit('change'); return } if(v&&S.fase!==top()){S.push=top()>S.best;S.fase=top();S.wave=1;startWave()} emit('change') }
-  function goFase(f){ if(B&&B.event) return; f=Math.max(1,Math.min(top(),f|0)); if(f===S.best+1) S.push=true; else {S.push=false;S.autoPush=false} S.fase=f;S.wave=1;startWave(); emit('change') }
+  function goFase(f){ if(B&&B.event) return; f=Math.max(1,Math.min(top(),f|0)); if(f===S.best+1) S.push=true; else S.push=false; S.fase=f;S.wave=1;startWave(); emit('change') }
 
   /* ---------- evolución ---------- */
   // pasiva de la clase evolucionada (null si aún no ha evolucionado)

@@ -152,7 +152,6 @@ function updateHUD(){
     L.forEach((x,i)=>{ const b=sb.children[i]; if(!b) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
       b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; }); }
   const mf=$('#misFab'); if(mf){ const n=G.missionsReady()+(G.calState().can?1:0)+G.passReady(); setHTML(mf,n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(misOpen&&$('#misBox')) renderMis(); }
-  const ab=$('#autoBtn'); if(ab){ab.setAttribute('aria-label',S.autoPush?'Avance automático activado':'Avance automático desactivado');ab.classList.toggle('off',!S.autoPush);ab.textContent=S.autoPush?'Auto: Sí':'Auto: No';ab.setAttribute('aria-pressed',S.autoPush)}
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
   setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Modos<sup class="nb">${n}</sup>`:'Modos')(S.tickets+S.bossTickets+G.evFreeLeft()+G.wbFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
@@ -794,7 +793,6 @@ const ACT={
   notifyAsk:()=>askNotify(),
   passAll:()=>{ const n=G.claimPassAll(); if(n){ haptic('ok'); toast('+'+n+' premios del pase'); } renderMis(true) },
   devPass:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'pass',amount:G.passState().season,reason:'stars:pass'}]); renderMis(true) },
-  autoToggle:()=>{G.setAuto(!S.autoPush);toast(S.autoPush?'Avance automático activado':'Avance automático desactivado: te quedas farmeando');updateHUD()},
   evoOpen:()=>evoModal(),
   modeGo:()=>{ if(G.inEvent()) return toast('Termina el evento primero'); const nx=CFG.modes[S.mode+1].name;
     showModal(`<h3>¿Ir a ${nx}?</h3><p class="hint">Vuelves a la fase 1 de ${nx}. No se puede volver a ${G.modeCfg().name}.</p><div class="ctrl"><button class="btn" data-act="close">Seguir farmeando</button><button class="btn gold" data-act="modeYes">Ir a ${nx}</button></div>`) },

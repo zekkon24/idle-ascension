@@ -241,7 +241,6 @@ button.skmode{border:1px solid var(--line);cursor:pointer;padding:4px 8px}
 button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .fasetxt{position:absolute;right:10px;bottom:34px;z-index:3;font-family:var(--display);font-weight:800;font-size:14px;white-space:nowrap;padding:3px 9px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .fab.small{padding:8px 12px;font-size:12px;border-radius:12px}
-#autoBtn:not(.off){background:var(--good);color:#0e1a12} /* Auto encendido: verde; apagado: gris */
 .fab.off{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
 .mlist{display:flex;flex-direction:column;gap:8px}
 .mcard{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
@@ -300,7 +299,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
   <button role="tab" data-tab="ev">Modos</button>
   <button role="tab" data-tab="dev">Ajustes</button>
 </div></nav>
-<div class="fabs" id="upFab" hidden><button class="fab" data-act="upOpen">Mejoras</button><button class="fab" id="misFab" data-act="misOpen">Misiones</button><button class="fab" id="autoBtn" data-act="autoToggle" aria-pressed="true" title="Avance automático">Auto</button></div>
+<div class="fabs" id="upFab" hidden><button class="fab" data-act="upOpen">Mejoras</button><button class="fab" id="misFab" data-act="misOpen">Misiones</button></div>
 <div id="modal"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -312,7 +311,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609291252-61a01f0';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609291255-a36ac1a';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
