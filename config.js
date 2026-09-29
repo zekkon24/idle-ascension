@@ -93,7 +93,15 @@ const CFG = {
       {k:'upgrade',n:10,t:'Compra 10 mejoras'},
       {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal'},
       {k:'ad',n:1,t:'Mira 1 anuncio'}],
-    goldMin:10, xp:20},
+    goldMin:10, xp:20,
+    // Misiones semanales (de lunes a domingo): cada una da oro de goldMin minutos + xp del pase
+    weekly:{list:[
+      {k:'kills',n:5000,t:'Derrota 5.000 enemigos'},
+      {k:'chests',n:25,t:'Abre 25 cofres'},
+      {k:'upgrade',n:60,t:'Compra 60 mejoras'},
+      {k:'event',n:5,t:'Juega 5 veces la Mazmorra o el Jefe semanal'},
+      {k:'dailies',n:20,t:'Completa 20 misiones diarias'}],
+      goldMin:60, xp:40}},
   // Calendario de 7 días: un premio por cada día que entras (no hace falta seguidos); tras el 7.º vuelve a empezar
   calendar:[{gold:30},{silver:2},{ess:1},{silver:3},{ev:2},{silver:5},{mode:1}],
   // Pase de temporada: 30 días, 30 niveles de 100 XP (las misiones dan 100 XP al día). Línea gratis y línea de pago (Stars)
@@ -116,7 +124,7 @@ const CFG = {
   // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.
   // Con el grimorio en el nivel 5 y el héroe en el nivel de la evolución, se evoluciona eligiendo uno de 2 caminos (evo.tiers[0]).
   // Cambiar de camino después cuesta switchCost tokens. fx: números de la pasiva de cada camino B. SIN BALANCEAR.
-  grimoire:{showAt:50, // botón «Grimorio» en Inicio al superar esta fase (o si ya se tiene)
+  grimoire:{showLvl:50, // icono del Grimorio (libro) en el combate desde este nivel del héroe (o si ya se tiene)
     levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
     up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
     names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},

@@ -223,7 +223,6 @@ input[type=number]{width:64px}
 .fpanel{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2)}
 .fabs{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center;pointer-events:none} /* Mejoras, Misiones y Auto juntos, mismo ancho */
 .fab{position:relative}
-#misFab{background:var(--panel2);color:var(--ink);border:1px solid var(--gold)}
 .fabs .fab{pointer-events:auto}
 .fabs .fab{justify-self:stretch}
 /* calaveras de modo: centradas abajo, dentro del marco del juego (debajo de la pelea) */
@@ -262,11 +261,12 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .banner:hover{background:linear-gradient(90deg,rgba(232,176,74,.32),rgba(232,176,74,.1))}
 .calbtn{position:absolute;right:10px;top:8px;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;padding:0}
 .better{color:var(--good);font-size:12px}
-.boostbtn{top:8px}
-.lootbtn{top:54px}
+.sidebtns{position:absolute;right:10px;top:8px;z-index:4;display:flex;flex-direction:column;gap:8px}
+.sidebtns .calbtn{position:relative;right:auto;top:auto}
+.calbtn.on{border-color:var(--gold);background:rgba(232,176,74,.25);box-shadow:0 0 10px rgba(232,176,74,.5)}
 .lootn{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;font-style:normal;line-height:16px;text-align:center}
 .boostbtn.on{border-color:var(--gold);background:rgba(232,176,74,.18)}
-.boosttime{position:absolute;right:54px;top:16px;font-size:12px;font-weight:800;color:var(--gold);background:rgba(0,0,0,.55);padding:2px 7px;border-radius:6px;font-variant-numeric:tabular-nums}
+.boosttime{position:absolute;right:56px;top:62px;font-size:12px;font-weight:800;color:var(--gold);background:rgba(0,0,0,.55);padding:2px 7px;border-radius:6px;font-variant-numeric:tabular-nums}
 .adbox{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 0}
 .adbox .bar{width:100%}
 .rank{display:flex;flex-direction:column;gap:2px}
@@ -297,9 +297,10 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
   <button role="tab" data-tab="inv">Inventario</button>
   <button role="tab" data-tab="shop">Tienda</button>
   <button role="tab" data-tab="ev">Modos</button>
+  <button role="tab" data-tab="mis">Misiones</button>
   <button role="tab" data-tab="dev">Ajustes</button>
 </div></nav>
-<div class="fabs" id="upFab" hidden><button class="fab" data-act="upOpen">Mejoras</button><button class="fab" id="misFab" data-act="misOpen">Misiones</button></div>
+<div class="fabs" id="upFab" hidden><button class="fab" data-act="upOpen">Mejoras</button></div>
 <div id="modal"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -311,7 +312,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609291307-3ca3b81';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609291317-e9e4e44';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

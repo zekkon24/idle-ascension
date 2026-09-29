@@ -108,7 +108,7 @@ function renderShell(){
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
     <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
-  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div id="skMode"></div><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><span class="boosttime" id="boostTime" hidden></span><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div>
+  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="calBtn" data-act="calOpen" aria-label="Calendario" title="Calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><i class="lootn" id="calN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><button class="calbtn" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg><i class="lootn" id="grimN" hidden>!</i></button><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div><span class="boosttime" id="boostTime" hidden></span></div>
   <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
     <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
     </div>
@@ -129,11 +129,11 @@ function updateHUD(){
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
-  // Grimorio y evolución en Inicio: aparece al desbloquearse (fase 50 superada o grimorio conseguido); «Evolucionar» cuando ya se puede
-  const es=$('#evoSlot'); if(es){ const shown=!ev&&(G.grimOwned()||S.best>=CFG.grimoire.showAt||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk(),
-      soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(), key=[shown,evoNow,soon,ev].join('|');
-    if(es.dataset.k!==key){ es.dataset.k=key; es.innerHTML=evoNow?'<button class="btn sm gold" data-act="evoOpen">Evolucionar</button>'
-      :shown?'<button class="btn sm" data-act="grimOpen">Grimorio</button>':(soon?'<span class="pill">Evolución: próximamente</span>':''); } }
+  // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
+  const gb=$('#grimBtn'); if(gb){ const shown=!ev&&(G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk();
+    gb.hidden=!shown; gb.classList.toggle('on',evoNow); gb.dataset.act=evoNow?'evoOpen':'grimOpen'; gb.setAttribute('aria-label',evoNow?'Evolucionar':'Grimorio'); $('#grimN').hidden=!evoNow; }
+  const es=$('#evoSlot'); if(es){ const soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(); setHTML(es,soon&&!ev?'<span class="pill">Evolución: próximamente</span>':''); }
+  const cb=$('#calBtn'); if(cb){ cb.hidden=ev; $('#calN').hidden=!G.calState().can; }
   const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
   $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#hpTxt').textContent=fmt(Math.ceil(hpv));
   $('#xpBar').style.width=xpp+'%'; $('#xpTxt').textContent=Math.floor(xpp)+' %';
@@ -153,7 +153,7 @@ function updateHUD(){
     setHTML(sm,L.length?`<button class="skmode${on?' on':''}" data-act="skAuto" aria-pressed="${on}" aria-label="Habilidades automáticas">Habilidades: ${on?'Auto':'Manual'}</button>`:'');
     L.forEach((x,i)=>{ const b=sb.children[i]; if(!b) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
       b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; }); }
-  const mf=$('#misFab'); if(mf){ const n=G.missionsReady()+(G.calState().can?1:0)+G.passReady(); setHTML(mf,n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(misOpen&&$('#misBox')) renderMis(); }
+  { const n=misBadge(); setHTML(document.querySelector('[data-tab="mis"]'),n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
   setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Modos<sup class="nb">${n}</sup>`:'Modos')(S.tickets+S.bossTickets+G.evFreeLeft()+G.wbFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
@@ -176,6 +176,7 @@ function renderTab(){
   if(tab==='shop') el.innerHTML=nbsp(tabShop());
   if(tab==='ev') el.innerHTML=nbsp(tabEv());
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
+  if(tab==='mis'){ misKey=misKeyNow(); el.innerHTML=nbsp(tabMis()); }
   updateHUD();
 }
 function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev'||(tab==='inv'&&invView==='cofres')) renderTab(); else updateHUD(); }
@@ -576,7 +577,7 @@ function tabBoss(){
 const mmss=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 let boostModalOpen=false, adTimer=null;
 /* ---------- misiones, calendario y pase ---------- */
-let misOpen=false, misView='mis', misKey='';
+let misView='dia', misKey='';
 // avisos del bot: Telegram pide permiso al jugador (requestWriteAccess) y el servidor lo apunta
 const canNotify=()=>!!(TG&&TG.requestWriteAccess&&window.Telemetry&&Telemetry.canPay(CFG));
 function askNotify(){ if(!canNotify()) return; S.opt=S.opt||{}; S.opt.askW=1;
@@ -585,17 +586,15 @@ function notifyOffer(){ if(!canNotify()||(S.opt&&S.opt.askW)) return; S.opt=S.op
   later(()=>showModal(`<h3>¿Te avisamos?</h3><p class="hint">El bot te escribe cuando tu héroe llena el tiempo sin conexión, para que no pierdas oro.</p>
     <div class="ctrl"><button class="btn" data-act="close">No, gracias</button><button class="btn gold" data-act="notifyYes">Sí, avísame</button></div>`)) }
 const bundleTxt=b=>Object.entries(b).map(([k,v])=>k==='gold'?`oro de ${v} min`:({silver:'plata',wood:'madera',mode:'cofre de modo',ess:'esencia',ev:'emblema',ticket:'ticket Mazmorra',bossTicket:'ticket Jefe'})[k]+(v>1?' ×'+v:'')).join(' + ');
-function renderMis(force){
-  const P=G.passState(), C=G.calState(), M=G.missions();
-  const key=misView+JSON.stringify([M.map(m=>[m.prog,m.claimed]),C.can,C.day,P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length]);
-  if(!force&&key===misKey&&$('#misBox')) return; misKey=key;
-  const chips=`<div class="fchips">${[['mis','Diarias',G.missionsReady()],['cal','Calendario',C.can?1:0],['pass','Pase',G.passReady()]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
+// Pestaña Misiones: Diarias · Semanal · Pase · Socios (el calendario va aparte, en su icono del combate)
+function misKeyNow(){ const P=G.passState(); return misView+JSON.stringify([G.missions().map(m=>[m.prog,m.claimed]),G.weekMissions().map(m=>[m.prog,m.claimed]),P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,window.Telemetry&&Telemetry.refs]) }
+const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · oro de ${M.goldMin} min + ${M.xp} XP del pase</span></div>
+      ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="${act}" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('');
+function tabMis(){ const P=G.passState();
+  const chips=`<div class="fchips">${[['dia','Diarias',G.missionsReady()],['sem','Semanal',G.weeklyReady()],['pass','Pase',G.passReady()],['soc','Socios',0]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
   let body='';
-  if(misView==='mis') body=M.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · oro + ${CFG.missions.xp} XP del pase</span></div>
-      ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="misClaim" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('')+'<p class="hint">Se renuevan cada día.</p>';
-  if(misView==='cal') body=`<div class="calg">${C.list.map((b,i)=>{ const d=i+1, got=d<C.day||(d===C.day&&!C.can), now=d===C.day&&C.can;
-      return `<div class="cald${got?' got':''}${now?' now':''}"><span class="s">Día ${d}</span><b>${bundleTxt(b)}</b>${got?'<span class="rmax">✓</span>':''}</div>` }).join('')}</div>
-    <button class="btn gold" data-act="calClaim" ${C.can?'':'disabled'}>${C.can?'Recoger día '+C.day:'Vuelve mañana'}</button>`;
+  if(misView==='dia') body=misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
+  if(misView==='sem') body=misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
   if(misView==='pass'){ const L=CFG.pass.levels, rows=[]; for(let l=1;l<=L;l++){ const open=l<=P.lvl;
       const cell=(prem)=>{ const got=prem?P.cp[l]:P.cf[l], lock=prem&&!P.prem; return `<div class="pc${got?' got':''}${open&&!got&&!lock?' can':''}${lock?' lock':''}">${bundleTxt(G.passReward(l,prem))}${got?' ✓':''}</div>` };
       rows.push(`<div class="prow${open?' open':''}"><span class="pl">${l}</span>${cell(false)}${cell(true)}</div>`) }
@@ -605,9 +604,15 @@ function renderMis(force){
       <button class="btn gold" data-act="passAll" ${G.passReady()?'':'disabled'}>Reclamar todo (${G.passReady()})</button>
       <div class="prow ph"><span class="pl">Nv</span><div class="pc">Gratis</div><div class="pc">De pago</div></div>
       <div class="plist">${rows.join('')}</div>`; }
-  const html=`<h3>Misiones</h3>${chips}<div id="misBox" class="mlist">${body}</div><button class="btn" data-act="misClose">Cerrar</button>`;
-  if($('#misBox')&&modalOpen()) setHTML($('#modal .box'),withX(html)); else showModal(html);
-}
+  if(misView==='soc'){ const R=CFG.referral, inv=inviteRow();
+    body=`<p class="hint">Invita a tus amigos: tu amigo recibe ${R.giftSilver} cofre de plata y tú ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}.</p>${inv||'<p class="hint">Para invitar, abre el juego desde Telegram.</p>'}`; }
+  return `<section class="panel"><h3>Misiones</h3>${chips}<div id="misBox" class="mlist">${body}</div></section>` }
+const misBadge=()=>G.missionsReady()+G.weeklyReady()+G.passReady();
+// Calendario: icono en el combate; ventana con los 7 días
+function calModal(){ const C=G.calState();
+  showModal(`<h3>Calendario</h3><div class="calg">${C.list.map((b,i)=>{ const d=i+1, got=d<C.day||(d===C.day&&!C.can), now=d===C.day&&C.can;
+      return `<div class="cald${got?' got':''}${now?' now':''}"><span class="s">Día ${d}</span><b>${bundleTxt(b)}</b>${got?'<span class="rmax">✓</span>':''}</div>` }).join('')}</div>
+    <button class="btn gold" data-act="calClaim" ${C.can?'':'disabled'}>${C.can?'Recoger día '+C.day:'Vuelve mañana'}</button><p class="hint">Un premio por cada día que entras (no hace falta seguidos).</p><button class="btn" data-act="close">Cerrar</button>`) }
 const adTimerOn=()=>adTimer!==null;
 function boostModal(){
   boostModalOpen=true;
@@ -726,7 +731,6 @@ function spinDone(){
 function tabDev(){
   const on=battery();
   return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña se lanzan solas; también con el botón Auto/Manual del combate (los eventos tienen el suyo)</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
-  ${inviteRow()}
   </section>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
   <div class="ctrl">Velocidad: ${[1,2,5,20].map(v=>`<button class="btn sm ${S.speed===v?'gold':''}" data-act="speed" data-v="${v}">×${v}</button>`).join('')}</div>
@@ -785,15 +789,15 @@ const ACT={
   skAuto:()=>{ if(G.inEvent()){ G.setOpt('evAuto',!(S.opt&&S.opt.evAuto)); toast(S.opt.evAuto?'Habilidades automáticas en el evento':'Habilidades a mano en el evento'); }
     else { G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); } updateHUD(); if(tab==='dev') renderTab() },
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
-  misOpen:()=>{ misOpen=true; misView=G.calState().can?'cal':G.missionsReady()||!G.passReady()?'mis':'pass'; renderMis(true) },
-  misClose:()=>{ misOpen=false; closeModal() },
-  misView:b=>{ misView=b.dataset.v; renderMis(true) },
-  misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast('+ oro y '+CFG.missions.xp+' XP del pase'); } renderMis(true) },
-  calClaim:()=>{ const r=G.calState().day, b=G.claimCal(); if(b){ haptic('ok'); toast('Día '+r+': '+bundleTxt(b)); } renderMis(true); if(b) notifyOffer() },
+  misView:b=>{ misView=b.dataset.v; renderTab() },
+  calOpen:()=>calModal(),
+  weekClaim:(b,k)=>{ if(G.claimWeekly(k)){ haptic('light'); toast('+ oro y '+CFG.missions.weekly.xp+' XP del pase'); } renderTab() },
+  misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast('+ oro y '+CFG.missions.xp+' XP del pase'); } renderTab() },
+  calClaim:()=>{ const r=G.calState().day, b=G.claimCal(); if(b){ haptic('ok'); toast('Día '+r+': '+bundleTxt(b)); } calModal(); updateHUD(); if(b) notifyOffer() },
   notifyYes:()=>{ closeModal(); askNotify() },
   notifyAsk:()=>askNotify(),
-  passAll:()=>{ const n=G.claimPassAll(); if(n){ haptic('ok'); toast('+'+n+' premios del pase'); } renderMis(true) },
-  devPass:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'pass',amount:G.passState().season,reason:'stars:pass'}]); renderMis(true) },
+  passAll:()=>{ const n=G.claimPassAll(); if(n){ haptic('ok'); toast('+'+n+' premios del pase'); } renderTab() },
+  devPass:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'pass',amount:G.passState().season,reason:'stars:pass'}]); renderTab() },
   evoOpen:()=>evoModal(),
   modeGo:()=>{ if(G.inEvent()) return toast('Termina el evento primero'); const nx=CFG.modes[S.mode+1].name;
     showModal(`<h3>¿Ir a ${nx}?</h3><p class="hint">Vuelves a la fase 1 de ${nx}. No se puede volver a ${G.modeCfg().name}.</p><div class="ctrl"><button class="btn" data-act="close">Seguir farmeando</button><button class="btn gold" data-act="modeYes">Ir a ${nx}</button></div>`) },
@@ -819,7 +823,7 @@ const ACT={
   modview:b=>{ modView=b.dataset.v||null; evView=null; renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
   evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(pendText(p)); renderTab(); } },
-  close:()=>{stopSpin();boostModalOpen=false;upOpen=false;misOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
+  close:()=>{stopSpin();boostModalOpen=false;upOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
   buy:(b,k)=>{if(G.buyUpgrade(k))renderTab()},
   buymax:(b,k)=>{const n=G.buyMax(k);toast(n?'+'+n+' niveles':'No tienes oro suficiente');renderTab()},
   equip:(b,k,id)=>{if(G.equip(id))renderTab()},
