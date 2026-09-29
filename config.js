@@ -88,25 +88,27 @@ const CFG = {
   tokens:{perUsd:100, open:true, packs:[100,500,1000,2500], bonus:{500:25,1000:100,2500:500}, keep:0.3, withdraw:{fee:0.15, min:100}}, // retiro: solo en pruebas locales (desactivado en Telegram)
   // Misiones diarias (se renuevan cada día): cada una da oro (minutos de farmeo de tu récord) y experiencia del pase
   missions:{list:[
-      {k:'kills',n:300,t:'Derrota 300 enemigos'},
-      {k:'chests',n:5,t:'Abre 5 cofres'},
-      {k:'upgrade',n:10,t:'Compra 10 mejoras'},
-      {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal'},
-      {k:'ad',n:5,t:'Mira 5 anuncios'}],
+      // ch: cofres de premio según lo difícil que es (madera las fáciles, plata las que piden eventos o anuncios)
+      {k:'kills',n:300,t:'Derrota 300 enemigos',ch:{wood:1}},
+      {k:'chests',n:5,t:'Abre 5 cofres',ch:{wood:1}},
+      {k:'upgrade',n:10,t:'Compra 10 mejoras',ch:{wood:1}},
+      {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal',ch:{silver:1}},
+      {k:'ad',n:5,t:'Mira 5 anuncios',ch:{silver:1}}],
     goldMin:10, xp:20,
     // Misiones semanales (de lunes a domingo): cada una da oro de goldMin minutos + xp del pase (o los suyos propios)
     weekly:{list:[
-      {k:'kills',n:5000,t:'Derrota 5.000 enemigos'},
-      {k:'chests',n:25,t:'Abre 25 cofres'},
-      {k:'upgrade',n:60,t:'Compra 60 mejoras'},
-      {k:'event',n:5,t:'Juega 5 veces la Mazmorra o el Jefe semanal'},
-      {k:'alldays',n:7,t:'Completa todas las misiones diarias cada día',goldMin:180,xp:120},   // la que más da (un día cuenta al recoger las 5 diarias)
-      {k:'ad',n:30,t:'Mira 30 anuncios'}],
+      {k:'kills',n:5000,t:'Derrota 5.000 enemigos',ch:{silver:2}},
+      {k:'chests',n:25,t:'Abre 25 cofres',ch:{silver:2}},
+      {k:'upgrade',n:60,t:'Compra 60 mejoras',ch:{silver:2}},
+      {k:'event',n:5,t:'Juega 5 veces la Mazmorra o el Jefe semanal',ch:{silver:3}},
+      {k:'alldays',n:7,t:'Completa todas las misiones diarias cada día',goldMin:180,xp:120,ch:{silver:5}},   // la que más da (un día cuenta al recoger las 5 diarias)
+      {k:'ad',n:30,t:'Mira 30 anuncios',ch:{silver:3}}],
       goldMin:60, xp:40}},
   // Calendario de 7 días: un premio por cada día que entras (no hace falta seguidos); tras el 7.º vuelve a empezar
-  calendar:[{gold:30},{silver:2},{ess:1},{silver:3},{ev:2},{silver:5},{mode:1}],
-  // Pase de temporada: 30 días, 30 niveles de 100 XP (las misiones dan 100 XP al día). Línea gratis y línea de pago (Stars)
-  pass:{days:30, levels:30, xp:100},
+  calendar:[{gold:30,wood:2},{silver:2},{ess:1,wood:2},{silver:3},{ev:2,wood:3},{silver:5},{mode:1}],
+  // Pase de temporada: 30 días, 50 niveles de 85 XP (diarias 100 XP/día + semanales 320 XP/semana ≈ nivel 50 hacia el día 29).
+  // Línea gratis y línea de pago (Stars). Nivel 50: arma Rara (gratis) y Épica (pago). Pago: 60 tokens cada 10 niveles (300 = 3 $).
+  pass:{days:30, levels:50, xp:85, item:{free:'R',prem:'E'}, tok:{every:10,n:60}},
   // Ofertas en el momento justo (se pagan con Stars; duran 'dur' horas y no vuelven a salir hasta pasadas 'cool' horas)
   //  wall: llevas 'hours' horas sin superar tu récord · evo: tienes el nivel para evolucionar pero te faltan materiales · inv: inventario lleno
   offers:{dur:24, cool:72,

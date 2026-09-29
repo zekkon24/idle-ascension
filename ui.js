@@ -101,7 +101,11 @@ function lootHTML(list){
 const ICON={
   gold:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--gold)"/><circle cx="8" cy="8" r="4.2" fill="none" stroke="#0005" stroke-width="1.4"/></svg>',
   tok:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l6 7-6 7-6-7z" fill="var(--tok)"/><path d="M8 4l3 4-3 4-3-4z" fill="#fff4"/></svg>',
-  scrap:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path fill="var(--scrap)" d="M7 1h2l.4 2 1.5.6 1.7-1.2 1.4 1.4-1.2 1.7.6 1.5 2 .4v2l-2 .4-.6 1.5 1.2 1.7-1.4 1.4-1.7-1.2-1.5.6L9 15H7l-.4-2-1.5-.6-1.7 1.2-1.4-1.4 1.2-1.7-.6-1.5L1 9V7l2-.4.6-1.5-1.2-1.7 1.4-1.4 1.7 1.2 1.5-.6z"/><circle cx="8" cy="8" r="2.4" fill="#0006"/></svg>'};
+  scrap:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path fill="var(--scrap)" d="M7 1h2l.4 2 1.5.6 1.7-1.2 1.4 1.4-1.2 1.7.6 1.5 2 .4v2l-2 .4-.6 1.5 1.2 1.7-1.4 1.4-1.7-1.2-1.5.6L9 15H7l-.4-2-1.5-.6-1.7 1.2-1.4-1.4 1.2-1.7-.6-1.5L1 9V7l2-.4.6-1.5-1.2-1.7 1.4-1.4 1.7 1.2 1.5-.6z"/><circle cx="8" cy="8" r="2.4" fill="#0006"/></svg>',
+  // cofres: madera (marrón), plata (gris) y modo (morado)
+  wood:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#9a6a3e"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#9a6a3e" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#5c3b1e"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>',
+  silver:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#b9c0cc"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#b9c0cc" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#6f7785"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>',
+  mode:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#9b6ad6"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#9b6ad6" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#5a3a86"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>'};
 function renderShell(){
   $('#app').innerHTML=`
   <div class="top"><div class="uname" id="uName"></div>
@@ -294,7 +298,7 @@ function tabInv(){
   if(invView==='main') return `<section class="panel"><h3>Inventario</h3>${head}</section>`;
   if(invView==='cofres'){
     const row=k=>{const n=G.chestCount(k);return `<div class="chest inv">
-      <div><div class="cn">${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
+      <div><div class="cn">${rw(ICON[k],'')}${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
       <div class="acts"><button class="btn sm" data-act="info" data-k="${k}">Info</button>
         <button class="btn sm gold" data-act="open1" data-k="${k}">Abrir 1</button>
         <button class="btn sm" data-act="openAll" data-k="${k}" ${n>1?'':'disabled'}>Abrir todos</button></div></div>`}; // siempre los 3 botones: quedan alineados entre filas
@@ -426,7 +430,7 @@ const canPay=()=>!!(window.Telemetry&&Telemetry.canPay(CFG));
 function payBtn(item,stars,dev){ return canPay()?`<button class="btn sm gold" data-act="starBuy" data-k="${item}">${fmt(stars)} ⭐</button>`
   :CFG.devTools&&dev?`<button class="btn sm gold" ${dev}>${fmt(stars)} ⭐ (prueba)</button>`:'<span class="pill">Solo en Telegram</span>' }
 // Ofertas en el momento: qué incluye y cuánto le queda
-const offerTxt=o=>o.k==='inv'?`${o.inv} huecos más de inventario para siempre`:bundleTxt(o.b);
+const offerTxt=o=>o.k==='inv'?`${o.inv} huecos más de inventario para siempre`:bundleHTML(o.b);
 const hleft=ms=>{ const h=Math.floor(ms/3600e3), m=Math.floor(ms%3600e3/60e3); return h?h+' h '+m+' min':m+' min' };
 function offerRows(){ return G.activeOffers().map(o=>`<div class="chest offer"><div><div class="cn">${o.t}</div><div class="s">${offerTxt(o)} · quedan ${hleft(o.left)}</div></div>
   <div class="acts">${payBtn('offer_'+o.k,o.stars,`data-act="devOffer" data-k="${o.k}"`)}</div></div>`).join('') }
@@ -484,7 +488,7 @@ function wdModal(){ const W=CFG.tokens.withdraw, n=S.won, fee=Math.ceil(n*W.fee)
     <div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="wdGo">Retirar</button></div>`) }
 
 /* ---------- botín de jefes ---------- */
-function lootRows(L){ const r=[]; if(L.scrap) r.push(`<div><span>Chatarra</span><b>+${fmt(L.scrap)}</b></div>`); if(L.wood) r.push(`<div><span>Cofre de madera</span><b>+${L.wood}</b></div>`);
+function lootRows(L){ const r=[]; if(L.scrap) r.push(`<div><span>Chatarra</span><b>+${fmt(L.scrap)}</b></div>`); if(L.wood) r.push(`<div><span>${rw(ICON.wood,'Cofre de madera')}</span><b>+${L.wood}</b></div>`);
   for(const m in L.mats) if(L.mats[m]) r.push(`<div><span>${CFG.modes[m].mat}</span><b>+${L.mats[m]}</b></div>`); return r.join('') }
 function lootModal(){ if(!S.loot) return; const n=S.loot.n; showModal(`<h3>Botín${n?` · ${n} jefe${n>1?'s':''}`:''}</h3><div class="loot">${lootRows(S.loot)}</div>
   <div class="ctrl"><button class="btn" data-act="close">Cerrar</button><button class="btn gold" data-act="lootClaim">Recoger</button></div>`) }
@@ -492,7 +496,8 @@ function lootModal(){ if(!S.loot) return; const n=S.loot.n; showModal(`<h3>Botí
 /* ---------- Modos: Campaña, Eventos (Mazmorra, Jefe semanal) y PvP ---------- */
 const CH_N={wood:'madera',silver:'plata',mode:'modo'};
 const RAR_S={C:'Com',U:'PCom',R:'Rara',E:'Épi',L:'Leg',M:'Mít'}; // abreviaturas para tablas estrechas
-function evRewText(r){ return [r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.ch?`${r.n||1} cofre${(r.n||1)>1?'s':''} de ${CH_N[r.ch]}`:''].filter(Boolean).join(' + ') }
+function evRewText(r){ return [r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.ch?rw(ICON[r.ch],'×'+(r.n||1)):''].filter(Boolean).join(' + ') }
+const evRewPlain=r=>[r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.ch?`${r.n||1} cofre${(r.n||1)>1?'s':''} de ${CH_N[r.ch]}`:''].filter(Boolean).join(' + ');
 // Ranking: los 10 primeros y tu puesto con sus vecinos
 function rankHTML(riv,mine,pos,show){
   const list=riv.map(x=>({...x})); if(mine) list.splice(pos-1,0,{name:S.name||'Tú',score:mine,me:true});
@@ -585,10 +590,15 @@ function askNotify(){ if(!canNotify()) return; S.opt=S.opt||{}; S.opt.askW=1;
 function notifyOffer(){ if(!canNotify()||(S.opt&&S.opt.askW)) return; S.opt=S.opt||{}; S.opt.askW=1; G.save();
   later(()=>showModal(`<h3>¿Te avisamos?</h3><p class="hint">El bot te escribe cuando tu héroe llena el tiempo sin conexión, para que no pierdas oro.</p>
     <div class="ctrl"><button class="btn" data-act="close">No, gracias</button><button class="btn gold" data-act="notifyYes">Sí, avísame</button></div>`)) }
-const bundleTxt=b=>Object.entries(b).map(([k,v])=>k==='gold'?`oro de ${v} min`:({silver:'plata',wood:'madera',mode:'cofre de modo',ess:'esencia',ev:'emblema',ticket:'ticket Mazmorra',bossTicket:'ticket Jefe'})[k]+(v>1?' ×'+v:'')).join(' + ');
+// premios: en texto (avisos) y con iconos (pantallas)
+const RN={silver:'cofre de plata',wood:'cofre de madera',mode:'cofre de modo',ess:'esencia',ev:'emblema',ticket:'ticket Mazmorra',bossTicket:'ticket Jefe'};
+const bundleTxt=b=>Object.entries(b).map(([k,v])=>k==='gold'?`oro de ${v} min`:k==='tok'?`${v} tokens`:k==='item'?`arma ${CFG.rarName[v]}`:RN[k]+(v>1?' ×'+v:'')).join(' + ');
+const rw=(ic,t)=>`<span class="rw">${ic}${t}</span>`;
+const bundleHTML=b=>Object.entries(b).map(([k,v])=>k==='gold'?rw(ICON.gold,v+' min'):k==='tok'?rw(ICON.tok,v):ICON[k]?rw(ICON[k],'×'+v)
+  :k==='item'?`<span class="rw" style="color:var(--r${v})">Arma ${CFG.rarName[v]}</span>`:`<span class="rw">${RN[k]}${v>1?' ×'+v:''}</span>`).join(' ');
 // Pestaña Misiones: Diarias · Semanal · Pase · Socios (el calendario va aparte, en su icono del combate)
 function misKeyNow(){ const P=G.passState(); return misView+JSON.stringify([G.missions().map(m=>[m.prog,m.claimed]),G.weekMissions().map(m=>[m.prog,m.claimed]),P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,window.Telemetry&&Telemetry.refs]) }
-const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · oro de ${m.goldMin||M.goldMin} min + ${m.xp||M.xp} XP del pase</span></div>
+const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · ${bundleHTML({gold:m.goldMin||M.goldMin,...(m.ch||{})})} + ${m.xp||M.xp} XP del pase</span></div>
       ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="${act}" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('');
 function tabMis(){ const P=G.passState();
   const chips=`<div class="fchips">${[['dia','Diarias',G.missionsReady()],['sem','Semanal',G.weeklyReady()],['pass','Pase',G.passReady()],['soc','Socios',0]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
@@ -596,7 +606,7 @@ function tabMis(){ const P=G.passState();
   if(misView==='dia') body=misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
   if(misView==='sem') body=misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
   if(misView==='pass'){ const L=CFG.pass.levels, rows=[]; for(let l=1;l<=L;l++){ const open=l<=P.lvl;
-      const cell=(prem)=>{ const got=prem?P.cp[l]:P.cf[l], lock=prem&&!P.prem; return `<div class="pc${got?' got':''}${open&&!got&&!lock?' can':''}${lock?' lock':''}">${bundleTxt(G.passReward(l,prem))}${got?' ✓':''}</div>` };
+      const cell=(prem)=>{ const got=prem?P.cp[l]:P.cf[l], lock=prem&&!P.prem; return `<div class="pc${got?' got':''}${open&&!got&&!lock?' can':''}${lock?' lock':''}">${bundleHTML(G.passReward(l,prem))}${got?' ✓':''}</div>` };
       rows.push(`<div class="prow${open?' open':''}"><span class="pl">${l}</span>${cell(false)}${cell(true)}</div>`) }
     body=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${P.lvl}/${L}</b><span class="s">Quedan ${P.daysLeft} días</span></div>
       <div class="rbar"><i style="width:${P.lvl>=L?100:P.into/P.need*100}%;background:var(--gold)"></i></div><span class="s">${P.lvl>=L?'¡Pase completo!':P.into+'/'+P.need+' XP · las misiones dan XP'}</span>
@@ -611,7 +621,7 @@ const misBadge=()=>G.missionsReady()+G.weeklyReady()+G.passReady();
 // Calendario: icono en el combate; ventana con los 7 días
 function calModal(){ const C=G.calState();
   showModal(`<h3>Calendario</h3><div class="calg">${C.list.map((b,i)=>{ const d=i+1, got=d<C.day||(d===C.day&&!C.can), now=d===C.day&&C.can;
-      return `<div class="cald${got?' got':''}${now?' now':''}"><span class="s">Día ${d}</span><b>${bundleTxt(b)}</b>${got?'<span class="rmax">✓</span>':''}</div>` }).join('')}</div>
+      return `<div class="cald${got?' got':''}${now?' now':''}"><span class="s">Día ${d}</span><b>${bundleHTML(b)}</b>${got?'<span class="rmax">✓</span>':''}</div>` }).join('')}</div>
     <button class="btn gold" data-act="calClaim" ${C.can?'':'disabled'}>${C.can?'Recoger día '+C.day:'Vuelve mañana'}</button><p class="hint">Un premio por cada día que entras (no hace falta seguidos).</p><button class="btn" data-act="close">Cerrar</button>`) }
 const adTimerOn=()=>adTimer!==null;
 function boostModal(){
@@ -744,8 +754,8 @@ function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
 const REW_T={invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
 // premios del servidor: por invitar o compras con Stars
-const rewTxt=r=>r.kind==='silver'?`+${fmt(r.amount)} cofre${r.amount>1?'s':''} de plata`:r.kind==='tokens'||r.kind==='won'?`+${fmt(r.amount)} tokens`
-  :r.kind==='first'?`Arma ${CFG.rarName[CFG.stars.first.r]} + ${CFG.stars.first.tokens} tokens + ${CFG.stars.first.silver} platas`:r.kind==='pass'?'Pase de pago activado':'';
+const rewTxt=r=>r.kind==='silver'?rw(ICON.silver,'+'+fmt(r.amount)):r.kind==='tokens'||r.kind==='won'?rw(ICON.tok,'+'+fmt(r.amount))
+  :r.kind==='first'?bundleHTML({item:CFG.stars.first.r,tok:CFG.stars.first.tokens,silver:CFG.stars.first.silver}):r.kind==='pass'?'Pase de pago activado':'';
 if(window.Telemetry) Telemetry.onReward=list=>{ const paid=list.some(r=>/^stars:/.test(r.reason||'')); if(paid) haptic('ok');
   later(()=>showModal(`<h3>${paid?'¡Compra recibida!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
 function renderSelect(){
@@ -815,14 +825,14 @@ const ACT={
   lootClaim:()=>{ if(G.claimLoot()){ closeModal(); toast('Botín al inventario'); renderTab(); } },
   evGo:()=>{ if(G.startEvent()){ tab='up'; renderTab(); } else if(G.evPaused()) toast('Evento en pausa hasta la 01:00 UTC'); },
   wbGo:()=>{ if(G.wbStart()){ tab='up'; renderTab(); } else if(G.evPaused()) toast('Evento en pausa hasta la 01:00 UTC'); },
-  wbClaim:()=>{ const p=G.wbClaim(); if(p){ toast(pendText(p)); renderTab(); } },
+  wbClaim:()=>{ const p=G.wbClaim(); if(p){ toast(p.rew?evRewPlain(p.rew):'Sin premio'); renderTab(); } },
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
   pvpSoon:()=>toast('PvP: próximamente'),
   syncRetry:()=>location.reload(),
   modview:b=>{ modView=b.dataset.v||null; evView=null; renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
-  evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(pendText(p)); renderTab(); } },
+  evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(p.rew?evRewPlain(p.rew):'Sin premio'); renderTab(); } },
   close:()=>{stopSpin();boostModalOpen=false;upOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
   buy:(b,k)=>{if(G.buyUpgrade(k))renderTab()},
   buymax:(b,k)=>{const n=G.buyMax(k);toast(n?'+'+n+' niveles':'No tienes oro suficiente');renderTab()},

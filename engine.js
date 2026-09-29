@@ -814,7 +814,8 @@ function createGame(opts){
   // Premios: {gold: minutos de farmeo de tu récord, silver, wood, mode, ess, ev, ticket, bossTicket}
   function giveBundle(b){ if(!b) return; if(b.gold) S.gold+=Math.max(20,farmRate(Math.max(1,S.best)).g*60*b.gold);
     for(const k of ['silver','wood','mode']) if(b[k]) addChest(k,b[k]);
-    if(b.ess) S.mats[0]=(S.mats[0]||0)+b.ess; if(b.ev) S.evm+=b.ev; if(b.ticket) S.tickets+=b.ticket; if(b.bossTicket) S.bossTickets+=b.bossTicket; }
+    if(b.ess) S.mats[0]=(S.mats[0]||0)+b.ess; if(b.ev) S.evm+=b.ev; if(b.ticket) S.tickets+=b.ticket; if(b.bossTicket) S.bossTickets+=b.bossTicket;
+    if(b.tok) S.tokens+=b.tok; if(b.item) newItem(S.cls,b.item); }   // tok: tokens (como comprados) · item: arma de tu clase de esa rareza
   // misiones del día: progreso guardado en S.daily (se renueva cada día; los enemigos se cuentan desde el inicio del día)
   function daily(){ const d=dayKey(); if(!S.daily||S.daily.d!==d) S.daily={d,k0:S.kills||0,p:{},c:{}}; return S.daily }
   function misBump(k,n){ if(!S) return; const D=daily(); D.p[k]=(D.p[k]||0)+n; const W=weekly(); W.p[k]=(W.p[k]||0)+n }
@@ -823,13 +824,13 @@ function createGame(opts){
   function weekMissions(){ const W=weekly(), L=(CFG.missions.weekly||{}).list||[]; return L.map(m=>{ const v=m.k==='kills'?(S.kills||0)-W.k0:(W.p[m.k]||0);
     return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!W.c[m.k]} }) }
   function claimWeekly(k){ const m=weekMissions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions.weekly;
-    const gm=m.goldMin||M.goldMin, xp=m.xp||M.xp; weekly().c[k]=true; giveBundle({gold:gm}); passAddXp(xp); track('weekly',{k}); save(); emit('change'); return {gold:true,xp} }
+    const gm=m.goldMin||M.goldMin, xp=m.xp||M.xp; weekly().c[k]=true; giveBundle({gold:gm,...(m.ch||{})}); passAddXp(xp); track('weekly',{k}); save(); emit('change'); return {gold:true,xp} }
   const weeklyReady=()=>weekMissions().filter(m=>m.done&&!m.claimed).length;
   function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1) }
   function missions(){ const D=daily(); return CFG.missions.list.map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
     return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!D.c[m.k]} }) }
   function claimMission(k){ const m=missions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions;
-    daily().c[k]=true; if(missions().every(x=>x.claimed)){ const W=weekly(); W.p.alldays=(W.p.alldays||0)+1; } giveBundle({gold:M.goldMin}); passAddXp(M.xp); track('mission',{k}); save(); emit('change'); return {gold:true,xp:M.xp} }
+    daily().c[k]=true; if(missions().every(x=>x.claimed)){ const W=weekly(); W.p.alldays=(W.p.alldays||0)+1; } giveBundle({gold:M.goldMin,...(m.ch||{})}); passAddXp(M.xp); track('mission',{k}); save(); emit('change'); return {gold:true,xp:M.xp} }
   const missionsReady=()=>missions().filter(m=>m.done&&!m.claimed).length;
   // calendario: un premio por día que entras (no hace falta seguidos)
   function calState(){ const c=S.cal||{n:0,last:null}, L=CFG.calendar; return {day:c.n%L.length+1,can:c.last!==dayKey(),list:L} }
@@ -840,8 +841,9 @@ function createGame(opts){
   function passS(){ const s=passSeason(); if(!S.pass||S.pass.s!==s) S.pass={s,xp:0,cf:{},cp:{}}; return S.pass }
   function passAddXp(n){ passS().xp+=n }
   function passReward(L,prem){ const top=CFG.pass.levels;
-    if(!prem) return L%5===0?{mode:1}:L%2===0?{silver:2}:{gold:30};
-    return L===top?{mode:5,ess:5,ev:10}:L%10===0?{mode:2,ess:2}:L%5===0?{ticket:1,bossTicket:1,ev:3}:L%2===0?{silver:3,ev:1}:{silver:3} }
+    const C=CFG.pass, tk=C.tok&&L%C.tok.every===0?{tok:C.tok.n}:{};
+    if(!prem) return L===top?{item:C.item.free,mode:1}:L%10===0?{mode:1}:L%5===0?{silver:2}:L%2===0?{wood:2}:{gold:30};
+    return L===top?{item:C.item.prem,mode:3,ess:5,ev:10,...tk}:L%10===0?{mode:2,ess:2,...tk}:L%5===0?{ticket:1,bossTicket:1,ev:3}:L%2===0?{silver:2,ev:1}:{silver:1,wood:1} }
   function passState(){ const P=passS(), C=CFG.pass, lvl=Math.min(C.levels,Math.floor(P.xp/C.xp));
     return {season:P.s,xp:P.xp,lvl,into:P.xp-lvl*C.xp,need:C.xp,prem:(S.passPrem||0)===P.s,daysLeft:C.days-dayKey()%C.days,cf:P.cf,cp:P.cp} }
   function claimPass(L,prem){ const st=passState(); if(!(L>=1&&L<=st.lvl)) return null; if(prem&&!st.prem) return null;
