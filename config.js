@@ -120,7 +120,12 @@ const CFG = {
       Asesino:{id:'clon', name:'Clon de sombra', cd:40, dur:8, mult:0.5, desc:'8 s: un clon copia sus golpes al 50 %'},
       Clerigo:{id:'juicio', name:'Luz del juicio', cd:45, dur:6, heal:0.05, dps:0.5, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}},
     // habilidad de evolución del camino B: POR DECIDIR (null = aún no hay)
-    evoB:{Guerrero:null, Mago:null, Arquero:null, Asesino:null, Clerigo:null}},
+    evoB:{
+      Guerrero:{id:'baluarte', name:'Baluarte', cd:40, dur:8, df:2, reflect:0.5, desc:'8 s: el doble de defensa y devuelve el 50 % del daño que recibe'},
+      Mago:{id:'armaduraHielo', name:'Armadura de hielo', cd:40, dur:8, desc:'8 s: quien le pega recibe una esquirla'},
+      Arquero:{id:'marca', name:'Marca del cazador', cd:35, dur:8, mult:0.5, desc:'8 s: el objetivo recibe +50 % de daño'},
+      Asesino:{id:'nube', name:'Nube tóxica', cd:40, dur:6, desc:'6 s: una nube envenena a todos cada segundo'},
+      Clerigo:{id:'sacrificio', name:'Sacrificio', cd:40, cost:0.3, dur:8, atk:0.6, desc:'Consume el 30 % de su vida: +60 % de daño durante 8 s'}}},
   matShop:{ess:50, ev:25}, // tienda: Esencia 50 tokens, Emblema 25 tokens
   boosts:{ // potenciadores por anuncios (cada uso pide 'ads' anuncios; 'perDay' usos al día)
     speed:{ads:2,min:15,mult:2,perDay:3}, // combate ×2 durante 15 min reales (se acumula si ya está activo)
@@ -141,7 +146,7 @@ const CFG = {
         Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 200 % y congela 2 s (no se mueve ni ataca)'},
         Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +50 % de daño a los jefes'},
         Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (15 % por s, 5 s), hasta 5 veces'},
-        Clerigo:{name:'Mártir',grim:'sacrificio',passive:'Sacrificio: cada golpe le cuesta el 2 % de su vida pero hace +50 % de daño'},
+        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: ya no se cura (ni regenera ni roba vida). Cada golpe le cuesta el 2 % de su vida pero hace +50 % de daño'},
       }},
       // Evolución 2: mejora la pasiva de clase (base) y añade un efecto nuevo; se suma a la pasiva de la evolución 1
       {lvl:300, pending:true, cost:{ess:5,gold:400000,ev:30}, // pending: bloqueada ("próximamente"), pide Esencia de pesadilla
