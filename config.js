@@ -103,7 +103,7 @@ const CFG = {
   grimoire:{levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
     up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
     names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},
-    fx:{fortaleza:{df:0.3}, escarcha:{need:3,mult:2,freeze:2}, cazador:{boss:0.5}, veneno:{pct:0.15,dur:5,max:5}, sacrificio:{cost:0.02,atk:0.5}}},
+    fx:{fortaleza:{df:0.3}, escarcha:{need:3,mult:2,freeze:2,ignoreDf:0.5}, cazador:{boss:0.5}, veneno:{pct:0.15,dur:5,max:5}, sacrificio:{cost:0.02,atk:0.5,lsMax:0.4}}},
   // Habilidades activas (elegidas por el diseñador): la de clase es directa (golpe/cura al momento); la de evolución da un efecto unos segundos. En los eventos se usan a mano;
   // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
   skills:{
@@ -143,10 +143,10 @@ const CFG = {
       // camino B (el opuesto): su pasiva es un efecto de grimorio (grimoire.fx[grim])
       alt:{
         Guerrero:{name:'Guardián',grim:'fortaleza',passive:'Fortaleza: +30 % de defensa'},
-        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 200 % y congela 2 s (no se mueve ni ataca)'},
+        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 200 % ignorando el 50 % de su defensa y lo congela 2 s (no se mueve ni ataca)'},
         Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +50 % de daño a los jefes'},
         Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (15 % por s, 5 s), hasta 5 veces'},
-        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: ya no se cura (ni regenera ni roba vida). Cada golpe le cuesta el 2 % de su vida pero hace +50 % de daño'},
+        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: solo se cura robando vida, y cuanta menos vida tiene, más roba (hasta el 40 % del daño). Cada golpe le cuesta el 2 % de su vida pero hace +50 % de daño'},
       }},
       // Evolución 2: mejora la pasiva de clase (base) y añade un efecto nuevo; se suma a la pasiva de la evolución 1
       {lvl:300, pending:true, cost:{ess:5,gold:400000,ev:30}, // pending: bloqueada ("próximamente"), pide Esencia de pesadilla
