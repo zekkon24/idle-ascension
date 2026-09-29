@@ -724,10 +724,10 @@ function spinDone(){
 
 /* ---------- Ajustes ---------- */
 function tabDev(){
-  const on=battery(), ad=!!(S.opt&&S.opt.autoDis);
+  const on=battery();
   return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña se lanzan solas; en los eventos, siempre a mano</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
   ${inviteRow()}
-  <div class="row"><div><div class="t">Desmontar Comunes de otras clases</div><div class="s">Al abrir cofres, directamente a chatarra</div></div><div class="acts"><button class="btn sm${ad?' gold':''}" data-act="autoDis" aria-pressed="${ad}">${ad?'Activado':'Desactivado'}</button></div></div></section>
+  </section>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
   <div class="ctrl">Velocidad: ${[1,2,5,20].map(v=>`<button class="btn sm ${S.speed===v?'gold':''}" data-act="speed" data-v="${v}">×${v}</button>`).join('')}</div>
   <div class="ctrl"><button class="btn sm" data-act="dev" data-k="gold">+ oro (1 h)</button><button class="btn sm" data-act="dev" data-k="tok">+100 tokens</button><button class="btn sm" data-act="dev" data-k="scrap">+100 chatarra</button><button class="btn sm" data-act="dev" data-k="wood">+10 cofres de madera</button><button class="btn sm" data-act="dev" data-k="day">Avanzar 1 día</button><button class="btn sm" data-act="dev" data-k="ticket">+1 ticket</button></div>
@@ -872,7 +872,6 @@ const ACT={
   shopInfo:(b,k)=>showModal(`<h3>${SHOP[k].name}</h3><p class="hint">${SHOP[k].desc}</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button></div>`),
   open1:(b,k)=>openChests(k,false),
   openAll:(b,k)=>openChests(k,true),
-  autoDis:()=>{G.setOpt('autoDis',!(S.opt&&S.opt.autoDis));renderTab()},
   battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.shots.length=0;fx.flash=0}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},

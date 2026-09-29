@@ -516,7 +516,6 @@ function createGame(opts){
     return out;
   }
   function newItem(cls,r){
-    if(S.opt&&S.opt.autoDis&&r==='C'&&cls!==S.cls){ const v=CFG.weapon.scrapDis.C; S.scrap+=v; return {cls,r,lvl:1,sec:[],auto:v}; }
     const it={id:S.nextId++,cls,r,lvl:1,sec:rollSecs(r,CFG.weapon[r][2]),refN:0,invested:0,fav:false};
     S.items.push(it); // nunca se equipa sola: lo decide el jugador
     return it;
@@ -598,7 +597,7 @@ function createGame(opts){
   function chestProbs(type,mode=S.mode,best=S.best){ const o=CFG.chests[type].odds, t=o[Math.min(mode,o.length-1)]; let p=t[0][1]; for(const [a,q] of t) if(Math.max(1,best)>=a) p=q; return p }
   function addChest(type,n){ S.chestInv[type]=(S.chestInv[type]||0)+n }
   const chestCount=type=>S.chestInv[type]||0;
-  function openChest(type){ const r=pick(chestProbs(type)); const cls=CLASSES[Math.floor(rand()*CLASSES.length)]; return newItem(cls,r) }
+  function openChest(type){ const r=pick(chestProbs(type)); return newItem(S.cls,r) }   // los cofres solo dan armas de tu clase
   // Inventario: como mucho weapon.invMax armas (la equipada NO cuenta: va en el Equipo). Para abrir X cofres hacen falta X huecos libres.
   const invMax=()=>(CFG.weapon.invMax||Infinity)+(S&&S.invBonus||0);   // + huecos comprados
   const invCount=()=>S.items.filter(x=>x.id!==S.equippedId).length;

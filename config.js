@@ -223,14 +223,16 @@ const CFG = {
    'itemSCE' cofres de plata por arma. Una rareza de reparto fija (fixed), la principal (main) se lleva el resto y la de premio gordo
    (jackpot) sale de: p_J = (V* − Σ fijas·valor − resto·valor_main) / (valor_J − valor_main).
    El precio del cofre de modo es fijo: 100 tokens (1 $), en chests.mode.price. */
-const CHEST_PLAN={ own:1/5, copies:11, eta:0.9, rho:0.5, beta:11, itemSCE:12,
+const CHEST_PLAN={ own:1,   // parte de las armas que son de tu clase (ahora todas: los cofres solo dan armas de tu clase)
+   copies:11, eta:0.9, rho:0.5, beta:11, itemSCE:12,
   // [modo, desde fase, rareza T, días, plata/día, madera/día, suerte de la rareza siguiente]
   // (Normal medido con plata comprada con oro, 10/día, y madera solo de jefes y eventos; Pesadilla e Infierno: recalibrar al desbloquearlos)
   seg:[[0,1,'C',3.3,10,3.2,0.05],[0,100,'U',8,10,1.5,0],[1,1,'R',16,8.3,3.0,0],[2,1,'E',20,9,3,0]],
   // cofre de modo por modo: rareza T (de la plata de ese modo), fijas, principal y premio gordo
-  mode:[{T:'U',fixed:{U:0.45},main:'R',jackpot:'E'},
-        {T:'R',fixed:{U:0.15,L:0.02},main:'R',jackpot:'E'},
-        {T:'E',fixed:{R:0.35,M:0.005},main:'E',jackpot:'L'}],
+  // (todas las armas son de tu clase: el cofre de modo da sobre todo la rareza del modo y a veces la siguiente)
+  mode:[{T:'U',fixed:{},main:'U',jackpot:'R'},
+        {T:'R',fixed:{},main:'R',jackpot:'E'},
+        {T:'E',fixed:{M:0.005},main:'E',jackpot:'L'}],   // (la Mítica solo sale aquí)
 };
 (function buildChests(P,C){
   const R=C.rar, idx=r=>R.indexOf(r), r2=x=>Math.round(x*1000)/10;       // % con un decimal
