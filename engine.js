@@ -271,7 +271,7 @@ function createGame(opts){
           case 'bola': for(const e of alive().slice(0,sk.targets)){ hurt(e,base(e)*sk.mult,k); if(!e.dead){ if(GR==='escarcha') e.shards=(e.shards||0)+1; else { e.dot=B.t+sk.dur; e.dotDps=base(e)*sk.burn; e.dotKind='fuego'; } } } break;
           case 'rapido': BUF.list.push({until:CT+sk.dur,spd:sk.spd}); break;
           case 'ejecutar': { const tg=alive()[0]; if(tg&&hurt(tg,base(tg)*sk.mult,k)) CD[k]=CT+sk.cd*sk.refund; break; }   // si mata, media recarga
-          case 'luz': { const t0=alive(), n=sk.spread?Math.min(sk.hits,t0.length):sk.hits; for(let i=0;i<n;i++){ const t=alive(), e=t[i%Math.max(1,t.length)]; if(e) hurt(e,base(e)*sk.mult,k); }   // golpes repartidos (spread: uno por enemigo, los que sobran se pierden)
+          case 'luz': { for(let i=0;i<sk.hits;i++){ const e=alive()[0]; if(e) hurt(e,base(e)*sk.mult,k); }   // golpes encadenados al mismo objetivo (si muere, siguen con el siguiente)
             BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
           case 'sed': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.shield=(BUF.shield||0)+sk.shield*Math.max(0,lost); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
           case 'combustion': BUF.combust=CT+sk.dur; BUF.burnUp=sk.burnUp||0; break;

@@ -127,7 +127,7 @@ const CFG = {
       Mago:{id:'bola', name:'Bola de fuego', cd:12, targets:3, mult:3, burn:0.5, dur:4, desc:'300 % en área hasta a 3 enemigos y los quema'},
       Arquero:{id:'perforante', name:'Disparo perforante', cd:15, mult:3, desc:'Disparo que atraviesa a todos (300 %)'},
       Asesino:{id:'ejecutar', name:'Ejecutar', cd:12, mult:9, refund:0.5, desc:'Golpe del 900 %; si mata, la recarga baja a la mitad'},
-      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:6, mult:0.8, spread:true, back:0.6, heal:0.1, desc:'Hasta 6 golpes de luz (80 %), uno por enemigo, que luego vuelven y le curan (10 % de vida cada uno)'}},
+      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:6, mult:0.2, back:0.6, heal:0.05, desc:'6 golpes de luz encadenados (20 % cada uno) que luego vuelven y le curan (5 % de vida cada uno)'}},
     evo:{
       Guerrero:{id:'sed', name:'Sed de sangre', cd:28, cost:0.2, shield:0.5, ls:0.4, dur:12, desc:'Pierde el 20 % de su vida: escudo de la mitad y +40 % de robo de vida 12 s'},
       Mago:{id:'combustion', name:'Combustión', cd:28, dur:8, burnUp:0.5, desc:'8 s: las quemaduras hacen +50 % y los que mueren quemados la pasan a otro'},
