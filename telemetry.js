@@ -5,7 +5,7 @@
 (function(root){
 'use strict';
 const myId=()=>{ const tg=root.Telegram&&root.Telegram.WebApp, u=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user; return u&&u.id||null };
-const api={refs:null, onReward:null, onConflict:null, attach, inviteLink, canSync, loadRemote, startSync, myId, drain:null, handle:null, requeue:null, canPay, buyStars, setCanWrite, poke:null};
+const api={refs:null, onReward:null, onConflict:null, attach, inviteLink, canSync, loadRemote, startSync, myId, drain:null, handle:null, requeue:null, canPay, buyStars, setCanWrite, poke:null, pvp};
 /* ---------- partida en el servidor ----------
    Al entrar se descarga la partida (y se comprueba la cuenta de Telegram). Mientras juegas se sube cada 'saveEvery' s y al
    salir de la app. Cada partida tiene una versión (rev): solo se acepta guardar si partes de la última; si otro dispositivo la
@@ -39,6 +39,10 @@ function startSync(G,me){
   setTimeout(()=>push(false),2000);                           // primera subida al poco de entrar (con el evento 'open')
   api.push=push;
 }
+/* ---------- PvP: rival, resultado e información (función "track") ---------- */
+function pvp(CFG,action,extra){ if(!canSync(CFG)) return Promise.resolve(null);
+  return fetchT(CFG.server.url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tgData(),action,...(extra||{})})},10000)
+    .then(r=>r.ok?r.json():null).then(j=>{ if(j&&j.now&&root.setServerTime) root.setServerTime(j.now); return j }).catch(()=>null) }
 /* ---------- pagos con Telegram Stars ----------
    El servidor (función "pay") crea la factura; Telegram la muestra (openInvoice). Al pagar, Telegram avisa al servidor,
    que deja el premio en "rewards": el juego lo recoge enviando datos (se reintenta unos segundos por si tarda). */
