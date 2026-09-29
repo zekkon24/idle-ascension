@@ -43,7 +43,7 @@ let expandedId=null, forgeId=null, lockSel=[], forjaBack='armas'; // forjaBack: 
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 // escribe HTML solo si cambia (evita rehacer botones mientras se tocan)
-const setHTML=(el,h)=>{ if(el&&el.__h!==h){ el.__h=h; el.innerHTML=h; } };
+const setHTML=(el,h)=>{ if(el&&el.__h!==h){ el.__h=h; el.innerHTML=nbsp(h); } };
 const F={rar:'all',stat:'any',min:'',max:''};
 const fx={shots:[],floats:[],flash:0};
 
@@ -145,7 +145,7 @@ function updateHUD(){
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   const sb=$('#skBar'); if(sb){ const L=G.skills(), man=G.manualSkills(), key=L.map(x=>x.slot+(x.locked?'L':'')).join()+man;
-    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.innerHTML=L.map(x=>`<button class="skb${x.locked?' lock':''}" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}"><span class="skn">${esc((x.name||'').split(' ')[0])}</span><i class="skcd"></i><b class="skt"></b></button>`).join('')+`<span class="skmode">${man?'¡Tócalas!':'Auto'}</span>`; }
+    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.innerHTML=L.map(x=>`<button class="skb${x.locked?' lock':''}" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}"><span class="skn${x.locked?'':((x.name||'').split(' ')[0].length>8?' long':'')}">${x.locked?'Evo':esc((x.name||'').split(' ')[0])}</span><i class="skcd"></i><b class="skt"></b></button>`).join('')+`<span class="skmode">${man?'¡Tócalas!':'Auto'}</span>`; }
     L.forEach((x,i)=>{ const b=sb.children[i]; if(!b||x.locked) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
       b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; b.querySelector('.skt').textContent=x.ready?'':Math.ceil(x.left); }); }
   const mf=$('#misFab'); if(mf){ const n=G.missionsReady()+(G.calState().can?1:0)+G.passReady(); setHTML(mf,n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(misOpen&&$('#misBox')) renderMis(); }
@@ -165,13 +165,13 @@ function renderTab(){
   if(upOpen) showUpgrades();
   // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
-    el.innerHTML=(invView==='forja'?back(forjaBack,forjaBack==='main'?'Volver al inventario':'Volver a Armas')
+    el.innerHTML=nbsp((invView==='forja'?back(forjaBack,forjaBack==='main'?'Volver al inventario':'Volver a Armas')
       :invView==='armas'?back('main','Volver al inventario')
       :invView==='grim'?back('main','Volver al inventario')
-      :equipHud())+tabInv(); if(invView==='armas') renderList(); }
-  if(tab==='shop') el.innerHTML=tabShop();
-  if(tab==='ev') el.innerHTML=tabEv();
-  if(tab==='dev') el.innerHTML=tabDev();
+      :equipHud())+tabInv()); if(invView==='armas') renderList(); }
+  if(tab==='shop') el.innerHTML=nbsp(tabShop());
+  if(tab==='ev') el.innerHTML=nbsp(tabEv());
+  if(tab==='dev') el.innerHTML=nbsp(tabDev());
   updateHUD();
 }
 function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev'||(tab==='inv'&&invView==='cofres')) renderTab(); else updateHUD(); }
@@ -434,7 +434,7 @@ function offerModal(k){ const o=G.activeOffers().find(x=>x.k===k); if(!o) return
 function firstOfferRow(){ const F=CFG.stars.first; if(S.firstBuy) return '';
   return `<div class="chest offer"><div><div class="cn">Oferta de bienvenida</div><div class="s">Arma ${CFG.rarName[F.r]} de tu clase + ${F.tokens} tokens + ${F.silver} cofres de plata · solo una vez</div></div>
     <div class="acts">${payBtn('first',F.stars,'data-act="devFirst"')}</div></div>` }
-function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name} <button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button></div>${k==='silver'?`<div class="s">${silverNote()}</div>`:''}</div>
+function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name.replace(/ ([^ ]+)$/,' <span style="white-space:nowrap">$1')}${/ /.test(it.name)?'':'<span style="white-space:nowrap">'} <button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button></span></div>${k==='silver'?`<div class="s">${silverNote()}</div>`:''}</div>
   <div class="acts">${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
 function tabShop(){
   const today=G.dayKey();
@@ -754,9 +754,13 @@ function renderSelect(){
 
 /* ---------- modal y avisos ---------- */
 // Ventanas: el botón "Cerrar" se cambia por una cruz arriba a la derecha (con la misma acción)
-function withX(html){ let act=null; html=html.replace(/<button class="btn[^"]*" data-act="([^"]+)"[^>]*>Cerrar<\/button>/,(m,a)=>{act=a;return ''}).replace(/<div class="ctrl"><\/div>/,'');
+// (también «Ahora no» cuando va solo; en las confirmaciones «Cancelar» se queda y además sale la cruz)
+function withX(html){ let act=null; html=html.replace(/<button class="btn[^"]*" data-act="([^"]+)"[^>]*>(?:Cerrar|Ahora no)<\/button>/,(m,a)=>{act=a;return ''}).replace(/<div class="ctrl"><\/div>/,'');
+  if(!act&&/data-act="close"/.test(html)) act='close';
   return act?`<button class="xclose" data-act="${act}" aria-label="Cerrar">✕</button>`+html:html }
-function showModal(html){$('#modal').innerHTML=`<div class="modal"><div class="box" role="dialog" aria-modal="true">${withX(html)}</div></div>`; const f=$('#modal .box button.gold')||$('#modal .box button:not(.xclose)'); if(f&&!reduceMotion()) f.focus({preventScroll:true})}
+// «50 %» sin que el % se quede solo en la línea siguiente
+const nbsp=h=>h.replace(/(\d) %/g,'$1\u00a0%');
+function showModal(html){$('#modal').innerHTML=`<div class="modal"><div class="box" role="dialog" aria-modal="true">${nbsp(withX(html))}</div></div>`; const f=$('#modal .box button.gold')||$('#modal .box button:not(.xclose)'); if(f&&!reduceMotion()) f.focus({preventScroll:true})}
 function closeModal(){$('#modal').innerHTML=''; if(modalQ.length) setTimeout(drainQ,150)}
 // Avisos que no deben pisar otra ventana (fin del evento, tiempo sin conexión): esperan su turno
 const modalQ=[];
@@ -810,7 +814,7 @@ const ACT={
   modview:b=>{ modView=b.dataset.v||null; evView=null; renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
   evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(pendText(p)); renderTab(); } },
-  close:()=>{stopSpin();boostModalOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
+  close:()=>{stopSpin();boostModalOpen=false;upOpen=false;misOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
   buy:(b,k)=>{if(G.buyUpgrade(k))renderTab()},
   buymax:(b,k)=>{const n=G.buyMax(k);toast(n?'+'+n+' niveles':'No tienes oro suficiente');renderTab()},
   equip:(b,k,id)=>{if(G.equip(id))renderTab()},
@@ -895,7 +899,7 @@ document.addEventListener('input',e=>{
   if(e.target.id==='fMax'){F.max=e.target.value;renderList()}
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='nameIn'){ ACT.nameSave(); return }
-  if(e.key==='Escape'&&modalOpen()&&!pendingSpin&&!adTimerOn()&&!($('#nameIn')&&!S.name)){ ACT.close(); return } if((e.key==='Enter'||e.key===' ')&&e.target.matches('.ihd[data-act],.chip[data-act]')){e.preventDefault();e.target.click()}});
+  if(e.key==='Escape'&&modalOpen()&&!pendingSpin&&!adTimerOn()&&!($('#nameIn')&&!S.name)){ const x=$('#modal .xclose'); if(x) x.click(); else ACT.close(); return } if((e.key==='Enter'||e.key===' ')&&e.target.matches('.ihd[data-act],.chip[data-act]')){e.preventDefault();e.target.click()}});
 document.addEventListener('visibilitychange',()=>{ if(!S) return;
   if(document.hidden) G.save();
   else { const off=G.applyOffline(); if(off) later(()=>offlineModal(off)); } }); // al volver a la app se cobra el tiempo fuera (el evento en curso lo pausa)
