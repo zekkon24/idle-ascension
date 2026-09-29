@@ -96,7 +96,7 @@ function createGame(opts){
     const c=CFG.classes[S.cls], L=S.lvl-1, u=S.up, U=CFG.upgrades, w=equipped(), ps={...(c.p||{}),...evoBase()}, A=S.absorb||{}, EV=S.evo?evoP():null;
     const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}; let wd=0,ws=0;
     const gr=grimFx(), gf=gr?CFG.grimoire.fx[gr]:{};                    // camino B: defensa (Guardián) o daño a jefes (Cazador)
-    if(gr==='fortaleza') sec.dfp+=gf.df; if(gr==='cazador') sec.bd+=gf.boss;
+    if(gr==='fortaleza'){ sec.dfp+=gf.df; sec.bd+=gf.boss||0; } if(gr==='cazador') sec.bd+=gf.boss;
     if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
     return {
       // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida,
@@ -202,7 +202,7 @@ function createGame(opts){
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); }
-    else if(B.event){ if(B.t>=CFG.event.dur||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
+    else if(B.event){ if((CFG.event.dur&&B.t>=CFG.event.dur)||B.t>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
     // curación: lo que de verdad se recupera (Santo: cada curación se convierte en daño en área durante unos segundos)
     // solo la regeneración (Fe) alimenta el aura; lo curado se pasa a la escala antigua (÷ hpK) para que el aura siga pegando igual
     // curación (el Oscuro solo se cura robando vida: ls)
@@ -215,7 +215,7 @@ function createGame(opts){
       for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const dd=d*(B.boss?1+h.bd:1); e.hp-=dd; B.auraDmg=(B.auraDmg||0)+dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); if(e.hp<=0) kill(e); } }
     if(P&&P.burnPct) for(const e of B.enemies){ // Archimago: quemaduras (cada acumulación hace burnPct del daño por segundo)
       if(e.dead||!e.burn) continue; e.burn=e.burn.filter(u=>u>B.t); if(!e.burn.length) continue;
-      const d=e.burn.length*P.burnPct*h.atk*dt; e.hp-=d; B.burnDmg=(B.burnDmg||0)+d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
+      const d=e.burn.length*P.burnPct*h.atk*dt*(CT<(BUF.combust||0)?1+(BUF.burnUp||0):1); e.hp-=d; B.burnDmg=(B.burnDmg||0)+d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     for(const e of B.enemies){ if(e.dead||!(e.dot>B.t)) continue;                   // daño con el tiempo: veneno, sangrado, fuego
       const d=e.dotDps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     for(const e of B.enemies){ if(e.dead||!e.poison||!e.poison.length) continue; e.poison=e.poison.filter(x=>x.until>B.t); // Veneno: acumulaciones
@@ -227,8 +227,9 @@ function createGame(opts){
       if(P&&P.dblBuff&&B.dblSt){ B.dblSt=B.dblSt.filter(u=>u>B.t); d*=1+P.dblBuff*B.dblSt.length; } // Ojo de Halcón: racha tras disparo doble
       if(B.critBuff){ d*=1+P.critNext; B.critBuff=false; }                // Sombra: golpe potenciado tras un crítico
       d*=buffMul('atk');                                                        // habilidades: +daño
+      { const a1=buffAdd('atk1'); if(a1&&(B.boss||B.kind==='boss')) d*=1+a1; }   // +daño solo contra jefes
       if(tg.mark>B.t) d*=1+tg.markMult;                                         // Marca del cazador
-      if(GR==='sacrificio'&&B.hp>1){ B.hp=Math.max(1,B.hp-GF.cost*h.hp); d*=1+GF.atk; }   // Sacrificio: vida por daño
+      if(GR==='sacrificio'&&B.hp>1){ B.hp=Math.max(1,B.hp-GF.cost*h.hp); if(!GF.single||B.boss||B.kind==='boss') d*=1+GF.atk; }   // Oscuro: el extra solo contra jefes   // Sacrificio: vida por daño
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
       if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; if(LG&&LG.id==='filoVacio') d*=atkE/dmgF(atkE,dfE);   // Filo del vacío: el crítico ignora la defensa
         B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
@@ -263,20 +264,22 @@ function createGame(opts){
           case 'luz': { for(let i=0;i<sk.hits;i++){ const t=alive(), e=t[i%Math.max(1,t.length)]; if(e) hurt(e,base(e)*sk.mult,k); }   // 3 golpes repartidos (si uno muere, pasan al siguiente)
             BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
           case 'sed': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.shield=(BUF.shield||0)+sk.shield*Math.max(0,lost); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
-          case 'combustion': BUF.combust=CT+sk.dur; break;
+          case 'combustion': BUF.combust=CT+sk.dur; BUF.burnUp=sk.burnUp||0; break;
           case 'perforante': for(const e of alive()) hurt(e,base(e)*sk.mult,k); break;
           case 'clon': BUF.clone={until:CT+sk.dur,mult:sk.mult}; break;
           case 'juicio': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps}; break;
           case 'baluarte': BUF.list.push({until:CT+sk.dur,df:sk.df,reflect:sk.reflect}); break;
-          case 'armaduraHielo': BUF.iceArmor=CT+sk.dur; break;
+          case 'armaduraHielo': { BUF.iceArmor=CT+sk.dur; BUF.iceShards=sk.shards||1; const F=CFG.grimoire.fx.escarcha;
+            // al lanzarla: esquirlas a todos
+            for(const e of alive()){ hurt(e,dmgF(h.atk,e.df*(1-F.ignoreDf))*F.mult*(sk.burst||1)*(B.boss?1+h.bd:1),k); if(!e.dead) e.frozen=B.t+F.freeze; } break; }
           case 'marca': { const tg=alive()[0]; if(tg){ tg.mark=B.t+sk.dur; tg.markMult=sk.mult; } break; }
-          case 'nube': BUF.cloud={until:CT+sk.dur,next:CT}; break;
-          case 'sacrificio': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.list.push({until:CT+sk.dur,atk:sk.atk}); break; }
+          case 'nube': BUF.cloud={until:CT+sk.dur,next:CT,pct:sk.pct,extra:sk.extra}; break;
+          case 'sacrificio': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.list.push({until:CT+sk.dur,atk:sk.single?0:sk.atk,atk1:sk.single?sk.atk:0}); break; }
         }
         emit('fx',{k:'skill',slot:k,id:sk.id,name:sk.name}); } }
     if(BUF.lightBack&&BUF.lightBack.length){ const back=BUF.lightBack.filter(x=>CT>=x.at); if(back.length){ BUF.lightBack=BUF.lightBack.filter(x=>CT<x.at); for(const x of back) heal(x.heal*h.hp); emit('fx',{k:'luzVuelve',n:back.length}); } }
     if(BUF.cloud&&CT<BUF.cloud.until&&CT>=BUF.cloud.next){ BUF.cloud.next+=1; const V=CFG.grimoire.fx.veneno;
-      for(const e of B.enemies){ if(e.dead) continue; e.poison=(e.poison||[]).filter(x=>x.until>B.t); e.poison.push({until:B.t+V.dur,dps:V.pct*dmgF(h.atk,e.df)}); if(e.poison.length>V.max) e.poison.shift(); } }
+      for(const e of B.enemies){ if(e.dead) continue; e.poison=(e.poison||[]).filter(x=>x.until>B.t); e.poison.push({until:B.t+V.dur,dps:(BUF.cloud.pct||V.pct)*dmgF(h.atk,e.df)}); if(e.poison.length>V.max+(BUF.cloud.extra||0)) e.poison.shift(); } }
     if(BUF.aura&&CT<BUF.aura.until){ heal(BUF.aura.heal*h.hp*dt);                              // Luz del juicio: cura y quema a los cercanos
       for(const e of B.enemies){ if(e.dead||e.arrive>B.t+0.5) continue; const d=dmgF(h.atk,e.df)*BUF.aura.dps*dt*(B.boss?1+h.bd:1); e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); } }
     if(B.enemies.some(canHit)){
@@ -301,12 +304,12 @@ function createGame(opts){
           if(BUF.gshield>0){ const a=Math.min(BUF.gshield,d); BUF.gshield-=a; d-=a; }    // escudo del Grimorio de la Luz
           B.hp-=d; emit('heroHit',{d});
           { const rf=buffAdd('reflect'); if(rf>0){ const r=d*rf/h.hpK; e.hp-=r; B.mD+=r; if(B.kind==='boss') addDmg(r); emit('hit',{e,d:r,crit:false,thorns:true}); if(e.hp<=0) kill(e); } }   // Baluarte: devuelve daño
-          if(CT<(BUF.iceArmor||0)&&!e.dead&&(e.shards=(e.shards||0)+1)>=CFG.grimoire.fx.escarcha.need){ const F=CFG.grimoire.fx.escarcha; e.shards=0;   // Armadura de hielo: esquirla al que pega
+          if(CT<(BUF.iceArmor||0)&&!e.dead&&(e.shards=(e.shards||0)+(BUF.iceShards||1))>=CFG.grimoire.fx.escarcha.need){ const F=CFG.grimoire.fx.escarcha; e.shards=0;   // Armadura de hielo: esquirla al que pega
             const x=dmgF(h.atk,e.df*(1-F.ignoreDf))*F.mult*(B.boss?1+h.bd:1); e.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); e.frozen=B.t+F.freeze; emit('hit',{e,d:x,crit:false,frost:true}); if(e.hp<=0) kill(e); }
           if(P&&P.rage) B.rage=(B.rage||0)+1;
           if(P&&P.lightMult&&!B.lightUsed&&B.hp>0&&B.hp<P.lightHp*h.hp){ B.lightUsed=true; B.lightUntil=B.t+P.lightDur; } } // Oráculo: luz interior
         else emit('dodge');
-        e.next+=1/CFG.enemy.spd;
+        e.next+=1/(CFG.enemy.spd*(e.spd||1));
         if(e.first){e.first=false;if(B.spawned<B.count)spawnEnemy()}
         if(B.hp<=0){ if(B.event) endEvent(); else lose(); return }
         if(e.dead) break;
@@ -326,7 +329,8 @@ function createGame(opts){
   function measureWave(){ if(!B||B.boss||B.event||!(B.mB>0)) return; const M=S.dpsM=S.dpsM||{d:0,b:0}, k=0.98;
     M.d=M.d*k+B.mD; M.b=M.b*k+B.mB; }
   const dpsK=h=>{ const M=S.dpsM; return M&&M.b>=CFG.offlineMinMeasure*heroStats().atk?Math.max(0.5,Math.min(3,M.d/M.b)):evoDps(h) };
-  function waveClear(){ measureWave(); if(S.wave<10){S.wave++;endWave(CFG.delays.wave);return} faseClear() }
+  function waveClear(){ measureWave(); if(!B.event) addXp(xpAt(S.fase)*(CFG.econ.waveXp||0)*heroStats().xpMult);   // experiencia por oleada ganada
+    if(S.wave<10){S.wave++;endWave(CFG.delays.wave);return} faseClear() }
   function faseClear(){
     const f=S.fase; S.wave=1;
     if(f===S.best+1){
@@ -404,16 +408,21 @@ function createGame(opts){
     statsDirty(); startWave(); emit('mode',{mode:S.mode,name:modeCfg().name}); emit('change'); return true }
 
   /* ---------- evento ---------- */
-  // 3 minutos de monstruos sin parar: el monstruo n es el de la fase n (1-150 de Normal, luego sigue con Pesadilla e Infierno).
+  // Mazmorra infinita: monstruos sin parar hasta morir; el monstruo n es el de la fase n (1-150 de Normal, luego sigue con Pesadilla e Infierno).
   // Iguales para todos los jugadores: no dependen de tu modo ni de tu récord.
   // Salen en grupos de 'group' monstruos (con groupHp × su vida): un grupo cada spawnEvery segundos, o al momento si no
   // queda ninguno vivo. El grupo n es el enemigo de la fase n. Puntúa por muertes (cada monstruo cuenta 1). 1 entrada gratis al día; las demás, 1 ticket.
+  // Mazmorra infinita: cada ramp.every segundos los grupos son más grandes, salen antes, andan y pegan más rápido
+  function evRamp(){ const V=CFG.event, R=V.ramp, r=R?Math.floor(B.t/R.every):0;
+    if(!R) return {group:V.group||1,every:V.spawnEvery,walk:V.walk,spd:1,r:0};
+    return {group:Math.min(R.groupMax||99,(V.group||1)+r*R.group), every:Math.max(R.spawnMin,V.spawnEvery*Math.pow(R.spawn,r)),
+      walk:Math.max(R.walkMin,V.walk*Math.pow(R.walk,r)), spd:1+r*R.spd, r}; }
   function evSpawn(){ const V=CFG.event, alive=B.enemies.some(e=>!e.dead);
     if(alive&&B.t<B.nextSpawn) return;
-    const n=B.groups=(B.groups||0)+1, m=Math.min(MODES().length-1,Math.floor((n-1)/CAP())), c=modeCurve(m,n-m*CAP()), hp=c.hp*(V.groupHp||1);
-    for(let i=0;i<(V.group||1);i++){ const at=B.t+V.walk+i*(V.groupGap||0);  // llegan escalonados
-      B.enemies.push({hp,max:hp,atk:c.atk*(V.groupAtk||1),df:c.df,spawn:B.t,walk:V.walk,arrive:at,next:at,first:false,dead:false,f:n}); B.spawned++; }
-    B.nextSpawn=B.t+V.spawnEvery; }
+    const n=B.groups=(B.groups||0)+1, m=Math.min(MODES().length-1,Math.floor((n-1)/CAP())), c=modeCurve(m,n-m*CAP()), hp=c.hp*(V.groupHp||1), R=evRamp();
+    for(let i=0;i<R.group;i++){ const at=B.t+R.walk+i*(V.groupGap||0);  // llegan escalonados
+      B.enemies.push({hp,max:hp,atk:c.atk*(V.groupAtk||1),df:c.df,spawn:B.t,walk:R.walk,arrive:at,next:at,first:false,dead:false,f:n,spd:R.spd}); B.spawned++; }
+    B.nextSpawn=B.t+R.every; }
   const evPhase=()=>B&&B.event?B.groups||0:0; // fase del último grupo que ha salido
   const inEvent=()=>!!(B&&B.event);
   // Pausa diaria de 00:00 a 01:00 UTC: no se puede entrar, los intentos empezados antes pueden terminar y a la 01:00 se reparten los premios
@@ -720,7 +729,7 @@ function createGame(opts){
       const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*dpsK(h), K=Math.max(1,Math.ceil(e.hp/hit))/h.spd, W=CFG.enemy.walk;
       // a distancia se dispara mientras se acercan; cuerpo a cuerpo cada enemigo sale cuando el anterior llega y hay que esperarlo
       t+=(h.ranged?per*K:W+K+(per-1)*Math.max(W,K)) + CFG.delays.wave; }
-    return {g:goldAt(f)*3*10*(hasCard()?1+CFG.cardGold:1)/t, x:xpAt(f)*3*10*h.xpMult/t};
+    return {g:goldAt(f)*3*10*(hasCard()?1+CFG.cardGold:1)/t, x:xpAt(f)*(3+(CFG.econ.waveXp||0))*10*h.xpMult/t};
   }
   // Farmeo sin conexión: hasta offlineCapH horas (offlineVipH con VIP). Si se llenó el tope, queda un extra
   // de oro (offlineAdMult) que se cobra viendo un anuncio con claimOfflineBonus().
@@ -846,7 +855,7 @@ function createGame(opts){
     // mejoras
     buyUpgrade, buyMax,
     // evento
-    claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, inEvent, evPhase, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
+    claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
     canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,

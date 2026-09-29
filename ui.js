@@ -122,7 +122,7 @@ function updateHUD(){
   const ev=G.inEvent();
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   setHTML($('#faseTxt'),ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
-    :ev?`⏱ ${mmss(Math.max(0,CFG.event.dur-B.t)*1000)} · Muertes ${B.kills}`:`Fase ${S.fase}`);
+    :ev?`⏱ ${mmss(B.t*1000)} · Nivel ${(G.evRamp()||{r:0}).r+1} · Muertes ${B.kills}`:`Fase ${S.fase}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   const tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):''; // (sin "Avanzando"/"Farmeando")
@@ -526,7 +526,7 @@ function tabEv(){
       <button class="mcard mbig" data-act="pvpSoon"><div class="ctrl" style="justify-content:space-between"><b>Buscar partida</b><span class="pill">Próximamente</span></div><span class="s">Lucha contra otro jugador</span></button>
     </div></section>`;
   return `${back}<section class="panel"><h3>Eventos</h3>
-    ${card('lab','Mazmorra','3 min de monstruos sin parar · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
+    ${card('lab','Mazmorra','Monstruos sin fin, cada vez más y más rápidos · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
     ${CFG.league&&CFG.league.show?(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow()):''}
     ${card('boss','Jefe semanal','1 min contra un jefe inmortal · ranking semanal por daño',`Entradas <b>${G.wbFreeLeft()+S.bossTickets}</b>`,paused?'En pausa':bd?`Semana ${fmt(bd)} · puesto ${bpos}`:`Cierra en ${dhm(G.weekLeft())}`,!!bp)}
   </section>`;
@@ -541,7 +541,7 @@ function tabLab(){
     <div class="evhead"><div><span class="s">Entradas</span><b>${G.evFreeLeft()+S.tickets}</b></div><div><span class="s">${paused?'Total de ayer':'Total hoy'}</span><b>${best||'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="evGo" ${(S.tickets>0||G.evFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Entrar'}</button>
     ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="ticket">+1 ticket · ${V.ticketCost} tok</button>`:''}</div>
-    <p class="hint">${V.dur/60} min de monstruos · suma las muertes de tus intentos del día</p>
+    <p class="hint">Sin tiempo: aguanta todo lo que puedas; cada ${V.ramp.every} s llegan más y más rápidos · suma las muertes de tus intentos del día</p>
     ${rankHTML(G.evRivals(d),best,pos,x=>x)}</section>
   <details class="panel fold"><summary><h3>Premios del día</h3></summary>${rewTable(V.rewards)}<p class="hint">Se reparten a las 01:00 UTC del día siguiente.</p></details>`;
 }
