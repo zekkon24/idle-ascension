@@ -44,6 +44,8 @@ function createGame(opts){
   }
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
     if(!st||!CFG.classes[st.cls]) return null;
+    { const OLD={espinas:'fortaleza',trueno:'furia',invocador:'orden',hielo:'caos',plaga:'cazador',viento:'rebote',almas:'veneno',sangre:'filo',tiempo:'luz',juicio:'sacrificio'}, G=st.grim;   // grimorios renovados
+      if(G&&G.owned){ for(const k in OLD) if(G.owned[k]!=null){ G.owned[OLD[k]]=G.owned[k]; delete G.owned[k]; } if(OLD[G.active]) G.active=OLD[G.active]; } }
     const d=newState(st.cls);
     for(const k in d) if(st[k]===undefined) st[k]=d[k];
     st.up={...d.up,...(st.up||{})}; st.stats={...d.stats,...(st.stats||{})}; for(const k in st.up) if(!Number.isFinite(st.up[k])) st.up[k]=0;
@@ -89,16 +91,18 @@ function createGame(opts){
   function computeStats(){
     const c=CFG.classes[S.cls], L=S.lvl-1, u=S.up, U=CFG.upgrades, w=equipped(), ps={...(c.p||{}),...evoBase()}, A=S.absorb||{};
     const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}; let wd=0,ws=0;
+    const gr=grimFx(), gf=gr?CFG.grimoire.fx[gr]:{};                    // grimorio activo: defensa, daño o crítico
+    if(gr==='fortaleza'||gr==='furia') sec.dfp+=gf.df; if(gr==='filo') sec.cd+=gf.cd; if(gr==='cazador') sec.bd+=gf.boss;
     if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
     return {
       // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida,
       // el Aura del Santo y el daño por defensa del Titán se escalan con ellas para que sigan valiendo lo mismo.
       hpK:Math.pow(U.hp.mult/(U.hp.ref||U.hp.mult),u.hp), dfK:Math.pow(U.df.mult/(U.df.ref||U.df.mult),u.df),
       hp:(c.hp+(A.hp||0)+c.ghp*L)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp'),
-      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk'),
+      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(gr==='furia'||gr==='orden'?1+gf.atk:1),
       df:(c.df+(A.df||0)+c.gdf*L)*Math.pow(U.df.mult,u.df)*(1+sec.dfp),
       spd:c.spd*(ps.spd||1)*Math.pow(U.spd.mult,u.spd)*(1+ws),
-      cr:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
+      cr:gr==='orden'?0:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
       ls:Math.min(CFG.caps.ls,sec.ls), bd:sec.bd, ranged:c.ranged,
       regen:ps.regen||0, dmgTaken:ps.dmgTaken||1, xpMult:ps.xp||1,
     };
@@ -193,14 +197,13 @@ function createGame(opts){
     const h=heroStats(), P=evoP(), GR=grimFx(), GF=GR&&CFG.grimoire.fx[GR];
     B.t+=dt; CT+=dt;
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
-    if(GR==='tiempo'){ B.hpHist=B.hpHist||[]; if(!B.hpHist.length||B.t-B.hpHist[B.hpHist.length-1][0]>=0.5) B.hpHist.push([B.t,B.hp]); while(B.hpHist.length>1&&B.t-B.hpHist[1][0]>=GF.back) B.hpHist.shift(); }
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); }
     else if(B.event){ if(B.t>=CFG.event.dur||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
     // curación: lo que de verdad se recupera (Santo: cada curación se convierte en daño en área durante unos segundos)
     // solo la regeneración (Fe) alimenta el aura; lo curado se pasa a la escala antigua (÷ hpK) para que el aura siga pegando igual
     const heal=(x,aura)=>{ const b=B.hp; B.hp=Math.min(h.hp,B.hp+x); const got=B.hp-b; if(aura&&got>0&&P&&P.aura) B.auraPool=(B.auraPool||0)+got*P.aura/h.hpK; };
     if(h.regen){ const lit=P&&P.lightMult&&B.t<(B.lightUntil||0); heal(h.regen*(lit?P.lightMult:1)*h.hp*dt,true); }
-    const kill=e=>{ if(e.dead) return; e.dead=true; e.deadAt=B.t; if(GR==='almas') B.souls=(B.souls||0)+1;
+    const kill=e=>{ if(e.dead) return; e.dead=true; e.deadAt=B.t;
       if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
       if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return } onKill(); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
     if(B.auraPool>0){ const d=B.auraPool*Math.min(1,dt/P.auraDur); B.auraPool-=d;                    // Santo: aura sagrada (en área)
@@ -209,24 +212,18 @@ function createGame(opts){
       if(e.dead||!e.burn) continue; e.burn=e.burn.filter(u=>u>B.t); if(!e.burn.length) continue;
       const d=e.burn.length*P.burnPct*h.atk*dt; e.hp-=d; B.burnDmg=(B.burnDmg||0)+d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     for(const e of B.enemies){ if(e.dead||!(e.dot>B.t)) continue;                   // daño con el tiempo: veneno, sangrado, fuego
-      const d=e.dotDps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.dotKind==='sangre') heal(d*CFG.grimoire.fx.sangre.heal*h.ls*h.hpK+d*0.02*h.hpK);
-      if(e.hp<=0){ kill(e); if(e.dotKind==='plaga'){ const nx=B.enemies.find(x=>!x.dead&&x!==e); if(nx){ nx.dot=B.t+CFG.grimoire.fx.plaga.dur; nx.dotDps=e.dotDps; nx.dotKind='plaga'; emit('fx',{k:'plaga',e:nx}); } } } }
-    if(GR==='invocador'){ if(!B.sumNext) B.sumNext=GF.every/2;
-      if(B.t>=B.sumNext&&!(B.sum&&B.sum.until>B.t)){ B.sum={until:B.t+GF.dur,hp:GF.hp*h.hp,next:B.t}; B.sumNext=B.t+GF.every; emit('fx',{k:'invocar'}); } }
-    { const sm=B.sum; if(sm&&sm.until>B.t&&sm.hp>0){ const GI=CFG.grimoire.fx.invocador; const tg=B.enemies.find(e=>!e.dead&&e.arrive<=B.t+0.5); if(tg&&B.t>=sm.next){ sm.next=B.t+1/h.spd;
-          const d=dmgF(h.atk,tg.df)*GI.dmg*(B.boss?1+h.bd:1); tg.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e:tg,d,crit:false,summon:true}); if(tg.hp<=0) kill(tg); } } }
-    if(GR==='viento'){ if(!B.windNext) B.windNext=GF.every;
-      if(B.t>=B.windNext){ B.windNext=B.t+GF.every; let n=0; const W=CFG.enemy.walk;
-        for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const w=e.walk||W; e.arrive=B.t+w*GF.push; e.spawn=e.arrive-w; e.next=Math.max(e.next,e.arrive); n++; }
-        if(n) emit('fx',{k:'viento'}); } }
+      const d=e.dotDps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
+    if(GR==='veneno') for(const e of B.enemies){ if(e.dead||!e.poison) continue; e.poison=e.poison.filter(x=>x.until>B.t); // Veneno: acumulaciones
+      const d=e.poison.reduce((a,x)=>a+x.dps,0)*dt; if(!d) continue; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
+    if(GR==='luz'&&CT>=(B.luzNext||0)){ BUF.gshield=Math.max(BUF.gshield||0,GF.pct*h.hp); B.luzNext=CT+GF.every; }   // Luz: escudo que se recarga
     const hitOnce=tg=>{
       let d=dmgF(h.atk+(P&&P.defDmg?P.defDmg*h.df/h.dfK:0),tg.df)*(B.boss?1+h.bd:1), crit=false; // Titán: daño extra según su defensa (en la escala antigua)
       if(P&&P.rage) d*=1+Math.min(P.rageCap,(B.rage||0)*P.rage);        // Berserker: furia por golpes recibidos
       if(P&&P.dblBuff&&B.dblSt){ B.dblSt=B.dblSt.filter(u=>u>B.t); d*=1+P.dblBuff*B.dblSt.length; } // Ojo de Halcón: racha tras disparo doble
       if(B.critBuff){ d*=1+P.critNext; B.critBuff=false; }                // Sombra: golpe potenciado tras un crítico
-      if(GR==='juicio') d*=1+GF.max*Math.max(0,B.hp/h.hp);                  // Juicio: más daño cuanta más vida
       d*=buffMul('atk');                                                        // habilidades: +daño
-      if(GR==='almas') d*=1+Math.min(GF.max,(B.souls||0)*GF.per);           // Almas: +3 % por muerte en la oleada
+      if(GR==='caos') d*=GF.min+rand()*(GF.max-GF.min);                    // Caos: daño al azar
+      if(GR==='sacrificio'&&B.hp>1){ B.hp=Math.max(1,B.hp-GF.cost*h.hp); d*=1+GF.atk; }   // Sacrificio: vida por daño
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
       if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
       else if(P&&P.critStack) B.critAcc=Math.min(P.critStackMax||1,(B.critAcc||0)+P.critStack); // Segador: cada golpe sin crítico suma probabilidad de crítico
@@ -234,20 +231,14 @@ function createGame(opts){
       if(P&&P.burnPct){ tg.burn=tg.burn||[]; if(tg.burn.length>=P.burnMax) tg.burn.shift(); tg.burn.push(B.t+P.burnDur); }
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
       if(BUF.clone&&CT<BUF.clone.until&&!tg.dead){ const c=d*BUF.clone.mult; tg.hp-=c; B.mD+=c; if(B.kind==='boss') addDmg(c); emit('hit',{e:tg,d:c,crit,clone:true}); }   // Clon de sombra
-      if(GR==='hielo') tg.slow=true;                                          // Hielo: ataca más despacio
-      if(GR==='plaga'){ tg.dot=B.t+GF.dur; tg.dotDps=GF.dps*d; tg.dotKind='plaga'; }   // Plaga: veneno (renueva)
-      if(GR==='sangre'&&crit){ tg.dot=B.t+GF.dur; tg.dotDps=GF.dps*d; tg.dotKind='sangre'; emit('fx',{k:'sangre',e:tg}); }
-      if(GR==='trueno'&&(B.hits=(B.hits||0)+1)%GF.every===0){                // Trueno: rayo que salta a otros enemigos
-        const others=B.enemies.filter(e=>!e.dead&&e!==tg&&(h.ranged||e.arrive<=B.t+1)).slice(0,GF.jumps);
-        for(const o of others){ const dd=d*GF.mult; o.hp-=dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); emit('hit',{e:o,d:dd,crit:false,bolt:true}); if(o.hp<=0) kill(o); }
-        emit('fx',{k:'trueno',from:tg,to:others}); }
+      if(GR==='veneno'){ tg.poison=(tg.poison||[]).filter(x=>x.until>B.t); tg.poison.push({until:B.t+GF.dur,dps:GF.pct*d}); if(tg.poison.length>GF.max) tg.poison.shift(); }
+      if(GR==='rebote'&&!tg.bounce){ const o=B.enemies.find(e=>!e.dead&&e!==tg); if(o){ const dd=d*GF.mult; o.hp-=dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); emit('hit',{e:o,d:dd,crit:false,bounce:true}); if(o.hp<=0) kill(o); } }   // Rebote
       if(tg.hp<=0) kill(tg);
     };
     const canHit=e=>!e.dead&&((h.ranged&&!B.event)||e.arrive<=B.t); // en el evento nadie dispara antes de que llegue (igual para todas las clases)
     // habilidades: las pedidas a mano (B.cast) y, en la campaña, las que estén listas
     if(!B.event&&!(S.opt&&S.opt.autoSkills===false)&&B.enemies.some(e=>!e.dead&&e.arrive<=B.t+0.3))
       for(const k of skillSlots()){ const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;
-        if(sk.id==='luz'&&B.hp>0.6*h.hp) continue;                                  // curar solo si hace falta
         if(sk.id==='sed'&&B.hp<0.5*h.hp) continue;                                  // no gastar vida si va mal
         CD[k]=CT+sk.cd; (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
     if(B.cast&&B.cast.length){ const list=B.cast; B.cast=[];
@@ -260,7 +251,8 @@ function createGame(opts){
           case 'bola': for(const e of alive().slice(0,sk.targets)){ hurt(e,base(e)*sk.mult,k); if(!e.dead){ e.dot=B.t+sk.dur; e.dotDps=base(e)*sk.burn; e.dotKind='fuego'; } } break;
           case 'rapido': BUF.list.push({until:CT+sk.dur,spd:sk.spd}); break;
           case 'ejecutar': { const tg=alive()[0]; if(tg&&hurt(tg,base(tg)*sk.mult,k)) CD[k]=CT+sk.cd*sk.refund; break; }   // si mata, media recarga
-          case 'luz': heal(sk.heal*h.hp); break;
+          case 'luz': { for(let i=0;i<sk.hits;i++){ const t=alive(), e=t[i%Math.max(1,t.length)]; if(e) hurt(e,base(e)*sk.mult,k); }   // 3 golpes repartidos (si uno muere, pasan al siguiente)
+            BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
           case 'sed': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.shield=(BUF.shield||0)+sk.shield*Math.max(0,lost); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
           case 'combustion': BUF.combust=CT+sk.dur; break;
           case 'perforante': for(const e of alive()) hurt(e,base(e)*sk.mult,k); break;
@@ -268,6 +260,7 @@ function createGame(opts){
           case 'juicio': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps}; break;
         }
         emit('fx',{k:'skill',slot:k,id:sk.id,name:sk.name}); } }
+    if(BUF.lightBack&&BUF.lightBack.length){ const back=BUF.lightBack.filter(x=>CT>=x.at); if(back.length){ BUF.lightBack=BUF.lightBack.filter(x=>CT<x.at); for(const x of back) heal(x.heal*h.hp); emit('fx',{k:'luzVuelve',n:back.length}); } }
     if(BUF.aura&&CT<BUF.aura.until){ heal(BUF.aura.heal*h.hp*dt);                              // Luz del juicio: cura y quema a los cercanos
       for(const e of B.enemies){ if(e.dead||e.arrive>B.t+0.5) continue; const d=dmgF(h.atk,e.df)*BUF.aura.dps*dt*(B.boss?1+h.bd:1); e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); } }
     if(B.enemies.some(canHit)){
@@ -285,17 +278,16 @@ function createGame(opts){
     for(const e of B.enemies){
       if(e.dead||e.arrive>B.t) continue;
       while(B.t>=e.next){
-        const sm=B.sum; if(sm&&sm.until>B.t&&sm.hp>0){ sm.hp-=dmgF(e.atk,h.df)*h.dmgTaken; if(sm.hp<=0){ sm.until=B.t; emit('fx',{k:'invocarFin'}); } }   // el esqueleto se lleva el golpe
-        else if(rand()>=h.ev){ let d=dmgF(e.atk,h.df)*h.dmgTaken*buffMul('taken');
+        if(rand()>=h.ev){ let d=dmgF(e.atk,h.df)*h.dmgTaken*buffMul('taken');
           if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad
+          if(BUF.gshield>0){ const a=Math.min(BUF.gshield,d); BUF.gshield-=a; d-=a; }    // escudo del Grimorio de la Luz
           B.hp-=d; emit('heroHit',{d});
-          if(GR==='espinas'){ const r=d*GF.reflect*buffMul('thorns')/h.hpK; e.hp-=r; B.mD+=r; if(B.kind==='boss') addDmg(r); emit('hit',{e,d:r,crit:false,thorns:true}); if(e.hp<=0) kill(e); }
+          if(GR==='fortaleza'){ const r=d*GF.reflect/h.hpK; e.hp-=r; B.mD+=r; if(B.kind==='boss') addDmg(r); emit('hit',{e,d:r,crit:false,thorns:true}); if(e.hp<=0) kill(e); }
           if(P&&P.rage) B.rage=(B.rage||0)+1;
           if(P&&P.lightMult&&!B.lightUsed&&B.hp>0&&B.hp<P.lightHp*h.hp){ B.lightUsed=true; B.lightUntil=B.t+P.lightDur; } } // Oráculo: luz interior
         else emit('dodge');
-        e.next+=(e.slow?GF.slow:1)/CFG.enemy.spd;
+        e.next+=1/CFG.enemy.spd;
         if(e.first){e.first=false;if(B.spawned<B.count)spawnEnemy()}
-        if(B.hp<=0&&GR==='tiempo'&&!B.rewound){ B.rewound=true; B.hp=Math.max(GF.min*h.hp,(B.hpHist&&B.hpHist[0]?B.hpHist[0][1]:0)); emit('fx',{k:'tiempo'}); }   // Tiempo: vuelve atrás una vez
         if(B.hp<=0){ if(B.event) endEvent(); else lose(); return }
         if(e.dead) break;
       }
@@ -742,14 +734,14 @@ function createGame(opts){
   function grimCost(){ const c=GC().cost[grimTier()]; return {gold:Math.round(c.goldH*3600*farmRate(Math.max(1,S.best)).g),ess:c.ess,ev:c.ev} }
   const grimPack=()=>GC().pack[grimTier()];
   function grimMissing(){ const c=grimCost(), o={}; if(S.gold<c.gold) o.gold=c.gold-S.gold; if((S.mats[0]||0)<c.ess) o.ess=c.ess-(S.mats[0]||0); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o }
-  function grimGet(id,how){ const G=grimState(); G.owned[id]=S.lvl; if(!G.active) G.active=id; track('grimoire',{id,how}); save(); emit('change'); return {ok:true} }
+  function grimGet(id,how){ const G=grimState(); G.owned[id]=S.lvl; if(!G.active) G.active=id; statsDirty(); track('grimoire',{id,how}); save(); emit('change'); return {ok:true} }
   function grimUnlock(id){ if(!grimList().some(g=>g.id===id)||grimOwned(id)) return {ok:false,why:'id'};
     if(Object.keys(grimMissing()).length) return {ok:false,why:'cost'}; const c=grimCost();
     S.gold-=c.gold; S.mats[0]-=c.ess; S.evm-=c.ev; return grimGet(id,'recursos') }
   function grimBuy(id){ if(!grimList().some(g=>g.id===id)||grimOwned(id)) return {ok:false,why:'id'}; const p=grimPack();
     if(!spend(p)) return {ok:false,why:'tokens'}; return grimGet(id,'tokens') }
   function grimSet(id){ const G=grimState(); if(!grimOwned(id)||G.active===id) return {ok:false}; if(inEvent()) return {ok:false,why:'event'};
-    if(!spend(GC().switchCost)) return {ok:false,why:'tokens'}; G.active=id; track('grimoire',{id,how:'cambio'}); save(); emit('change'); return {ok:true} }
+    if(!spend(GC().switchCost)) return {ok:false,why:'tokens'}; G.active=id; statsDirty(); track('grimoire',{id,how:'cambio'}); save(); emit('change'); return {ok:true} }
 
   /* ---------- premios del servidor (referidos) ---------- */
   // El servidor manda premios pendientes: 'silver' = cofres de plata, 'won' = tokens ganados (retirables)
