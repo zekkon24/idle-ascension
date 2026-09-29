@@ -127,6 +127,13 @@ const CFG = {
   surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,hp:1.5,atk:1.5,reward:{silver:1}}},
   // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
   bossPhase:{at:0.5, rage:1.3, summon:[2,3]},
+  // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
+  // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
+  // × hp0·hpG^(piso−1) de vida y × atk0·atkG^(piso−1) de ataque. Premios la 1.ª vez que llegas a cada piso.
+  tower:{lives:3, lifeCost:50, hp0:0.5, hpG:1.08, atk0:0.6, atkG:1.06, count0:4, countEvery:5, countMax:10, group:3,
+    elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:2,atk:2}, maxSkills:2,
+    nodes:{fight:50,elite:20,treasure:15,rest:15}, // peso de cada tipo de camino
+    rewards:[{every:50,b:{mode:1}},{every:25,b:{silver:1}},{every:5,b:{wood:1}}]},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)

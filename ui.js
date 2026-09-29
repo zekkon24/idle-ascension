@@ -78,6 +78,9 @@ G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+f
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{fx.shots.length=0});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡El jefe se enfurece!':'¡El jefe llama refuerzos!'); });
+G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab(); later(()=>showModal(r.won?`<h3>¡Piso ${r.floor} superado!</h3><p class="hint">${r.k==='elite'?'Élite: eliges 2 mejoras.':'Elige tu mejora en la Torre.'}</p><button class="btn gold" data-act="close">Elegir</button>`
+  :`<h3>Derrota en el piso ${r.floor}</h3><p class="hint">${r.lives>0?`Te quedan ${r.lives} vida${r.lives>1?'s':''}: vuelve a intentarlo.`:'Sin vidas: puedes comprar una o terminar la partida.'}</p><button class="btn gold" data-act="close">Vale</button>`)); });
+G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
   else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
 G.on('eventStart',()=>{fx.shots.length=0; fx.floats.length=0});
@@ -128,11 +131,11 @@ function updateHUD(){
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
-  setHTML($('#faseTxt'),ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
+  setHTML($('#faseTxt'),ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
+  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
@@ -517,6 +520,20 @@ const rewTable=list=>`<div class="rank evrew">${list.map((r,i)=>{ const from=i?l
 const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), h=Math.floor(m%1440/60); return d?`${d} d ${h} h`:h?`${h} h ${m%60} min`:`${m%60} min` };
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
+/* ---------- Torre (roguelike) ---------- */
+const NODE={fight:['⚔️','Combate','Enemigos normales · 1 mejora'],elite:['💀','Élite','Pocos y muy duros · 2 mejoras'],treasure:['🎁','Tesoro','Elige una mejora sin luchar'],rest:['🔥','Descanso','Recupera 1 vida (si está llena, mejora)'],boss:['👑','Jefe','Jefe del piso · 1 mejora']};
+function boonCard(b,i){ const f=G.boonInfo(b); return `<button class="mcard bcard" data-act="towerPick" data-k="${i}"><div class="ctrl" style="justify-content:space-between"><b>${f.name}</b><span class="pill">${f.kind}</span></div><span class="s">${f.desc}</span></button>` }
+function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of TC.rewards) if(f%r.every===0) return {f,b:r.b} })();
+  let body='';
+  if(!run) body=`<p class="hint">Entras con tu héroe. En cada piso eliges camino; al ganar eliges una mejora (pasiva, objeto o hechizo de cualquier clase) que se suma a lo tuyo durante la partida. ${TC.lives} vidas: si pierdes un combate repites el piso.</p>
+      <button class="btn gold" data-act="towerStart">Empezar partida</button>`;
+  else if(run.lives<=0) body=`<p class="hint">Te quedaste sin vidas en el piso ${run.floor}.</p><div class="ctrl"><button class="btn gold" data-act="towerLife" ${G.tokens()>=TC.lifeCost?'':'disabled'}>+1 vida · ${TC.lifeCost} tokens</button><button class="btn" data-act="towerQuit">Terminar partida</button></div>`;
+  else if(run.pick) body=`<p class="hint">Elige una mejora:</p><div class="mlist">${run.pick.map(boonCard).join('')||'<p class="hint">No quedan mejoras nuevas.</p>'}</div>${run.pick.length?'':'<button class="btn gold" data-act="towerPick" data-k="0">Seguir</button>'}`;
+  else body=`<p class="hint">Elige camino:</p><div class="mlist">${run.nodes.map((k,i)=>{ const N=NODE[k]; return `<button class="mcard mbig" data-act="towerGo" data-k="${i}"><div class="ctrl" style="justify-content:space-between"><b>${N[0]} ${N[1]}</b></div><span class="s">${N[2]}</span></button>` }).join('')}</div>`;
+  const boons=run&&run.boons.length?`<div class="tchips">${run.boons.map(b=>{ const f=G.boonInfo(b); return `<span class="pill" title="${esc(f.desc)}">${f.name}</span>` }).join('')}</div>`:'';
+  return `<section class="panel"><h3>Torre</h3><div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Vidas</span><b>${run?'♥'.repeat(Math.max(0,run.lives))||'0':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
+    ${body}${boons}${run&&run.lives>0&&!G.inEvent()?'<button class="btn sm" data-act="towerQuit">Abandonar partida</button>':''}
+    <p class="hint">Premios (la 1.ª vez que llegas): cofre de madera cada 5 pisos, de plata cada 25 y de modo cada 50. Siguiente: piso ${nxt.f} · ${bundleHTML(nxt.b)}</p></section>` }
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
@@ -532,9 +549,11 @@ function tabEv(){
     return `<section class="panel"><h3>Modos</h3><div class="mlist">
       ${big('campana','Campaña','Normal · Pesadilla · Infierno',`<span class="pill" style="color:var(--gold)">${M.name} · fase ${S.best}/${CFG.phaseCap}</span>`)}
       ${big('eventos','Eventos','Mazmorra · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
+      ${big('torre','Torre','Roguelike: elige caminos y combina mejoras de todas las clases',(r=>r?`<span class="pill" style="color:var(--gold)">Piso ${r.floor} · ♥ ${r.lives}</span>`:`<span class="pill">Récord ${G.towerState().best}</span>`)(G.towerState().run))}
       ${big('pvp','PvP','Tutorial · Buscar partida','<span class="pill">Próximamente</span>')}
     </div></section>` }
   if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div><p class="hint">Cada modo tiene ${CFG.phaseCap} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p></section>`;
+  if(modView==='torre') return back+tabTower();
   if(modView==='pvp') return `${back}<section class="panel"><h3>PvP</h3><div class="mlist">
       <button class="mcard mbig" data-act="pvpSoon"><div class="ctrl" style="justify-content:space-between"><b>Tutorial</b><span class="pill">Próximamente</span></div><span class="s">Aprende a combatir contra otros jugadores</span></button>
       <button class="mcard mbig" data-act="pvpSoon"><div class="ctrl" style="justify-content:space-between"><b>Buscar partida</b><span class="pill">Próximamente</span></div><span class="s">Lucha contra otro jugador</span></button>
@@ -822,6 +841,12 @@ const ACT={
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
   misView:b=>{ misView=b.dataset.v; renderTab() },
   calOpen:()=>calModal(),
+  towerStart:()=>{ G.towerStart(); renderTab() },
+  towerQuit:()=>showModal(`<h3>¿Terminar la partida?</h3><p class="hint">Pierdes las mejoras de esta partida. El récord y los premios se quedan.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="towerQuitYes">Terminar</button></div>`),
+  towerQuitYes:()=>{ G.towerAbandon(); closeModal(); renderTab() },
+  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast('Descansas: +1 vida'); if(G.inEvent()){ tab='up'; } renderTab() },
+  towerPick:(b,k)=>{ if(G.towerPick(+k)) haptic('ok'); closeModal(); renderTab() },
+  towerLife:()=>{ if(G.towerBuyLife()){ toast('+1 vida'); renderTab() } else toast('Tokens insuficientes') },
   wheelOpen:()=>wheelModal(),
   wheelSpin:()=>wheelGo(false),
   wheelAd:()=>playAd(()=>wheelGo(true)),
