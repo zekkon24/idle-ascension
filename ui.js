@@ -599,11 +599,11 @@ function renderMis(force){
     body=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${P.lvl}/${L}</b><span class="s">Quedan ${P.daysLeft} días</span></div>
       <div class="rbar"><i style="width:${P.lvl>=L?100:P.into/P.need*100}%;background:var(--gold)"></i></div><span class="s">${P.lvl>=L?'¡Pase completo!':P.into+'/'+P.need+' XP · las misiones dan XP'}</span>
       ${P.prem?'':`<div class="chest offer"><div><div class="cn">Pase de pago</div><div class="s">Desbloquea la columna dorada de esta temporada</div></div><div class="acts">${payBtn('pass',CFG.stars.pass.stars,'data-act="devPass"')}</div></div>`}
+      <button class="btn gold" data-act="passAll" ${G.passReady()?'':'disabled'}>Reclamar todo (${G.passReady()})</button>
       <div class="prow ph"><span class="pl">Nv</span><div class="pc">Gratis</div><div class="pc">De pago</div></div>
-      <div class="plist">${rows.join('')}</div>
-      <button class="btn gold" data-act="passAll" ${G.passReady()?'':'disabled'}>Recoger todo (${G.passReady()})</button>`; }
+      <div class="plist">${rows.join('')}</div>`; }
   const html=`<h3>Misiones</h3>${chips}<div id="misBox" class="mlist">${body}</div><button class="btn" data-act="misClose">Cerrar</button>`;
-  if($('#misBox')&&modalOpen()) setHTML($('#modal .box'),html); else showModal(html);
+  if($('#misBox')&&modalOpen()) setHTML($('#modal .box'),withX(html)); else showModal(html);
 }
 const adTimerOn=()=>adTimer!==null;
 function boostModal(){
@@ -753,7 +753,10 @@ function renderSelect(){
 }
 
 /* ---------- modal y avisos ---------- */
-function showModal(html){$('#modal').innerHTML=`<div class="modal"><div class="box" role="dialog" aria-modal="true">${html}</div></div>`; const f=$('#modal .box button.gold')||$('#modal .box button'); if(f&&!reduceMotion()) f.focus({preventScroll:true})}
+// Ventanas: el botón "Cerrar" se cambia por una cruz arriba a la derecha (con la misma acción)
+function withX(html){ let act=null; html=html.replace(/<button class="btn[^"]*" data-act="([^"]+)"[^>]*>Cerrar<\/button>/,(m,a)=>{act=a;return ''}).replace(/<div class="ctrl"><\/div>/,'');
+  return act?`<button class="xclose" data-act="${act}" aria-label="Cerrar">✕</button>`+html:html }
+function showModal(html){$('#modal').innerHTML=`<div class="modal"><div class="box" role="dialog" aria-modal="true">${withX(html)}</div></div>`; const f=$('#modal .box button.gold')||$('#modal .box button:not(.xclose)'); if(f&&!reduceMotion()) f.focus({preventScroll:true})}
 function closeModal(){$('#modal').innerHTML=''; if(modalQ.length) setTimeout(drainQ,150)}
 // Avisos que no deben pisar otra ventana (fin del evento, tiempo sin conexión): esperan su turno
 const modalQ=[];

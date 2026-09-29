@@ -182,7 +182,9 @@ input[type=number]{width:64px}
 .star{background:none;border:0;padding:8px;margin:-8px -4px;font-size:15px;color:var(--muted)}
 .star.on{color:var(--gold)}
 .modal{position:fixed;inset:0;background:rgba(5,6,10,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
-.modal .box{overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:10px;max-height:85vh;overflow:auto}
+.modal .xclose{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;z-index:2}
+.modal .box h3{padding-right:36px}
+.modal .box{position:relative;overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:10px;max-height:85vh;overflow:auto}
 .modal h3{margin:0;font-family:var(--display);font-size:20px;font-weight:600}
 .loot{display:flex;flex-direction:column;gap:6px}
 .loot div{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:var(--panel2);font-size:13px}
@@ -306,7 +308,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609291151-8fd0581';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609291212-649f215';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
