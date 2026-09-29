@@ -104,13 +104,13 @@ const CFG = {
   // Solo uno activo; cambiarlo cuesta switchCost tokens.
   // fx: números de cada efecto (activo desde el nivel skillLvl del grimorio)
   grimoire:{skillLvl:25, switchCost:250,
-    fx:{fortaleza:{df:0.3,reflect:0.5}, furia:{df:-0.3,atk:0.4}, orden:{atk:0.25}, caos:{min:0,max:3}, cazador:{boss:0.5},
+    fx:{fortaleza:{df:0.3}, furia:{df:-0.3,atk:0.4}, fuego:{pct:0.2,dur:3,cr:0.25}, escarcha:{need:3,mult:2,freeze:2}, cazador:{boss:0.5},
         rebote:{mult:0.7}, veneno:{pct:0.15,dur:5,max:5}, filo:{cd:1.0}, luz:{pct:0.2,every:10}, sacrificio:{cost:0.02,atk:0.5}}, cost:[{goldH:2,ess:2,ev:4},{goldH:4,ess:4,ev:8}], pack:[300,600],
     classes:{
-      Guerrero:[{id:'fortaleza',name:'Grimorio de la Fortaleza',role:'Muro',desc:'+30 % de defensa y devuelve el 50 % del daño que recibe'},
+      Guerrero:[{id:'fortaleza',name:'Grimorio de la Fortaleza',role:'Muro',desc:'+30 % de defensa'},
                 {id:'furia',name:'Grimorio de la Furia',role:'Furia',desc:'−30 % de defensa pero +40 % de daño'}],
-      Mago:[{id:'orden',name:'Grimorio del Orden',role:'Orden',desc:'Daño fiable: sin críticos, pero +25 % de daño siempre'},
-            {id:'caos',name:'Grimorio del Caos',role:'Caos',desc:'Cada golpe hace un daño al azar entre 0 y ×3'}],
+      Mago:[{id:'fuego',name:'Grimorio del Fuego',role:'Fuego',desc:'Sus golpes queman (20 % por s, 3 s); pegar a un enemigo quemado da +25 % de crítico'},
+            {id:'escarcha',name:'Grimorio de la Escarcha',role:'Escarcha',desc:'Ya no quema: clava esquirlas; con 3, hace 200 % y lo congela 2 s (no se mueve ni ataca)'}],
       Arquero:[{id:'cazador',name:'Grimorio del Cazador',role:'Cazador',desc:'+50 % de daño a los jefes'},
                {id:'rebote',name:'Grimorio del Rebote',role:'Rebote',desc:'Sus flechas rebotan y golpean a un enemigo más (70 %)'}],
       Asesino:[{id:'veneno',name:'Grimorio del Veneno',role:'Veneno',desc:'Cada golpe envenena (15 % por s, 5 s); se acumula hasta 5 veces'},
