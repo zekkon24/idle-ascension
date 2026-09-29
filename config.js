@@ -130,10 +130,31 @@ const CFG = {
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
   // × hp0·hpG^(piso−1) de vida y × atk0·atkG^(piso−1) de ataque. Premios la 1.ª vez que llegas a cada piso.
-  tower:{lives:3, lifeCost:50, hp0:0.5, hpG:1.08, atk0:0.6, atkG:1.06, count0:4, countEvery:5, countMax:10, group:3,
+  tower:{lives:3, lifeCost:50, hp0:0.5, hpG:1.12, atk0:0.6, atkG:1.08, count0:4, countEvery:5, countMax:10, group:3,
     elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:2,atk:2}, maxSkills:2,
     nodes:{fight:50,elite:20,treasure:15,rest:15}, // peso de cada tipo de camino
-    rewards:[{every:50,b:{mode:1}},{every:25,b:{silver:1}},{every:5,b:{wood:1}}]},
+    rewards:[{every:50,b:{mode:1}},{every:25,b:{silver:1}},{every:5,b:{wood:1}}],
+    // rareza de las cartas: C común, R rara, L legendaria (las pasivas de camino, objetos y hechizos existentes son legendarias)
+    rarity:{normal:{C:50,R:35,L:15}, better:{C:30,R:45,L:25}},   // better: élite y jefe
+    // mejoras propias de la Torre (las comunes se pueden repetir y se acumulan)
+    fx:{
+      fuerza:{r:'C',name:'Fuerza',desc:'+15 % de daño',atk:0.15},
+      aguante:{r:'C',name:'Aguante',desc:'+20 % de vida máxima (y te cura esa parte)',hp:0.2},
+      rapidez:{r:'C',name:'Rapidez',desc:'+12 % de velocidad de ataque',spd:0.12},
+      precision:{r:'C',name:'Precisión',desc:'+8 % de crítico',cr:0.08},
+      vampiro:{r:'C',name:'Vampiro',desc:'5 % de robo de vida',ls:0.05},
+      aliento:{r:'C',name:'Segundo aliento',desc:'Al ganar cada combate recuperas el 15 % de la vida',heal:0.15},
+      escudo:{r:'R',name:'Escudo inicial',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
+      espinas:{r:'R',name:'Espinas',desc:'Devuelves el 30 % del daño que recibes',reflect:0.3},
+      ejecutor:{r:'R',name:'Ejecutor',desc:'+50 % de daño a enemigos por debajo del 30 % de vida',below:0.3,mult:0.5},
+      recarga:{r:'R',name:'Recarga rápida',desc:'Las habilidades recargan un 25 % más rápido',cd:0.75},
+      cadena:{r:'R',name:'Cadena',desc:'Cada 5.º golpe salta también a otro enemigo',every:5},
+      cristal:{r:'R',name:'Cristal',desc:'+40 % de daño, pero −25 % de vida',atk:0.4,hp:-0.25},
+      furia:{r:'R',name:'Furia sangrienta',desc:'+1 % de daño por cada 1 % de vida que te falta',per:1},
+      explosion:{r:'L',name:'Explosión',desc:'Los enemigos que mueren explotan: 30 % de su vida a los cercanos',pct:0.3},
+      eco:{r:'L',name:'Eco',desc:'Tus hechizos de la Torre se lanzan dos veces'},
+      maestria:{r:'L',name:'Maestría',desc:'Tus pasivas de la Torre son un 50 % más fuertes',mult:1.5},
+      pacto:{r:'L',name:'Pacto',desc:'Pierdes 1 vida de la partida y eliges 2 mejoras más'}}},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
