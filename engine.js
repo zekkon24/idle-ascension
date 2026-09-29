@@ -190,12 +190,28 @@ function createGame(opts){
   const manualSkills=()=>!!(B&&B.event&&!(S.opt&&S.opt.evAuto));
 
   /* ---------- combate ---------- */
+  /* ---------- sorpresas en la campaña y racha ---------- */
+  const STK={n:0}, SUR={next:null,kind:null,until:0};
+  const streakMul=()=>1+Math.min(CFG.streak.max,Math.floor(STK.n/CFG.streak.per)*CFG.streak.pct);
+  const hordeOn=()=>SUR.kind==='horde'&&CT<SUR.until;
+  function surpriseTick(){ const C=CFG.surprise; if(!C||!B||B.event) return;
+    if(SUR.next===null) SUR.next=CT+C.every+(rand()*2-1)*C.jitter;
+    if(SUR.kind&&CT>=SUR.until){ const k=SUR.kind; SUR.kind=null;
+      if(k==='wander'){ const w=B.enemies.find(e=>e.wander&&!e.dead); if(w){ w.dead=true; w.fled=true; emit('surprise',{k:'wanderFled'}); } }
+      else emit('surprise',{k:'hordeEnd'}); }
+    if(SUR.kind||B.boss||CT<SUR.next) return;
+    SUR.next=CT+C.every+(rand()*2-1)*C.jitter;
+    if(rand()<0.5){ SUR.kind='horde'; SUR.until=CT+C.horde.dur; emit('surprise',{k:'horde',dur:C.horde.dur}); }
+    else { const W=C.wander, e=enemyStats(S.fase,S.wave,false), hp=e.hp*perWave(S.fase)*W.hp;
+      B.enemies.push({hp,max:hp,atk:e.atk*W.atk,df:e.df,spawn:B.t,walk:walkT(),arrive:B.t+walkT(),next:B.t+walkT(),first:false,dead:false,wander:true,spd:1});
+      SUR.kind='wander'; SUR.until=CT+W.dur; emit('surprise',{k:'wander',dur:W.dur}); } }
+  const surpriseState=()=>SUR.kind&&CT<SUR.until?{k:SUR.kind,left:SUR.until-CT}:null;
   function startWave(){
     if(B&&B.event) return; // el evento en curso no se interrumpe
     // jefe: al empujar una fase múltiplo de 10; y el de la fase 150 se puede repetir (farmear) una vez vencido
     const boss=(S.wave===10 && S.fase%10===0 && (S.fase===S.best+1 || (S.fase===CAP() && S.best>=CAP())));
     const h=heroStats();
-    B={t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
+    B={t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase)*(hordeOn()?CFG.surprise.horde.count:1),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     const g=boss?1:Math.min(B.count,groupAt(S.fase)); for(let i=0;i<g;i++) spawnEnemy(i*((WV()||{}).gap||0)); emit('wave',B);
   }
   // Embestida: los de cuerpo a cuerpo saltan al enemigo, así que esperan menos a que llegue (× enemy.dash)
@@ -214,6 +230,7 @@ function createGame(opts){
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); }
+    if(!B.event) surpriseTick();
     else if(B.event){ if((CFG.event.dur&&B.t>=CFG.event.dur)||B.t>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
     // curación: lo que de verdad se recupera (Santo: cada curación se convierte en daño en área durante unos segundos)
     // solo la regeneración (Fe) alimenta el aura; lo curado se pasa a la escala antigua (÷ hpK) para que el aura siga pegando igual
@@ -222,7 +239,9 @@ function createGame(opts){
     if(h.regen){ const lit=P&&P.lightMult&&B.t<(B.lightUntil||0); heal(h.regen*(lit?P.lightMult:1)*h.hp*dt,true); }
     const kill=e=>{ if(e.dead) return; e.dead=true; e.deadAt=B.t;
       if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
-      if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return } onKill(); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
+      if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return }
+      if(e.wander){ giveBundle(CFG.surprise.wander.reward); SUR.kind=null; emit('surprise',{k:'wanderWin',reward:CFG.surprise.wander.reward}); }
+      onKill(); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
     if(B.auraPool>0){ const d=B.auraPool*Math.min(1,dt/P.auraDur); B.auraPool-=d;                    // Santo: aura sagrada (en área)
       for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const dd=d*(B.boss?1+h.bd:1); e.hp-=dd; B.auraDmg=(B.auraDmg||0)+dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); if(e.hp<=0) kill(e); } }
     if(P&&P.burnPct) for(const e of B.enemies){ // Archimago: quemaduras (cada acumulación hace burnPct del daño por segundo)
@@ -315,7 +334,7 @@ function createGame(opts){
         if(rand()>=h.ev){ let d=dmgF(e.atk,h.df*buffMul('df'))*h.dmgTaken*buffMul('taken');
           if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad
           if(BUF.gshield>0){ const a=Math.min(BUF.gshield,d); BUF.gshield-=a; d-=a; }    // escudo del Grimorio de la Luz
-          B.hp-=d; emit('heroHit',{d});
+          B.hp-=d; emit('heroHit',{d}); if(!B.event&&STK.n){ STK.n=0; emit('streak',{n:0}); }
           { const rf=buffAdd('reflect'); if(rf>0){ const r=d*rf/h.hpK; e.hp-=r; B.mD+=r; if(B.kind==='boss') addDmg(r); emit('hit',{e,d:r,crit:false,thorns:true}); if(e.hp<=0) kill(e); } }   // Baluarte: devuelve daño
           if(CT<(BUF.iceArmor||0)&&!e.dead&&(e.shards=(e.shards||0)+(BUF.iceShards||1))>=CFG.grimoire.fx.escarcha.need){ const F=CFG.grimoire.fx.escarcha; e.shards=0;   // Armadura de hielo: esquirla al que pega
             const x=dmgF(h.atk,e.df*(1-F.ignoreDf))*F.mult*(B.boss?1+h.bd:1); e.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); e.frozen=B.t+F.freeze; emit('hit',{e,d:x,crit:false,frost:true}); if(e.hp<=0) kill(e); }
@@ -334,7 +353,8 @@ function createGame(opts){
   function onKill(){
     if(!S.daily||S.daily.d!==dayKey()) daily(); S.kills++;   // el día de las misiones empieza con el primer enemigo
     const m=B.boss?CFG.econ.bossGold:3/B.count; // el oro por oleada no sube con más enemigos
-    const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales y cofres)
+    STK.n++; if(STK.n%CFG.streak.per===0) emit('streak',{n:STK.n});
+    const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1)*streakMul()*(hordeOn()?CFG.surprise.horde.gold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales y cofres)
     addXp(xpAt(S.fase)*m*heroStats().xpMult);
   }
   // DPS medido: en oleadas normales (sin jefe ni evento) se compara el daño real (golpes, quemaduras, aura…) con el de la
@@ -828,6 +848,11 @@ function createGame(opts){
   // bonus por completar todas: diarias (missions.bonus) y semanales (missions.weekly.bonus); una vez por día / semana
   const bonusState=kind=>{ const box=kind==='week'?weekly():daily(), L=kind==='week'?weekMissions():missions(); return {can:L.every(m=>m.claimed)&&!box.bonus,got:!!box.bonus,b:kind==='week'?CFG.missions.weekly.bonus:CFG.missions.bonus} };
   function claimBonus(kind){ const st=bonusState(kind); if(!st.can) return null; (kind==='week'?weekly():daily()).bonus=true; giveBundle(st.b); track('misBonus',{kind}); save(); emit('change'); return st.b }
+  // ruleta diaria: 1 tirada gratis + 1 con anuncio por día
+  function wheelState(){ const d=dayKey(); if(!S.wheel||S.wheel.d!==d) S.wheel={d,free:false,ad:false}; return {free:!S.wheel.free,ad:!S.wheel.ad,list:CFG.wheel} }
+  function spinWheel(viaAd){ const st=wheelState(); if(viaAd?!st.ad:!st.free) return null; if(viaAd){ S.wheel.ad=true; addAd(); } else S.wheel.free=true;
+    const L=CFG.wheel, tot=L.reduce((a,x)=>a+x.w,0); let r=rand()*tot, i=0; for(;i<L.length-1;i++){ r-=L[i].w; if(r<0) break; }
+    giveBundle(L[i].b); track('wheel',{i,ad:!!viaAd}); save(); emit('change'); return {i,b:L[i].b} }
   const weeklyReady=()=>weekMissions().filter(m=>m.done&&!m.claimed).length+(bonusState('week').can?1:0);
   function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1) }
   function missions(){ const D=daily(); return CFG.missions.list.map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
@@ -883,7 +908,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

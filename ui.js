@@ -77,6 +77,8 @@ G.on('mode',({name})=>{ upOpen=false; showModal(`<h3>Modo ${name}</h3><p class="
 G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase));
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{fx.shots.length=0});
+G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
+  else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
 G.on('eventStart',()=>{fx.shots.length=0; fx.floats.length=0});
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
@@ -112,7 +114,7 @@ function renderShell(){
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
     <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
-  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="calBtn" data-act="calOpen" aria-label="Calendario" title="Calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><i class="lootn" id="calN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><button class="calbtn" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg><i class="lootn" id="grimN" hidden>!</i></button><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div><span class="boosttime" id="boostTime" hidden></span></div>
+  <div id="battle" class="battle"><div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="calBtn" data-act="calOpen" aria-label="Calendario" title="Calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><i class="lootn" id="calN" hidden>!</i></button><button class="calbtn" id="wheelBtn" data-act="wheelOpen" aria-label="Ruleta diaria" title="Ruleta diaria"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg><i class="lootn" id="wheelN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><button class="calbtn" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg><i class="lootn" id="grimN" hidden>!</i></button><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div><span class="boosttime" id="boostTime" hidden></span></div>
   <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
     <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
     </div>
@@ -126,11 +128,11 @@ function updateHUD(){
   const ev=G.inEvent();
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   setHTML($('#faseTxt'),ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
-    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}`);
+    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):''; // (sin "Avanzando"/"Farmeando")
-  tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':'');
+  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
+  tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
   // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
@@ -138,6 +140,7 @@ function updateHUD(){
     gb.hidden=!shown; gb.classList.toggle('on',evoNow); gb.dataset.act=evoNow?'evoOpen':'grimOpen'; gb.setAttribute('aria-label',evoNow?'Evolucionar':'Grimorio'); $('#grimN').hidden=!evoNow; }
   const es=$('#evoSlot'); if(es){ const soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(); setHTML(es,soon&&!ev?'<span class="pill">Evolución: próximamente</span>':''); }
   const cb=$('#calBtn'); if(cb){ cb.hidden=ev; $('#calN').hidden=!G.calState().can; }
+  const wb=$('#wheelBtn'); if(wb){ wb.hidden=ev; const w=G.wheelState(); $('#wheelN').hidden=!w.free; }
   const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
   $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#hpTxt').textContent=fmt(Math.ceil(hpv));
   $('#xpBar').style.width=xpp+'%'; $('#xpTxt').textContent=Math.floor(xpp)+' %';
@@ -625,6 +628,16 @@ function tabMis(){ const P=G.passState();
     body=`<p class="hint">Invita a tus amigos: tu amigo recibe ${R.giftSilver} cofre de plata y tú ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}.</p>${inv||'<p class="hint">Para invitar, abre el juego desde Telegram.</p>'}`; }
   return `<section class="panel"><h3>Misiones</h3>${chips}<div id="misBox" class="mlist">${body}</div></section>` }
 const misBadge=()=>G.missionsReady()+G.weeklyReady()+G.passReady();
+// Ruleta diaria: tirada gratis + tirada con anuncio; resalta el premio que toca
+function wheelModal(hit){ const W=G.wheelState(), tot=W.list.reduce((a,x)=>a+x.w,0);
+  showModal(`<h3>Ruleta diaria</h3><div class="wheelg">${W.list.map((x,i)=>`<div class="wcell${hit===i?' hit':''}"><b>${bundleHTML(x.b)}</b><span class="s">${Math.round(x.w/tot*100)} %</span></div>`).join('')}</div>
+    <div class="ctrl"><button class="btn gold" data-act="wheelSpin" ${W.free?'':'disabled'}>${W.free?'Girar gratis':'Gratis: mañana'}</button><button class="btn" data-act="wheelAd" ${W.ad?'':'disabled'}>${W.ad?'Girar con anuncio':'Anuncio: mañana'}</button></div>
+    <p class="hint">Una tirada gratis al día y otra viendo un anuncio.</p><button class="btn" data-act="close">Cerrar</button>`) }
+function wheelGo(viaAd){ const r=G.spinWheel(viaAd); if(!r) return; const L=G.wheelState().list.length; let i=0, n=L*2+r.i;
+  if(!$('#modal .wcell')) wheelModal();   // (tras el anuncio se vuelve a abrir la ruleta)
+  if(reduceMotion()){ wheelModal(r.i); toast('Ruleta: '+bundleTxt(r.b)); return }
+  const tick=()=>{ document.querySelectorAll('#modal .wcell').forEach((c,j)=>c.classList.toggle('hit',j===i%L)); if(i++<n) setTimeout(tick,40+i*6); else { haptic('ok'); wheelModal(r.i); toast('Ruleta: '+bundleTxt(r.b)); updateHUD(); } };
+  document.querySelectorAll('#modal .ctrl button').forEach(b=>b.disabled=true); tick(); }
 // Calendario: icono en el combate; ventana con los 7 días
 function calModal(){ const C=G.calState();
   showModal(`<h3>Calendario</h3><div class="calg">${C.list.map((b,i)=>{ const d=i+1, got=d<C.day||(d===C.day&&!C.can), now=d===C.day&&C.can;
@@ -808,6 +821,9 @@ const ACT={
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
   misView:b=>{ misView=b.dataset.v; renderTab() },
   calOpen:()=>calModal(),
+  wheelOpen:()=>wheelModal(),
+  wheelSpin:()=>wheelGo(false),
+  wheelAd:()=>playAd(()=>wheelGo(true)),
   misBonus:(b,k)=>{ const r=G.claimBonus(k); if(r){ haptic('ok'); toast('Bonus: '+bundleTxt(r)); } renderTab() },
   weekClaim:(b,k)=>{ if(G.claimWeekly(k)){ haptic('light'); { const m=CFG.missions.weekly.list.find(x=>x.k===k); toast(bundleTxt(m.rew||{})+(Object.keys(m.rew||{}).length?' + ':'')+(m.xp||CFG.missions.weekly.xp)+' XP del pase'); } } renderTab() },
   misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast(bundleTxt(CFG.missions.list.find(x=>x.k===k).rew||{})+(Object.keys(CFG.missions.list.find(x=>x.k===k).rew||{}).length?' + ':'')+CFG.missions.xp+' XP del pase'); } renderTab() },

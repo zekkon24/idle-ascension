@@ -122,6 +122,14 @@ const CFG = {
   stars:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/pay', perToken:0.5,
     first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez
     pass:{stars:250}},
+  // Sorpresas en la campaña (cada every±jitter s de combate; no en jefes ni eventos): Horda (dur s, enemigos ×count, oro ×gold)
+  // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
+  surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,hp:1.5,atk:1.5,reward:{silver:1}}},
+  // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
+  streak:{per:10, pct:0.01, max:0.25},
+  // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
+  wheel:[{b:{gold:30},w:20},{b:{gold:60},w:15},{b:{gold:180},w:6},{b:{wood:1},w:15},{b:{wood:2},w:10},{b:{wood:3},w:5},
+    {b:{silver:1},w:8},{b:{ticket:1},w:6},{b:{ess:1},w:5},{b:{ev:3},w:8},{b:{mode:1},w:2}],
   shopTab:false, // pestaña Tienda: oculta hasta tener el juego casi terminado (su contenido sigue en el código)
   startWeapon:'C',
   // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube
