@@ -522,12 +522,14 @@ function createGame(opts){
     for(let i=0;i<n;i++){ let r=rand()*w.reduce((a,b)=>a+b,0), j=0; for(;j<types.length-1;j++){ r-=w[j]; if(r<0) break; } out.push(types[j]); }
     if(!out.some(t=>t==='fight'||t==='elite')) out[0]='fight'; return out }
   function towerState(){ S.tower=S.tower||{best:0,run:null,got:0}; return S.tower }
-  function towerStart(){ if(inEvent()) return false; const T=towerState(); T.run={floor:1,lives:CFG.tower.lives,boons:[],nodes:towerNodes(1),pick:null}; save(); emit('change'); return true }
+  // run.hp: fracción de vida que te queda en la partida (no se cura entre combates; al perder una vida vuelves con la vida llena)
+  function towerStart(){ if(inEvent()) return false; const T=towerState(); T.run={floor:1,lives:CFG.tower.lives,hp:1,boons:[],nodes:towerNodes(1),pick:null}; save(); emit('change'); return true }
   function towerAbandon(){ const T=towerState(); if(inEvent()) return false; T.run=null; save(); emit('change'); return true }
   // elegir camino: combate (normal/élite/jefe) o directo a la recompensa (tesoro/descanso)
   function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k) return false;
     if(k==='treasure'){ run.pick=towerOffer(3); run.after='next'; save(); emit('change'); return {k} }
-    if(k==='rest'){ if(run.lives<CFG.tower.lives) run.lives++; else run.pick=towerOffer(3); run.after='next'; if(!run.pick) towerNext(); save(); emit('change'); return {k} }
+    // descanso: vida al máximo (si ya estaba llena, solo te ahorras el combate)
+    if(k==='rest'){ const full=!(run.hp<1); run.hp=1; towerNext(); save(); emit('change'); return {k,full} }
     towerFight(k); return {k} }
   function towerOffer(n){ const pool=boonPool(), o=[]; while(o.length<n&&pool.length) o.push(pool.splice(Math.floor(rand()*pool.length),1)[0]); return o }
   function towerFight(k){ const T=CFG.tower, run=S.tower.run, f=run.floor, c=normalCurve(Math.max(1,Math.min(S.best||1,CAP())));
@@ -538,10 +540,10 @@ function createGame(opts){
     if(k==='boss') add(1,T.boss.hp*Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery)),T.boss.atk,true);
     else if(k==='elite') add(T.elite.n,T.elite.hp,T.elite.atk);
     else add(Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery)),1,1);
-    statsDirty(); HS=null; B.hp=heroStats().hp; emit('eventStart',B); emit('change') }
-  function towerEnd(won){ const run=S.tower.run, k=B.node; B=null; statsDirty(); let res;
-    if(won){ run.pick=towerOffer(3); run.after='next'; if(k==='elite') run.extra=1; res={won:true,floor:run.floor,k} }
-    else { run.lives--; res={won:false,floor:run.floor,lives:run.lives} }
+    statsDirty(); HS=null; B.hp=heroStats().hp*Math.max(0.01,run.hp==null?1:run.hp); emit('eventStart',B); emit('change') }
+  function towerEnd(won){ const run=S.tower.run, k=B.node, frac=Math.max(0,B.hp/heroStats().hp); B=null; statsDirty(); let res;
+    if(won){ run.hp=Math.min(1,frac); run.pick=towerOffer(3); run.after='next'; if(k==='elite') run.extra=1; res={won:true,floor:run.floor,k,hp:run.hp} }
+    else { run.lives--; run.hp=1; res={won:false,floor:run.floor,lives:run.lives} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
   // elegir mejora (o saltarla si no quedan); después, al siguiente piso
   function towerPick(i){ const run=S.tower&&S.tower.run; if(!run||!run.pick) return false; const b=run.pick[i]; if(b) run.boons.push(b);

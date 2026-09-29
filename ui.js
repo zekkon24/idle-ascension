@@ -521,17 +521,17 @@ const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), 
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 /* ---------- Torre (roguelike) ---------- */
-const NODE={fight:['⚔️','Combate','Enemigos normales · 1 mejora'],elite:['💀','Élite','Pocos y muy duros · 2 mejoras'],treasure:['🎁','Tesoro','Elige una mejora sin luchar'],rest:['🔥','Descanso','Recupera 1 vida (si está llena, mejora)'],boss:['👑','Jefe','Jefe del piso · 1 mejora']};
+const NODE={fight:['⚔️','Combate','Enemigos normales · 1 mejora'],elite:['💀','Élite','Pocos y muy duros · 2 mejoras'],treasure:['🎁','Tesoro','Elige una mejora sin luchar'],rest:['🔥','Descanso','Te curas del todo (si ya estás al máximo, te saltas el combate)'],boss:['👑','Jefe','Jefe del piso · 1 mejora']};
 function boonCard(b,i){ const f=G.boonInfo(b); return `<button class="mcard bcard" data-act="towerPick" data-k="${i}"><div class="ctrl" style="justify-content:space-between"><b>${f.name}</b><span class="pill">${f.kind}</span></div><span class="s">${f.desc}</span></button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of TC.rewards) if(f%r.every===0) return {f,b:r.b} })();
   let body='';
-  if(!run) body=`<p class="hint">Entras con tu héroe. En cada piso eliges camino; al ganar eliges una mejora (pasiva, objeto o hechizo de cualquier clase) que se suma a lo tuyo durante la partida. ${TC.lives} vidas: si pierdes un combate repites el piso.</p>
+  if(!run) body=`<p class="hint">Entras con tu héroe. La vida no se recupera entre combates (solo en los descansos). En cada piso eliges camino; al ganar eliges una mejora (pasiva, objeto o hechizo de cualquier clase) que se suma a lo tuyo durante la partida. ${TC.lives} vidas: si pierdes un combate repites el piso.</p>
       <button class="btn gold" data-act="towerStart">Empezar partida</button>`;
   else if(run.lives<=0) body=`<p class="hint">Te quedaste sin vidas en el piso ${run.floor}.</p><div class="ctrl"><button class="btn gold" data-act="towerLife" ${G.tokens()>=TC.lifeCost?'':'disabled'}>+1 vida · ${TC.lifeCost} tokens</button><button class="btn" data-act="towerQuit">Terminar partida</button></div>`;
   else if(run.pick) body=`<p class="hint">Elige una mejora:</p><div class="mlist">${run.pick.map(boonCard).join('')||'<p class="hint">No quedan mejoras nuevas.</p>'}</div>${run.pick.length?'':'<button class="btn gold" data-act="towerPick" data-k="0">Seguir</button>'}`;
   else body=`<p class="hint">Elige camino:</p><div class="mlist">${run.nodes.map((k,i)=>{ const N=NODE[k]; return `<button class="mcard mbig" data-act="towerGo" data-k="${i}"><div class="ctrl" style="justify-content:space-between"><b>${N[0]} ${N[1]}</b></div><span class="s">${N[2]}</span></button>` }).join('')}</div>`;
   const boons=run&&run.boons.length?`<div class="tchips">${run.boons.map(b=>{ const f=G.boonInfo(b); return `<span class="pill" title="${esc(f.desc)}">${f.name}</span>` }).join('')}</div>`:'';
-  return `<section class="panel"><h3>Torre</h3><div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Vidas</span><b>${run?'♥'.repeat(Math.max(0,run.lives))||'0':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
+  return `<section class="panel"><h3>Torre</h3><div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Vidas</span><b>${run?'♥'.repeat(Math.max(0,run.lives))||'0':'–'}</b></div><div><span class="s">Salud</span><b>${run?Math.round((run.hp==null?1:run.hp)*100)+' %':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
     ${body}${boons}${run&&run.lives>0&&!G.inEvent()?'<button class="btn sm" data-act="towerQuit">Abandonar partida</button>':''}
     <p class="hint">Premios (la 1.ª vez que llegas): cofre de madera cada 5 pisos, de plata cada 25 y de modo cada 50. Siguiente: piso ${nxt.f} · ${bundleHTML(nxt.b)}</p></section>` }
 function tabEv(){
@@ -844,7 +844,7 @@ const ACT={
   towerStart:()=>{ G.towerStart(); renderTab() },
   towerQuit:()=>showModal(`<h3>¿Terminar la partida?</h3><p class="hint">Pierdes las mejoras de esta partida. El récord y los premios se quedan.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="towerQuitYes">Terminar</button></div>`),
   towerQuitYes:()=>{ G.towerAbandon(); closeModal(); renderTab() },
-  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast('Descansas: +1 vida'); if(G.inEvent()){ tab='up'; } renderTab() },
+  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Descansas: te saltas el combate':'Descansas: vida al máximo'); if(G.inEvent()){ tab='up'; } renderTab() },
   towerPick:(b,k)=>{ if(G.towerPick(+k)) haptic('ok'); closeModal(); renderTab() },
   towerLife:()=>{ if(G.towerBuyLife()){ toast('+1 vida'); renderTab() } else toast('Tokens insuficientes') },
   wheelOpen:()=>wheelModal(),
