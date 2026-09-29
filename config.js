@@ -88,22 +88,23 @@ const CFG = {
   tokens:{perUsd:100, open:true, packs:[100,500,1000,2500], bonus:{500:25,1000:100,2500:500}, keep:0.3, withdraw:{fee:0.15, min:100}}, // retiro: solo en pruebas locales (desactivado en Telegram)
   // Misiones diarias (se renuevan cada día): cada una da oro (minutos de farmeo de tu récord) y experiencia del pase
   missions:{list:[
-      // ch: cofres de premio según lo difícil que es (madera las fáciles, plata las que piden eventos o anuncios)
-      {k:'kills',n:300,t:'Derrota 300 enemigos',ch:{wood:1}},
-      {k:'chests',n:5,t:'Abre 5 cofres',ch:{wood:1}},
-      {k:'upgrade',n:10,t:'Compra 10 mejoras',ch:{wood:1}},
-      {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal',ch:{silver:1}},
-      {k:'ad',n:5,t:'Mira 5 anuncios',ch:{silver:1}}],
-    goldMin:10, xp:20, bonus:{gold:60,silver:1,wood:2}, // bonus: al recoger todas las diarias del día (gold = minutos de farmeo)
-    // Misiones semanales (de lunes a domingo): cada una da oro de goldMin minutos + xp del pase (o los suyos propios)
+      // rew: premio de cada misión (gold = minutos de farmeo de tu récord). Entre todas: oro de 3 h, 3 madera, 1 plata (la de anuncios), 1 ticket.
+      // La más fácil (enemigos) solo da XP del pase. Todas dan xp del pase.
+      {k:'kills',n:300,t:'Derrota 300 enemigos',rew:{}},
+      {k:'chests',n:5,t:'Abre 5 cofres',rew:{gold:60,wood:1}},
+      {k:'upgrade',n:10,t:'Compra 10 mejoras',rew:{gold:60,wood:1}},
+      {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal',rew:{gold:60,wood:1,ticket:1}},
+      {k:'ad',n:5,t:'Mira 5 anuncios',rew:{silver:1}}],
+    xp:20, bonus:{gold:60,silver:1,wood:2}, // bonus: al recoger todas las diarias del día
+    // Misiones semanales (de lunes a domingo). Entre todas: oro de 6 h, 5 madera, 2 plata (la de anuncios), 1 ticket.
     weekly:{list:[
-      {k:'kills',n:5000,t:'Derrota 5.000 enemigos',ch:{silver:2}},
-      {k:'chests',n:25,t:'Abre 25 cofres',ch:{silver:2}},
-      {k:'upgrade',n:60,t:'Compra 60 mejoras',ch:{silver:2}},
-      {k:'event',n:5,t:'Juega 5 veces la Mazmorra o el Jefe semanal',ch:{silver:3}},
-      {k:'alldays',n:7,t:'Completa todas las misiones diarias cada día',goldMin:180,xp:120,ch:{silver:5}},   // la que más da (un día cuenta al recoger las 5 diarias)
-      {k:'ad',n:30,t:'Mira 30 anuncios',ch:{silver:3}}],
-      goldMin:60, xp:40, bonus:{gold:120,silver:3}}}, // bonus: al recoger todas las semanales
+      {k:'kills',n:5000,t:'Derrota 5.000 enemigos',rew:{}},
+      {k:'chests',n:25,t:'Abre 25 cofres',rew:{gold:70,wood:1}},
+      {k:'upgrade',n:60,t:'Compra 60 mejoras',rew:{gold:70,wood:1}},
+      {k:'event',n:5,t:'Juega 5 veces la Mazmorra o el Jefe semanal',rew:{gold:70,wood:1}},
+      {k:'alldays',n:7,t:'Completa todas las misiones diarias cada día',xp:120,rew:{gold:150,wood:2,ticket:1}},   // la que más da (un día cuenta al recoger las 5 diarias)
+      {k:'ad',n:30,t:'Mira 30 anuncios',rew:{silver:2}}],
+      xp:40, bonus:{gold:120,silver:3}}}, // bonus: al recoger todas las semanales
   // Calendario de 7 días: un premio por cada día que entras (no hace falta seguidos); tras el 7.º vuelve a empezar
   calendar:[{gold:30,wood:2},{silver:2},{ess:1,wood:2},{silver:3},{ev:2,wood:3},{silver:5},{mode:1}],
   // Pase de temporada: 30 días, 50 niveles de 85 XP (diarias 100 XP/día + semanales 320 XP/semana ≈ nivel 50 hacia el día 29).

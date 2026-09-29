@@ -598,7 +598,7 @@ const bundleHTML=b=>Object.entries(b).map(([k,v])=>k==='gold'?rw(ICON.gold,v+' m
   :k==='item'?`<span class="rw" style="color:var(--r${v})">Arma ${CFG.rarName[v]}</span>`:`<span class="rw">${RN[k]}${v>1?' ×'+v:''}</span>`).join(' ');
 // Pestaña Misiones: Diarias · Semanal · Pase · Socios (el calendario va aparte, en su icono del combate)
 function misKeyNow(){ const P=G.passState(); return misView+JSON.stringify([G.bonusState('day'),G.bonusState('week'),G.missions().map(m=>[m.prog,m.claimed]),G.weekMissions().map(m=>[m.prog,m.claimed]),P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,window.Telemetry&&Telemetry.refs]) }
-const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · ${bundleHTML({gold:m.goldMin||M.goldMin,...(m.ch||{})})} + ${m.xp||M.xp} XP del pase</span></div>
+const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · ${bundleHTML(m.rew||{})} ${m.xp||M.xp} XP del pase</span></div>
       ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="${act}" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('');
 function tabMis(){ const P=G.passState();
   const chips=`<div class="fchips">${[['dia','Diarias',G.missionsReady()],['sem','Semanal',G.weeklyReady()],['pass','Pase',G.passReady()],['soc','Socios',0]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
@@ -804,8 +804,8 @@ const ACT={
   misView:b=>{ misView=b.dataset.v; renderTab() },
   calOpen:()=>calModal(),
   misBonus:(b,k)=>{ const r=G.claimBonus(k); if(r){ haptic('ok'); toast('Bonus: '+bundleTxt(r)); } renderTab() },
-  weekClaim:(b,k)=>{ if(G.claimWeekly(k)){ haptic('light'); toast('+ oro y '+(CFG.missions.weekly.list.find(x=>x.k===k).xp||CFG.missions.weekly.xp)+' XP del pase'); } renderTab() },
-  misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast('+ oro y '+CFG.missions.xp+' XP del pase'); } renderTab() },
+  weekClaim:(b,k)=>{ if(G.claimWeekly(k)){ haptic('light'); { const m=CFG.missions.weekly.list.find(x=>x.k===k); toast(bundleTxt(m.rew||{})+(Object.keys(m.rew||{}).length?' + ':'')+(m.xp||CFG.missions.weekly.xp)+' XP del pase'); } } renderTab() },
+  misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast(bundleTxt(CFG.missions.list.find(x=>x.k===k).rew||{})+(Object.keys(CFG.missions.list.find(x=>x.k===k).rew||{}).length?' + ':'')+CFG.missions.xp+' XP del pase'); } renderTab() },
   calClaim:()=>{ const r=G.calState().day, b=G.claimCal(); if(b){ haptic('ok'); toast('Día '+r+': '+bundleTxt(b)); } calModal(); updateHUD(); if(b) notifyOffer() },
   notifyYes:()=>{ closeModal(); askNotify() },
   notifyAsk:()=>askNotify(),
