@@ -92,6 +92,8 @@ const CFG = {
     wall:{stars:100, t:'Rompe el muro', b:{mode:3,silver:10}, hours:4},
     evo:{stars:100, t:'Pack de evolución', b:{ess:3,ev:12}},
     inv:{stars:100, t:'Inventario +25', inv:25, max:2}},
+  // Comprar tokens con TON / USDT (función "crypto"; sin retiros). on:true cuando el secreto TON_ADDRESS esté puesto en Supabase.
+  crypto:{on:false, url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/crypto', manifest:'https://zekkon24.github.io/idle-ascension/tonconnect-manifest.json'},
   // Pagos con Telegram Stars (función "pay" del servidor; el precio que manda es el del servidor). 100 tokens = 50 Stars.
   stars:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/pay', perToken:0.5,
     first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez

@@ -406,6 +406,7 @@ const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverCost(n))} oro`:`${fmt(G.shop
 const tokOpen=()=>!!(CFG.devTools||CFG.tokens.open||G.tokens()>0);
 const soon='<span class="pill">Próximamente</span>';
 // Botón de pago con Stars: en Telegram abre la factura; en local (pruebas) usa el botón de prueba 'dev'
+let payCoin='stars';   // pestaña Tokens: pagar con Stars, TON o USDT
 const canPay=()=>!!(window.Telemetry&&Telemetry.canPay(CFG));
 function payBtn(item,stars,dev){ return canPay()?`<button class="btn sm gold" data-act="starBuy" data-k="${item}">${fmt(stars)} ⭐</button>`
   :CFG.devTools&&dev?`<button class="btn sm gold" ${dev}>${fmt(stars)} ⭐ (prueba)</button>`:'<span class="pill">Solo en Telegram</span>' }
@@ -429,11 +430,14 @@ function tabShop(){
   const head=`<div class="fchips" role="tablist">${[['cofres','Cofres'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
   let body='';
   if(shopView==='cofres') body=offerRows()+shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket')+shopRow('ess')+shopRow('ev');
+  const crypto=window.TonPay&&TonPay.on(CFG); if(!crypto) payCoin='stars';
   if(shopView==='tokens') body=`<div class="loot"><div><span>Tus tokens</span><b>${fmt(G.tokens())}</b></div></div>
-    ${firstOfferRow()}
-    ${CFG.tokens.packs.map(n=>{ const bn=(CFG.tokens.bonus||{})[n]||0; return `<div class="chest${bn?' deal':''}"><div><div class="cn">${fmt(n+bn)} tokens${bn?` <span class="pill" style="color:var(--good);white-space:nowrap;vertical-align:3px">+${Math.round(bn/n*100)} %</span>`:''}</div>${bn?`<div class="s">${fmt(n)} + ${fmt(bn)} de regalo</div>`:''}</div><div class="acts">${payBtn('t'+n,n*CFG.stars.perToken,`data-act="tokBuy" data-k="${n}"`)}</div></div>` }).join('')}
+    ${crypto?`<div class="ctrl" style="justify-content:space-between"><span class="s">Pagar con</span><div class="fchips">${[['stars','⭐ Stars'],['TON','TON'],['USDT','USDT']].map(([v,l])=>`<button data-act="payCoin" data-v="${v}" aria-pressed="${payCoin===v}">${l}</button>`).join('')}</div></div>`:''}
+    ${payCoin==='stars'?firstOfferRow():''}
+    ${CFG.tokens.packs.map(n=>{ const bn=(CFG.tokens.bonus||{})[n]||0; return `<div class="chest${bn?' deal':''}"><div><div class="cn">${fmt(n+bn)} tokens${bn?` <span class="pill" style="color:var(--good);white-space:nowrap;vertical-align:3px">+${Math.round(bn/n*100)} %</span>`:''}</div>${bn?`<div class="s">${fmt(n)} + ${fmt(bn)} de regalo</div>`:''}</div><div class="acts">${payCoin==='stars'?payBtn('t'+n,n*CFG.stars.perToken,`data-act="tokBuy" data-k="${n}"`):`<button class="btn sm gold" data-act="cryptoBuy" data-k="t${n}">${usd(n)} en ${payCoin}</button>`}</div></div>` }).join('')}
     ${CFG.devTools?`<div class="ctrl"><button class="btn sm" data-act="wdAsk" ${S.won>=CFG.tokens.withdraw.min?'':'disabled'}>Retirar ganados (prueba)</button></div>`:''}
-    <p class="hint">Se pagan con Telegram Stars ⭐.</p>`;
+    <p class="hint">${payCoin==='stars'?'Se pagan con Telegram Stars ⭐.':`Se paga con tu cartera (Telegram Wallet, Tonkeeper…) en la red TON. El precio en ${payCoin==='TON'?'TON se fija al cambio del momento':'USDT es en dólares'}. Llega en 1-2 min.`}</p>
+    ${crypto?'<div class="ctrl"><button class="btn sm" data-act="cryptoCheck">¿Pagaste y no llegó? Comprobar</button></div>':''}`;
   if(shopView==='subs') body=`
     <div class="chest"><div><div class="cn">Tarjeta mensual</div><div class="s">+${Math.round(CFG.cardGold*100)} % oro · 30 días${G.hasCard()?' · quedan '+(S.cardUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="card">${fmt(CFG.cardPrice)} tokens</button>`:soon}</div></div>
     <div class="chest"><div><div class="cn">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button>`:soon}</div></div>`;
@@ -812,6 +816,15 @@ const ACT={
       if(st==='paid') toast('¡Pago hecho! Recibiendo tu compra…'); else if(st==='done') toast('Ya lo compraste'); else if(st==='error') toast('No se pudo abrir el pago. Prueba otra vez.'); }) },
   devOffer:(b,k)=>{ if(!CFG.devTools) return; closeModal(); G.applyRewards([{kind:'offer_'+k,amount:1,reason:'stars:offer_'+k}]); toast('Oferta (prueba)'); renderTab() },
   devFirst:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'first',amount:1,reason:'stars:first'}]); toast('Oferta de bienvenida (prueba)'); renderTab() },
+  payCoin:b=>{ payCoin=b.dataset.v; renderTab() },
+  cryptoBuy:(b,k)=>{ const coin=payCoin; b.disabled=true;
+    showModal(`<h3>Pago con ${coin}</h3><p class="hint" id="cryptoSt">Un momento…</p><button class="btn" data-act="close">Cerrar</button>`);
+    const st=t=>{ const e=$('#cryptoSt'); if(e) e.textContent=t };
+    TonPay.buy(CFG,k,coin,st).then(r=>{ b.disabled=false;
+      const err={cancel:'Pago cancelado.','tu cartera no tiene USDT':'Tu cartera no tiene USDT.','no tienes USDT suficientes':'No tienes USDT suficientes.',off:'Pagos con crypto: próximamente.',net:'Sin conexión con el servidor. Prueba otra vez.'};
+      if(r.ok){ closeModal(); toast('¡Pago recibido!') } else if(r.pending) st('Tu pago aún no se ha confirmado en la red. Llegará solo; si tarda, toca "Comprobar" en Tokens.');
+      else st(err[r.error]||('No se pudo pagar: '+r.error)) }) },
+  cryptoCheck:b=>{ b.disabled=true; TonPay.check(CFG).then(c=>{ b.disabled=false; toast(c.paid?'¡Pago recibido!':c.pending?'Aún no ha llegado. Prueba en un minuto.':'No hay pagos pendientes.') }) },
   goTokens:()=>{ closeModal(); tab='shop'; shopView='tokens'; renderTab() },
   tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k+((CFG.tokens.bonus||{})[k]||0))} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
