@@ -351,7 +351,7 @@ function tabGrim(){ const GC=CFG.grimoire, P=G.evoPaths(), lv=G.grimLevel();
       <p class="hint">${G.evoLvlOk()?'¡Ya puedes evolucionar y elegir camino!':`Evoluciona al llegar al nivel ${CFG.evo.tiers[0].lvl} y elige camino.`}</p>${G.evoLvlOk()?'<button class="btn gold" data-act="evoOpen">Evolucionar</button>':''}`;
   else top=`<div class="ctrl" style="justify-content:space-between"><b>Camino elegido: ${P[S.path].name}</b></div>
       ${tokOpen()?`<button class="btn" data-act="pathAsk">Cambiar a ${P[S.path==='B'?'A':'B'].name} · ${GC.switchCost} tokens</button>`:''}`;
-  return `<h3>${G.grimName()}</h3>${top}<h3 style="font-size:15px">Los 2 caminos</h3>${pathCard('A',P.A,S.evo>=1&&S.path==='A')}${pathCard('B',P.B,S.evo>=1&&S.path==='B')}` }
+  return `<h3>${G.grimName()}</h3>${top}` }
 let grimOpen=false;
 const showGrim=()=>{ grimOpen=true; showModal(tabGrim()+'<button class="btn" data-act="grimClose">Cerrar</button>') };
 // Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.

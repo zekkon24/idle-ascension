@@ -668,7 +668,7 @@ function createGame(opts){
   function addGoldH(g){ if(!(g>0)||!CFG.league) return; const k=S.best+'|'+S.lvl+'|'+S.mode;
     if(GR.k!==k){ GR.k=k; GR.g=Math.max(1e-9,farmRate(Math.max(1,S.best)).g*3600); } league().goldH+=g/GR.g; }
   function addSpent(n){ if(CFG.league) league().spent+=n }
-  function addAd(){ if(CFG.league) league().ads++ }
+  function addAd(){ if(CFG.league) league().ads++; misBump('ad',1) }   // cada anuncio visto cuenta para las misiones
   // Premio del mes anterior: pendiente desde el día 1 a la 01:00 UTC
   function leaguePending(){ league(); const P=S.leagueLast; if(!P||P.claimed) return null;
     if(P.m===monthKey()-1&&new Date(dayKey()*864e5).getUTCDate()===1&&evPaused()) return null;
@@ -825,7 +825,7 @@ function createGame(opts){
   function claimWeekly(k){ const m=weekMissions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions.weekly;
     weekly().c[k]=true; giveBundle({gold:M.goldMin}); passAddXp(M.xp); track('weekly',{k}); save(); emit('change'); return {gold:true,xp:M.xp} }
   const weeklyReady=()=>weekMissions().filter(m=>m.done&&!m.claimed).length;
-  function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1); else if(type==='ad') misBump('ad',1) }
+  function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1) }
   function missions(){ const D=daily(); return CFG.missions.list.map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
     return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!D.c[m.k]} }) }
   function claimMission(k){ const m=missions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions;
