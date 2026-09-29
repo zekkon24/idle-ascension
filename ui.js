@@ -180,7 +180,8 @@ function renderTab(){
   if(tab==='shop') el.innerHTML=nbsp(tabShop());
   if(tab==='ev') el.innerHTML=nbsp(tabEv());
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
-  if(tab==='mis'){ misKey=misKeyNow(); el.innerHTML=nbsp(tabMis()); }
+  if(tab==='mis'){ misKey=misKeyNow(); const pl=$('.plist'), y=window.scrollY, py=pl?pl.scrollTop:0; el.innerHTML=nbsp(tabMis());   // se conserva el scroll
+    const pl2=$('.plist'); if(pl2) pl2.scrollTop=py; window.scrollTo(0,y); }
   updateHUD();
 }
 function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev'||(tab==='inv'&&invView==='cofres')) renderTab(); else updateHUD(); }
@@ -597,7 +598,11 @@ const rw=(ic,t)=>`<span class="rw">${ic}${t}</span>`;
 const bundleHTML=b=>Object.entries(b).map(([k,v])=>k==='gold'?rw(ICON.gold,v+' min'):k==='tok'?rw(ICON.tok,v):ICON[k]?rw(ICON[k],'×'+v)
   :k==='item'?`<span class="rw" style="color:var(--r${v})">Arma ${CFG.rarName[v]}</span>`:`<span class="rw">${RN[k]}${v>1?' ×'+v:''}</span>`).join(' ');
 // Pestaña Misiones: Diarias · Semanal · Pase · Socios (el calendario va aparte, en su icono del combate)
-function misKeyNow(){ const P=G.passState(); return misView+JSON.stringify([G.bonusState('day'),G.bonusState('week'),G.missions().map(m=>[m.prog,m.claimed]),G.weekMissions().map(m=>[m.prog,m.claimed]),P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,window.Telemetry&&Telemetry.refs]) }
+// solo cambia con lo que se ve en la sección abierta (así el Pase no se redibuja —ni pierde el scroll— con cada enemigo)
+function misKeyNow(){ const P=G.passState(), badge=[G.missionsReady(),G.weeklyReady(),G.passReady()];
+  const v=misView==='dia'?[G.bonusState('day'),G.missions().map(m=>[m.prog,m.claimed])]:misView==='sem'?[G.bonusState('week'),G.weekMissions().map(m=>[m.prog,m.claimed])]
+    :misView==='pass'?[P.lvl,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,P.xp]:[window.Telemetry&&Telemetry.refs];
+  return misView+JSON.stringify([badge,v]) }
 const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · ${bundleHTML(m.rew||{})} ${m.xp||M.xp} XP del pase</span></div>
       ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="${act}" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('');
 function tabMis(){ const P=G.passState();
