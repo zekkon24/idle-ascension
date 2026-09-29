@@ -597,14 +597,16 @@ const rw=(ic,t)=>`<span class="rw">${ic}${t}</span>`;
 const bundleHTML=b=>Object.entries(b).map(([k,v])=>k==='gold'?rw(ICON.gold,v+' min'):k==='tok'?rw(ICON.tok,v):ICON[k]?rw(ICON[k],'×'+v)
   :k==='item'?`<span class="rw" style="color:var(--r${v})">Arma ${CFG.rarName[v]}</span>`:`<span class="rw">${RN[k]}${v>1?' ×'+v:''}</span>`).join(' ');
 // Pestaña Misiones: Diarias · Semanal · Pase · Socios (el calendario va aparte, en su icono del combate)
-function misKeyNow(){ const P=G.passState(); return misView+JSON.stringify([G.missions().map(m=>[m.prog,m.claimed]),G.weekMissions().map(m=>[m.prog,m.claimed]),P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,window.Telemetry&&Telemetry.refs]) }
+function misKeyNow(){ const P=G.passState(); return misView+JSON.stringify([G.bonusState('day'),G.bonusState('week'),G.missions().map(m=>[m.prog,m.claimed]),G.weekMissions().map(m=>[m.prog,m.claimed]),P.xp,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,window.Telemetry&&Telemetry.refs]) }
 const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · ${bundleHTML({gold:m.goldMin||M.goldMin,...(m.ch||{})})} + ${m.xp||M.xp} XP del pase</span></div>
       ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="${act}" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('');
 function tabMis(){ const P=G.passState();
   const chips=`<div class="fchips">${[['dia','Diarias',G.missionsReady()],['sem','Semanal',G.weeklyReady()],['pass','Pase',G.passReady()],['soc','Socios',0]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
   let body='';
-  if(misView==='dia') body=misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
-  if(misView==='sem') body=misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
+  const bonusRow=(kind,t)=>{ const st=G.bonusState(kind); return `<div class="mrow bonus${st.got?' done':''}"><div class="mi"><b>${t}</b><span class="s">${bundleHTML(st.b)}</span></div>
+      ${st.got?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="misBonus" data-k="${kind}" ${st.can?'':'disabled'}>Recoger</button>`}</div>` };
+  if(misView==='dia') body=bonusRow('day','Bonus: completa todas las diarias')+misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
+  if(misView==='sem') body=bonusRow('week','Bonus: completa todas las semanales')+misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
   if(misView==='pass'){ const L=CFG.pass.levels, rows=[]; for(let l=1;l<=L;l++){ const open=l<=P.lvl;
       const cell=(prem)=>{ const got=prem?P.cp[l]:P.cf[l], lock=prem&&!P.prem; return `<div class="pc${got?' got':''}${open&&!got&&!lock?' can':''}${lock?' lock':''}">${bundleHTML(G.passReward(l,prem))}${got?' ✓':''}</div>` };
       rows.push(`<div class="prow${open?' open':''}"><span class="pl">${l}</span>${cell(false)}${cell(true)}</div>`) }
@@ -801,6 +803,7 @@ const ACT={
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
   misView:b=>{ misView=b.dataset.v; renderTab() },
   calOpen:()=>calModal(),
+  misBonus:(b,k)=>{ const r=G.claimBonus(k); if(r){ haptic('ok'); toast('Bonus: '+bundleTxt(r)); } renderTab() },
   weekClaim:(b,k)=>{ if(G.claimWeekly(k)){ haptic('light'); toast('+ oro y '+(CFG.missions.weekly.list.find(x=>x.k===k).xp||CFG.missions.weekly.xp)+' XP del pase'); } renderTab() },
   misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast('+ oro y '+CFG.missions.xp+' XP del pase'); } renderTab() },
   calClaim:()=>{ const r=G.calState().day, b=G.claimCal(); if(b){ haptic('ok'); toast('Día '+r+': '+bundleTxt(b)); } calModal(); updateHUD(); if(b) notifyOffer() },
