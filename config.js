@@ -110,6 +110,7 @@ const CFG = {
   stars:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/pay', perToken:0.5,
     first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez
     pass:{stars:250}},
+  shopTab:false, // pestaña Tienda: oculta hasta tener el juego casi terminado (su contenido sigue en el código)
   startWeapon:'C',
   // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube
   // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.

@@ -114,7 +114,7 @@ function renderShell(){
     </div>
   </div>
   <div id="tab"></div>`;
-  $('#nav').hidden=false; renderTab();
+  $('#nav').hidden=false; { const st=document.querySelector('[data-tab="shop"]'); if(st) st.hidden=!CFG.shopTab; } if(tab==='shop'&&!CFG.shopTab) tab='up'; renderTab();
 }
 function updateHUD(){
   if(!S||!$('#rGold')) return;
@@ -857,7 +857,7 @@ const ACT={
       if(r.ok){ closeModal(); toast('¡Pago recibido!') } else if(r.pending) st('Tu pago aún no se ha confirmado en la red. Llegará solo; si tarda, toca "Comprobar" en Tokens.');
       else st(err[r.error]||('No se pudo pagar: '+r.error)) }) },
   cryptoCheck:b=>{ b.disabled=true; TonPay.check(CFG).then(c=>{ b.disabled=false; toast(c.paid?'¡Pago recibido!':c.pending?'Aún no ha llegado. Prueba en un minuto.':'No hay pagos pendientes.') }) },
-  goTokens:()=>{ closeModal(); tab='shop'; shopView='tokens'; renderTab() },
+  goTokens:()=>{ closeModal(); if(!CFG.shopTab) return toast('La tienda llegará más adelante'); tab='shop'; shopView='tokens'; renderTab() },
   tokBuy:(b,k)=>{ if(G.buyTokens(+k)){ toast(`+${fmt(+k+((CFG.tokens.bonus||{})[k]||0))} tokens (prueba)`); renderTab(); } },
   wdAsk:()=>wdModal(),
   grimUnlock:()=>{ const r=G.grimUnlock(); toast(r.ok?'¡Grimorio conseguido! Súbelo luchando':'Te faltan recursos'); renderTab() },
