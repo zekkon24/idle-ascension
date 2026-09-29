@@ -122,7 +122,7 @@ function updateHUD(){
   const ev=G.inEvent();
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   setHTML($('#faseTxt'),ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
-    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nivel ${(G.evRamp()||{r:0}).r+1} · Muertes ${B.kills}`:`Fase ${S.fase}`);
+    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   const tag=$('#tag'), tt=ev?(B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):''; // (sin "Avanzando"/"Farmeando")
@@ -130,7 +130,7 @@ function updateHUD(){
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
   const es=$('#evoSlot'); if(es){ const can=!ev&&G.evoLvlOk(), key=can+'|'+S.mode+'|'+(S.lvl>=G.lvlCap())+'|'+ev;
-    if(es.dataset.k!==key){ es.dataset.k=key; es.innerHTML=can?'<button class="btn sm gold" data-act="evoOpen">Evolucionar</button>'
+    if(es.dataset.k!==key){ es.dataset.k=key; es.innerHTML=can?''
       :(G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap()?'<span class="pill">Evolución: próximamente</span>':''); } }
   const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
   $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#hpTxt').textContent=fmt(Math.ceil(hpv));
@@ -144,10 +144,12 @@ function updateHUD(){
   if(bt){ bt.hidden=!bl; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
-  const sb=$('#skBar'); if(sb){ const L=G.skills(), man=G.manualSkills(), key=L.map(x=>x.slot+(x.locked?'L':'')).join()+man;
-    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.innerHTML=L.map(x=>`<button class="skb${x.locked?' lock':''}" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}"><span class="skn${x.locked?'':((x.name||'').split(' ')[0].length>8?' long':'')}">${x.locked?'Evo':esc((x.name||'').split(' ')[0])}</span><i class="skcd"></i><b class="skt"></b></button>`).join('')+`<span class="skmode">${man?'¡Tócalas!':'Auto'}</span>`; }
-    L.forEach((x,i)=>{ const b=sb.children[i]; if(!b||x.locked) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
-      b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; b.querySelector('.skt').textContent=x.ready?'':Math.ceil(x.left); }); }
+  // habilidades: solo las desbloqueadas; la recarga se ve con el reloj gris (sin números). En los eventos, botón Auto/Manual
+  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), auto=inEv&&!!(S.opt&&S.opt.evAuto), key=L.map(x=>x.slot).join()+inEv+auto;
+    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}"><span class="skn${(x.name||'').split(' ')[0].length>8?' long':''}">${esc((x.name||'').split(' ')[0])}</span><i class="skcd"></i></button>`).join('')
+      +(inEv?`<button class="skmode${auto?' on':''}" data-act="evAuto" aria-pressed="${auto}">${auto?'Auto':'Manual'}</button>`:'<span class="skmode">Auto</span>'); }
+    L.forEach((x,i)=>{ const b=sb.children[i]; if(!b) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
+      b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; }); }
   const mf=$('#misFab'); if(mf){ const n=G.missionsReady()+(G.calState().can?1:0)+G.passReady(); setHTML(mf,n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(misOpen&&$('#misBox')) renderMis(); }
   const ab=$('#autoBtn'); if(ab){ab.setAttribute('aria-label',S.autoPush?'Avance automático activado':'Avance automático desactivado');ab.classList.toggle('off',!S.autoPush);ab.textContent=S.autoPush?'Auto: Sí':'Auto: No';ab.setAttribute('aria-pressed',S.autoPush)}
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
@@ -722,7 +724,7 @@ function spinDone(){
 /* ---------- Ajustes ---------- */
 function tabDev(){
   const on=battery();
-  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña se lanzan solas; en los eventos, siempre a mano</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
+  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña se lanzan solas; en los eventos, con el botón Auto/Manual del combate</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
   ${inviteRow()}
   </section>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
@@ -778,6 +780,7 @@ const ACT={
   upClose:()=>{upOpen=false;closeModal()},
   skill:(b,k)=>{ const x=G.skills().find(s=>s.slot===k); if(!x) return; if(x.locked) return toast(`${x.name}: ${x.desc}`);
     const r=G.useSkill(k); if(r.ok){ haptic('medium'); toast(x.name) } else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate') },
+  evAuto:()=>{ G.setOpt('evAuto',!(S.opt&&S.opt.evAuto)); toast(S.opt.evAuto?'Habilidades automáticas en el evento':'Habilidades a mano en el evento'); updateHUD() },
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
   misOpen:()=>{ misOpen=true; misView=G.calState().can?'cal':G.missionsReady()||!G.passReady()?'mis':'pass'; renderMis(true) },
   misClose:()=>{ misOpen=false; closeModal() },

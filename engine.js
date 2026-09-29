@@ -184,7 +184,9 @@ function createGame(opts){
   function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'};
     if(CT<(CD[k]||0)) return {ok:false,why:'cd',left:CD[k]-CT};
     CD[k]=CT+d.cd; (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
-  const manualSkills=()=>!!(B&&B.event);   // en los eventos se usan a mano
+  // en los eventos se usan a mano, salvo que el jugador ponga «Auto» (opt.evAuto); en la campaña, solas (opt.autoSkills)
+  const skillsAuto=()=>B&&B.event?!!(S.opt&&S.opt.evAuto):!(S.opt&&S.opt.autoSkills===false);
+  const manualSkills=()=>!!(B&&B.event&&!(S.opt&&S.opt.evAuto));
 
   /* ---------- combate ---------- */
   function startWave(){
@@ -256,8 +258,8 @@ function createGame(opts){
       if(LG&&LG.id==='tajo'){ const o=B.enemies.find(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5); if(o){ const x=d*LG.mult; o.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); emit('hit',{e:o,d:x,crit:false,cleave:true}); if(o.hp<=0) kill(o); } }
     };
     const canHit=e=>!e.dead&&((h.ranged&&!B.event)||e.arrive<=B.t); // en el evento nadie dispara antes de que llegue (igual para todas las clases)
-    // habilidades: las pedidas a mano (B.cast) y, en la campaña, las que estén listas
-    if(!B.event&&!(S.opt&&S.opt.autoSkills===false)&&B.enemies.some(e=>!e.dead&&e.arrive<=B.t+0.3))
+    // habilidades: las pedidas a mano (B.cast) y, en automático, las que estén listas
+    if(skillsAuto()&&B.enemies.some(e=>!e.dead&&e.arrive<=B.t+0.3))
       for(const k of skillSlots()){ const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;
         if((sk.id==='sed'||sk.id==='sacrificio')&&B.hp<0.5*h.hp) continue;         // no gastar vida si va mal
         CD[k]=CT+sk.cd; (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
