@@ -571,7 +571,8 @@ function createGame(opts){
       const gb=GH.B, me=B.enemies[0], them=gb.enemies[0], m0=me.hp, t0=them.hp;
       stepCore(s); GH.step(s);
       const out=Math.max(0,m0-me.hp), back=Math.max(0,t0-them.hp), gh=GH.heroStats(), h=heroStats();
-      if(out>0) gb.inc.push({d:out,a:h.atk}); if(back>0) B.inc.push({d:back,a:gh.atk});   // se aplica en el siguiente paso, con sus defensas
+      const cp=c=>((CFG.pvp.cls||{})[c]||1);   // fuerza de cada clase en PvP (solo el daño que hace)
+      if(out>0) gb.inc.push({d:out*cp(S.cls),a:h.atk}); if(back>0) B.inc.push({d:back*cp(GH.S.cls),a:gh.atk});   // se aplica en el siguiente paso, con sus defensas
       if(me.frozen>B.t) gb.stun=Math.max(gb.stun||0,me.frozen); if(them.frozen>gb.t) B.stun=Math.max(B.stun||0,them.frozen);   // congelar = no puede atacar
       Object.assign(me,{hp:gb.hp,max:gh.hp,df:gh.df,dead:false}); Object.assign(them,{hp:B.hp,max:h.hp,df:h.df,dead:false});
       if(B.hp<=0||gb.hp<=0||B.t>=V.maxT){ pvpFightEnd(); return } } }
