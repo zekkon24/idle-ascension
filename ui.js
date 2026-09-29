@@ -30,6 +30,8 @@ function fmt(n){ if(n===undefined||n===null||isNaN(n))return '0'; const a=Math.a
 const pct=v=>(Math.round(v*1000)/10).toLocaleString('es-ES')+' %';
 const clsLabel=c=>CFG.classes[c].label||c;
 const wName=it=>CFG.names[it.cls][R.indexOf(it.r)];
+// efecto de arma Legendaria/Mítica (línea para la tarjeta)
+const legendLine=it=>{ const L=R.indexOf(it.r)>=R.indexOf('L')&&CFG.weapon.legend&&CFG.weapon.legend[it.cls]; return L?`<div class="s" style="color:var(--rL)">✦ <b>${L.name}</b>: ${L.desc}</div>`:'' };
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const battery=()=>!!(S&&S.opt&&S.opt.battery); // Modo batería: sin barras, números, proyectiles ni parpadeo
 const CHEST_TYPES=['wood','silver','mode'];
@@ -210,7 +212,7 @@ function itemCard(it){
       <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear: no se desmonta ni se usa para forjar'}" title="Bloquear: no se desmonta ni se usa para forjar">★</button></span>
     </div>
     ${open?`<div class="idet">
-      <div class="s">Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div>
+      <div class="s">Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div>${legendLine(it)}
       <div class="sec">${chips(it.sec,false,it.r)}</div>
       <div class="ctrl">
         ${eq?'':`<button class="btn sm" data-act="equip" data-id="${it.id}" ${own?'':'disabled title="Es de otra clase"'}>Equipar</button>`}
@@ -241,7 +243,7 @@ function tabForja(){
   return `<section class="panel"><h3>Forja</h3>
     <div class="wcard${eq?' eq':''}">
       <div class="hd"><span class="nm" style="color:var(--r${it.r});font-size:16px">${wName(it)}</span>${eq?'<span class="pill">Equipada</span>':own?`<button class="btn sm" data-act="equip" data-id="${it.id}">Equipar</button>`:''}</div>
-      <div class="s">${CFG.rarName[it.r]}</div>
+      <div class="s">${CFG.rarName[it.r]}</div>${legendLine(it)}
       <div class="fbox"><div class="fbh"><b>Nivel ${it.lvl}/${CFG.weapon.maxLvl}</b></div>
         <div class="s">Daño ${up(m.d,mn.d)} · Velocidad ${up(m.s,mn.s)}</div>
         ${max?'<span class="pill">Nivel máximo</span>':`<button class="btn gold" data-act="lvl" data-id="${it.id}" ${have<n||S.scrap<sc?'disabled':''}>Subir a nv ${it.lvl+1}</button>

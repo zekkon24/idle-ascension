@@ -38,6 +38,13 @@ const CFG = {
     lvlPct:0.25,maxLvl:5, // nv5 = ×2 del base: una nv5 supera un poco a la siguiente rareza nv1; nivel N -> N+1 cuesta N armas iguales + chatarra
     scrapLvl:{C:0,U:10,R:30,E:60,L:120,M:240},
     scrapDis:{C:2,U:5,R:15,E:40,L:100,M:250},
+    // efecto de las armas Legendarias (y Míticas) de cada clase. SIN BALANCEAR.
+    legend:{
+      Guerrero:{id:'tajo', name:'Tajo partido', mult:0.5, desc:'Sus golpes dan también al enemigo de detrás (50 %)'},
+      Mago:{id:'vacio', name:'Vacío', ignoreDf:0.3, desc:'Sus golpes ignoran el 30 % de la defensa'},
+      Arquero:{id:'rafaga', name:'Ráfaga', every:4, arrows:3, desc:'Cada 4.º disparo son 3 flechas'},
+      Asesino:{id:'filoVacio', name:'Filo del vacío', desc:'Los críticos ignoran toda la defensa'},
+      Clerigo:{id:'llamarada', name:'Llamarada solar', every:5, pct:0.2, dur:3, desc:'Cada 5.º golpe quema a todos (20 % por s, 3 s)'}},
     refund:0.6,
     reforge:{C:3,U:5,R:10,E:20,L:40,M:80},reforgeStep:0.2,reforgeCap:3, // coste = base × (1 + 0,2 por reforja hecha), como mucho ×3
   },
