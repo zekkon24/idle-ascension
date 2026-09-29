@@ -85,7 +85,7 @@ G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Hord
   else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
 G.on('pvpEnd',r=>{ tab='ev'; modView='pvp'; evView=null; haptic(r.win?'ok':'medium');
   if(r.rival.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpResult',{match:r.rival.match,win:r.win}).then(j=>{ if(j&&j.ok){ G.pvpSync(j); if(PVI) Object.assign(PVI.me,{rating:j.rating,games:j.games,wins:j.wins,rank:j.rank,left:j.left}); pvpLoad(); } });
-  renderTab(); later(()=>showModal(`<h3>${r.win?'¡Victoria!':'Derrota'}</h3><p class="hint">Contra ${esc(r.rival.name)} (${r.rival.cls}) · tú ${Math.round(r.me*100)} % de vida, rival ${Math.round(r.them*100)} %.<br>${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.rating)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
+  renderTab(); later(()=>showModal(`<h3>${r.win?'¡Victoria!':'Derrota'}</h3><p class="hint">Contra ${esc(r.rival.name)} (${clName(r.rival.cls)}) · tú ${Math.round(r.me*100)} % de vida, rival ${Math.round(r.them*100)} %.<br>${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.rating)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
 G.on('eventStart',()=>{fx.shots.length=0; fx.floats.length=0});
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
@@ -134,6 +134,7 @@ function updateHUD(){
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
+  $('#faseTxt').classList.toggle('top',ev);
   setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
   setHTML($('#uName'),esc(S.name||''));
@@ -170,7 +171,7 @@ function updateHUD(){
   { const n=misBadge(); setHTML(document.querySelector('[data-tab="mis"]'),n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
-  setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Modos<sup class="nb">${n}</sup>`:'Modos')(S.tickets+S.bossTickets+G.evFreeLeft()+G.wbFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
+  setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Modos<sup class="nb">${n}</sup>`:'Modos')((G.evPaused()?0:G.evFreeLeft()+G.wbFreeLeft())+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
   setHTML(document.querySelector('[data-tab="inv"]'),nc?`Inventario<sup class="nb">${nc>99?'99+':nc}</sup>`:'Inventario');
 }
 function renderTab(){
@@ -232,7 +233,7 @@ function itemCard(it){
       <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear: no se desmonta ni se usa para forjar'}" title="Bloquear: no se desmonta ni se usa para forjar">★</button></span>
     </div>
     ${open?`<div class="idet">
-      <div class="s">Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div>${legendLine(it)}
+      <div class="s">${CFG.rarName[it.r]} · Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div>${legendLine(it)}
       <div class="sec">${chips(it.sec,false,it.r)}</div>
       <div class="ctrl">
         ${eq?'':`<button class="btn sm" data-act="equip" data-id="${it.id}" ${own?'':'disabled title="Es de otra clase"'}>Equipar</button>`}
@@ -395,7 +396,7 @@ function oddsModal(type){
     const here=m===S.mode&&p===cur; rows.push(`<tr class="${here?'here':''}"><td>${name}</td>${p.map(v=>`<td>${v?v.toLocaleString('es-ES'):'—'}</td>`).join('')}</tr>`) }));
   showModal(`<h3>Cofre de ${ch.name.toLowerCase()}</h3>
     <div class="tw"><table class="odds-t"><thead><tr><th>%</th>${R.map(r=>`<th style="color:var(--r${r})" title="${CFG.rarName[r]}">${RAR_S[r]}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>
-    <p class="hint">${R.map(r=>`<b style="color:var(--r${r})">${RAR_S[r]}</b> ${CFG.rarName[r]}`).join(' · ')}. ${type==='mode'?'El contenido depende del modo en que estés al abrirlo. ':''}Se usa el % de donde estés al abrirlo (resaltado). Clase aleatoria.</p>
+    <p class="hint">${R.map(r=>`<b style="color:var(--r${r})">${RAR_S[r]}</b> ${CFG.rarName[r]}`).join(' · ')}. ${type==='mode'?'El contenido depende del modo en que estés al abrirlo. ':''}Se usa el % de donde estés al abrirlo (resaltado). Siempre armas de tu clase.</p>
     <button class="btn gold" data-act="close">Cerrar</button>`);
 }
 function impModal(id,i){ const it=G.findItem(id), x=it.sec[i], o=G.improveOdds(id,i);
@@ -524,7 +525,7 @@ const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), 
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 /* ---------- Torre (roguelike) ---------- */
-const NODE={fight:['⚔️','Combate','Enemigos normales · elige 1 mejora'],elite:['💀','Élite','Pocos y muy duros · elige 2 grimorios (pasivas de camino)'],treasure:['🎁','Cofre','Sin luchar · elige 1 objeto'],rest:['🔥','Hoguera','Te curas del todo (si ya estás al máximo, te saltas el combate)'],boss:['👑','Jefe','Jefe del piso · elige 1 mejora']};
+const NODE={fight:['⚔️','Combate','Enemigos normales · elige 1 mejora'],elite:['💀','Élite','Pocos y muy duros · elige 2 grimorios (pasivas de camino)'],treasure:['🎁','Cofre','Sin luchar · elige 1 objeto'],rest:['🔥','Hoguera','Te curas del todo y pasas al siguiente piso sin luchar'],boss:['👑','Jefe','Jefe del piso · elige 1 mejora']};
 const RARC={C:'var(--rC)',R:'var(--rR)',L:'var(--rL)'};
 function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of TC.rewards) if(f%r.every===0) return {f,b:r.b} })();
@@ -544,16 +545,17 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{
 const pvpOnline=()=>!!(window.Telemetry&&Telemetry.canSync&&Telemetry.canSync(CFG));
 let PVI=null, pvpBusy=false, pvpLast=null;
 function pvpLoad(){ if(!pvpOnline()) return; Telemetry.pvp(CFG,'pvpInfo').then(j=>{ if(!j||!j.ok) return; PVI=j; G.pvpSync(j.me); if(tab==='ev'&&modView==='pvp') renderTab(); }) }
+const clName=c=>CFG.classes[c]?clsLabel(c):(c||'');   // nombre de la clase (con tilde); '' si el servidor no la sabe
 const pvpOdds=r=>{ const P=G.pvpState(), E=1/(1+Math.pow(10,(r.rating-P.rating)/400)), K=P.games<CFG.pvp.newGames?CFG.pvp.kNew:CFG.pvp.k; return `ganar +${Math.round(K*(1-E))} · perder ${Math.round(-K*E)}` };
 function tabPvp(){ const P=G.pvpState(), r=P.rival, on=pvpOnline(), left=on&&PVI?PVI.me.left:G.pvpLeft();
   const head=`<div class="evhead"><div><span class="s">Puntos</span><b>${fmt(P.rating)}</b></div><div><span class="s">Puesto</span><b>${on&&PVI?PVI.me.rank:'–'}</b></div><div><span class="s">Victorias</span><b>${P.wins}/${P.games}</b></div><div><span class="s">Combates hoy</span><b>${left}/${CFG.pvp.daily}</b></div></div>`;
   const busy=G.inEvent()||pvpBusy;
-  const riv=r?`<div class="misTop"><b>${esc(r.name)}${r.bot?' <span class="pill">bot</span>':''}</b><span class="s">${r.cls}${r.path?' · camino '+r.path:''} · nivel ${r.lvl||'?'} · ${fmt(r.rating)} puntos<br>${pvpOdds(r)}</span></div>
-      <div class="ctrl"><button class="btn gold" style="flex:1" data-act="pvpGo" ${left>0&&!busy?'':'disabled'}>Luchar</button><button class="btn" data-act="pvpFind" ${left>0&&!busy?'':'disabled'}>Otro rival</button></div>`
+  const riv=r?`<div class="misTop"><b>${esc(r.name)}${r.bot?' <span class="pill">bot</span>':''}</b><span class="s">${clName(r.cls)}${r.path?' · camino '+r.path:''} · nivel ${r.lvl||'?'} · ${fmt(r.rating)} puntos<br>${pvpOdds(r)}</span></div>
+      <div class="ctrl"><button class="btn gold" style="flex:1" data-act="pvpGo" ${left>0&&!busy?'':'disabled'}>Luchar</button><button class="btn" data-act="pvpFind" ${left>0&&!busy&&G.pvpRerolls()?'':'disabled'}>Otro rival (${G.pvpRerolls()})</button></div>`
     :`<button class="btn gold" data-act="pvpFind" ${left>0&&!busy?'':'disabled'}>${pvpBusy?'Buscando…':'Buscar rival'}</button>`;
-  const top=on?(PVI?`<h3>Ranking</h3><div class="rank">${PVI.top.map((x,i)=>`<div class="${x.me?'me':''}"><span>${i+1}</span><span>${esc(x.name)} · ${x.cls}</span><b>${fmt(x.rating)}</b></div>`).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}</div>`:'<p class="hint">Cargando ranking…</p>'):'<p class="hint">El ranking y los rivales reales están dentro de Telegram. Aquí luchas contra bots.</p>';
-  const defs=on&&PVI&&PVI.log.length?`<h3>Te han atacado</h3><div class="rank">${PVI.log.map(x=>`<div><span style="color:${x.won?'var(--bad)':'var(--good)'}">${x.won?'✗':'✓'}</span><span>${esc(x.name)} · ${x.cls} ${x.won?'ganó a tu fantasma':'perdió contra tu fantasma'}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
-  const hist=P.hist.length?`<h3>Tus combates</h3><div class="rank">${P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''} · ${x.cls}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
+  const top=on?(PVI?`<h3>Ranking</h3><div class="rank">${PVI.top.map((x,i)=>`<div class="${x.me?'me':''}"><span>${i+1}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''}</span><b>${fmt(x.rating)}</b></div>`).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}</div>`:'<p class="hint">Cargando ranking…</p>'):'<p class="hint">El ranking y los rivales reales están dentro de Telegram. Aquí luchas contra bots.</p>';
+  const defs=on&&PVI&&PVI.log.length?`<h3>Te han atacado</h3><div class="rank">${PVI.log.map(x=>`<div><span style="color:${x.won?'var(--bad)':'var(--good)'}">${x.won?'✗':'✓'}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''} ${x.won?'ganó a tu fantasma':'perdió contra tu fantasma'}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
+  const hist=P.hist.length?`<h3>Tus combates</h3><div class="rank">${P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''} · ${clName(x.cls)}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
   return `<section class="panel"><h3>PvP</h3>${head}${left<=0?'<p class="hint" style="color:var(--bad)">No te quedan combates hoy.</p>':''}${riv}
     <p class="hint">Luchas contra el fantasma de otro jugador: su héroe con todo lo suyo (arma, mejoras, evolución, grimorio y habilidades) manejado por la IA. Sin tiempo real: tu fantasma también defiende cuando no estás. Máx. ${CFG.pvp.maxT} s; si nadie cae, gana quien tenga más % de vida.</p>
     ${top}${defs}${hist}</section>` }
@@ -738,6 +740,11 @@ function evoModal(){
     <div class="ctrl"><button class="btn" data-act="close">Ahora no</button><button class="btn gold" data-act="evoGo" ${G.canEvolve()?'':'disabled'}>Evolucionar</button></div>`);
 }
 
+/* ---------- combates abandonados (se cerró la app a mitad) ---------- */
+function quitModal(q){ const p=q.pvp, t=q.tower;
+  if(p&&p.rival.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpResult',{match:p.rival.match,win:false}).then(j=>{ if(j&&j.ok) G.pvpSync(j) });
+  showModal(`<h3>Combate abandonado</h3>${t?`<p class="hint">Torre, piso ${t.floor}: cerraste el juego a mitad del combate y cuenta como derrota. ${t.lives>0?`Te quedan ${t.lives} vida${t.lives>1?'s':''}.`:'Te quedaste sin vidas.'}</p>`:''}
+    ${p?`<p class="hint">PvP contra ${esc(p.rival.name)}: cerraste el juego a mitad del duelo y cuenta como derrota (${p.d} puntos).</p>`:''}<button class="btn gold" data-act="close">Vale</button>`) }
 /* ---------- farmeo sin conexión ---------- */
 function offlineModal(off){
   const h=Math.floor(off.secs/3600), mi=Math.round((off.secs%3600)/60);
@@ -755,7 +762,7 @@ function fakePick(probs){const tot=probs.reduce((a,b)=>a+b,0);let x=Math.random(
 function spin(type,loot,nc=1){
   const best=[...loot].sort((a,b)=>R.indexOf(b.r)-R.indexOf(a.r)||((a.cls===S.cls)?-1:1))[0];
   const probs=G.chestProbs(type), idx=42, tiles=[];
-  for(let i=0;i<52;i++) tiles.push(i===idx?best:{r:fakePick(probs),cls:CLASSES[Math.floor(Math.random()*CLASSES.length)]});
+  for(let i=0;i<52;i++) tiles.push(i===idx?best:{r:fakePick(probs),cls:S.cls});   // (los cofres solo dan armas de tu clase)
   const title=nc===1?`Cofre de ${CFG.chests[type].name.toLowerCase()}`:`${nc} cofres de ${CFG.chests[type].name.toLowerCase()}`;
   const [c1,c2]=CHEST_COL[type];
   showModal(`<h3>${title}</h3>
@@ -865,7 +872,7 @@ const ACT={
   towerStart:()=>{ G.towerStart(); renderTab() },
   towerQuit:()=>showModal(`<h3>¿Terminar la partida?</h3><p class="hint">Pierdes las mejoras de esta partida. El récord y los premios se quedan.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="towerQuitYes">Terminar</button></div>`),
   towerQuitYes:()=>{ G.towerAbandon(); closeModal(); renderTab() },
-  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Hoguera: te saltas el combate':'Hoguera: vida al máximo'); if(G.inEvent()){ tab='up'; } renderTab() },
+  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Hoguera: ya tenías la vida llena':'Hoguera: vida al máximo'); if(G.inEvent()){ tab='up'; } renderTab() },
   towerPick:(b,k)=>{ if(G.towerPick(+k)) haptic('ok'); closeModal(); renderTab() },
   towerLife:()=>{ if(G.towerBuyLife()){ toast('+1 vida'); renderTab() } else toast('Tokens insuficientes') },
   wheelOpen:()=>wheelModal(),
@@ -900,14 +907,15 @@ const ACT={
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
   pvpFind:()=>{ if(pvpBusy||G.inEvent()) return; const P=G.pvpState(), avoid=P.rival&&P.rival.id||pvpLast;
+    if(P.rival&&!G.pvpRerolls()) return toast('Ya no puedes cambiar de rival: lucha contra este');
     if(!pvpOnline()){ G.pvpBot(); renderTab(); return }
     pvpBusy=true; renderTab();
     Telemetry.pvp(CFG,'pvpFind',{avoid}).then(j=>{ pvpBusy=false;
-      if(!j) toast('Sin conexión'); else if(j.error==='limit') toast('No te quedan combates hoy');
-      else if(j.ok&&j.bot){ const r=G.pvpBot(); r.rating=j.rating; r.match=j.match; G.save(); }
+      if(!j) toast('Sin conexión'); else if(j.error==='limit') toast('No te quedan combates hoy'); else if(j.error==='rerolls') toast('Ya no puedes cambiar de rival: lucha contra este');
+      else if(j.ok&&j.bot){ const r=G.pvpBot(); if(r){ r.rating=j.rating; r.match=j.match; G.save(); } }
       else if(j.ok&&j.rival) G.pvpSetRival({...j.rival,match:j.match});
       renderTab(); }) },
-  pvpGo:()=>{ const r=G.pvpState().rival; if(G.pvpFight()){ pvpLast=r&&r.id; tab='up'; renderTab(); } },
+  pvpGo:()=>{ const r=G.pvpState().rival; if(G.pvpFight()){ pvpLast=r&&r.id; if(r&&r.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpStart',{match:r.match}); tab='up'; renderTab(); } },
   syncRetry:()=>location.reload(),
   modview:b=>{ modView=b.dataset.v||null; evView=null; if(modView==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
@@ -1096,6 +1104,7 @@ if(S){
   if(G.autoLoot()) setTimeout(()=>toast('Botín de jefes sin recoger: enviado al inventario'),400);
   if(!S.name) later(nameModal);
   const ae=G.autoEvent(); if(ae) later(()=>evEndModal(ae));   // intento del evento que quedó a medias al cerrar
+  const aq=G.autoQuit(); if(aq) later(()=>quitModal(aq));      // combate de la Torre o duelo PvP que quedó a medias: derrota
   const off=G.applyOffline();
   if(off) later(()=>offlineModal(off));
 } else renderSelect();

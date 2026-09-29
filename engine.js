@@ -76,7 +76,14 @@ function createGame(opts){
   let autoLoot=null; // botín de jefes que quedó sin recoger al cerrar: al volver a entrar va directo al inventario
   let autoEvent=null; // intento del evento que quedó a medias al cerrar: se cuenta con las muertes que llevaba
   function load(){ if(!storage) return null; try{const t=storage.get(SAVE_KEY); S=t?migrate(JSON.parse(t)):null}catch(e){S=null} HS=null; B=null;
-    autoLoot=S&&S.loot?claimLoot():null; autoEvent=S&&S.evRun?finishRun(S.evRun.kills,false):S&&S.wbRun?wbFinish(S.wbRun.dmg,false):null; if(S) S.refPend=null; return S }
+    autoLoot=S&&S.loot?claimLoot():null; autoEvent=S&&S.evRun?finishRun(S.evRun.kills,false):S&&S.wbRun?wbFinish(S.wbRun.dmg,false):null; if(S) S.refPend=null;
+    autoQuit=S?quitFights():null; return S }
+  // combate de la Torre o duelo PvP que quedó a medias al cerrar la app: cuenta como derrota (así cerrar no sirve para no perder)
+  let autoQuit=null;
+  function quitFights(){ const out={}; const run=S.tower&&S.tower.run;
+    if(run&&run.fight){ run.fight=null; run.lives--; run.hp=1; out.tower={floor:run.floor,lives:run.lives}; }
+    const P=S.pvp; if(P&&P.fight){ out.pvp=pvpLoss(P.fight); P.fight=null; P.rival=null; }
+    return out.tower||out.pvp?out:null }
   function reset(){ S=null; B=null; HS=null; if(storage) try{storage.del(SAVE_KEY)}catch(e){} }
   // Nombre del jugador: 3-16 caracteres (letras, números, espacio, _ y -)
   function cleanName(n){ return String(n||'').replace(/[^\p{L}\p{N} _-]/gu,'').replace(/\s+/g,' ').trim().slice(0,16) }
@@ -236,7 +243,7 @@ function createGame(opts){
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); }
     if(!B.event) surpriseTick();
-    else if(B.event&&B.kind!=='tower'&&B.kind!=='pvp'){ if((CFG.event.dur&&B.t>=CFG.event.dur)||B.t>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
+    else if(!B.kind){ if((CFG.event.dur&&B.t>=CFG.event.dur)||B.t>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // solo la Mazmorra (no tiene kind): un intento de ayer se cierra al acabar la pausa
     // curación: lo que de verdad se recupera (Santo: cada curación se convierte en daño en área durante unos segundos)
     // solo la regeneración (Fe) alimenta el aura; lo curado se pasa a la escala antigua (÷ hpK) para que el aura siga pegando igual
     // curación (el Oscuro solo se cura robando vida: ls)
@@ -543,13 +550,13 @@ function createGame(opts){
   const pvpK=g=>g<CFG.pvp.newGames?CFG.pvp.kNew:CFG.pvp.k;
   const pvpExp=(a,b)=>1/(1+Math.pow(10,(b-a)/400));   // probabilidad esperada de ganar
   // bot: tu partida (misma progresión) con otra clase, otro camino y otro nombre
-  function pvpBot(){ const P=pvpState(), cls=Object.keys(CFG.classes).filter(c=>c!==S.cls), c=cls[Math.floor(rand()*cls.length)], me=JSON.parse(JSON.stringify(packed()));
+  function pvpBot(){ if(pvpState().finds>0&&!pvpRerolls()) return null; const P=pvpState(), cls=Object.keys(CFG.classes).filter(c=>c!==S.cls), c=cls[Math.floor(rand()*cls.length)], me=JSON.parse(JSON.stringify(packed()));
     const w=me.items.find(x=>+String(x).split('|')[0]===S.equippedId), name=pvpName(rand);
     const save={...me,cls:c,name,items:w?[String(w).replace(/^(\d+)\|[^|]*\|/,'$1|'+c+'|')]:[],path:S.evo>=1?(rand()<0.5?'A':'B'):S.path,pvp:null,tower:null,opt:{evAuto:true,pvpAuto:true}};
-    P.rival={bot:true,name,cls:c,lvl:S.lvl,evo:S.evo,path:save.path,rating:Math.max(0,Math.round(P.rating+(rand()*2-1)*CFG.pvp.botSpread)),save}; save_(); emit('change'); return P.rival }
+    P.rival={bot:true,name,cls:c,lvl:S.lvl,evo:S.evo,path:save.path,rating:Math.max(0,Math.round(P.rating+(rand()*2-1)*CFG.pvp.botSpread)),save}; P.finds=(P.finds||0)+1; save_(); emit('change'); return P.rival }
   const save_=()=>save();
   // rival real que manda el servidor: {id, name, cls, lvl, evo, path, rating, save, match}
-  function pvpSetRival(r){ const P=pvpState(); if(inEvent()||!r||!r.save||!CFG.classes[r.save.cls]) return false; P.rival={...r,bot:false}; save(); emit('change'); return true }
+  function pvpSetRival(r){ const P=pvpState(); if(inEvent()||!r||!r.save||!CFG.classes[r.save.cls]) return false; P.rival={...r,bot:false}; P.finds=(P.finds||0)+1; save(); emit('change'); return true }
   // el servidor manda tus puntos (manda sobre los del móvil)
   function pvpSync(o){ const P=pvpState(); if(!o) return; for(const k of ['rating','games','wins']) if(typeof o[k]==='number') P[k]=o[k]; save(); emit('change') }
   function ghostOf(save){ const mem={get:()=>JSON.stringify(save),set(){},del(){}}, g=createGame({cfg:CFG,seed:Math.floor(rand()*1e9),now:nowFn,storage:mem});
@@ -561,7 +568,8 @@ function createGame(opts){
     B={event:true,kind:'pvp',hpM,t:0,boss:false,count:0,spawned:0,kills:0,enemies:[pvpDouble(o,o.name,o.cls)],hp:0,th:null,over:false,wait:0,mD:0,mB:0,inc:[]};
     statsDirty(); B.hp=heroStats().hp; return heroStats() }
   function pvpFight(){ const P=pvpState(), r=P.rival; if(!r||inEvent()||pvpLeft()<=0) return false;
-    const g=ghostOf(r.save); if(!g) return false; P.used++;
+    const g=ghostOf(r.save); if(!g) return false; P.used++; P.finds=0;
+    P.fight={name:r.name,cls:r.cls,bot:r.bot,rating:r.rating,id:r.id,match:r.match};   // si se cierra la app a mitad, cuenta como derrota
     const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.ttk*(dps(a,b)+dps(b,a))/(a.hp+b.hp);   // vida para que un golpe normal tarde ~ttk s en matar
     const gs=g.duelEnter({...a,name:S.name,cls:S.cls},M), ms=duelEnter({...b,name:r.name,cls:r.cls},M); GH=g;
     Object.assign(B.enemies[0],{hp:gs.hp,max:gs.hp}); Object.assign(g.B.enemies[0],{hp:ms.hp,max:ms.hp});
@@ -578,12 +586,17 @@ function createGame(opts){
       if(B.hp<=0||gb.hp<=0||B.t>=V.maxT){ pvpFightEnd(); return } } }
   function pvpFightEnd(){ const P=S.pvp, r=P.rival, h=heroStats(), gh=GH?GH.heroStats():null, gb=GH?GH.B:null;
     const me=B.hp/h.hp, them=gb?gb.hp/gh.hp:1, win=B.hp>0&&(!gb||gb.hp<=0||me>=them), t=B.t;
-    B=null; GH=null; BUF.list=[]; BUF.shield=0; BUF.gshield=0; statsDirty();
-    const k=pvpK(P.games), d=Math.round(k*((win?1:0)-pvpExp(P.rating,r.rating)));
+    B=null; GH=null; BUF.list=[]; BUF.shield=0; BUF.gshield=0; statsDirty(); P.fight=null;
+    const res={...pvpResult(r,win),me:Math.max(0,me),them:Math.max(0,them),t};
+    P.rival=null; misBump('pvp',1); save(); emit('pvpEnd',res); startWave(); emit('change'); return res }
+  // puntos Elo e historial de un duelo terminado
+  function pvpResult(r,win){ const P=S.pvp, k=pvpK(P.games), d=Math.round(k*((win?1:0)-pvpExp(P.rating,r.rating)));
     P.rating=Math.max(0,P.rating+d); P.games++; if(win) P.wins++;
     P.hist.unshift({name:r.name,cls:r.cls,bot:r.bot,win,d,rating:r.rating}); P.hist=P.hist.slice(0,10);
-    const res={win,d,rating:P.rating,me:Math.max(0,me),them:Math.max(0,them),t,rival:{name:r.name,cls:r.cls,bot:r.bot,id:r.id,match:r.match}};
-    P.rival=null; misBump('pvp',1); save(); emit('pvpEnd',res); startWave(); emit('change'); return res }
+    return {win,d,rating:P.rating,rival:{name:r.name,cls:r.cls,bot:r.bot,id:r.id,match:r.match}} }
+  const pvpLoss=r=>({...pvpResult(r,false),quit:true});
+  // cambios de rival que quedan antes del próximo duelo (el primero que buscas no cuenta)
+  const pvpRerolls=()=>{ const P=pvpState(); return Math.max(0,CFG.pvp.rerolls-Math.max(0,(P.finds||0)-1)) };
   /* ---------- Torre (roguelike) ---------- */
   // Mejoras posibles: pasivas de los caminos A y B, efectos de armas legendarias y habilidades (de clase y de evolución) de todas las clases
   function boonPool(){ const T=CFG.tower, run=S.tower.run, have=new Set(run.boons.map(boonKey)), out=[];
@@ -639,8 +652,8 @@ function createGame(opts){
     if(tfx('escudo')) BUF.shield=(BUF.shield||0)+CFG.tower.fx.escudo.shield*tfx('escudo')*heroStats().hp;   // Torre: Escudo inicial
     if(tfx('afilar')){ BUF.crits=CFG.tower.fx.afilar.n*tfx('afilar'); BUF.critsUntil=CT+1e9; }   // Torre: Piedra de afilar
     B.clockAt=CT+CFG.tower.fx.reloj.every; B.hammerAt=CT+CFG.tower.fx.martillo.every;
-    emit('eventStart',B); emit('change') }
-  function towerEnd(won){ const run=S.tower.run, k=B.node, frac=Math.max(0,B.hp/heroStats().hp); B=null; BUF.crits=0; statsDirty(); let res;
+    run.fight={k}; save(); emit('eventStart',B); emit('change') }
+  function towerEnd(won){ const run=S.tower.run, k=B.node, frac=Math.max(0,B.hp/heroStats().hp); B=null; BUF.crits=0; statsDirty(); run.fight=null; let res;
     if(won){ run.hp=Math.min(1,frac+CFG.tower.fx.aliento.heal*tfxRun('aliento')); run.cat=k==='elite'?'grim':'upg'; run.pick=towerOffer(3,k==='elite'||k==='boss',run.cat); run.after='next'; if(k==='elite') run.extra=1; res={won:true,floor:run.floor,k,hp:run.hp} }
     else { run.lives--; run.hp=1; res={won:false,floor:run.floor,lives:run.lives} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
@@ -945,7 +958,8 @@ function createGame(opts){
     if(inEvent()) return null;                                 // durante el evento el tiempo está en pausa: no se farmea a la vez
     if(!(el>60&&(S.best>0||S.mode>0))) return null;
     const f=Math.max(1,Math.min(S.fase,S.best)), r=farmRate(f), l0=S.lvl;
-    const g=r.g*el, x=r.x*el; S.gold+=g; addGoldH(g); addXp(x); grimXp(el);   // el grimorio también gana tiempo sin conexión S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
+    const g=r.g*el, x=r.x*el; S.gold+=g; addGoldH(g); addXp(x); grimXp(el);   // el grimorio también gana tiempo sin conexión
+    S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
     const capped=raw>=cap; if(capped&&offlineAdLeft()>0) S.offBonus=g*(CFG.offlineAdMult-1);
     emit('change');
     return {secs:el,fase:f,gold:g,xp:x,lvlFrom:l0,lvlTo:S.lvl,capped,bonus:S.offBonus||0};
@@ -1077,9 +1091,9 @@ function createGame(opts){
     // mejoras
     buyUpgrade, buyMax,
     // evento
-    claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
+    claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpLeft, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, boonInfo, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpLeft, pvpRerolls, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, boonInfo, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

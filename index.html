@@ -26,7 +26,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14p
 .silh{flex:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
 .eslots{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .eslot{display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--rc,var(--line));border-radius:10px;padding:8px 10px;cursor:pointer;min-width:0}
-.eslot b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eslot b{font-size:14px;overflow-wrap:anywhere}
 .eslot.empty{border-style:dashed;opacity:.8}
 .mbig{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:18px 16px;gap:6px}
 .mbig b{font-size:18px}
@@ -209,6 +209,8 @@ input[type=number]{width:64px}
 .win-card b{font-size:16px}
 #rlOut{display:flex;flex-direction:column;gap:8px}
 .nav button{font-size:11px;white-space:nowrap;position:relative}
+.nav button{padding-top:13px;padding-bottom:7px}
+.nav .nb{top:0;right:0;line-height:13px;min-width:13px}
 .nb{position:absolute;top:2px;right:2px;min-width:15px;padding:0 3px;border-radius:8px;background:#c9302c;color:#fff;font-size:9px;font-weight:800;line-height:15px;text-align:center} /* globo encima: no ocupa ancho */
 /* inventario compacto */
 .ilist{display:flex;flex-direction:column;gap:4px}
@@ -248,6 +250,7 @@ input[type=number]{width:64px}
 .skmode{font-size:10px;font-weight:800;color:var(--muted);background:rgba(0,0,0,.45);padding:2px 6px;border-radius:6px;margin-bottom:2px}
 button.skmode{border:1px solid var(--line);cursor:pointer;padding:4px 8px}
 button.skmode.on{color:var(--gold);border-color:var(--gold)}
+.fasetxt.top{top:38px;bottom:auto;left:10px;right:auto;font-size:12px;padding:2px 8px}
 .fasetxt{position:absolute;right:10px;bottom:34px;z-index:3;font-family:var(--display);font-weight:800;font-size:14px;white-space:nowrap;padding:3px 9px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .fab.small{padding:8px 12px;font-size:12px;border-radius:12px}
 .fab.off{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
@@ -298,6 +301,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .misTop{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
 .bar.big{height:12px;border-radius:7px}
 @media (max-width:340px){.nav button{font-size:10px}}
+@media (max-width:374px){.ihd .meta .rar{display:none}} /* móvil pequeño: el color del nombre ya dice la rareza (al abrir el arma se ve escrita) */
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -322,7 +326,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609291840-7640f82';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609291909-1a5785a';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

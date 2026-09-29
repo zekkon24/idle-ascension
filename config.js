@@ -178,7 +178,8 @@ const CFG = {
   // ttk: la vida de los dos en el duelo se multiplica igual, para que solo con ataques normales se tarde ~ttk s (con habilidades, menos)
   // cls: multiplicador del daño que hace cada clase en PvP. Calibrado (días 4-60, mejoras al azar) para ganar de media:
   // Mago 55 %, Asesino 52 %, Arquero 50 %, Clérigo 48 %, Guerrero 45 % (el Mago tiene ventaja: es su modo)
-  pvp:{daily:10, maxT:90, ttk:45, cls:{Guerrero:1.84,Mago:0.86,Arquero:1.31,Asesino:1.11,Clerigo:0.44}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+  // rerolls: veces que puedes pedir otro rival antes de luchar
+  pvp:{daily:10, rerolls:3, maxT:90, ttk:45, cls:{Guerrero:1.84,Mago:0.86,Arquero:1.31,Asesino:1.11,Clerigo:0.44}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
@@ -269,7 +270,7 @@ const CFG = {
     dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
     ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
-    curve:[[1,2200],[2,5700],[3,12500],[5,30600],[7,65600],[10,120700],[13,234600],[15,343100],[17,471100],[20,980600],[25,1997500],[30,3158900],[35,4463700],[40,5806700],[45,7021800]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
+    curve:[[1,2200],[2,6000],[3,13600],[5,32400],[7,70300],[10,127200],[13,191000],[15,288500],[17,458500],[20,958600],[25,1959000],[30,3131500],[35,4433500],[40,5820900],[45,7041000]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
       // ×3 del premio diario de la Mazmorra en el mismo puesto (solo hay uno por semana); los cofres de madera
       // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca
