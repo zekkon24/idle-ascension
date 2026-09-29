@@ -83,6 +83,8 @@ G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab(); later(
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
   else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
+G.on('pvpEnd',r=>{ tab='ev'; modView='pvp'+r.m; evView=null; renderTab(); haptic(r.win?'ok':'medium');
+  later(()=>showModal(`<h3>${r.win?'¡Victoria!':'Derrota'}</h3><p class="hint">PvP${r.m} · ${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.pts)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
 G.on('eventStart',()=>{fx.shots.length=0; fx.floats.length=0});
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
@@ -131,11 +133,11 @@ function updateHUD(){
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
-  setHTML($('#faseTxt'),ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
+  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.round-B.t))} s · Tú ${Math.round(Math.max(0,B.hp)/h.hp*100)} % · Rival ${B.enemies[0]?Math.round(Math.max(0,B.enemies[0].hp)/B.enemies[0].max*100):0} %`:ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
   setHTML($('#uName'),esc(S.name||''));
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
+  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · DUELO':B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
   $('#hName').innerHTML=`${heroName()} <em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
@@ -535,6 +537,72 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{
   return `<section class="panel"><h3>Torre</h3><div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Vidas</span><b>${run?'♥'.repeat(Math.max(0,run.lives))||'0':'–'}</b></div><div><span class="s">Salud</span><b>${run?Math.round((run.hp==null?1:run.hp)*100)+' %':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
     ${body}${boons}${run&&run.lives>0&&!G.inEvent()?'<button class="btn sm" data-act="towerQuit">Abandonar partida</button>':''}
     <p class="hint">Premios (la 1.ª vez que llegas): cofre de madera cada 5 pisos, de plata cada 25 y de modo cada 50. Siguiente: piso ${nxt.f} · ${bundleHTML(nxt.b)}</p></section>` }
+/* ---------- PvP asíncrono: 4 sistemas de prueba (pvp1..pvp4) ---------- */
+const PVPM={1:['Ataque y defensa','Monta tu defensa; ataca la de otros eligiendo cartas y postura'],2:['Duelo programado','Planea 5 acciones en secreto y adivina las del rival'],3:['Draft de cartas','Coged cartas por turnos de la misma mesa; luego pelean solos'],4:['Equipo','Tu héroe + 2 mercenarios, delante o detrás; pelean solos']};
+const P2A={A:'⚔ Atacar',B:'🛡 Bloquear',C:'⚡ Cargar',H:'💥 Habilidad'};
+const PROF={agresivo:'Suele atacar mucho',defensivo:'Suele bloquear',astuto:'Suele cargar y usar habilidades'};
+let p1def=null, p1atk={st:null,picks:[]}, p2plan=['A','A','A','A','A'], p2last=null, p4last=null;
+const fxName=id=>G.boonInfo({t:'fx',id}).name;
+function fxCard(id,act,k,sel,dis){ const f=G.boonInfo({t:'fx',id}), c=RARC[f.r]; return `<button class="mcard bcard${sel?' sel':''}" data-act="${act}" data-k="${k}" ${dis?'disabled':''} style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b>${sel?'<span class="pill" style="color:var(--good)">✓</span>':''}</div><span class="s">${f.desc}</span></button>` }
+const stName=k=>CFG.pvp.stance[k].name;
+const stChips=(act,cur)=>`<div class="tchips">${Object.keys(CFG.pvp.stance).map(k=>`<button class="pill${cur===k?' on':''}" data-act="${act}" data-v="${k}">${stName(k)}</button>`).join('')}</div>`;
+const pvpWho=r=>`${esc(r.name)} · ${r.cls}${r.path?' '+r.path:''} · ${fmt(r.pts)} pts`;
+const pvpOdds=r=>{ const E=1/(1+Math.pow(10,(r.pts-G.pvpState().pts)/400)); return `ganar +${Math.round(CFG.pvp.k*(1-E))} · perder ${Math.round(-CFG.pvp.k*E)}` };
+function pvpHead(){ const P=G.pvpState(), V=CFG.pvp; return `<div class="evhead"><div><span class="s">Puntos</span><b>${fmt(P.pts)}</b></div><div><span class="s">Puesto</span><b>${G.pvpRank(P.w,P.pts)}</b></div><div><span class="s">Combates hoy</span><b>${G.pvpLeft()}/${V.daily}</b></div></div>` }
+function tabPvp(){ const P=G.pvpState(), V=CFG.pvp, pos=G.pvpRank(P.w,P.pts);
+  const pend=P.pend?`<div class="misTop"><b>Liga terminada · puesto ${P.pend.pos}</b><span class="s">${P.pend.rew?bundleHTML(P.pend.rew):'Sin premio'}</span><button class="btn gold" data-act="pvpClaim">Recoger</button></div>`:'';
+  const hist=P.hist.length?`<h3>Últimos duelos</h3><div class="rank">${P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>PvP${x.m||''} · ${esc(x.name)} · ${x.cls}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
+  const rews=`<div class="rank evrew">${V.rewards.map((r,i)=>{ const from=i?V.rewards[i-1].to+1:1; return `<div><b>${from===r.to?r.to:from+'–'+r.to}</b><span>${bundleHTML(r.b)}</span></div>` }).join('')}</div>`;
+  const live=P.duel?P.duel.m:0;
+  return `<section class="panel"><h3>PvP · pruebas</h3>${pvpHead()}${pend}
+    <div class="mlist">${[1,2,3,4].map(m=>`<button class="mcard mbig" data-act="modview" data-v="pvp${m}"><div class="ctrl" style="justify-content:space-between"><b>PvP${m} · ${PVPM[m][0]}</b>${live===m?'<span class="pill" style="color:var(--gold)">En curso</span>':''}</div><span class="s">${PVPM[m][1]}</span></button>`).join('')}</div>
+    <p class="hint">Sin tiempo real: siempre luchas contra la copia de otro jugador (la maneja la IA). Los 4 sistemas comparten puntos, liga y combates del día (${V.daily}).</p>
+    <h3>Liga semanal · cierra en ${dhm(G.weekLeft())}</h3>${rankHTML(G.pvpRivals(P.w).map(x=>({name:x.name,score:x.pts})),P.pts,pos,fmt)}
+    <h3>Premios de la semana</h3>${rews}${hist}</section>` }
+function pvpFindBtn(m){ const P=G.pvpState(), busy=G.inEvent()||(P.duel&&P.duel.m!==m); return `<button class="btn gold" data-act="pvpFind" data-k="${m}" ${busy?'disabled':''}>Buscar rival</button>${busy&&P.duel?`<p class="hint">Tienes un duelo en curso en PvP${P.duel.m}.</p>`:''}` }
+const noFights=()=>G.pvpLeft()<=0?'<p class="hint" style="color:var(--bad)">No te quedan combates hoy.</p>':'';
+function tabPvp1(){ const P=G.pvpState(), V=CFG.pvp, r=P.rival&&P.rival.m===1?P.rival:null; if(!p1def) p1def=P.def?{st:P.def.st,cards:P.def.cards.slice()}:{st:'aguantar',cards:[]};
+  const changed=!P.def||P.def.st!==p1def.st||P.def.cards.join()!==p1def.cards.join();
+  const def=`<h3>Mi defensa</h3><p class="hint">Otros jugadores la atacan cuando no estás. Postura:</p>${stChips('p1St',p1def.st)}
+    <p class="hint">Elige 3 cartas (${p1def.cards.length}/3):</p><div class="mlist">${V.cards.map((id,i)=>fxCard(id,'p1Card',i,p1def.cards.includes(id),false)).join('')}</div>
+    <button class="btn ${changed&&p1def.cards.length===3?'gold':''}" data-act="p1Save" ${changed&&p1def.cards.length===3?'':'disabled'}>${P.def?'Guardar cambios':'Guardar defensa'}</button>`;
+  const log=P.log.length?`<h3>Registro</h3><div class="rank">${P.log.map((x,i)=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'✓':'✗'}</span><span>${esc(x.name)} (${x.cls}, ${stName(x.st)}) ${x.win?'no pudo con tu defensa':'ganó a tu defensa'}${!x.win&&!x.rev?` <button class="btn sm" data-act="p1Rev" data-k="${i}">Venganza</button>`:''}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
+  let atk;
+  if(!r) atk=pvpFindBtn(1);
+  else atk=`<div class="misTop"><b>${pvpWho(r)}${r.free?' · <span style="color:var(--gold)">Venganza (gratis)</span>':''}</b><span class="s">Su defensa: <b>${stName(r.def.st)}</b> · ${r.def.cards.map(fxName).join(', ')} · ${pvpOdds(r)}</span></div>
+    <p class="hint">Tu postura (Presionar gana a Aguantar, Aguantar gana a Contraataque, Contraataque gana a Presionar; la que gana hace +${Math.round(V.stBonus*100)} % de daño):</p>${stChips('p1ASt',p1atk.st)}
+    <p class="hint">Elige 2 cartas (${p1atk.picks.length}/2):</p><div class="mlist">${P.offer.map((id,i)=>fxCard(id,'p1APick',i,p1atk.picks.includes(i),false)).join('')}</div>
+    <div class="ctrl"><button class="btn gold" style="flex:1" data-act="p1Go" ${p1atk.st&&p1atk.picks.length===2&&(r.free||G.pvpLeft())&&!G.inEvent()?'':'disabled'}>Atacar</button><button class="btn" data-act="pvpFind" data-k="1">Otro rival</button></div>${r.free?'':noFights()}`;
+  return `<section class="panel"><h3>PvP1 · Ataque y defensa</h3>${pvpHead()}<h3>Atacar</h3>${atk}${def}${log}</section>` }
+function tabPvp2(){ const P=G.pvpState(), D=P.duel&&P.duel.m===2?P.duel:null, r=P.rival&&P.rival.m===2?P.rival:null, V=CFG.pvp.duel, nH=p2plan.filter(a=>a==='H').length;
+  const rules=`<p class="hint">⚔ Atacar: daño normal (a quien carga, ×${V.vsCharge}) · 🛡 Bloquear: para el ataque y devuelve parte · ⚡ Cargar: tu próxima 💥 pega doble (si te atacan, lo pierdes) · 💥 Habilidad: ×${V.skill}, rompe el bloqueo (máx. ${V.maxH} por plan). Hasta ${V.plans} planes; si nadie cae, gana quien tenga más vida.</p>`;
+  const tw=p2last?`<h3>Último plan</h3><div class="p2t"><span></span>${p2last.turns.map((t,i)=>`<span>T${i+1}</span>`).join('')}<span>Tú</span>${p2last.turns.map(t=>`<span>${P2A[t.a].split(' ')[0]}</span>`).join('')}<span>Rival</span>${p2last.turns.map(t=>`<span>${P2A[t.b].split(' ')[0]}</span>`).join('')}<span></span>${p2last.turns.map(t=>`<span class="s">${t.d1>0?`<b style="color:var(--good)">−${Math.round(t.d1*100)}</b>`:''}${t.d0>0?` <b style="color:var(--bad)">−${Math.round(t.d0*100)}</b>`:''}${!t.d0&&!t.d1?'–':''}</span>`).join('')}</div>`:'';
+  let body;
+  if(!r) body=pvpFindBtn(2)+tw;
+  else if(!D) body=`<div class="misTop"><b>${pvpWho(r)}</b><span class="s">Pista: ${PROF[r.prof]} · ${pvpOdds(r)}</span></div><button class="btn gold" data-act="p2Start" ${G.pvpLeft()?'':'disabled'}>Empezar duelo</button>${noFights()}`;
+  else body=`<div class="misTop"><b>Plan ${D.plan+1}/${V.plans} contra ${esc(r.name)} (${r.cls})</b><span class="s">Pista: ${PROF[r.prof]}</span>
+      <div class="p2hp"><span>Tú</span><i><u style="width:${Math.max(0,D.hp[0])*100}%;background:var(--good)"></u></i><b>${Math.max(0,Math.round(D.hp[0]*100))} %</b><span>Rival</span><i><u style="width:${Math.max(0,D.hp[1])*100}%;background:var(--bad)"></u></i><b>${Math.max(0,Math.round(D.hp[1]*100))} %</b></div>
+      ${D.ch[0]||D.ch[1]?`<span class="s">${D.ch[0]?'⚡ Tienes carga. ':''}${D.ch[1]?'⚡ El rival tiene carga.':''}</span>`:''}</div>
+    <p class="hint">Toca cada turno para cambiar la acción:</p><div class="p2plan">${p2plan.map((a,i)=>`<button class="btn" data-act="p2Act" data-k="${i}"><span class="s">T${i+1}</span><br>${P2A[a]}</button>`).join('')}</div>
+    ${nH>V.maxH?`<p class="hint" style="color:var(--bad)">Máximo ${V.maxH} habilidades por plan.</p>`:''}<button class="btn gold" data-act="p2Go" ${nH>V.maxH?'disabled':''}>Revelar</button>${tw}`;
+  return `<section class="panel"><h3>PvP2 · Duelo programado</h3>${pvpHead()}${body}${rules}</section>` }
+function tabPvp3(){ const P=G.pvpState(), D=P.duel&&P.duel.m===3?P.duel:null, r=P.rival&&P.rival.m===3?P.rival:null;
+  let body;
+  if(!r) body=pvpFindBtn(3);
+  else if(!D) body=`<div class="misTop"><b>${pvpWho(r)}</b><span class="s">${pvpOdds(r)}</span></div><button class="btn gold" data-act="p3Start" ${G.pvpLeft()?'':'disabled'}>Empezar draft</button>${noFights()}`;
+  else { const mine=D.table.filter((c,j)=>D.own[j]===0), theirs=D.table.filter((c,j)=>D.own[j]===1);
+    body=`<div class="misTop"><b>Te toca · ${mine.length+1} de 4</b><span class="s">Tú: ${mine.map(fxName).join(', ')||'–'}<br>Rival: ${theirs.map(fxName).join(', ')||'–'}</span></div>
+      <div class="mlist">${D.table.map((id,j)=>D.own[j]===null?fxCard(id,'p3Pick',j,false,false):`<div class="mcard bcard gone"><b>${fxName(id)}</b><span class="s">${D.own[j]?'Del rival':'Tuya'}</span></div>`).join('')}</div>`; }
+  return `<section class="panel"><h3>PvP3 · Draft de cartas</h3>${pvpHead()}${body}<p class="hint">Hay 8 cartas en la mesa. Coges una y el rival otra, hasta 4 cada uno. Lo que coges tú, él ya no lo tiene. Después pelean solos en el escenario.</p></section>` }
+const CLS_I={Guerrero:'🛡',Mago:'🔥',Arquero:'🏹',Asesino:'🗡',Clerigo:'✨'};
+function tabPvp4(){ const P=G.pvpState(), T=P.team, r=P.rival&&P.rival.m===4?P.rival:null, V=CFG.pvp.team;
+  const unit=(i,cls,hero)=>`<div class="p4u"><b>${CLS_I[cls]} ${hero?'Tú':'Mercenario'}</b>${hero?`<span class="s">${cls}</span>`:`<button class="btn sm" data-act="p4Merc" data-k="${i-1}">${cls} ↻</button>`}<button class="btn sm" data-act="p4Pos" data-k="${i}">${T.pos[i]==='f'?'Delante':'Detrás'}</button></div>`;
+  const team=`<h3>Mi equipo</h3><div class="p4team">${unit(0,S.cls,true)}${unit(1,T.mercs[0])}${unit(2,T.mercs[1])}</div>`;
+  const last=p4last?`<h3>Último combate · ${p4last.win?'<span style="color:var(--good)">Victoria</span>':'<span style="color:var(--bad)">Derrota</span>'} (${Math.round(p4last.t)} s)</h3><div class="rank">${p4last.units.map(u=>`<div><span>${u.side?'Rival':'Tú'}</span><span>${CLS_I[u.cls]} ${u.cls}${u.hero?' (héroe)':''} · ${u.pos==='f'?'delante':'detrás'} · daño ${fmt(u.dmg)}</span><b style="color:${u.hp>0?'var(--good)':'var(--bad)'}">${u.hp>0?Math.round(u.hp/u.max*100)+' %':'†'}</b></div>`).join('')}</div>`:'';
+  const riv=r?`<div class="misTop"><b>${pvpWho(r)}</b><span class="s">Delante: ${r.team.filter(u=>u.pos==='f').map(u=>CLS_I[u.cls]+' '+u.cls).join(', ')||'–'} · Detrás: ${r.team.filter(u=>u.pos==='b').map(u=>CLS_I[u.cls]+' '+u.cls).join(', ')||'–'}<br>${pvpOdds(r)}</span></div>
+    <div class="ctrl"><button class="btn gold" style="flex:1" data-act="p4Go" ${G.pvpLeft()?'':'disabled'}>Luchar</button><button class="btn" data-act="pvpFind" data-k="4">Otro rival</button></div>${noFights()}`:pvpFindBtn(4);
+  return `<section class="panel"><h3>PvP4 · Equipo</h3>${pvpHead()}${riv}${team}
+    <p class="hint">Primero se ataca a la fila de delante. 🛡 Guerrero delante: atrae a los cuerpo a cuerpo y recibe menos daño · 🗡 Asesino: salta a la fila de atrás · 🏹 Arquero: dispara al más débil · 🔥 Mago: salpica a los de la misma fila · ✨ Clérigo: cura al aliado más herido. Un cuerpo a cuerpo detrás pega la mitad (menos el Asesino). Mercenarios al ${Math.round(V.merc*100)} % de tu fuerza.</p>${last}</section>` }
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
@@ -551,14 +619,12 @@ function tabEv(){
       ${big('campana','Campaña','Normal · Pesadilla · Infierno',`<span class="pill" style="color:var(--gold)">${M.name} · fase ${S.best}/${CFG.phaseCap}</span>`)}
       ${big('eventos','Eventos','Mazmorra · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
       ${big('torre','Torre','Roguelike: elige caminos y combina mejoras de todas las clases',(r=>r?`<span class="pill" style="color:var(--gold)">Piso ${r.floor} · ♥ ${r.lives}</span>`:`<span class="pill">Récord ${G.towerState().best}</span>`)(G.towerState().run))}
-      ${big('pvp','PvP','Tutorial · Buscar partida','<span class="pill">Próximamente</span>')}
+      ${big('pvp','PvP','4 sistemas de prueba · liga semanal',G.pvpState().pend?'<span class="pill" style="color:var(--gold)">Premio</span>':G.pvpState().duel?'<span class="pill" style="color:var(--gold)">Duelo en curso</span>':`<span class="pill">${G.pvpLeft()} combates</span>`)}
     </div></section>` }
   if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div><p class="hint">Cada modo tiene ${CFG.phaseCap} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p></section>`;
   if(modView==='torre') return back+tabTower();
-  if(modView==='pvp') return `${back}<section class="panel"><h3>PvP</h3><div class="mlist">
-      <button class="mcard mbig" data-act="pvpSoon"><div class="ctrl" style="justify-content:space-between"><b>Tutorial</b><span class="pill">Próximamente</span></div><span class="s">Aprende a combatir contra otros jugadores</span></button>
-      <button class="mcard mbig" data-act="pvpSoon"><div class="ctrl" style="justify-content:space-between"><b>Buscar partida</b><span class="pill">Próximamente</span></div><span class="s">Lucha contra otro jugador</span></button>
-    </div></section>`;
+  if(modView==='pvp') return back+tabPvp();
+  if(/^pvp[1-4]$/.test(modView)) return `<button class="back" data-act="modview" data-v="pvp">← PvP</button>`+({pvp1:tabPvp1,pvp2:tabPvp2,pvp3:tabPvp3,pvp4:tabPvp4})[modView]();
   return `${back}<section class="panel"><h3>Eventos</h3>
     ${card('lab','Mazmorra','Hasta 5 min de monstruos, cada vez más y más rápidos · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
     ${CFG.league&&CFG.league.show?(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow()):''}
@@ -879,7 +945,23 @@ const ACT={
   wbClaim:()=>{ const p=G.wbClaim(); if(p){ toast(p.rew?evRewPlain(p.rew):'Sin premio'); renderTab(); } },
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
-  pvpSoon:()=>toast('PvP: próximamente'),
+  pvpFind:(b,k)=>{ if(G.pvpFind(+k)){ p1atk={st:null,picks:[]}; renderTab(); } },
+  p1St:b=>{ p1def.st=b.dataset.v; renderTab() },
+  p1Card:(b,k)=>{ const id=CFG.pvp.cards[+k], L=p1def.cards; if(L.includes(id)) L.splice(L.indexOf(id),1); else if(L.length<3) L.push(id); else toast('Máximo 3 cartas'); renderTab() },
+  p1Save:()=>{ const first=!G.pvpState().def; if(G.pvp1Def(p1def.st,p1def.cards)){ haptic('ok'); toast(first?'Defensa guardada: ya te han atacado, mira el registro':'Defensa guardada'); renderTab(); } },
+  p1ASt:b=>{ p1atk.st=b.dataset.v; renderTab() },
+  p1APick:(b,k)=>{ const L=p1atk.picks, i=+k; if(L.includes(i)) L.splice(L.indexOf(i),1); else if(L.length<2) L.push(i); else toast('Máximo 2 cartas'); renderTab() },
+  p1Go:()=>{ if(G.pvp1Attack(p1atk.st,p1atk.picks)){ p1atk={st:null,picks:[]}; tab='up'; renderTab(); } },
+  p1Rev:(b,k)=>{ if(G.pvp1Revenge(+k)){ p1atk={st:null,picks:[]}; renderTab(); } },
+  p2Act:(b,k)=>{ const o='ABCH', i=+k; p2plan[i]=o[(o.indexOf(p2plan[i])+1)%4]; renderTab() },
+  p2Start:()=>{ if(G.pvp2Start()){ p2last=null; renderTab(); } },
+  p2Go:()=>{ const r=G.pvp2Play(p2plan.slice()); if(r){ p2last=r; renderTab(); } },
+  p3Start:()=>{ if(G.pvp3Start()) renderTab() },
+  p3Pick:(b,k)=>{ if(G.pvp3Pick(+k)){ if(G.inEvent()) tab='up'; renderTab(); } },
+  p4Merc:(b,k)=>{ const T=G.pvpState().team, L=Object.keys(CFG.classes), m=T.mercs.slice(); m[+k]=L[(L.indexOf(m[+k])+1)%L.length]; G.pvp4Team(m,T.pos); renderTab() },
+  p4Pos:(b,k)=>{ const T=G.pvpState().team, p=T.pos.slice(); p[+k]=p[+k]==='f'?'b':'f'; G.pvp4Team(T.mercs,p); renderTab() },
+  p4Go:()=>{ const r=G.pvp4Fight(); if(r){ p4last=r; renderTab(); } },
+  pvpClaim:()=>{ const p=G.pvpClaim(); if(p){ haptic('ok'); toast(p.rew?'Premio de liga: '+bundleTxt(p.rew):'Sin premio esta semana'); } renderTab() },
   syncRetry:()=>location.reload(),
   modview:b=>{ modView=b.dataset.v||null; evView=null; renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },

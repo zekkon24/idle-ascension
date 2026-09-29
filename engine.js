@@ -99,13 +99,14 @@ function createGame(opts){
     const gs=grimSet(), GFX=towerOn()?grimFxT():CFG.grimoire.fx;                               // camino B (y Torre): defensa (Guardián) o daño a jefes (Cazador)
     if(gs.has('fortaleza')){ sec.dfp+=GFX.fortaleza.df; sec.bd+=GFX.fortaleza.boss||0; } if(gs.has('cazador')) sec.bd+=GFX.cazador.boss;
     if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
+    const MX=pvpOn()&&S.pvp&&S.pvp.duel?S.pvp.duel.mix:null;   // PvP: tus estadísticas se acercan a las del rival
     return {
       // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida,
       // el Aura del Santo y el daño por defensa del Titán se escalan con ellas para que sigan valiendo lo mismo.
       hpK:Math.pow(U.hp.mult/(U.hp.ref||U.hp.mult),u.hp), dfK:Math.pow(U.df.mult/(U.df.ref||U.df.mult),u.df),
-      hp:(c.hp+(A.hp||0)+c.ghp*L)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*Math.max(0.2,1+TF.aguante.hp*tfx('aguante')+TF.cristal.hp*tfx('cristal')),
-      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(1+TF.fuerza.atk*tfx('fuerza')+TF.cristal.atk*tfx('cristal')),
-      df:(c.df+(A.df||0)+c.gdf*L)*Math.pow(U.df.mult,u.df)*(1+sec.dfp),
+      hp:(c.hp+(A.hp||0)+c.ghp*L)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*Math.max(0.2,1+TF.aguante.hp*tfx('aguante')+TF.cristal.hp*tfx('cristal'))*(MX?MX.hp:1),
+      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(1+TF.fuerza.atk*tfx('fuerza')+TF.cristal.atk*tfx('cristal'))*(MX?MX.atk:1),
+      df:(c.df+(A.df||0)+c.gdf*L)*Math.pow(U.df.mult,u.df)*(1+sec.dfp)*(MX?MX.df:1),
       spd:c.spd*(ps.spd||1)*Math.pow(U.spd.mult,u.spd)*(1+ws)*(1+TF.rapidez.spd*tfx('rapidez')),
       cr:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr+TF.precision.cr*tfx('precision')), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
       ls:Math.min(CFG.caps.ls,sec.ls+TF.vampiro.ls*tfx('vampiro')), bd:sec.bd, ranged:c.ranged,
@@ -233,14 +234,14 @@ function createGame(opts){
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); }
     if(!B.event) surpriseTick();
-    else if(B.event&&B.kind!=='tower'){ if((CFG.event.dur&&B.t>=CFG.event.dur)||B.t>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
+    else if(B.event&&B.kind!=='tower'&&B.kind!=='pvp'){ if((CFG.event.dur&&B.t>=CFG.event.dur)||B.t>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // un intento de ayer se cierra al acabar la pausa
     // curación: lo que de verdad se recupera (Santo: cada curación se convierte en daño en área durante unos segundos)
     // solo la regeneración (Fe) alimenta el aura; lo curado se pasa a la escala antigua (÷ hpK) para que el aura siga pegando igual
     // curación (el Oscuro solo se cura robando vida: ls)
-    const heal=(x,aura,ls)=>{ if(h.noHeal&&!ls) return; const b=B.hp; B.hp=Math.min(h.hp,B.hp+x); const got=B.hp-b; if(aura&&got>0&&P&&P.aura) B.auraPool=(B.auraPool||0)+got*P.aura/h.hpK; };
+    const heal=(x,aura,ls)=>{ if(h.noHeal&&!ls) return; if(B.kind==='pvp') x*=CFG.pvp.heal; const b=B.hp; B.hp=Math.min(h.hp,B.hp+x); const got=B.hp-b; if(aura&&got>0&&P&&P.aura) B.auraPool=(B.auraPool||0)+got*P.aura/h.hpK; };
     if(h.regen){ const lit=P&&P.lightMult&&B.t<(B.lightUntil||0); heal(h.regen*(lit?P.lightMult:1)*h.hp*dt,true); }
     const kill=e=>{ if(e.dead) return; e.dead=true; e.deadAt=B.t;
-      if(towerOn()&&tfx('explosion')){ const x=e.max*CFG.tower.fx.explosion.pct; for(const o of B.enemies){ if(o.dead||o===e||o.arrive>B.t+0.5) continue; o.hp-=x; B.mD+=x; emit('hit',{e:o,d:x,crit:false,burst:true}); if(o.hp<=0) kill(o); } }   // Torre: Explosión
+      if(bonOn()&&tfx('explosion')){ const x=e.max*CFG.tower.fx.explosion.pct; for(const o of B.enemies){ if(o.dead||o===e||o.arrive>B.t+0.5) continue; o.hp-=x; B.mD+=x; emit('hit',{e:o,d:x,crit:false,burst:true}); if(o.hp<=0) kill(o); } }   // Torre: Explosión
       if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
       if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return }
       if(e.wander){ giveBundle(CFG.surprise.wander.reward); SUR.kind=null; emit('surprise',{k:'wanderWin',reward:CFG.surprise.wander.reward}); }
@@ -261,14 +262,15 @@ function createGame(opts){
       if(P&&P.dblBuff&&B.dblSt){ B.dblSt=B.dblSt.filter(u=>u>B.t); d*=1+P.dblBuff*B.dblSt.length; } // Ojo de Halcón: racha tras disparo doble
       if(B.critBuff){ d*=1+P.critNext; B.critBuff=false; }                // Sombra: golpe potenciado tras un crítico
       d*=buffMul('atk');                                                        // habilidades: +daño
-      if(towerOn()){ const TX=CFG.tower.fx; if(tfx('ejecutor')&&tg.hp<TX.ejecutor.below*tg.max) d*=1+TX.ejecutor.mult*tfx('ejecutor'); if(tfx('furia')) d*=1+TX.furia.per*tfx('furia')*Math.max(0,1-B.hp/h.hp); }   // Torre: Ejecutor y Furia
+      if(bonOn()){ const TX=CFG.tower.fx; if(tfx('ejecutor')&&tg.hp<TX.ejecutor.below*tg.max) d*=1+TX.ejecutor.mult*tfx('ejecutor'); if(tfx('furia')) d*=1+TX.furia.per*tfx('furia')*Math.max(0,1-B.hp/h.hp); }   // Torre: Ejecutor y Furia
       { const a1=buffAdd('atk1'); if(a1&&(B.boss||B.kind==='boss')) d*=1+a1; }   // +daño solo contra jefes
       if(tg.mark>B.t) d*=1+tg.markMult;                                         // Marca del cazador
       if(GS.has('sacrificio')&&B.hp>1){ const GF=FX.sacrificio; B.hp=Math.max(1,B.hp-GF.cost*h.hp); if(!GF.single||B.boss||B.kind==='boss') d*=1+GF.atk; }   // Oscuro: el extra solo contra jefes   // Sacrificio: vida por daño
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
-      if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; if(towerOn()&&tfx('colmillo')) heal(CFG.tower.fx.colmillo.heal*tfx('colmillo')*h.hp,false,true); if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE);   // Filo del vacío: el crítico ignora la defensa
+      if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; if(bonOn()&&tfx('colmillo')) heal(CFG.tower.fx.colmillo.heal*tfx('colmillo')*h.hp,false,true); if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE);   // Filo del vacío: el crítico ignora la defensa
         B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
       else if(P&&P.critStack) B.critAcc=Math.min(P.critStackMax||1,(B.critAcc||0)+P.critStack); // Segador: cada golpe sin crítico suma probabilidad de crítico
+      if(tg.pv) d=pvpIn(tg,d);
       tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls')+(GS.has('sacrificio')?FX.sacrificio.lsMax*Math.max(0,1-B.hp/h.hp):0))*h.hpK,false,true); if(B.kind==='boss') addDmg(d);   // (Oscuro: roba más cuanta menos vida)   // robo de vida: cura la misma parte de tu vida máxima que antes
       if(P&&P.burnPct){ tg.burn=tg.burn||[]; if(tg.burn.length>=P.burnMax) tg.burn.shift(); tg.burn.push(B.t+P.burnDur); }
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
@@ -277,7 +279,7 @@ function createGame(opts){
         tg.frozen=B.t+FX.escarcha.freeze; emit('hit',{e:tg,d:x,crit:false,frost:true}); emit('fx',{k:'congelar',e:tg}); }
       if(LS.llamarada&&(B.flare=(B.flare||0)+1)%LS.llamarada.every===0) for(const e of B.enemies){ if(e.dead) continue; e.dot=B.t+LS.llamarada.dur; e.dotDps=LS.llamarada.pct*d; e.dotKind='fuego'; }   // Llamarada solar
       if(GS.has('veneno')){ const GF=FX.veneno; tg.poison=(tg.poison||[]).filter(x=>x.until>B.t); tg.poison.push({until:B.t+GF.dur,dps:GF.pct*d}); if(tg.poison.length>GF.max) tg.poison.shift(); }
-      if(towerOn()&&tfx('hielo')&&!tg.dead&&rand()<CFG.tower.fx.hielo.chance) tg.frozen=Math.max(tg.frozen||0,B.t+CFG.tower.fx.hielo.dur);   // Torre: Orbe de hielo
+      if(bonOn()&&tfx('hielo')&&!tg.dead&&rand()<CFG.tower.fx.hielo.chance) tg.frozen=Math.max(tg.frozen||0,B.t+CFG.tower.fx.hielo.dur);   // Torre: Orbe de hielo
       if(tg.hp<=0) kill(tg);
       // Tajo partido (después de matar: también alcanza al que acaba de salir)
       if(LS.tajo){ const o=B.enemies.find(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5); if(o){ const x=d*LS.tajo.mult; o.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); emit('hit',{e:o,d:x,crit:false,cleave:true}); if(o.hp<=0) kill(o); } }
@@ -290,7 +292,7 @@ function createGame(opts){
         CD[k]=CT+sk.cd*cdMul(); (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
     if(B.cast&&B.cast.length){ const list=B.cast; B.cast=[];
       const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk');
-      const hurt=(e,d,k)=>{ e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e,d,crit:false,skill:k}); if(e.hp<=0) kill(e); return e.dead };
+      const hurt=(e,d,k)=>{ if(e.pv) d=pvpIn(e,d); e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e,d,crit:false,skill:k}); if(e.hp<=0) kill(e); return e.dead };
       for(const k of (tfx('eco')?list.flatMap(k=>k[0]==='t'?[k,k]:[k]):list)){ const sk=skillDef(k); if(!sk) continue;
         switch(sk.id){
           case 'muro': BUF.shield=(BUF.shield||0)+sk.shield*h.df;                                   // escudo según la defensa
@@ -344,11 +346,12 @@ function createGame(opts){
       if(!e.dead&&e.frozen>B.t){ if(e.arrive>B.t){ e.spawn+=dt; e.arrive+=dt; } e.next=Math.max(e.next,e.frozen); continue; }   // congelado
       if(e.dead||e.arrive>B.t) continue;
       while(B.t>=e.next){
-        if(rand()>=h.ev){ let d=dmgF(e.atk,h.df*buffMul('df'))*h.dmgTaken*buffMul('taken');
+        if(rand()>=h.ev){ let d=dmgF(e.atk,h.df*buffMul('df'))*h.dmgTaken*buffMul('taken'); if(e.cr&&rand()<e.cr) d*=1+e.cd;   // (rival PvP: críticos)
+          if(e.pv){ const X=e.pv; if(X.exec&&B.hp<CFG.tower.fx.ejecutor.below*h.hp) d*=1+X.exec; if(X.furia) d*=1+X.furia*Math.max(0,1-e.hp/e.max); if(X.ls) e.hp=Math.min(e.max,e.hp+d*X.ls*CFG.pvp.heal); }   // rival PvP: sus cartas
           if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad
           if(BUF.gshield>0){ const a=Math.min(BUF.gshield,d); BUF.gshield-=a; d-=a; }    // escudo del Grimorio de la Luz
           B.hp-=d; emit('heroHit',{d}); if(!B.event&&STK.n){ STK.n=0; emit('streak',{n:0}); }
-          { const rf=buffAdd('reflect')+CFG.tower.fx.espinas.reflect*tfx('espinas'); if(rf>0){ const r=d*rf/h.hpK; e.hp-=r; B.mD+=r; if(B.kind==='boss') addDmg(r); emit('hit',{e,d:r,crit:false,thorns:true}); if(e.hp<=0) kill(e); } }   // Baluarte: devuelve daño
+          { const rf=buffAdd('reflect')+CFG.tower.fx.espinas.reflect*tfx('espinas')+(pvpOn()&&S.pvp.duel?S.pvp.duel.refl||0:0); if(rf>0){ const r=d*rf/h.hpK; e.hp-=r; B.mD+=r; if(B.kind==='boss') addDmg(r); emit('hit',{e,d:r,crit:false,thorns:true}); if(e.hp<=0) kill(e); } }   // Baluarte: devuelve daño
           if(CT<(BUF.iceArmor||0)&&!e.dead&&(e.shards=(e.shards||0)+(BUF.iceShards||1))>=CFG.grimoire.fx.escarcha.need){ const F=CFG.grimoire.fx.escarcha; e.shards=0;   // Armadura de hielo: esquirla al que pega
             const x=dmgF(h.atk,e.df*(1-F.ignoreDf))*F.mult*(B.boss?1+h.bd:1); e.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); e.frozen=B.t+F.freeze; emit('hit',{e,d:x,crit:false,frost:true}); if(e.hp<=0) kill(e); }
           if(P&&P.rage) B.rage=(B.rage||0)+1;
@@ -360,6 +363,9 @@ function createGame(opts){
         if(e.dead) break;
       }
     }
+    if(B.kind==='pvp'){ const V=CFG.pvp, r=B.enemies[0];
+      if(r&&!r.dead&&r.arrive<=B.t&&CT>=(r.skAt||0)){ if(r.skAt){ let d=dmgF(r.atk,h.df*buffMul('df'))*V.skillMult*h.dmgTaken; if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; } B.hp-=d; emit('heroHit',{d,skill:true}); emit('fx',{k:'rivalSkill'}); } r.skAt=CT+V.skillEvery; }
+      if(B.hp<=0||(r&&r.dead)||B.t>=V.round){ endEvent(); return } }
     if(B.kind==='tower'){ const TX=CFG.tower.fx;
       if(tfx('reloj')&&CT>=B.clockAt){ B.clockAt=CT+TX.reloj.every; for(const k of skillSlots()) CD[k]=CT; emit('fx',{k:'reloj'}); }   // Torre: Reloj de arena
       if(tfx('martillo')&&CT>=B.hammerAt){ B.hammerAt=CT+TX.martillo.every; for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const x=dmgF(h.atk,e.df)*TX.martillo.mult; e.hp-=x; B.mD+=x; emit('hit',{e,d:x,crit:false,bolt:true}); if(e.hp<=0) kill(e); } }   // Torre: Martillo del trueno
@@ -418,7 +424,9 @@ function createGame(opts){
   function evoP(){ if(!S.evo) return null; const k=S.cls+S.evo+(S.path||''); if(EPk===k) return EP; const o={}; evoTiers().slice(0,S.evo).forEach((t,i)=>Object.assign(o,tierCls(t,i))); EP=o; EPk=k; return o }
   // Torre: las mejoras elegidas en la partida se suman a lo tuyo solo mientras luchas en la Torre
   const towerOn=()=>!!(B&&B.kind==='tower');
-  const tBoons=()=>towerOn()&&S.tower&&S.tower.run?S.tower.run.boons:[];
+  const pvpOn=()=>!!(B&&B.kind==='pvp');
+  const bonOn=()=>towerOn()||pvpOn();   // mejoras de la Torre activas (Torre o duelo PvP)
+  const tBoons=()=>towerOn()&&S.tower&&S.tower.run?S.tower.run.boons:pvpOn()&&S.pvp&&S.pvp.duel?S.pvp.duel.cards.map(id=>({t:'fx',id})):[];
   const boonPas=b=>{ const T=evoTiers()[0]; return b.path==='B'?T.alt[b.cls]:T.classes[b.cls] };
   const towerSkills=()=>tBoons().filter(b=>b.t==='sk');
   const tfx=id=>tBoons().filter(b=>b.t==='fx'&&b.id===id).length;   // cuántas veces tienes esta mejora de la Torre
@@ -515,9 +523,127 @@ function createGame(opts){
   function endEvent(){
     if(!B||!B.event) return null;
     if(B.kind==='tower') return towerEnd(B.hp>0);
+    if(B.kind==='pvp') return pvpFightEnd();
     const res=B.kind==='boss'?wbFinish(B.dmg,B.hp<=0):finishRun(B.kills,B.hp<=0);
     B=null; misBump('event',1); save(); emit('eventEnd',res); startWave(); emit('change'); return res;
   }
+  /* ---------- PvP asíncrono: 4 sistemas de prueba (pvp1..pvp4) contra copias y fantasmas ----------
+     Comparten puntos (ELO), liga semanal, combates del día e historial.
+     1 Ataque y defensa · 2 Duelo programado (turnos en secreto) · 3 Draft de cartas · 4 Equipo autochess */
+  const PSYL=['ka','ro','mi','zu','the','lan','dor','vi','sha','gar','nel','to','ria','bel','xo','ur','fen','ly','ash','mor'];
+  const pvpName=r=>{ let nm=''; const n=2+Math.floor(r()*2); for(let j=0;j<n;j++) nm+=PSYL[Math.floor(r()*PSYL.length)]; return nm[0].toUpperCase()+nm.slice(1)+(r()<0.4?Math.floor(r()*99):'') };
+  const pick1=L=>L[Math.floor(rand()*L.length)];
+  const pickN=(L,n)=>{ const c=L.slice(), o=[]; while(o.length<n&&c.length) o.push(c.splice(Math.floor(rand()*c.length),1)[0]); return o };
+  const STANCES=['aguantar','presionar','contra'];
+  // posturas: presionar gana a aguantar, aguantar gana a contraataque, contraataque gana a presionar
+  const stBeats=(a,b)=>a&&b&&CFG.pvp.stance[a].beats===b?1:a&&b&&CFG.pvp.stance[b].beats===a?-1:0;
+  function pvpState(){ const V=CFG.pvp, d=dayKey(), w=weekKey(); S.pvp=S.pvp||{pts:V.start,d,used:0,w,pend:null,hist:[]}; const P=S.pvp;
+    if(P.d!==d){ P.d=d; P.used=0; if(P.def) pvp1Incoming(); }
+    if(P.w!==w){ const pos=pvpRank(P.w,P.pts); P.pend={w:P.w,pos,rew:pvpReward(pos)}; P.w=w; P.pts=Math.round(V.start+(P.pts-V.start)/2); }   // cada lunes: premio y media vuelta a 1000
+    P.log=P.log||[]; P.team=P.team||{mercs:['Guerrero','Clerigo'],pos:[CFG.classes[S.cls].ranged||S.cls==='Asesino'?'b':'f','f','b']};
+    return P }
+  function pvpRivals(w){ const V=CFG.pvp, r=mulberry32(w*7717+(S.startDay||0)); const out=[]; for(let i=0;i<V.rivals;i++){ const g=Math.sqrt(-2*Math.log(r()+1e-9))*Math.cos(2*Math.PI*r()); out.push({name:pvpName(r),pts:Math.round(V.start+60+g*V.rivalSd)}); } return out.sort((a,b)=>b.pts-a.pts) }
+  const pvpRank=(w,pts)=>1+pvpRivals(w).filter(x=>x.pts>pts).length;
+  function pvpReward(pos){ for(const r of CFG.pvp.rewards) if(pos<=r.to) return r.b; return null }
+  function pvpClaim(){ const P=pvpState(); if(!P.pend) return null; const p=P.pend; P.pend=null; if(p.rew) giveBundle(p.rew); save(); emit('change'); return p }
+  const pvpLeft=()=>Math.max(0,CFG.pvp.daily-pvpState().used);
+  const pvpExp=(a,b)=>1/(1+Math.pow(10,(b-a)/400));   // probabilidad esperada de ganar (ELO)
+  // estadísticas de una clase a tu nivel y con tus mejoras (proporción respecto a tu clase)
+  function clsStats(c,pow){ const h=computeStats(), mc=CFG.classes[S.cls], rc=CFG.classes[c], lv=S.lvl-1, ratio=q=>(rc[q]+rc['g'+q]*lv)/(mc[q]+mc['g'+q]*lv);
+    return {cls:c,hp:h.hp*ratio('hp')*pow, atk:h.atk*(1+h.cr*h.cd)/(1+rc.cr*rc.cd)*ratio('atk')*pow, df:h.df*ratio('df')*pow, spd:h.spd*rc.spd/mc.spd, cr:rc.cr, cd:rc.cd, ranged:!!rc.ranged} }
+  // rival fantasma de otra clase con tu fuerza ± spread; según el sistema lleva defensa, estilo o equipo
+  function pvpFind(m){ const P=pvpState(), V=CFG.pvp; if(inEvent()||P.duel) return null; const cls=Object.keys(CFG.classes), c=pick1(cls), k=()=>1+(rand()*2-1)*V.spread;
+    const b=clsStats(c,1), r={m:m||1,name:pvpName(rand),cls:c,path:S.evo>=1?(rand()<0.5?'A':'B'):null,pts:Math.max(0,Math.round(P.pts+(rand()*2-1)*120)),hp:b.hp*k(),atk:b.atk*k(),df:b.df*k(),spd:b.spd*k(),cr:b.cr,cd:b.cd};
+    if(r.m===1){ r.def={st:pick1(STANCES),cards:pickN(V.cards,3)}; P.offer=pickN(V.cards,4); }
+    if(r.m===2) r.prof=pick1(Object.keys(V.duel.prof));
+    if(r.m===4){ const L=[c,pick1(cls),pick1(cls)]; r.team=L.map((x,i)=>({cls:x,pos:CFG.classes[x].ranged||x==='Clerigo'?'b':'f',pow:i?V.team.merc:1})); if(!r.team.some(u=>u.pos==='f')) r.team[0].pos='f'; }
+    P.rival=r; save(); emit('change'); return r }
+  // fin de un duelo (cualquier sistema): puntos, historial, misión
+  function pvpFinish(win,extra){ const P=S.pvp, V=CFG.pvp, r=P.rival, d=Math.round(V.k*((win?1:0)-pvpExp(P.pts,r.pts)));
+    P.pts=Math.max(0,P.pts+d); P.hist.unshift({m:r.m,name:r.name,cls:r.cls,win,d}); P.hist=P.hist.slice(0,10); P.duel=null; P.rival=null; P.offer=null; misBump('pvp',1);
+    const res={m:r.m,win,d,pts:P.pts,...(extra||{})}; save(); emit('pvpEnd',res); emit('change'); return res }
+  const pvpUse=()=>{ const P=S.pvp; if(P.rival&&P.rival.free) return true; if(pvpLeft()<=0) return false; P.used++; return true };   // la venganza no gasta combate
+  // efectos de cartas para el rival (la IA): lo mismo que te dan a ti
+  function rivalFx(cards){ const TF=CFG.tower.fx, n=id=>cards.filter(x=>x===id).length;
+    return {atk:1+TF.fuerza.atk*n('fuerza')+TF.cristal.atk*n('cristal'), hp:Math.max(0.2,1+TF.aguante.hp*n('aguante')+TF.cristal.hp*n('cristal')), spd:1+TF.rapidez.spd*n('rapidez'), cr:TF.precision.cr*n('precision'),
+      ls:TF.vampiro.ls*n('vampiro')+TF.colmillo.heal*n('colmillo'), shield:TF.escudo.shield*n('escudo'), reflect:TF.espinas.reflect*n('espinas'), taken:TF.talisman.taken*n('talisman'), exec:TF.ejecutor.mult*n('ejecutor'), furia:TF.furia.per*n('furia')} }
+  // combate en tiempo real en el escenario (sistemas 1 y 3): tus cartas y postura contra las del rival
+  function pvpFight(cards,rcards,st,rst){ const P=S.pvp, r=P.rival, V=CFG.pvp, h=computeStats(), m=V.mix, f=(a,b)=>Math.pow(Math.sqrt(a*b)/a,1-m);   // mezcla: los dos se acercan a la media
+    const S1=st?V.stance[st]:{}, S2=rst?V.stance[rst]:{}, t=stBeats(st,rst), g=q=>(S1[q]||1)*(q==='atk'&&t>0?1+V.stBonus:1), gr=q=>(S2[q]||1)*(q==='atk'&&t<0?1+V.stBonus:1);
+    // hpMul: más vida para los dos (rondas más largas); rivalPow y cls: fuerza de la IA (no usa pasivas ni habilidades de clase)
+    P.duel={m:r.m,cards,rcards,st,rst,refl:S1.reflect||0,mix:{hp:f(h.hp,r.hp)*V.hpMul*g('hp'),atk:f(h.atk,r.atk)*g('atk'),df:f(h.df,r.df)*g('df')}};
+    const X=rivalFx(rcards), rp=V.rivalPow*((V.cls||{})[S.cls]||1);
+    const hp=r.hp*f(r.hp,h.hp)*V.hpMul*gr('hp')*X.hp, atk=r.atk*f(r.atk,h.atk)*rp*gr('atk')*X.atk;
+    B={event:true,kind:'pvp',t:0,boss:false,count:0,spawned:0,kills:0,enemies:[],hp:0,th:null,over:false,wait:0,mD:0,mB:0};
+    B.enemies.push({hp,max:hp,atk,df:r.df*f(r.df,h.df)*gr('df'),spawn:0,walk:0.8,arrive:0.8,next:0.8,first:false,dead:false,spd:r.spd*X.spd/CFG.enemy.spd,cr:Math.min(0.6,r.cr+X.cr),cd:r.cd,rival:true,skAt:0,
+      pv:{...X,reflect:X.reflect+(S2.reflect||0),shield:X.shield*hp}});
+    statsDirty(); B.hp=heroStats().hp; if(tfx('escudo')) BUF.shield=CFG.tower.fx.escudo.shield*tfx('escudo')*heroStats().hp; if(tfx('afilar')){ BUF.crits=CFG.tower.fx.afilar.n*tfx('afilar'); BUF.critsUntil=CT+1e9; }
+    emit('eventStart',B); emit('change'); return true }
+  // daño que recibe el rival: talismán, escudo y espinas (te devuelve parte)
+  function pvpIn(e,d){ const X=e.pv; if(!X) return d; d*=1-X.taken; if(X.shield>0){ const a=Math.min(X.shield,d); X.shield-=a; d-=a; } if(X.reflect>0&&B) B.hp-=d*X.reflect; return d }
+  function pvpFightEnd(){ const r=B.enemies[0], me=Math.max(0,B.hp/heroStats().hp), them=r?Math.max(0,r.hp/r.max):0, won=r.dead||(B.hp>0&&me>=them);
+    B=null; BUF.crits=0; BUF.shield=0; statsDirty(); const res=pvpFinish(won,{me,them}); startWave(); return res }
+  /* 1 · Ataque y defensa: tu defensa (postura + 3 cartas) la atacan otros; tú atacas eligiendo 2 cartas y postura viendo la suya */
+  function pvp1Def(st,cards){ const P=pvpState(), V=CFG.pvp; if(!V.stance[st]||!Array.isArray(cards)||cards.length!==3||cards.some(c=>!V.cards.includes(c))) return false;
+    const first=!P.def; P.def={st,cards:cards.slice()}; if(first) pvp1Incoming(); save(); emit('change'); return true }
+  function pvp1Incoming(){ const P=S.pvp, V=CFG.pvp, n=V.def.incoming[0]+Math.floor(rand()*(V.def.incoming[1]-V.def.incoming[0]+1));
+    for(let i=0;i<n;i++){ const st=pick1(STANCES), cards=pickN(V.cards,2), val=c=>({C:1,R:2,L:3})[CFG.tower.fx[c].r];
+      const p=Math.min(0.85,Math.max(0.15,V.def.base+V.def.st*stBeats(P.def.st,st)+V.def.card*(P.def.cards.reduce((a,c)=>a+val(c),0)-cards.reduce((a,c)=>a+val(c),0)*1.5)));
+      const win=rand()<p, d=Math.round(V.k*V.def.k*(win?1:-1)); P.pts=Math.max(0,P.pts+d);
+      P.log.unshift({name:pvpName(rand),cls:pick1(Object.keys(CFG.classes)),st,cards,win,d,rev:false}); }
+    P.log=P.log.slice(0,10) }
+  function pvp1Revenge(i){ const P=pvpState(), x=P.log[i]; if(!x||x.win||x.rev||inEvent()||P.duel) return null; x.rev=true;
+    const r=pvpFind(1); r.name=x.name; r.cls=x.cls; r.def={st:x.st,cards:x.cards.concat(pickN(CFG.pvp.cards,1))}; r.free=true; save(); return r }
+  function pvp1Attack(st,picks){ const P=pvpState(), r=P.rival; if(!r||r.m!==1||inEvent()||P.duel||!CFG.pvp.stance[st]) return false;
+    const cards=[...new Set(picks)].map(i=>P.offer[i]).filter(Boolean); if(cards.length!==2||!pvpUse()) return false;
+    return pvpFight(cards,r.def.cards,st,r.def.st) }
+  /* 2 · Duelo programado: los dos planean 5 acciones en secreto (A atacar, B bloquear, C cargar, H habilidad); se revelan turno a turno */
+  function pvp2Start(){ const P=pvpState(), r=P.rival; if(!r||r.m!==2||inEvent()||P.duel||!pvpUse()) return false; const h=computeStats(), V=CFG.pvp.duel;
+    const pm=dmgF(h.atk,r.df)*(1+h.cr*h.cd)/r.hp, pr=dmgF(r.atk,h.df)*(1+r.cr*r.cd)/h.hp, q=Math.pow(pm/pr,V.pow/2);   // fuerza real: cuenta, pero poco
+    P.duel={m:2,plan:0,hp:[1,1],ch:[0,0],x:[V.x*q,V.x/q],turns:[]}; save(); emit('change'); return true }
+  function pvp2Plan(prof){ const W=CFG.pvp.duel.prof[prof], out=[]; let hs=0;
+    for(let i=0;i<5;i++){ let a; do{ let u=rand()*4; a='ABCH'.split('').find((k,j)=>(u-=W[j])<0)||'A'; }while(a==='H'&&hs>=CFG.pvp.duel.maxH); if(a==='H') hs++; out.push(a); } return out }
+  function pvp2Play(acts){ const P=pvpState(), D=P.duel, r=P.rival, V=CFG.pvp.duel; if(!D||D.m!==2||!Array.isArray(acts)||acts.length!==5||acts.some(a=>!'ABCH'.includes(a))||acts.filter(a=>a==='H').length>V.maxH) return null;
+    const theirs=pvp2Plan(r.prof), cls=[S.cls,r.cls], turns=[];
+    for(let i=0;i<5&&D.hp[0]>0&&D.hp[1]>0;i++){ const a=[acts[i],theirs[i]], dmg=[0,0], note=['',''];
+      for(const s of [0,1]){ const o=1-s, me=a[s], th=a[o], X=D.x[s], C=V.cls[cls[s]]||{};
+        if(me==='A'){ if(th==='B'){ dmg[s]+=D.x[o]*((V.cls[cls[o]]||{}).counter||V.counter); note[s]='bloqueado'; }
+          else { let d=X*(C.atk||1)*(th==='C'?(C.vsCharge||V.vsCharge):1); if(C.crit&&rand()<C.crit){ d*=2; note[s]='¡crítico!'; } dmg[o]+=d; if(th==='C') D.ch[o]=0; } }
+        if(me==='H'){ dmg[o]+=X*(C.skill||V.skill)*(D.ch[s]?V.charged:1); if(th==='C') D.ch[o]=0; D.ch[s]=0; }
+        if(me==='B'&&C.blockHeal) D.hp[s]=Math.min(1,D.hp[s]+C.blockHeal); }
+      for(const s of [0,1]) if(a[s]==='C'&&a[1-s]!=='A'&&a[1-s]!=='H') D.ch[s]=1;
+      D.hp[0]-=dmg[0]; D.hp[1]-=dmg[1]; turns.push({a:a[0],b:a[1],d0:dmg[0],d1:dmg[1],hp:D.hp.slice(),n:note}); }
+    D.plan++; D.turns=turns; const end=D.hp[0]<=0||D.hp[1]<=0||D.plan>=V.plans;
+    if(end){ const win=D.hp[1]<=0&&D.hp[0]>0?true:D.hp[0]<=0&&D.hp[1]>0?false:D.hp[0]>=D.hp[1]; return {turns,theirs,end:true,...pvpFinish(win,{hp:D.hp.slice()})} }
+    save(); emit('change'); return {turns,theirs,end:false} }
+  /* 3 · Draft: 8 cartas en la mesa; tú y el rival cogéis por turnos (4 cada uno) y luego pelean solos en el escenario */
+  function pvp3Start(){ const P=pvpState(), r=P.rival; if(!r||r.m!==3||inEvent()||P.duel||!pvpUse()) return false;
+    P.duel={m:3,table:pickN(CFG.pvp.draft.pool,8),own:Array(8).fill(null)}; save(); emit('change'); return true }
+  function pvp3Pick(i){ const P=pvpState(), D=P.duel; if(!D||D.m!==3||D.own[i]!==null||inEvent()) return false; D.own[i]=0;
+    const free=D.own.map((o,j)=>o===null?j:-1).filter(j=>j>=0), val=c=>({C:1,R:2,L:3})[CFG.tower.fx[c].r]+rand()*1.5;   // la IA coge la carta que más vale (con algo de azar)
+    if(free.length){ const j=free.reduce((a,b)=>val(D.table[b])>val(D.table[a])?b:a); D.own[j]=1; }
+    if(D.own.every(o=>o!==null)) return pvpFight(D.table.filter((c,j)=>D.own[j]===0),D.table.filter((c,j)=>D.own[j]===1),null,null);
+    save(); emit('change'); return true }
+  /* 4 · Equipo autochess: tu héroe + 2 mercenarios, delante (f) o detrás (b); pelean solos al instante */
+  function pvp4Team(mercs,pos){ const P=pvpState(), cls=Object.keys(CFG.classes); if(!Array.isArray(mercs)||mercs.length!==2||mercs.some(c=>!cls.includes(c))||!Array.isArray(pos)||pos.length!==3||pos.some(p=>p!=='f'&&p!=='b')) return false;
+    P.team={mercs:mercs.slice(),pos:pos.slice()}; save(); emit('change'); return true }
+  function pvp4Sim(A,Bt){ const V=CFG.pvp.team, all=[...A.map(u=>({...u,side:0})),...Bt.map(u=>({...u,side:1}))], log=[]; for(const u of all){ u.max=u.hp*=V.hpMul; u.next=0.5+rand()*0.3; u.dmg=0; }
+    const alive=s=>all.filter(u=>u.side===s&&u.hp>0); let t=0;
+    for(;t<V.maxT&&alive(0).length&&alive(1).length;t+=0.1) for(const u of all){ if(u.hp<=0||t<u.next) continue; u.next+=1/u.spd;
+      const en=alive(1-u.side), fr=en.filter(e=>e.pos==='f'), row=fr.length?fr:en, back=en.filter(e=>e.pos==='b'); if(!en.length) break;
+      let tg=u.cls==='Asesino'&&back.length?back[0]:u.cls==='Arquero'?row.reduce((a,b)=>b.hp<a.hp?b:a):(!u.ranged&&row.find(e=>e.cls==='Guerrero'))||row[0];
+      let d=dmgF(u.atk,tg.df)*(rand()<u.cr?1+u.cd:1)*(!u.ranged&&u.cls!=='Asesino'&&u.pos==='b'?V.backMelee:1)*(tg.cls==='Guerrero'&&tg.pos==='f'?V.guard:1);
+      const hitU=(e,x)=>{ e.hp-=x; u.dmg+=x; if(e.hp<=0){ e.hp=0; log.push({t,k:'dead',u:e.cls,side:e.side,by:u.cls}); } };
+      hitU(tg,d);
+      if(u.cls==='Mago') for(const e of en) if(e!==tg&&e.pos===tg.pos&&e.hp>0) hitU(e,d*V.splash);   // Mago: salpica a los de la misma fila
+      if(u.cls==='Clerigo'){ const al=alive(u.side); if(al.length){ const w=al.reduce((a,b)=>b.hp/b.max<a.hp/a.max?b:a); w.hp=Math.min(w.max,w.hp+d*V.heal); } } }   // Clérigo: cura al aliado más herido
+    const pct=s=>all.filter(u=>u.side===s).reduce((a,u)=>a+u.hp/u.max,0);
+    const win=alive(1).length===0&&alive(0).length>0?true:alive(0).length===0?false:pct(0)>=pct(1);
+    return {win,t,log,units:all.map(u=>({cls:u.cls,side:u.side,pos:u.pos,hp:u.hp,max:u.max,dmg:u.dmg,hero:u.hero}))} }
+  function pvp4Fight(){ const P=pvpState(), r=P.rival; if(!r||r.m!==4||inEvent()||P.duel||!pvpUse()) return null; const V=CFG.pvp, T=P.team, h=computeStats(), k=()=>1+(rand()*2-1)*V.spread;
+    const me=[{cls:S.cls,hp:h.hp,atk:h.atk,df:h.df,spd:h.spd,cr:h.cr,cd:h.cd,ranged:!!h.ranged,pos:T.pos[0],hero:true},...T.mercs.map((c,i)=>({...clsStats(c,V.team.merc),pos:T.pos[i+1]}))];
+    const them=r.team.map(u=>({...clsStats(u.cls,u.pow*V.team.rival*((V.team.cls||{})[S.cls]||1)*k()),pos:u.pos}));
+    const res=pvp4Sim(me,them); return {...res,...pvpFinish(res.win)} }
   /* ---------- Torre (roguelike) ---------- */
   // Mejoras posibles: pasivas de los caminos A y B, efectos de armas legendarias y habilidades (de clase y de evolución) de todas las clases
   function boonPool(){ const T=CFG.tower, run=S.tower.run, have=new Set(run.boons.map(boonKey)), out=[];
@@ -1013,7 +1139,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, boonInfo, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpRivals, pvpRank, pvpClaim, pvpLeft, pvpFind, pvp1Def, pvp1Attack, pvp1Revenge, pvp2Start, pvp2Play, pvp3Start, pvp3Pick, pvp4Team, pvp4Fight, pvp4Sim, pvpOn, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, boonInfo, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

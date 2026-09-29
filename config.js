@@ -169,6 +169,29 @@ const CFG = {
       corona:{r:'L',obj:true,name:'Corona del rey',desc:'+1 vida en la partida'},
       reloj:{r:'L',obj:true,name:'Reloj de arena',desc:'Cada 20 s todas tus habilidades se recargan al instante',every:20},
       martillo:{r:'L',obj:true,name:'Martillo del trueno',desc:'Cada 8 s un rayo golpea a todos los enemigos (200 % de tu daño)',every:8,mult:2}}},
+  // PvP asíncrono: duelo al mejor de 3 contra la copia de otro jugador o un «fantasma» (rival generado a tu nivel).
+  // Antes de cada ronda eliges 1 de 3 cartas (mejoras de la Torre, se acumulan en el duelo). Ronda: hasta 'round' s (si nadie
+  // cae, gana quien tenga más % de vida). Estadísticas mezcladas: tu^mix × media^(1−mix). Liga semanal con puntos tipo ELO (k).
+  // PvP asíncrono, 4 sistemas de prueba (pvp1..pvp4) con puntos, liga semanal y combates del día compartidos. SIN BALANCEAR.
+  // mix: cuánto se acercan tus estadísticas a las del rival (0 = nada, 1 = iguales) · hpMul: más vida en los combates del escenario
+  // rivalPow/cls: fuerza de la IA (no usa pasivas ni habilidades de clase; cls = ajuste por tu clase) · heal: curación en PvP
+  pvp:{daily:10, round:60, mix:0.5, hpMul:2.5, rivalPow:1.1, heal:0.5, k:32, start:1000, skillEvery:12, skillMult:3, spread:0.15, rivals:49, rivalSd:180,
+    cls:{Asesino:1.4,Arquero:1.05,Clerigo:1.05},
+    cards:['fuerza','aguante','rapidez','precision','vampiro','escudo','espinas','ejecutor','cristal','furia','talisman','colmillo'],
+    // 1 · Ataque y defensa: posturas (presionar > aguantar > contraataque > presionar; la que gana: +stBonus de daño)
+    stance:{aguantar:{name:'Aguantar',hp:1.25,atk:0.85,beats:'contra'},presionar:{name:'Presionar',atk:1.2,df:0.8,beats:'aguantar'},contra:{name:'Contraataque',reflect:0.25,atk:0.95,beats:'presionar'}},
+    stBonus:0.15,
+    // ataques que recibe tu defensa cada día (resultado según postura y cartas); k: parte de los puntos normales
+    def:{incoming:[1,3],base:0.5,st:0.15,card:0.03,k:0.25},
+    // 2 · Duelo programado: x = % de vida por golpe; skill/charged = multiplicadores; counter = lo que devuelve un bloqueo
+    duel:{x:0.1,pow:0.1,plans:3,maxH:2,skill:2,charged:2,counter:0.5,vsCharge:1.5,
+      cls:{Guerrero:{counter:0.8},Mago:{skill:2.5},Arquero:{vsCharge:2,atk:1.2},Asesino:{crit:0.25},Clerigo:{blockHeal:0.03}},
+      prof:{agresivo:[0.45,0.15,0.15,0.25],defensivo:[0.2,0.45,0.2,0.15],astuto:[0.25,0.2,0.3,0.25]}},
+    // 3 · Draft: mesa de 8 cartas de este mazo
+    draft:{pool:['fuerza','aguante','rapidez','precision','vampiro','escudo','espinas','ejecutor','cristal','furia','talisman','colmillo']},
+    // 4 · Equipo: merc = fuerza de los mercenarios; rival = fuerza del equipo rival; backMelee = daño de un cuerpo a cuerpo detrás; guard = daño que recibe un Guerrero delante
+    team:{merc:0.7,rival:1.1,cls:{Asesino:0.88,Mago:0.95,Guerrero:1.05,Clerigo:1.05},hpMul:3,maxT:90,backMelee:0.5,guard:0.85,splash:0.4,heal:0.4},
+    rewards:[{to:1,b:{ev:10,mode:2}},{to:3,b:{ev:8,mode:1}},{to:10,b:{ev:5,silver:2}},{to:25,b:{ev:3,silver:1}},{to:50,b:{wood:2}}]},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
