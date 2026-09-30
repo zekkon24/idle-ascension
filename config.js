@@ -335,8 +335,8 @@ const CHEST_PLAN={ own:1,   // parte de las armas que son de tu clase (ahora tod
         {T:'R',fixed:{},main:'R',jackpot:'E'},
         {T:'E',fixed:{M:0.005},main:'E',jackpot:'L'}],   // (la Mítica solo sale aquí)
 };
-// cofre de madera en Pesadilla e Infierno: fijo (siempre Común y Poco común, y algo de Rara), no sale de la curva
-const WOOD_FIX=[null,{C:50,U:45,R:5},{C:30,U:55,R:15}];
+// cofre de madera: reparto fijo (siempre Común y Poco común; Rara desde Pesadilla), no sale de la curva
+const WOOD_FIX=[{1:{C:95,U:5},100:{C:90,U:10}},{1:{C:60,U:38,R:2}},{1:{C:50,U:45,R:5}}];   // por modo y fase desde la que vale
 (function buildChests(P,C){
   const R=C.rar, idx=r=>R.indexOf(r), r2=x=>Math.round(x*1000)/10;       // % con un decimal
   const vec=o=>R.map(r=>r2(o[r]||0)), fix=v=>{ const d=Math.round((100-v.reduce((a,b)=>a+b,0))*10)/10, k=v.indexOf(Math.max(...v)); v[k]=Math.round((v[k]+d)*10)/10; return v }; // suma exacta 100
@@ -344,8 +344,8 @@ const WOOD_FIX=[null,{C:50,U:45,R:5},{C:30,U:55,R:15}];
   for(const [m,from,T,days,S,W,luck] of P.seg){
     const den=P.own*days*(S+P.rho*W), t=idx(T), pT=Math.min(1,P.copies/(P.eta*den)), pN=t<R.length-1?-Math.log(1-luck)/den:0;
     const mk=k=>{ const o={}; o[R[t+1]]=pN*k; o[T]=Math.min(1-pN*k,pT*k); if(t>0) o[R[t-1]]=(o[R[t-1]]||0)+1-o[T]-pN*k; else o[T]=1-pN*k; return fix(vec(o)) };
-    silver[m].push([from,mk(1)]); wood[m].push([from,WOOD_FIX[m]?R.map(r=>WOOD_FIX[m][r]||0):mk(P.rho)]);
-    if(WOOD_FIX[m]){ const sv=silver[m].slice(-1)[0][1], wT=(WOOD_FIX[m][T]||0)/100, need=Math.min(1,(P.copies/(P.eta*P.own*days)-W*wT)/S), d=Math.max(0,r2(need)-sv[t]);
+    silver[m].push([from,mk(1)]); const wf=WOOD_FIX[m]&&WOOD_FIX[m][from]; wood[m].push([from,wf?R.map(r=>wf[r]||0):mk(P.rho)]);
+    if(wf){ const sv=silver[m].slice(-1)[0][1], wT=(wf[T]||0)/100, need=Math.min(1,(P.copies/(P.eta*P.own*days)-W*wT)/S), d=Math.max(0,r2(need)-sv[t]);
       if(d>0){ sv[t]=Math.round((sv[t]+d)*10)/10; sv[t-1]=Math.round((sv[t-1]-d)*10)/10; } }   // la plata compensa lo que la madera ya no da (mismo ritmo)
     const sv=silver[m].slice(-1)[0][1]; sceS[m]=R.reduce((a,r,i)=>a+sv[i]/100*Math.pow(P.beta,i-t),0);   // valor de 1 plata en copias de T (último tramo del modo)
   }
