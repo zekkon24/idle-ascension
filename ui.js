@@ -66,8 +66,14 @@ function syncBack(){ if(!TG||!TG.BackButton) return; const v=canGoBack(); if(v==
 if(TG&&TG.BackButton) try{ TG.BackButton.onClick(goBack) }catch(e){}
 
 /* ---------- eventos del motor -> pantalla ---------- */
-G.on('hit',({e,d,crit,ranged,thorns,clone})=>{ if(e) e._hitAt=performance.now(); if(!thorns&&!clone) fx.atkAt=performance.now(); if(battery()||tab!=='up') return; if(e&&e.rival) fx.rflash=0.12; fx.shots.push({e,t:0,ranged}); fx.floats.push({e,txt:fmt(d),crit,life:0.9}) });
-G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(G.pvpOn()) (fx.rshots=fx.rshots||[]).push({t:0}); fx.floats.push({hero:true,txt:'-'+fmt(d),life:0.8}) });
+// proyectil de cada clase a distancia (el resto, tajo del color de la clase)
+const PROJ={Mago:'fire',Arquero:'arrow',Clerigo:'holy'};
+function attackFx(cls,side,e,crit){ const k=PROJ[cls]; if(k) ART.addFx('proj',{kind:k,side,e,color:k==='holy'?'#ffe38a':null}); else ART.addFx('slash',{side,e,crit,color:crit?'#ffd35a':ART.shade(CFG.classes[cls].color,1.4)});
+  if(crit){ ART.addFx('crit',{side,e}); ART.shake(2) } }
+G.on('hit',({e,d,crit,ranged,thorns,clone,skill,frost,burst,bolt,cleave})=>{ if(e) e._hitAt=performance.now(); if(!thorns&&!clone) fx.atkAt=performance.now(); if(battery()||tab!=='up') return; if(e&&e.rival) fx.rflash=0.12;
+  if(!skill&&!thorns&&!clone&&!frost&&!burst&&!bolt&&!cleave) attackFx(S.cls,'hero',e,crit);
+  if(d>=0.5) fx.floats.push({e,txt:fmt(d),crit,life:0.9}) });   // (sin «0» de golpes que no hacen daño)
+G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(d>0.08*G.heroStats().hp) ART.shake(3); if(d>=0.5) fx.floats.push({hero:true,txt:'-'+fmt(d),life:0.8}) });
 G.on('dodge',()=>{ if(!battery()&&tab==='up') fx.floats.push({hero:true,txt:'esquiva',life:0.8}) });
 G.on('level',l=>toast('¡Nivel '+l+'!'));
 // Jefes: sin ventana; el botín va a la bolsa (icono de cofre) y el icono da un pequeño salto
@@ -76,7 +82,7 @@ G.on('bossFarm',({mat})=>{ if(mat){ const b=$('#lootBtn'); updateHUD(); if(b&&!r
 G.on('mode',({name})=>{ upOpen=false; showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves a la fase 1. Los enemigos son mucho más fuertes, dan más oro y los jefes sueltan ${G.modeCfg().mat}.</p><button class="btn gold" data-act="close">Continuar</button>`) });
 G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase));
 G.on('fase',()=>refreshTabIfStatic());
-G.on('wave',()=>{fx.shots.length=0});
+G.on('wave',()=>{});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡El jefe se enfurece!':'¡El jefe llama refuerzos!'); });
 G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab(); later(()=>showModal(r.won?`<h3>¡Piso ${r.floor} superado!</h3><p class="hint">${r.k==='elite'?'Élite: eliges 2 grimorios.':'Elige tu mejora en la Torre.'}</p><button class="btn gold" data-act="close">Elegir</button>`
   :`<h3>Derrota en el piso ${r.floor}</h3><p class="hint">${r.lives>0?`Te quedan ${r.lives} vida${r.lives>1?'s':''}: vuelve a intentarlo.`:'Sin vidas: puedes comprar una o terminar la partida.'}</p><button class="btn gold" data-act="close">Vale</button>`)); });
@@ -86,7 +92,22 @@ G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Hord
 G.on('pvpEnd',r=>{ tab='ev'; modView='pvp'; evView=null; haptic(r.win?'ok':'medium');
   if(r.rival.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpResult',{match:r.rival.match,win:r.win}).then(j=>{ if(j&&j.ok){ G.pvpSync(j); if(PVI) Object.assign(PVI.me,{rating:j.rating,games:j.games,wins:j.wins,rank:j.rank,left:j.left}); pvpLoad(); } });
   renderTab(); later(()=>showModal(`<h3>${r.win?'¡Victoria!':'Derrota'}</h3><p class="hint">Contra ${esc(r.rival.name)} (${clName(r.rival.cls)}) · tú ${Math.round(r.me*100)} % de vida, rival ${Math.round(r.them*100)} %.<br>${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.rating)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
-G.on('eventStart',()=>{fx.shots.length=0; fx.floats.length=0});
+function skillFx(ev,side,eng){ if(battery()) return;
+  if(ev.k==='skill'){ const d=eng.skillDef(ev.slot)||{}, id=ev.id;
+    ART.addFx('name',{side,text:ev.name});
+    if(['rapido','sed','sacrificio','combustion','clon','juicio','baluarte'].includes(id)) ART.addFx(id,{side,dur:d.dur||1});
+    else ART.addFx(id,{side});
+    if(id==='armaduraHielo') ART.addFx('iceArmor',{side,dur:d.dur||8});
+    if(id==='combustion') ART.addFx('combustionHit',{side});
+    if(id==='ejecutar'||id==='bola') ART.shake(id==='ejecutar'?4:2); }
+  else if(ev.k==='congelar') ART.addFx('congelar',{side,e:ev.e});
+  else if(ev.k==='luzVuelve') ART.addFx('luzVuelve',{side,n:ev.n});
+  else if(ev.k==='reloj') ART.addFx('reloj',{side}); }
+G.on('fx',ev=>skillFx(ev,'hero',G));
+G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
+  const gh=G.pvpOn()&&G.ghost(); if(gh){   // PvP: el fantasma también lanza sus habilidades y dispara
+    gh.on('fx',ev=>skillFx(ev,'rival',gh));
+    gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
   showModal(`<h3>${boss?'Jefe semanal':'Mazmorra'}</h3>
@@ -1015,7 +1036,7 @@ const ACT={
   shopInfo:(b,k)=>showModal(`<h3>${SHOP[k].name}</h3><p class="hint">${SHOP[k].desc}</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button></div>`),
   open1:(b,k)=>openChests(k,false),
   openAll:(b,k)=>openChests(k,true),
-  battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.shots.length=0;fx.flash=0}renderTab()},
+  battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.flash=0;ART.clearFx();ART.clearParts()}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},
   reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='cofres';forgeId=null;lockSel=[];expandedId=null;F.rar='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
@@ -1061,6 +1082,7 @@ function draw(dt){
   if(cv.width!==Math.round(CW*dpr)||cv.height!==Math.round(CH*dpr)){cv.width=Math.round(CW*dpr);cv.height=Math.round(CH*dpr)}
   const sc=Math.max(1,Math.min(2.2,CH/200,CW/200)), W=CW/sc, H=CH/sc; // escala los dibujos al tamaño de la pantalla (el ancho manda: caben los enemigos)
   const g=C.ctx; g.setTransform(dpr*sc,0,0,dpr*sc,0,0);
+  if(!battery()){ const [sx,sy]=ART.shakeOffset(dt); g.translate(sx,sy); }   // sacudida (críticos, golpes fuertes)
   const bars=!battery();
   const tier=Math.floor((S.fase-1)/10), hue=(220+tier*37)%360, gk=hue+'|'+H;
   if(C.gk!==gk){ C.gk=gk; C.grd=g.createLinearGradient(0,0,0,H); C.grd.addColorStop(0,`hsl(${hue} 30% 16%)`); C.grd.addColorStop(1,`hsl(${hue} 25% 9%)`); }
@@ -1080,9 +1102,7 @@ function draw(dt){
     ART.hero(g,x,gy,{cls:e.cls,color:rc.color,evo:rv.evo||0,path:rv.path,flip:true,walk:p<1&&anim?T:0,atk:pulse(fx.ratkAt,260),hit:fx.rflash>0?fx.rflash/0.12:0,t:anim?T+1.3:0}); fx.rflash=Math.max(0,(fx.rflash||0)-dt);
     const nm=n=>{ n=String(n||''); return n.length>10?n.slice(0,9)+'…':n };   // nombres cortos: no se pisan
     g.textAlign='center'; g.font='700 9px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#ece7da'; g.fillText(nm(e.name),x,gy-92); g.fillText(nm(S.name),hx,gy-92);
-    if(bars){ g.fillStyle='#0009'; g.fillRect(x-20,gy-84,40,5); g.fillStyle='#e2605a'; g.fillRect(x-20,gy-84,40*Math.max(0,e.hp/e.max),5); }
-    fx.rshots=(fx.rshots||[]).filter(s=>(s.t+=dt)<0.18);
-    for(const s of fx.rshots){ if(rc.ranged){ const k=s.t/0.18, sx=x-14; g.fillStyle=rc.color; g.beginPath(); g.arc(sx+(hx-sx)*k,gy-34+(k*20),4,0,7); g.fill() } else { g.strokeStyle='#fff8'; g.lineWidth=2; g.beginPath(); g.arc(hx+6,gy-16,14,Math.PI-1,Math.PI+1); g.stroke() } } }
+    if(bars){ g.fillStyle='#0009'; g.fillRect(x-20,gy-84,40,5); g.fillStyle='#e2605a'; g.fillRect(x-20,gy-84,40*Math.max(0,e.hp/e.max),5); } }
   // monstruos: tipo según la zona (campaña: la fase; Mazmorra: el grupo; Torre: el piso) y color según el modo
   const zoneOf=f=>Math.floor(((f-1)%150)/30), modeHue=m=>[0,190,300][Math.min(2,m||0)];
   let q=0, idx=0;
@@ -1097,13 +1117,13 @@ function draw(dt){
     e.x=x;
     if(e.dead&&!e._burst){ e._burst=1; if(anim) ART.burst(x,gy-r,'#d9d2c0',8); }
     ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:B.boss,elite:B.elite,t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK)});
+    if(anim&&!e.dead) ART.status(g,x,gy,r,{frozen:e.frozen>B.t,burn:(e.burn&&e.burn.some(u=>u>B.t))||(e.dot>B.t&&e.dotKind==='fuego'),poison:e.poison&&e.poison.some(p=>p.until>B.t),mark:e.mark>B.t},T);
     if(bars&&!e.immortal&&!e.dead){ const by=gy-r*3.7-6; g.fillStyle='#0009'; g.fillRect(x-18,by,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,by,36*Math.max(0,e.hp/e.max),4); }
   }
   if(anim) ART.parts(g,dt);
-  fx.shots=fx.shots.filter(s=>(s.t+=dt)<0.18);
-  for(const s of fx.shots){ if(s.e.x===undefined) continue;
-    if(s.ranged){const k=s.t/0.18, sx=hx+14, ex=s.e.x; g.fillStyle=c.color; g.beginPath(); g.arc(sx+(ex-sx)*k,gy-34+(k*20),4,0,7); g.fill()}
-    else {g.strokeStyle='#fff8';g.lineWidth=2;g.beginPath();g.arc(s.e.x-6,gy-16,14,-1,1);g.stroke()} }
+  if(anim){ const foes=B.kind==='pvp'?[]:B.enemies.filter(e=>!e.dead&&e.x!=null).map(e=>({x:e.x}));
+    ART.drawFx(g,{W,hx,rx:B.kind==='pvp'?B.enemies[0].x:null,gy,foes,now:now/1000,
+      drawClone:(x,side)=>{ if(side==='rival'){ const e=B.enemies[0], rv=G.pvpState().rival||{}; ART.hero(g,x,gy,{cls:e.cls,color:(CFG.classes[e.cls]||c).color,evo:rv.evo,path:rv.path,flip:true,t:T}) } else ART.hero(g,x,gy,{cls:S.cls,color:ART.shade(c.color,0.5),evo:S.evo,path:S.path,t:T+0.5}) }}); }
   fx.floats=fx.floats.filter(f=>(f.life-=dt)>0);
   g.textAlign='center'; g.font='800 13px "Nunito Sans", system-ui, sans-serif';
   for(const f of fx.floats){ const y=(f.hero?gy-80:gy-52)-(0.9-f.life)*30; const x=f.hero?hx:(f.e&&f.e.x)||0;
@@ -1122,7 +1142,7 @@ function loop(now){
     let sim=real*(S.speed||1)*G.speedMult();
     while(sim>0){const d=Math.min(0.02,sim);G.step(d);sim-=d}
     // el motor solo avisa; si los golpes ocurren sin dibujar (pestaña oculta) se descartan
-    if(tab!=='up'){fx.shots.length=0;fx.floats.length=0}
+    if(tab!=='up'){fx.floats.length=0;ART.clearFx()}
     drawT+=real; if(!battery()||drawT>=0.1){draw(drawT);drawT=0}
     hudT+=real; if(hudT>0.25){hudT=0;updateHUD()}
     offT+=real; if(offT>5){ offT=0; const k=G.offerCheck(); if(k) offerModal(k); }
