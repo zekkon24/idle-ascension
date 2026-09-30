@@ -66,8 +66,8 @@ function syncBack(){ if(!TG||!TG.BackButton) return; const v=canGoBack(); if(v==
 if(TG&&TG.BackButton) try{ TG.BackButton.onClick(goBack) }catch(e){}
 
 /* ---------- eventos del motor -> pantalla ---------- */
-G.on('hit',({e,d,crit,ranged})=>{ if(battery()||tab!=='up') return; if(e&&e.rival) fx.rflash=0.12; fx.shots.push({e,t:0,ranged}); fx.floats.push({e,txt:fmt(d),crit,life:0.9}) });
-G.on('heroHit',({d})=>{ if(battery()||tab!=='up') return; fx.flash=0.15; if(G.pvpOn()) (fx.rshots=fx.rshots||[]).push({t:0}); fx.floats.push({hero:true,txt:'-'+fmt(d),life:0.8}) });
+G.on('hit',({e,d,crit,ranged,thorns,clone})=>{ if(e) e._hitAt=performance.now(); if(!thorns&&!clone) fx.atkAt=performance.now(); if(battery()||tab!=='up') return; if(e&&e.rival) fx.rflash=0.12; fx.shots.push({e,t:0,ranged}); fx.floats.push({e,txt:fmt(d),crit,life:0.9}) });
+G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(G.pvpOn()) (fx.rshots=fx.rshots||[]).push({t:0}); fx.floats.push({hero:true,txt:'-'+fmt(d),life:0.8}) });
 G.on('dodge',()=>{ if(!battery()&&tab==='up') fx.floats.push({hero:true,txt:'esquiva',life:0.8}) });
 G.on('level',l=>toast('¡Nivel '+l+'!'));
 // Jefes: sin ventana; el botín va a la bolsa (icono de cofre) y el icono da un pequeño salto
@@ -1068,45 +1068,49 @@ function draw(dt){
   // suelo más abajo que antes: menos franja vacía
   const gy=Math.min(H-30,Math.round(H*0.72)); g.fillStyle=`hsl(${hue} 20% 22%)`; g.fillRect(0,gy,W,H-gy);
   g.fillStyle=`hsl(${hue} 20% 28%)`; for(let x=(bars?-(performance.now()/40)%24:0);x<W;x+=24) g.fillRect(x,gy+6,10,3); // en modo batería el suelo no se mueve
-  const hx=W*0.24, c=CFG.classes[S.cls];
-  // héroe (en PvP también el del rival, mirando hacia ti)
-  const fig=(x,cc,flip,hit)=>{ g.save(); g.translate(x,gy); if(flip) g.scale(-1,1); if(hit){g.globalAlpha=0.6}
-    g.fillStyle=cc.color; g.fillRect(-11,-40,22,30); g.beginPath(); g.arc(0,-50,10,0,7); g.fill();
-    g.fillStyle='#12141c'; g.fillRect(2,-53,3,3);
-    g.strokeStyle='#ece7da'; g.lineWidth=3; g.beginPath(); g.moveTo(10,-30); g.lineTo(cc.ranged?16:26,cc.ranged?-44:-40); g.stroke();
-    g.fillStyle='#0008'; g.beginPath(); g.ellipse(0,2,14,4,0,0,7); g.fill(); g.restore() };
-  fig(hx,c,false,fx.flash>0);
-  if(!B) return;
+  const hx=W*0.24, c=CFG.classes[S.cls], now=performance.now(), T=now/1000, anim=!battery();
+  const prog=(at,ms)=>at&&anim?Math.max(0,Math.min(1,(now-at)/ms)):0, pulse=(at,ms)=>{ const k=prog(at,ms); return k>0&&k<1?k:0 };
+  // el héroe anda mientras no hay enemigo delante (entre oleadas o mientras se acercan)
+  const walking=!B||B.over||!B.enemies.some(e=>!e.dead&&B.t>=e.arrive-0.05);
+  fx.walkT=walking&&anim?(fx.walkT||0)+dt:0;
+  ART.hero(g,hx,gy,{cls:S.cls,color:c.color,evo:S.evo,path:S.path,walk:fx.walkT,atk:pulse(fx.atkAt,260),hit:fx.flash>0?fx.flash/0.15:0,t:anim?T:0});
+  if(!B){ if(anim) ART.parts(g,dt); return }
   const h=G.heroStats(), contact=hx+34, spawnX=W+24;
-  if(B.kind==='pvp'){ const e=B.enemies[0], rc=CFG.classes[e.cls]||c, rx=Math.max(W*0.62,hx+90), p=Math.min(1,B.t/(e.walk||0.8)), x=spawnX-(spawnX-rx)*p; e.x=x;
-    fig(x,rc,true,fx.rflash>0); fx.rflash=Math.max(0,(fx.rflash||0)-dt);
-    g.textAlign='center'; g.font='700 11px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#ece7da'; g.fillText(String(e.name||''),x,gy-80); g.fillText(String(S.name||''),hx,gy-80);
-    if(bars){ g.fillStyle='#0009'; g.fillRect(x-20,gy-72,40,5); g.fillStyle='#e2605a'; g.fillRect(x-20,gy-72,40*Math.max(0,e.hp/e.max),5); }
+  if(B.kind==='pvp'){ const e=B.enemies[0], rc=CFG.classes[e.cls]||c, rv=G.pvpState().rival||{}, rx=Math.max(W*0.7,hx+100), p=Math.min(1,B.t/(e.walk||0.8)), x=spawnX-(spawnX-rx)*p; e.x=x;
+    ART.hero(g,x,gy,{cls:e.cls,color:rc.color,evo:rv.evo||0,path:rv.path,flip:true,walk:p<1&&anim?T:0,atk:pulse(fx.ratkAt,260),hit:fx.rflash>0?fx.rflash/0.12:0,t:anim?T+1.3:0}); fx.rflash=Math.max(0,(fx.rflash||0)-dt);
+    const nm=n=>{ n=String(n||''); return n.length>10?n.slice(0,9)+'…':n };   // nombres cortos: no se pisan
+    g.textAlign='center'; g.font='700 9px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#ece7da'; g.fillText(nm(e.name),x,gy-92); g.fillText(nm(S.name),hx,gy-92);
+    if(bars){ g.fillStyle='#0009'; g.fillRect(x-20,gy-84,40,5); g.fillStyle='#e2605a'; g.fillRect(x-20,gy-84,40*Math.max(0,e.hp/e.max),5); }
     fx.rshots=(fx.rshots||[]).filter(s=>(s.t+=dt)<0.18);
     for(const s of fx.rshots){ if(rc.ranged){ const k=s.t/0.18, sx=x-14; g.fillStyle=rc.color; g.beginPath(); g.arc(sx+(hx-sx)*k,gy-34+(k*20),4,0,7); g.fill() } else { g.strokeStyle='#fff8'; g.lineWidth=2; g.beginPath(); g.arc(hx+6,gy-16,14,Math.PI-1,Math.PI+1); g.stroke() } } }
-  let q=0;
+  // monstruos: tipo según la zona (campaña: la fase; Mazmorra: el grupo; Torre: el piso) y color según el modo
+  const zoneOf=f=>Math.floor(((f-1)%150)/30), modeHue=m=>[0,190,300][Math.min(2,m||0)];
+  let q=0, idx=0;
   for(const e of B.enemies){ if(B.kind==='pvp') break;
-    if(e.dead) continue;
+    const dieK=e.dead?(B.t-(e.deadAt||0))/0.45:0; if(e.dead&&(dieK>=1||e.x===undefined)) continue;
+    if(!e._k){ const f=e.f||S.fase, zone=B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):zoneOf(f);
+      e._k=ART.kindFor(zone,idx+(e.minion?1:0)); e._hue=modeHue(e.f?Math.floor((e.f-1)/150):B.kind?0:S.mode); }
+    idx++;
     const p=Math.min(1,(B.t-e.spawn)/(e.walk||CFG.enemy.walk));
-    let x=spawnX-(spawnX-contact)*p; if(p>=1){x+=q*20;q++}
-    e.x=x; const r=B.boss?(B.elite?30:24):13, y=gy-r;
-    g.fillStyle=B.boss?(B.elite?'#9b3fd0':'#c2463f'):`hsl(${(hue+140)%360} 45% 52%)`;
-    g.beginPath(); g.ellipse(x,y+2,r+2,r,0,0,7); g.fill();
-    g.fillStyle='#fff'; g.fillRect(x-r*0.45,y-r*0.25,4,4); g.fillRect(x-r*0.05,y-r*0.25,4,4);
-    if(B.boss){g.fillStyle='#e8b04a';g.beginPath();g.moveTo(x-12,y-r+2);g.lineTo(x-8,y-r-10);g.lineTo(x-2,y-r);g.lineTo(x+4,y-r-10);g.lineTo(x+10,y-r+2);g.fill()}
-    if(bars&&!e.immortal){ g.fillStyle='#0009'; g.fillRect(x-18,y-r-14,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,y-r-14,36*Math.max(0,e.hp/e.max),4); }
+    const r=B.boss?(B.elite?26:21):13, y=gy, cx=contact+(r-13)*2.4;   // los grandes se paran más lejos (no tapan al héroe)
+    let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*20;q++}
+    e.x=x;
+    if(e.dead&&!e._burst){ e._burst=1; if(anim) ART.burst(x,gy-r,'#d9d2c0',8); }
+    ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:B.boss,elite:B.elite,t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK)});
+    if(bars&&!e.immortal&&!e.dead){ const by=gy-r*3.7-6; g.fillStyle='#0009'; g.fillRect(x-18,by,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,by,36*Math.max(0,e.hp/e.max),4); }
   }
+  if(anim) ART.parts(g,dt);
   fx.shots=fx.shots.filter(s=>(s.t+=dt)<0.18);
   for(const s of fx.shots){ if(s.e.x===undefined) continue;
     if(s.ranged){const k=s.t/0.18, sx=hx+14, ex=s.e.x; g.fillStyle=c.color; g.beginPath(); g.arc(sx+(ex-sx)*k,gy-34+(k*20),4,0,7); g.fill()}
     else {g.strokeStyle='#fff8';g.lineWidth=2;g.beginPath();g.arc(s.e.x-6,gy-16,14,-1,1);g.stroke()} }
   fx.floats=fx.floats.filter(f=>(f.life-=dt)>0);
   g.textAlign='center'; g.font='800 13px "Nunito Sans", system-ui, sans-serif';
-  for(const f of fx.floats){ const y=(f.hero?gy-70:gy-48)-(0.9-f.life)*30; const x=f.hero?hx:(f.e&&f.e.x)||0;
+  for(const f of fx.floats){ const y=(f.hero?gy-80:gy-52)-(0.9-f.life)*30; const x=f.hero?hx:(f.e&&f.e.x)||0;
     g.globalAlpha=Math.min(1,f.life*2); g.fillStyle=f.hero?'#e2605a':(f.crit?'#e8b04a':'#ece7da');
     g.fillText(f.txt+(f.crit?'!':''),x,y); }
   g.globalAlpha=1; fx.flash=Math.max(0,fx.flash-dt);
-  if(bars){ g.fillStyle='#0009'; g.fillRect(hx-20,gy-72,40,5); g.fillStyle='#6cc47a'; g.fillRect(hx-20,gy-72,40*Math.max(0,G.B.hp/h.hp),5); }
+  if(bars){ g.fillStyle='#0009'; g.fillRect(hx-20,gy-84,40,5); g.fillStyle='#6cc47a'; g.fillRect(hx-20,gy-84,40*Math.max(0,G.B.hp/h.hp),5); }
 }
 
 /* ---------- bucle ---------- */
