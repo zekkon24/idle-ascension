@@ -22,14 +22,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14p
 .boot{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg)}
 .boot b{font-family:var(--display);font-size:26px;font-weight:800;color:var(--gold);letter-spacing:.5px}
 .boot span{color:var(--muted);font-size:13px}
-.equip-in{display:flex;gap:12px;align-items:center}
 .silh{flex:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
-.eslots{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
-.eslot{display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--rc,var(--line));border-radius:10px;padding:8px 10px;cursor:pointer;min-width:0}
-.eslot b{font-size:14px;overflow-wrap:anywhere}
-.eslot.empty{border-style:dashed;opacity:.8}
-.mbig{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:18px 16px;gap:6px}
-.mbig b{font-size:18px}
 #syncBox{z-index:150;text-align:center;padding:0 24px}
 #ctlBox{z-index:200;text-align:center;padding:0 24px} /* cartel de mantenimiento/actualización: por encima de todo */
 *{box-sizing:border-box}
@@ -40,7 +33,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .uname{font-family:var(--display);font-weight:800;font-size:14px;flex:1;min-width:0;display:flex;flex-direction:column;gap:0;white-space:nowrap;line-height:1.15}
 .uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
-.uname .nc{font-family:var(--body);font-weight:600;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
 .uname em{flex:none;font-style:normal;color:var(--muted);font-family:var(--body);font-size:11px}
 .res{flex:none}
 .namebox{display:flex;flex-direction:column;gap:4px}
@@ -233,10 +225,10 @@ input[type=number]{width:64px}
 .nav .nb{top:-4px;right:-10px;line-height:13px;min-width:13px}
 .nav button[aria-selected="true"] .ico{filter:drop-shadow(0 0 4px rgba(232,176,74,.55))}
 /* botones con relieve y pequeño rebote al tocar */
-.btn,.fab,.mcard,.fchips button,.calbtn,.skb,.evcard{transition:transform .08s ease-out,box-shadow .08s,border-color .15s}
+.btn,.mcard,.fchips button,.calbtn,.skb,.evcard{transition:transform .08s ease-out,box-shadow .08s,border-color .15s}
 .btn{box-shadow:0 2px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
 .btn.gold{background:linear-gradient(#f3c466,#d99a2e);box-shadow:0 2px 0 #8a5a14,inset 0 1px 0 rgba(255,255,255,.35)}
-.btn:active:not(:disabled),.fab:active,.mcard:active,.fchips button:active,.calbtn:active,.skb:active,.evcard:active{transform:translateY(1px) scale(.97)}
+.btn:active:not(:disabled),.mcard:active,.fchips button:active,.calbtn:active,.skb:active,.evcard:active{transform:translateY(1px) scale(.97)}
 .btn:active:not(:disabled){box-shadow:0 1px 0 rgba(0,0,0,.35)}
 .btn.gold:active:not(:disabled){box-shadow:0 1px 0 #8a5a14}
 .cat{display:inline-flex;align-items:center;gap:8px}.cat .ico{color:var(--gold)}
@@ -258,10 +250,6 @@ input[type=number]{width:64px}
 .ihd .meta .rar{font-size:11px}
 .idet{padding:0 10px 9px;display:flex;flex-direction:column;gap:6px}
 .fpanel{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2)}
-.fabs{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:center;pointer-events:none} /* Mejoras, Misiones y Auto juntos, mismo ancho */
-.fab{position:relative}
-.fabs .fab{pointer-events:auto}
-.fabs .fab{justify-self:stretch}
 /* calaveras de modo: centradas abajo, dentro del marco del juego (debajo de la pelea) */
 .skbar{position:absolute;left:10px;bottom:10px;z-index:4;display:flex;gap:8px;align-items:flex-end}
 .skb{position:relative;width:58px;height:58px;border-radius:50%;border:2px solid var(--line);background:var(--panel2);color:var(--ink);display:grid;place-items:center;overflow:hidden;padding:0}
@@ -289,14 +277,11 @@ button.skmode{border:1px solid var(--line);cursor:pointer;padding:4px 8px}
 button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .fasetxt.top{top:38px;bottom:auto;left:10px;right:auto;font-size:12px;padding:2px 8px}
 .fasetxt{position:absolute;right:10px;bottom:34px;z-index:3;font-family:var(--display);font-weight:800;font-size:14px;white-space:nowrap;padding:3px 9px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
-.fab.small{padding:8px 12px;font-size:12px;border-radius:12px}
-.fab.off{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
 .mlist{display:flex;flex-direction:column;gap:8px}
 .mcard{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
 .mcard.cur{border-color:var(--gold)}
 .mcard.lock{opacity:.6}
 .mcard .btn{align-self:flex-start}
-.fab{background:var(--gold);color:var(--gold-ink);border:0;border-radius:14px;padding:12px 16px;font-weight:800;box-shadow:0 6px 18px rgba(0,0,0,.45)}
 .modal .panel{border:0;padding:0;background:none}
 .fold summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
 .fold summary::-webkit-details-marker{display:none}
@@ -344,6 +329,103 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 @media (max-width:374px){.res{font-size:12px;gap:6px}.res .ic{width:12px;height:12px}.uname{font-size:13px}}
 @media (max-width:374px){.ihd .meta .rar{display:none}} /* móvil pequeño: el color del nombre ya dice la rareza (al abrir el arma se ve escrita) */
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* Forja */
+.fgtabs{display:grid;grid-template-columns:1fr 1fr;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.fgtabs button{background:none;border:0;border-radius:8px;padding:9px 6px;font-weight:800;color:var(--muted)}
+.fgtabs button.on{background:var(--panel);color:var(--ink);box-shadow:inset 0 -2px 0 var(--gold)}
+.fgtabs small{font-weight:600;font-size:11px;color:var(--muted)}
+.fgbody{display:flex;flex-direction:column;gap:8px}
+.fgneed{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--panel2);font-variant-numeric:tabular-nums}
+.fgneed{grid-template-columns:1fr auto}
+.fgneed span{color:var(--muted)}
+
+/* Inventario en cuadrícula */
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
+.itile{position:relative;aspect-ratio:1;display:grid;place-items:center;padding:0;border-radius:10px;border:2px solid var(--rc);background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--rc) 22%,transparent),transparent 70%),var(--panel2)}
+.itile.sel{outline:2px solid var(--gold);outline-offset:2px}
+.isheet{margin-bottom:6px} /* el borde dorado de la casilla elegida (4 px por fuera) no toca la ficha */
+.igrid{padding-top:2px}
+.itile .tl{position:absolute;left:4px;bottom:2px;font-size:10px;font-weight:800;color:var(--ink);text-shadow:0 1px 2px #000}
+.itile .tf{position:absolute;left:4px;top:1px;font-size:11px;color:var(--gold)}
+.itile .tu{position:absolute;right:4px;top:1px;font-size:10px;color:var(--good)}
+.isheet{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:10px;background:var(--panel2);border:1px solid var(--rc)}
+.ishd{display:flex;gap:10px;align-items:center}
+.isart{flex:none;width:48px;height:48px;border-radius:10px;display:grid;place-items:center;border:2px solid var(--rc);background:radial-gradient(circle,color-mix(in srgb,var(--rc) 25%,transparent),transparent 70%)}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.mtile{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);text-align:center}
+.mtile .mi{color:var(--mc);filter:drop-shadow(0 0 6px color-mix(in srgb,var(--mc) 50%,transparent))}
+.mtile b{font-size:15px;font-variant-numeric:tabular-nums}
+.mtile .mn{font-size:11px;color:var(--muted);line-height:1.2}
+
+/* Barra de mejoras */
+.upstrip{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:42px repeat(4,1fr);gap:5px;padding:5px;border-radius:14px;background:rgba(18,20,28,.92);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.upt{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px 5px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);opacity:.55;min-width:0}
+.upt.ok{opacity:1;border-color:var(--gold);box-shadow:inset 0 -2px 0 rgba(232,176,74,.35)}
+.upt:active{transform:scale(.96)}
+.upt .un{font-size:10px;color:var(--muted);font-weight:700}
+.upt b{font-size:14px;font-variant-numeric:tabular-nums}
+.upt .uc{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
+.upt .uc .dot{width:8px;height:8px}
+.upx{border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:11px;font-weight:800;color:var(--gold);padding:0}
+.app.home .battle{padding-bottom:78px}
+
+/* Retrato, cabeceras de pantalla, Forja con marco, cabecera del Inventario y tarjetas de Modos */
+.av{flex:none;width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);background:#1b1e2a no-repeat;background-size:230%;background-position:41% 22%;box-shadow:0 0 0 2px #0b0c10}
+.hbar .bar{height:10px}
+.scrhd{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 2px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.scrhd b{flex:1;font-size:17px;letter-spacing:2.5px;font-weight:800}
+.scrb{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-size:24px;line-height:1;color:var(--ink)}
+.scrg{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-variant-numeric:tabular-nums}
+.fgp{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.fgframe{position:relative;align-self:center;width:190px;height:190px;border-radius:16px;display:grid;place-items:center;border:2px solid var(--rc);background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--rc) 30%,transparent),transparent 65%),#0d0f16;box-shadow:0 0 24px color-mix(in srgb,var(--rc) 35%,transparent),inset 0 0 30px rgba(0,0,0,.6)}
+.fgframe .fgeq{position:absolute;top:8px;right:8px}
+.fgname{text-align:center;font-size:22px;font-weight:800;letter-spacing:.5px}
+.fgrar{display:flex;justify-content:center;align-items:center;gap:10px;color:var(--rc);font-weight:800;letter-spacing:2px;font-size:13px}
+.fgst i{font-style:normal;color:#3a3f55;font-size:15px;letter-spacing:0}.fgst i.on{color:var(--rc)}
+.fgrow{display:grid;grid-template-columns:34px 1fr auto auto auto;gap:8px;align-items:center;padding:9px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.fgi{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#11131b;color:var(--gold)}
+.fgk{font-weight:800;letter-spacing:.5px}
+.fgrow s{color:var(--muted)}.fgrow em{font-style:normal;color:var(--good)}.fgrow b.up{color:var(--good);font-size:17px}
+.fgcta{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px;border:0;border-radius:14px;background:linear-gradient(180deg,#f0c060,#d49a2e);color:var(--gold-ink);box-shadow:0 4px 0 #8a611c,0 8px 18px rgba(0,0,0,.4)}
+.fgcta b{font-size:17px;letter-spacing:2px}.fgcta span{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;opacity:.85}
+.fgcta:disabled{filter:grayscale(.7) brightness(.6);box-shadow:none}
+.ibanner{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px;min-height:170px;padding:12px;border-radius:14px;border:1px solid var(--line);background-size:cover;background-position:center bottom;overflow:hidden}
+.ibart img{width:118px;height:auto;display:block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6))}
+.ibinfo{display:flex;flex-direction:column;gap:2px;padding-bottom:6px}
+.ibinfo small{font-size:12px;color:#d8d2c4;font-weight:700}
+.ibinfo b{font-size:22px;font-weight:800;text-shadow:0 2px 6px #000}.ibinfo span{font-size:11px;font-weight:800;color:var(--gold);letter-spacing:1.5px}
+.ibslots{display:flex;flex-direction:column;gap:8px;align-self:center}
+.ibslot{position:relative;width:56px;height:56px;border-radius:12px;display:grid;place-items:center;border:2px solid var(--rc,var(--line));background:rgba(10,11,16,.7);color:var(--rE);padding:0}
+.ibslot.empty{border-style:dashed;color:var(--muted);font-size:18px}
+.ibl{position:absolute;right:-6px;bottom:-6px;padding:1px 5px;border-radius:6px;background:var(--rc,var(--line));color:#0c0d12;font-size:10px;font-weight:800}
+.utabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+.utabs button{background:none;border:0;border-bottom:3px solid transparent;padding:11px 4px 9px;font-weight:800;letter-spacing:1px;color:var(--muted);font-size:13px}
+.utabs button.on{color:var(--ink);border-bottom-color:var(--gold)}
+.utabs small{font-weight:600;color:var(--muted);font-size:11px;letter-spacing:0}
+.fdet summary{cursor:pointer;color:var(--muted);font-weight:800;font-size:13px;padding:2px 2px 6px}
+.itile .tl{left:3px;top:3px;bottom:auto;padding:0 4px;border-radius:5px;background:var(--rc);color:#0c0d12;text-shadow:none;font-size:10px}
+.itile .tf{left:auto;right:4px;top:auto;bottom:2px}
+.itile.empty{border:2px dashed var(--line);background:rgba(255,255,255,.02)}
+.isheet.fixed{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:6;background:linear-gradient(180deg,#262a3c,#1c1f2c);box-shadow:0 -8px 24px rgba(0,0,0,.55);border-radius:16px 16px 12px 12px;border-top:2px solid var(--rc)}
+.isn{font-size:17px}.isheet .rar{font-size:11px;font-weight:800;letter-spacing:1.5px;margin-left:4px}
+.isx{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.isacts{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px}.isacts .btn{padding:11px 6px;letter-spacing:.5px}
+.ilist.has-sheet{padding-bottom:230px}
+.mgrid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mcard2{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:3px;min-height:170px;padding:12px;border-radius:16px;border:1px solid var(--line);background-size:cover;background-position:center;text-align:left;color:var(--ink);overflow:hidden;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+.mcard2.wide{grid-column:1 / -1;min-height:150px}
+.mcard2.low{min-height:96px;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px}
+.mcard2 .mk{font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--gold)}
+.mcard2 .mt{font-size:24px;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 8px #000}
+.mcard2 .ms{font-size:12px;color:#cfcad0;display:block;line-height:1.35}
+.mcard2 .mf{font-size:12px;font-weight:800;color:var(--gold)}
+.mcard2 .mm{display:flex;gap:10px;font-size:10px;font-weight:800;letter-spacing:1px;color:var(--muted)}.mcard2 .mm .on{color:var(--good)}
+.mcard2 .mp{position:absolute;right:12px;bottom:18px;text-align:right;display:flex;flex-direction:column}.mcard2 .mp small{font-size:11px;color:var(--muted)}.mcard2 .mp b{font-size:16px}
+.mcard2 .mbar{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(0,0,0,.5)}.mcard2 .mbar i{display:block;height:100%;background:var(--gold)}
+.mbadge{position:absolute;top:10px;left:10px;padding:2px 8px;border-radius:6px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;letter-spacing:1px}
+.mbadge.g{background:rgba(0,0,0,.6);color:var(--gold);border:1px solid var(--gold)}
+.mico{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(10,11,16,.75);border:1px solid var(--line);color:var(--ink)}
 </style>
 
 <div class="app" id="app"></div>
@@ -355,7 +437,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
   <button role="tab" data-tab="mis">Misiones</button>
   <button role="tab" data-tab="dev">Ajustes</button>
 </div></nav>
-<div class="fabs" id="upFab" hidden><button class="fab" data-act="upOpen">Mejoras</button></div>
+<div class="upstrip" id="upFab" hidden></div>
 <div id="modal"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -367,7 +449,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609300700-53fc06c';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609300937-8595fd8';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

@@ -40,7 +40,7 @@ const CHEST_TYPES=['wood','silver','mode'];
 const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
-let tab='up', upOpen=false, invView='main', shopView='cofres', evView=null, modView=null;
+let tab='up', invView='main', shopView='cofres', evView=null, modView=null;
 let expandedId=null, forgeId=null, lockSel=[], forjaBack='armas'; // forjaBack: adónde vuelve "← Volver" desde la Forja
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -87,7 +87,7 @@ function goBack(){ if(modalOpen()){ if(canGoBack()) ACT.close(); return }
   if(tab==='ev'&&modView){ modView=null; return renderTab() }
   if(tab==='inv'&&invView==='forja'){ invView=forjaBack; return renderTab() }
   if(tab==='inv'&&invView!=='main'){ invView='main'; return renderTab() }
-  tab='up'; upOpen=false; renderTab() }
+  tab='up'; renderTab() }
 let backShown=null;
 function syncBack(){ if(!TG||!TG.BackButton) return; const v=canGoBack(); if(v===backShown) return; backShown=v; try{ v?TG.BackButton.show():TG.BackButton.hide() }catch(e){} }
 if(TG&&TG.BackButton) try{ TG.BackButton.onClick(goBack) }catch(e){}
@@ -119,7 +119,7 @@ function bossLoot(mat,chest){ const b=$('#lootBtn'); updateHUD(); const items=[.
   if(!flyLoot(items)&&b&&!reduceMotion()) b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:450}) }
 G.on('boss',({mat})=>{ haptic('medium'); bossLoot(mat,true) });
 G.on('bossFarm',({mat})=>{ if(mat) bossLoot(mat,false) });
-G.on('mode',({name})=>{ upOpen=false; showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves a la fase 1. Los enemigos son mucho más fuertes, dan más oro y los jefes sueltan ${G.modeCfg().mat}.</p><button class="btn gold" data-act="close">Continuar</button>`) });
+G.on('mode',({name})=>{ showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves a la fase 1. Los enemigos son mucho más fuertes, dan más oro y los jefes sueltan ${G.modeCfg().mat}.</p><button class="btn gold" data-act="close">Continuar</button>`) });
 G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase));
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{});
@@ -198,9 +198,9 @@ const ICONS={
 const NAVL={up:'Inicio',inv:'Inventario',shop:'Tienda',ev:'Modos',mis:'Misiones',dev:'Ajustes'};
 // botón de la barra: icono + nombre (+ globo)
 const navSet=(k,n)=>setHTML(document.querySelector(`[data-tab="${k}"]`),`<span class="ni">${IC(ICONS[k])}${n?`<sup class="nb">${n}</sup>`:''}</span><span class="nl">${NAVL[k]}</span>`);
-function renderShell(){
+function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pantalla nueva
   $('#app').innerHTML=`
-  <div class="top"><div class="uname" id="uName"></div>
+  <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><div class="uname" id="uName"></div>
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
     <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
@@ -222,12 +222,13 @@ function updateHUD(){
   $('#faseTxt').classList.toggle('top',ev);
   setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
-  setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span><span class="nc">${heroName()}</span>`);   // nombre y, debajo, la clase
+  setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span>`);   // solo el nombre: la clase ya se ve en el retrato
+  avatar();   // nombre y, debajo, la clase
   setHTML($('#xpLbl'),`Nv ${S.lvl}${S.lvl>=G.lvlCap()?' máx.':''}`);
   $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
-  const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
+  const fab=$('#upFab'); if(fab){ fab.hidden=tab!=='up'||ev; if(!fab.hidden) setHTML(fab,upStrip()); }
   // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
   const gb=$('#grimBtn'); if(gb){ const shown=!ev&&(G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk();
     gb.hidden=!shown; gb.classList.toggle('on',evoNow); gb.dataset.act=evoNow?'evoOpen':'grimOpen'; gb.setAttribute('aria-label',evoNow?'Evolucionar':'Grimorio'); $('#grimN').hidden=!evoNow; }
@@ -270,13 +271,9 @@ function renderTab(){
   const bt=$('#battle'); if(bt) bt.hidden=tab!=='up'; $('#app').classList.toggle('home',tab==='up'); // el combate sigue funcionando por detrás
   if(tab==='up') el.innerHTML='';
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||G.inEvent();
-  if(upOpen) showUpgrades();
   // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
-    el.innerHTML=nbsp((invView==='forja'?back(forjaBack,forjaBack==='main'?'Volver al inventario':'Volver a Armas')
-      :invView==='armas'?back('main','Volver al inventario')
-      :invView==='grim'?back('main','Volver al inventario')
-      :equipHud())+tabInv()); if(invView==='armas') renderList(); }
+    el.innerHTML=nbsp((invView==='forja'?'':invView==='grim'?back('main','Volver al inventario'):invBanner())+tabInv()); if(invView==='armas'||invView==='main') renderList(); }
   if(tab==='shop') el.innerHTML=nbsp(tabShop());
   if(tab==='ev') el.innerHTML=nbsp(tabEv());
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
@@ -288,15 +285,14 @@ function renderTab(){
 function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev'||(tab==='inv'&&invView==='cofres')) renderTab(); else updateHUD(); }
 
 /* ---------- Inicio: mejoras y niveles ---------- */
-function showUpgrades(){upOpen=true;showModal(tabUp()+'<button class="btn gold" data-act="upClose">Cerrar</button>');updateHUD()}
-function tabUp(){
-  const rows=Object.entries(CFG.upgrades).map(([k,u])=>{
-    const c=G.upCost(k), dv=G.upgradeGain(k), v=G.heroStats()[k];
-    const nv=x=>k==='spd'?x.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+'/s':fmt(x);
-    return `<div class="row"><div><div class="t">${u.name}</div><div class="s">${nv(v)} → <b style="color:var(--good)">${nv(v+dv)}</b></div></div>
-      <div class="acts"><button class="btn sm gold" data-act="buy" data-k="${k}" data-need="gold:${c}">${fmt(c)} oro</button><button class="btn sm" data-act="buymax" data-k="${k}">Máx.</button></div></div>`}).join('');
-  return `<section class="panel"><h3>Mejoras</h3>${rows}</section>`;
-}
+// Barra de mejoras fija sobre la barra de abajo: un toque compra 1 nivel (o todos los posibles en MÁX)
+let upX='1';
+const UPS={atk:'Daño',hp:'Vida',df:'Defensa',spd:'Velocidad'};
+function upStrip(){ const st=G.heroStats();
+  const t=Object.keys(UPS).map(k=>{ const c=G.upCost(k), v=st[k], ok=S.gold>=c;
+    const nv=k==='spd'?v.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}):fmt(v);
+    return `<button class="upt${ok?' ok':''}" data-act="upBuy" data-k="${k}" aria-label="Mejorar ${UPS[k]} por ${fmt(c)} oro"><span class="un">${UPS[k]}</span><b>${nv}</b><span class="uc"><i class="dot" style="background:var(--gold)"></i>${fmtG(c)}</span></button>` }).join('');
+  return `<button class="upx" data-act="upX" aria-label="Comprar ${upX==='1'?'de uno en uno':'el máximo'}">${upX==='1'?'×1':'MÁX'}</button>${t}` }
 // Modos: Normal, Pesadilla, Infierno. Muestra dónde estás, qué da cada uno y qué hace falta para pasar al siguiente.
 function nameModal(){ showModal(`<h3>Tu nombre</h3><input id="nameIn" class="nameinp" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(S.name||'')}">
   <p class="hint">No se podrá cambiar.</p><div class="ctrl"><button class="btn gold" data-act="nameSave">Guardar</button></div>`); const i=$('#nameIn'); if(i) i.focus() }
@@ -342,30 +338,35 @@ function statRow(it,x,i,opt){ const [lo,hi]=CFG.sec[x.k][it.r], top=x.v>=hi, w=h
       <div class="rbar"><i style="width:${w}%;background:var(--${top?'good':'r'+it.r})"></i></div></div>
     ${opt.imp?(top?'<span class="rmax">MÁX</span>':`<button class="btn sm rup" data-act="impAsk" data-id="${it.id}" data-k="${i}" aria-label="Subir ${CFG.sec[x.k].n}">↑</button>`):''}
   </div>` }
+let forjaTab='lvl', fdetOpen=false;   // fdetOpen: el panel «Filtros y desmontar» sigue como lo dejaste
+// Forja: el arma en un marco del color de su rareza, estrellas de nivel y dos pestañas, Subir nivel y Reforjar
+const BIGSWORD=`<svg viewBox="0 0 64 64" width="92" height="92" aria-hidden="true"><path d="M50 6l8 0 0 8-26 26-8-8z" fill="#dfe4ee"/><path d="M50 6l8 0-30 30-4-4z" fill="#fff" opacity=".55"/><path d="M18 34l12 12-4 4-12-12z" fill="var(--gold)"/><path d="M20 44l-8 8" stroke="#8a5a34" stroke-width="5" stroke-linecap="round"/><circle cx="9" cy="55" r="4" fill="var(--gold)"/></svg>`;
+const ICSPD='<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>';
 function tabForja(){
   const it=G.findItem(forgeId)||G.equipped();
-  if(!it) return `<section class="panel"><h3>Forja</h3><p class="hint">Vacío.</p></section>`;
+  if(!it) return `${scrHead('FORJA',forjaBack)}<section class="panel"><p class="hint">Vacío.</p></section>`;
   forgeId=it.id;
   const m=G.weaponMain(it), eq=it.id===S.equippedId, own=it.cls===S.cls, max=it.lvl>=CFG.weapon.maxLvl;
   const n=G.lvlCostItems(it), sc=G.lvlCostScrap(it), have=G.fodderFor(it).length;
   const mn=G.weaponMain({r:it.r,lvl:Math.min(CFG.weapon.maxLvl,it.lvl+1)});
-  const up=(a,b)=>max?`+${pct(a)}`:`+${pct(a)} → <b style="color:var(--good)">+${pct(b)}</b>`;
   const p=G.reforgePrice(it,lockSel.length,'scrap'), pt=lockSel.length===1&&tokOpen()?G.reforgePrice(it,1,'token'):null;
-  return `<section class="panel"><h3>Forja</h3>
-    <div class="wcard${eq?' eq':''}">
-      <div class="hd"><span class="nm" style="color:var(--r${it.r});font-size:16px">${wName(it)}</span>${eq?'<span class="pill">Equipada</span>':own?`<button class="btn sm" data-act="equip" data-id="${it.id}">Equipar</button>`:''}</div>
-      <div class="s">${CFG.rarName[it.r]}</div>${legendLine(it)}
-      <div class="fbox"><div class="fbh"><b>Nivel ${it.lvl}/${CFG.weapon.maxLvl}</b></div>
-        <div class="s">Daño ${up(m.d,mn.d)} · Velocidad ${up(m.s,mn.s)}</div>
-        ${max?'<span class="pill">Nivel máximo</span>':`<button class="btn gold" data-act="lvl" data-id="${it.id}" ${have<n||S.scrap<sc?'disabled':''}>Subir a nv ${it.lvl+1}</button>
-        <div class="s">Necesita ${n} arma${n>1?'s':''} igual${n>1?'es':''} <b style="color:var(--${have>=n?'good':'bad'})">(${have}/${n})</b>${sc?` + ${sc} chatarra`:''}</div>`}</div>
-      <div class="fbox"><div class="fbh"><b>Reforja</b><span class="s">${lockSel.length}/${G.maxLocks(it)} fijados</span></div>
-        ${it.sec.map((x,i)=>statRow(it,x,i,{lock:true,imp:true})).join('')}
-        <button class="btn gold" data-act="ref" data-id="${it.id}" data-pay="scrap" ${S.scrap<p.scrap?'disabled':''}>Reforjar · ${fmt(p.scrap)} chatarra</button>
-        ${pt?`<button class="btn sm" data-act="ref" data-id="${it.id}" data-pay="token">O con token: ${fmt(pt.scrap)} chat. + ${pt.tokens} token</button>`:''}
-        <div class="rlegend"><span>${LOCK_SVG(true)} fija un stat (cuesta más)</span><span><b>↑</b> sube solo ese stat</span></div>
-      </div>
-    </div>
+  const stars=Array.from({length:CFG.weapon.maxLvl},(_,i)=>`<i class="${i<it.lvl?'on':''}">★</i>`).join('');
+  const row=(ic,k,a,b)=>`<div class="fgrow"><span class="fgi">${IC(ic,18)}</span><span class="fgk">${k}</span>${max?`<b>+${pct(a)}</b>`:`<s>+${pct(a)}</s><em>→</em><b class="up">+${pct(b)}</b>`}</div>`;
+  const lvlBody=max?'<p class="hint" style="text-align:center">Nivel máximo</p>':`
+      ${row(ICONS.armas,'Daño',m.d,mn.d)}${row(ICSPD,'Velocidad',m.s,mn.s)}
+      <div class="fgneed"><span>Armas iguales</span><b style="color:var(--${have>=n?'good':'bad'})">${have}/${n}</b></div>
+      <button class="fgcta" data-act="lvl" data-id="${it.id}" ${have<n||S.scrap<sc?'disabled':''}><b>SUBIR A NIVEL ${it.lvl+1}</b><span>${sc?`${ICON.scrap} ${fmt(sc)} chatarra · `:''}${n} arma${n>1?'s':''} igual${n>1?'es':''}</span></button>`;
+  const refBody=`${it.sec.map((x,i)=>statRow(it,x,i,{lock:true,imp:true})).join('')}
+      <button class="fgcta" data-act="ref" data-id="${it.id}" data-pay="scrap" ${S.scrap<p.scrap?'disabled':''}><b>REFORJAR</b><span>${ICON.scrap} ${fmt(p.scrap)} chatarra</span></button>
+      ${pt?`<button class="btn sm" data-act="ref" data-id="${it.id}" data-pay="token">O con token: ${fmt(pt.scrap)} chat. + ${pt.tokens} token</button>`:''}
+      <div class="rlegend"><span>${LOCK_SVG(true)} fija un stat (cuesta más)</span><span><b>↑</b> sube solo ese stat</span></div>`;
+  return `${scrHead('FORJA',forjaBack)}<section class="fgp">
+    <div class="fgframe" style="--rc:var(--r${it.r})">${BIGSWORD.replace('width="92" height="92"','width="120" height="120"')}
+      ${eq?'<span class="pill fgeq">Equipada</span>':own?`<button class="btn sm fgeq" data-act="equip" data-id="${it.id}">Equipar</button>`:''}</div>
+    <div class="fgname">${wName(it)}</div>
+    <div class="fgrar" style="--rc:var(--r${it.r})"><span>${CFG.rarName[it.r].toUpperCase()}</span><span class="fgst">${stars}</span></div>${legendLine(it)}
+    <div class="fgtabs"><button class="${forjaTab==='lvl'?'on':''}" data-act="forjaTab" data-v="lvl">Subir nivel</button><button class="${forjaTab==='ref'?'on':''}" data-act="forjaTab" data-v="ref">Reforjar <small>${lockSel.length}/${G.maxLocks(it)}</small></button></div>
+    <div class="fgbody">${forjaTab==='lvl'?lvlBody:refBody}</div>
     ${!eq&&G.equipped()?`<button class="btn sm" data-act="forge" data-id="${S.equippedId}">Volver a mi arma equipada</button>`:''}
     </section>`;
 }
@@ -381,29 +382,39 @@ function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy
     Clerigo:`<path d="M40 22l10-18 10 18z"/><path d="M28 46h44l8 82H20z" opacity=".85"/><circle cx="50" cy="30" r="17" fill="none" stroke="${c}" stroke-width="2" opacity=".6"/><rect x="78" y="44" width="4" height="40" rx="2"/><circle cx="80" cy="42" r="7"/>`,
   }[cls]||'';
   return `<svg class="silh" viewBox="0 0 100 130" width="92" height="120" aria-hidden="true" fill="${c}">${body}${extra}</svg>` }
+// Retrato redondo (cabeza del dibujo del héroe) y escenarios de art.js como imagen de fondo (se pintan una vez)
+let avKey=null;
+function avatar(){ const k=[S.cls,S.evo,S.path].join(), el=$('#avatar'); if(!el||k===avKey) return; heroImg(); const src=heroImgCache[k]; if(src){ avKey=k; el.style.backgroundImage=`url(${src})` } }   // solo cuando cambia el dibujo
+const sceneCache={};
+function sceneImg(zone,w,h){ const k=zone+'_'+w+'_'+h; if(!sceneCache[k]&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const g=cv.getContext('2d');
+  ART.scene(g,w,h,Math.round(h*0.8),zone,0,0,0); sceneCache[k]=cv.toDataURL('image/jpeg',0.8) }catch(e){ sceneCache[k]='' } } return sceneCache[k]||'' }
+const zoneNow=()=>Math.floor(((Math.max(1,S.best)-1)%150)/30);
+const scrHead=(t,backV)=>`<div class="scrhd">${backV?`<button class="scrb" data-act="invview" data-v="${backV}" aria-label="Volver">‹</button>`:''}<b>${t}</b><span class="scrg">${ICON.gold}${fmtG(S.gold)}</span></div>`;
 // Inventario: el héroe con el mismo dibujo del combate (se pinta una vez y se guarda como imagen)
 const heroImgCache={};
 function heroImg(){ const c=CFG.classes[S.cls], k=[S.cls,S.evo,S.path].join();
   if(!heroImgCache[k]&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=184; cv.height=240; const g=cv.getContext('2d');
     g.scale(2*1.6,2*1.6); ART.hero(g,25,73,{cls:S.cls,color:c.color,evo:S.evo,path:S.path}); heroImgCache[k]=cv.toDataURL() }catch(e){} }
   return heroImgCache[k]?`<img class="silh" src="${heroImgCache[k]}" width="92" height="120" alt="">`:classSVG(S.cls) }
-function equipHud(){ const w=G.equipped();
-  const wm=w&&G.weaponMain(w);
-  const wslot=w?`<button class="eslot" data-act="forge" data-id="${w.id}" data-from="main" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
-      <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span><span class="s">Toca para forjar</span></button>`
-    :`<button class="eslot" data-act="invview" data-v="armas"><span class="s">Arma</span><b>Sin arma</b><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`;
-  return `<section class="panel equip"><div class="equip-in">${heroImg()}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}</div></div></section>` }
+// Cabecera del inventario: el héroe grande sobre el escenario de su zona y sus huecos (arma y grimorio)
+function invBanner(){ const w=G.equipped(), bg=sceneImg(zoneNow(),390,190), gshown=G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1;
+  const ws=w?`<button class="ibslot" style="--rc:var(--r${w.r})" data-act="forge" data-id="${w.id}" data-from="main" aria-label="Arma: ${wName(w)}">${MINISWORD}<span class="ibl">Nv ${w.lvl}</span></button>`:`<button class="ibslot empty" data-act="invview" data-v="armas" aria-label="Sin arma">—</button>`;
+  const gs=gshown?`<button class="ibslot" style="--rc:var(--rE)" data-act="grimOpen" aria-label="Grimorio">${((document.querySelector('#grimBtn svg')||{}).outerHTML||'📖').replace(/width="22" height="22"/,'width="30" height="30"')}${G.grimOwned()?`<span class="ibl">Nv ${G.grimLevel()}</span>`:''}</button>`:`<span class="ibslot empty" aria-label="Grimorio bloqueado">🔒</span>`;
+  return `<section class="ibanner" style="background-image:linear-gradient(180deg,rgba(18,20,28,.1),rgba(18,20,28,.85)),url(${bg})">
+    <div class="ibart">${heroImg()}</div>
+    <div class="ibinfo"><b>${esc(S.name||'')}</b><span>${heroName().toUpperCase()}</span><small>Nivel ${S.lvl}</small></div>
+    <div class="ibslots">${ws}${gs}</div></section>` }
 function tabInv(){
   if(invView==='forja') return tabForja();
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0)+(S.pvpTickets>0?1:0);
   // pantalla principal: solo las pestañas, sin nada abierto hasta que toques una
-  const head=`<div class="fchips" role="tablist">
-    <button data-act="invview" data-v="armas" aria-pressed="false">${IC(ICONS.armas,14)}Armas (${G.invCount()})</button>
-    <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">${IC(ICONS.cofres,14)}Cofres (${nc})</button>
-    <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">${IC(ICONS.mat,14)}Materiales (${nm})</button>
+  const cur=invView==='main'?'armas':invView;
+  const head=`<div class="utabs" role="tablist">
+    <button data-act="invview" data-v="armas" class="${cur==='armas'?'on':''}">Armas <small>${G.invCount()}/${G.invMax()}</small></button>
+    <button data-act="invview" data-v="cofres" class="${cur==='cofres'?'on':''}">Cofres <small>${nc}</small></button>
+    <button data-act="invview" data-v="mat" class="${cur==='mat'?'on':''}">Materiales <small>${nm}</small></button>
 </div>`;
   if(invView==='grim') return `<section class="panel">${tabGrim()}</section>`;
-  if(invView==='main') return `<section class="panel"><h3>Inventario</h3>${head}</section>`;
   if(invView==='cofres'){
     const row=k=>{const n=G.chestCount(k);return `<div class="chest inv">
       <div><div class="cn">${rw(ICON[k],'')}${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
@@ -411,33 +422,33 @@ function tabInv(){
         <button class="btn sm gold" data-act="open1" data-k="${k}">Abrir 1</button>
         <button class="btn sm" data-act="openAll" data-k="${k}" ${n>1?'':'disabled'}>Abrir todos</button></div></div>`}; // siempre los 3 botones: quedan alineados entre filas
     const owned=CHEST_TYPES.filter(k=>G.chestCount(k)>0);
-    return `<section class="panel"><h3>Inventario</h3>${head}${owned.map(row).join('')||'<p class="hint">Vacío.</p>'}</section>`;
+    return `${head}<section class="panel">${owned.map(row).join('')||'<p class="hint">Vacío.</p>'}</section>`;
   }
   if(invView==='mat'){
-    const rows=[];
-    if(S.scrap>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--scrap)"></i> Chatarra</span><span class="meta"><b>${fmt(S.scrap)}</b></span></div></div>`);
-    if(S.evm>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--rL)"></i> ${CFG.event.mat}s</span><span class="meta"><b>${S.evm}</b></span></div></div>`);
-    if(S.tickets>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--rE)"></i> Tickets de Mazmorra</span><span class="meta"><b>${S.tickets}</b></span></div></div>`);
-    if(S.pvpTickets>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--gold)"></i> Tickets PvP</span><span class="meta"><b>${S.pvpTickets}</b></span></div></div>`);
-    if(S.bossTickets>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--bad)"></i> Tickets Jefe</span><span class="meta"><b>${S.bossTickets}</b></span></div></div>`);
-    for(const [m,n] of Object.entries(S.mats||{})) if(n>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--rE)"></i> ${CFG.modes[m].mat}</span><span class="meta"><b>${n}</b></span></div></div>`);
-    if(S.tokens>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--tok)"></i> Tokens comprados</span><span class="meta"><b>${fmt(S.tokens)}</b></span></div></div>`);
-    if(S.won>0) rows.push(`<div class="irow"><div class="ihd" style="cursor:default"><span class="nm"><i class="dot" style="background:var(--good)"></i> Tokens ganados (retirables)</span><span class="meta"><b>${fmt(S.won)}</b></span></div></div>`);
-    return `<section class="panel"><h3>Inventario</h3>${head}${rows.join('')||'<p class="hint">Vacío.</p>'}</section>`;
+    const t=[], add=(n,c,name,ic)=>{ if(n>0) t.push(`<div class="mtile" style="--mc:${c}" title="${name}"><span class="mi">${IC(ic||ICONS.mat,26)}</span><b>${fmt(n)}</b><span class="mn">${name}</span></div>`) };
+    add(S.scrap,'var(--scrap)','Chatarra','<path d="M12 3l2.2 3.2 3.8-.6-.6 3.8L20.6 12l-3.2 2.2.6 3.8-3.8-.6L12 20.6l-2.2-3.2-3.8.6.6-3.8L3.4 12l3.2-2.2-.6-3.8 3.8.6z"/><circle cx="12" cy="12" r="3"/>');
+    for(const [m,n] of Object.entries(S.mats||{})) add(n,'var(--rE)',CFG.modes[m].mat);
+    add(S.evm,'var(--rL)',CFG.event.mat+'s','<path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/>');
+    add(S.tickets,'var(--rE)','Ticket Mazmorra','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
+    add(S.bossTickets,'var(--bad)','Ticket Jefe','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
+    add(S.pvpTickets,'var(--gold)','Ticket PvP','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
+    add(S.tokens,'var(--tok)','Tokens','<path d="M12 3l8 9-8 9-8-9z"/>');
+    add(S.won,'var(--good)','Tokens ganados','<path d="M12 3l8 9-8 9-8-9z"/>');
+    return `${head}<section class="panel">${t.length?`<div class="mgrid">${t.join('')}</div>`:'<p class="hint">Vacío.</p>'}</section>`;
   }
   // solo salen las opciones que tienes (rarezas, clases y stats de tus armas); si la elegida ya no existe, vuelve a "todas"
   const have=S.items.filter(x=>x.id!==S.equippedId), hasStat=k=>have.some(x=>x.sec.some(y=>y.k===k));
   if(F.rar!=='all'&&!have.some(x=>x.r===F.rar)) F.rar='all';
   if(F.stat!=='any'&&!hasStat(F.stat)) F.stat='any';
   const statOpts=Object.entries(CFG.sec).filter(([k])=>hasStat(k)).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
-  return `<section class="panel"><h3>Armas (${G.invCount()}/${G.invMax()})</h3>
-    <div class="filters fpanel"><div class="ctrl" id="fHead">${fHead()}</div>
+  return `${head}<section class="panel">
+    <details class="fdet"${fdetOpen?' open':''}><summary>Filtros y desmontar</summary><div class="filters fpanel"><div class="ctrl" id="fHead">${fHead()}</div>
       <div class="frow"><select id="fRar" aria-label="Rareza">${['all',...R.filter(r=>have.some(x=>x.r===r))].map(r=>`<option value="${r}" ${F.rar===r?'selected':''}>${r==='all'?'Rareza':CFG.rarName[r]}</option>`).join('')}</select>
         <select id="fStat" aria-label="Stat"><option value="any">Cualquier stat</option>${statOpts}</select></div>
       <div class="frow"><input type="number" id="fMin" aria-label="Mínimo %" inputmode="decimal" placeholder="mín" value="${esc(F.min)}">
         <input type="number" id="fMax" aria-label="Máximo %" inputmode="decimal" placeholder="máx" value="${esc(F.max)}"></div>
       <div id="bulk"></div>
-    </div>
+    </div></details>
     <div id="invList" class="ilist"></div></section>`;
 }
 // Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Efecto desde el nivel 25 del grimorio.
@@ -479,12 +490,30 @@ function filtered(){
     return true;
   }).sort((a,b)=>(b.id===S.equippedId)-(a.id===S.equippedId)||(a.cls===S.cls?0:1)-(b.cls===S.cls?0:1)||R.indexOf(b.r)-R.indexOf(a.r)||b.lvl-a.lvl);
 }
+// Inventario en cuadrícula: casilla con el color de rareza, nivel, ★ bloqueada y ▲ mejor que la equipada
+const MINISWORD=BIGSWORD.replace('width="92" height="92"','width="38" height="38"');
+function itemTile(it){ const eq=it.id===S.equippedId, own=it.cls===S.cls, up=own&&!eq&&betterThanEquipped(it), sel=expandedId===it.id;
+  return `<button class="itile${sel?' sel':''}" style="--rc:var(--r${it.r})" data-act="expand" data-id="${it.id}" aria-pressed="${sel}" aria-label="${wName(it)} nivel ${it.lvl}">
+    ${MINISWORD}<span class="tl">Nv ${it.lvl}</span>${it.fav?'<span class="tf">★</span>':''}${up?'<span class="tu">▲</span>':''}</button>` }
+function itemSheet(it){ const m=G.weaponMain(it), own=it.cls===S.cls;
+  return `<div class="isheet fixed" style="--rc:var(--r${it.r})">
+    <div class="ishd"><div class="isart">${MINISWORD}</div><div style="min-width:0;flex:1"><b class="isn">${wName(it)}</b> <span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r].toUpperCase()}</span>
+      <div class="s">Nv ${it.lvl} · Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div></div>
+      <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear'}">★</button>
+      <button class="isx" data-act="expand" data-id="${it.id}" aria-label="Cerrar">✕</button></div>
+    ${legendLine(it)}<div class="sec">${chips(it.sec,false,it.r)}</div>
+    <div class="isacts"><button class="btn" data-act="dis1" data-id="${it.id}" ${it.fav?'disabled':''}>Desmontar</button>
+      <button class="btn" data-act="forge" data-id="${it.id}">Forjar</button>
+      <button class="btn gold" data-act="equip" data-id="${it.id}" ${own?'':'disabled'}>Equipar</button></div></div>` }
 function renderList(){
   const el=$('#invList'); if(!el) return; setHTML($('#fHead'),fHead());
   const list=filtered(), dis=list.filter(x=>x.id!==S.equippedId&&!x.fav);
   const bulk=$('#bulk'); if(bulk) bulk.innerHTML=`<div class="ctrl"><span class="s">${list.length} de ${G.invCount()} armas</span><button class="btn sm" data-act="disAsk" ${dis.length?'':'disabled'}>Desmontar las filtradas (${dis.length})</button></div>`;
-  el.innerHTML=`${list.slice(0,80).map(itemCard).join('')||(G.invCount()?'<p class="hint">Sin resultados.</p>':'<p class="hint">Vacío.</p>')}
-    ${list.length>80?`<p class="hint">+${list.length-80} más</p>`:''}`;
+  const sel=list.find(x=>x.id===expandedId);
+  const shown=list.slice(0,80), room=Math.max(0,Math.min(G.invMax()-G.invCount(),(4-shown.length%4)%4+4));
+  el.classList.toggle('has-sheet',!!sel);
+  el.innerHTML=nbsp(`${sel?itemSheet(sel):''}${list.length?`<div class="igrid">${shown.map(itemTile).join('')}${'<span class="itile empty"></span>'.repeat(F.rar==='all'&&F.stat==='any'?room:0)}</div>`:(G.invCount()?'<p class="hint">Sin resultados.</p>':'<p class="hint">Vacío.</p>')}
+    ${list.length>80?`<p class="hint">+${list.length-80} más</p>`:''}`);
   updateHUD();
 }
 function oddsModal(type){
@@ -672,13 +701,19 @@ function tabEv(){
   // Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Jefe semanal; la Liga está oculta) y PvP (próximamente)
   const back=`<button class="back" data-act="modview" data-v="">← Modos</button>`;
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
-    const big=(v,t,sub,st,lock)=>`<button class="mcard mbig${lock?' lock':''}" data-act="modview" data-v="${v}"><div class="ctrl" style="justify-content:space-between"><b class="cat">${GI[v]?GIC(GI[v],24):IC(ICONS[v],22)}${t}</b>${st}</div><span class="s">${sub}</span></button>`;
-    return `<section class="panel"><h3>Modos</h3><div class="mlist">
-      ${big('campana','Campaña','Normal · Pesadilla · Infierno',`<span class="pill" style="color:var(--gold)">${M.name} · fase ${S.best}/${CFG.phaseCap}</span>`)}
-      ${big('eventos','Eventos','Mazmorra · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
-      ${big('torre','Torre','Caminos y mejoras',(r=>r?`<span class="pill" style="color:var(--gold)">Piso ${r.floor} · ♥ ${r.lives}</span>`:`<span class="pill">Récord ${G.towerState().best}</span>`)(G.towerState().run))}
-      ${big('pvp','PvP','Duelos por puntos',`<span class="pill">${fmt(G.pvpState().rating)} puntos · ${G.pvpFreeLeft()} gratis</span>`)}
-    </div></section>` }
+    const tw=G.towerState(), tr=tw.run, pv=G.pvpState(), cap=CFG.phaseCap, bg=(z,w,h)=>`background-image:linear-gradient(180deg,rgba(10,10,16,0) 35%,rgba(10,10,16,.8)),url(${sceneImg(z,w,h)})`;
+    const modesTxt=CFG.modes.map((x,i)=>`<span class="${i===S.mode?'on':''}">${x.name.toUpperCase()}</span>`).join('');
+    return `<div class="scrhd"><b>MODOS DE JUEGO</b><span class="scrg">${ICON.gold}${fmtG(S.gold)}</span></div><div class="mgrid2">
+      <button class="mcard2 wide" style="${bg(zoneNow(),360,150)}" data-act="modview" data-v="campana">
+        <span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
+        <span class="mp"><small>Progreso</small><b>Fase ${S.best} / ${cap}</b></span><span class="mbar"><i style="width:${S.best/cap*100}%"></i></span></button>
+      <button class="mcard2" style="${bg(4,180,170)}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
+        <b class="mt">Eventos</b><span class="ms">Mazmorra diaria<br>Jefe semanal</span><span class="mf">⏱ Jefe: ${dhm(G.weekLeft())}</span></button>
+      <button class="mcard2" style="${bg('arena',180,170)}" data-act="modview" data-v="pvp"><span class="mbadge g">${G.pvpFreeLeft()} GRATIS</span>
+        <b class="mt">PvP</b><span class="ms">Duelos por puntos</span><span class="mf">🛡 ${fmt(pv.rating)} puntos</span></button>
+      <button class="mcard2 wide low" style="${bg(2,360,110)}" data-act="modview" data-v="torre"><span class="mico">${GIC(GI.torre,30)}</span>
+        <span><b class="mt">Torre</b><span class="ms">${tr?`Piso ${tr.floor} · ♥ ${tr.lives}`:`Roguelike · récord piso ${tw.best}`}</span></span></button>
+    </div>` }
   if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div></section>`;
   if(modView==='torre') return back+tabTower();
   if(modView==='pvp') return back+tabPvp();
@@ -933,7 +968,7 @@ if(window.Telemetry) Telemetry.onReward=list=>{ const paid=list.some(r=>/^stars:
   const pvp=list.every(r=>r.kind==='pvp');
   later(()=>showModal(`<h3>${paid?'¡Compra recibida!':pvp?'¡Premio de la semana PvP!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
 function renderSelect(){
-  $('#nav').hidden=true; $('#upFab').hidden=true; upOpen=false;
+  $('#nav').hidden=true; $('#upFab').hidden=true;
   $('#app').classList.remove('home');
   $('#app').innerHTML=`<div><div class="hero-title">Idle Ascension</div></div>
   <label class="namebox"><span class="s">Tu nombre</span><input id="pNameIn" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(pendingName)}"></label>
@@ -965,8 +1000,8 @@ function toast(t){let el=$('.toast');if(!el){el=document.createElement('div');el
 const ACT={
   pick:b=>{ const inp=$('#pNameIn'), n=inp?inp.value:''; if(!G.validName(n)){ toast('Escribe tu nombre (3-16 letras)'); if(inp) inp.focus(); return } G.newGame(b.dataset.c,n);syncS();pendingName='';renderShell();G.save()},
   nameSave:()=>{ const n=($('#nameIn')||{}).value; if(!G.setName(n)) return toast('Escribe tu nombre (3-16 letras)'); closeModal(); toast('Nombre guardado'); updateHUD(); if(tab==='dev') renderTab(); },
-  upOpen:()=>showUpgrades(),
-  upClose:()=>{upOpen=false;closeModal()},
+  upBuy:(b,k)=>{ if(upX==='max'){ if(!G.buyMax(k)) toast('No tienes oro suficiente') } else if(!G.buyUpgrade(k)) toast('No tienes oro suficiente'); updateHUD() },
+  upX:()=>{ upX=upX==='1'?'max':'1'; updateHUD() },
   skill:(b,k)=>{ const x=G.skills().find(s=>s.slot===k); if(!x) return; if(x.locked) return toast(`${x.name}: ${(SKI[x.id]||[0,x.desc])[1]}`);
     const r=G.useSkill(k); if(r.ok){ haptic('medium'); toast(x.name) } else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate') },
   // botón Auto/Manual del combate: en los eventos cambia opt.evAuto; en la campaña, opt.autoSkills
@@ -1027,9 +1062,7 @@ const ACT={
   modview:b=>{ modView=b.dataset.v||null; evView=null; if(modView==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
   evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(p.rew?evRewPlain(p.rew):'Sin premio'); renderTab(); } },
-  close:()=>{stopSpin();boostModalOpen=false;upOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
-  buy:(b,k)=>{if(G.buyUpgrade(k))renderTab()},
-  buymax:(b,k)=>{const n=G.buyMax(k);toast(n?'+'+n+' niveles':'No tienes oro suficiente');renderTab()},
+  close:()=>{stopSpin();boostModalOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
   equip:(b,k,id)=>{if(G.equip(id))renderTab()},
   fav:(b,k,id)=>{const f=G.toggleFav(id);if(f===null)return;toast(f?'Arma bloqueada: no se desmonta ni se usa para forjar':'Arma desbloqueada');if(tab==='inv'&&invView==='armas')renderList();else renderTab()},
   lvl:(b,k,id)=>{const r=G.levelUp(id),it=G.findItem(id);
@@ -1041,9 +1074,10 @@ const ACT={
   disAsk:()=>{const ids=filtered().filter(x=>x.id!==S.equippedId&&!x.fav).map(x=>x.id);const v=ids.reduce((s,id)=>s+G.disValue(G.findItem(id)),0);
     pendingDis=ids;showModal(`<h3>¿Desmontar ${ids.length} armas?</h3><p class="hint">+${v} chatarra · la equipada y las ★ se quedan</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`)},
   disYes:()=>{closeModal();disToast(G.dismantle(pendingDis||[]));pendingDis=null;renderTab()},
-  invFull:()=>{ closeModal(); tab='inv'; invView='armas'; renderTab() },
+  invFull:()=>{ closeModal(); tab='inv'; invView='armas'; fdetOpen=true; renderTab() },   // inventario lleno: filtros abiertos para desmontar
+  forjaTab:(b)=>{forjaTab=b.dataset.v;renderTab()},
   forge:(b,k,id)=>{forgeId=id;lockSel=[];forjaBack=b.dataset.from||'armas';tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
-  invview:b=>{const v=b.dataset.v; if(v==='forja') forjaBack='armas'; invView=tab==='inv'&&invView===v&&(v==='cofres'||v==='mat')?'main':v; renderTab()}, // tocar la pestaña abierta la cierra
+  invview:b=>{const v=b.dataset.v; if(v==='forja') forjaBack='armas'; invView=v; renderTab()}, // tocar la pestaña abierta la cierra
   expand:(b,k,id)=>{expandedId=expandedId===id?null:id;renderList()},
   fclear:()=>{F.rar='all';F.stat='any';F.min='';F.max='';renderTab()},
   rlskip:()=>spinDone(),
@@ -1112,10 +1146,11 @@ document.addEventListener('contextmenu',e=>{ if(e.target.closest('.skb')) e.prev
 document.addEventListener('click',e=>{
   if(skSkip&&e.target.closest('.skb')){ skSkip=false; return } skSkip=false;
   const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
-  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;lockSel=[];renderTab();return}
+  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;lockSel=[];renderTab();return}
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
+document.addEventListener('toggle',e=>{ if(e.target.classList&&e.target.classList.contains('fdet')) fdetOpen=e.target.open },true);
 document.addEventListener('change',e=>{ if(e.target.id==='fStat'){F.stat=e.target.value;renderList()} if(e.target.id==='fRar'){F.rar=e.target.value;$('#fHead').innerHTML=fHead();renderList()} });
 document.addEventListener('input',e=>{
   if(e.target.id==='buyQty'&&buyCtx){const n=Math.floor(+e.target.value||0);buyCtx.n=n;const mx=maxBuy(buyCtx.k);$('#buyTotal').textContent=priceTxt(buyCtx.k,Math.max(0,n));$('#buyOk').disabled=!(n>=1&&n<=mx)}
