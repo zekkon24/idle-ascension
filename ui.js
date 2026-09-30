@@ -502,8 +502,13 @@ function renderList(){
   el.classList.toggle('has-sheet',!!sel);
   el.innerHTML=nbsp(`${sel?itemSheet(sel):''}${list.length?`<div class="igrid">${shown.map(itemTile).join('')}${'<span class="itile empty"></span>'.repeat(F.rar==='all'&&F.stat==='any'?room:0)}</div>`:(G.invCount()?'<p class="hint">Sin resultados.</p>':'<p class="hint">Vacío.</p>')}
     ${list.length>80?`<p class="hint">+${list.length-80} más</p>`:''}`);
-  updateHUD();
+  fitSheet(); updateHUD();
 }
+// la ficha del arma tapa justo el recuadro del héroe (si se ve); si se ha bajado la página, queda arriba del todo
+function fitSheet(){ const sh=document.querySelector('.isheet.fixed'), bn=document.querySelector('.ibanner'); if(!sh||!bn) return;
+  const r=bn.getBoundingClientRect(), top=document.querySelector('.top').getBoundingClientRect().bottom+6;
+  Object.assign(sh.style,{left:r.left+'px',right:'auto',width:r.width+'px',maxWidth:'none',top:Math.max(top,r.top)+'px',minHeight:r.height+'px'}) }
+window.addEventListener('resize',fitSheet);
 function oddsModal(type){
   const ch=CFG.chests[type], cur=G.chestProbs(type), rows=[];
   ch.odds.forEach((tr,m)=>tr.forEach(([a,p],i)=>{ const nx=tr[i+1], name=CFG.modes[m].name+(tr.length>1?(nx?` ${a}–${nx[0]-1}`:` ${a}+`):'');

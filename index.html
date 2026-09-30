@@ -413,11 +413,12 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .itile .tl{left:3px;top:3px;bottom:auto;padding:0 4px;border-radius:5px;background:var(--rc);color:#0c0d12;text-shadow:none;font-size:10px}
 .itile .tf{left:auto;right:4px;top:auto;bottom:2px}
 .itile.empty{border:2px dashed var(--line);background:rgba(255,255,255,.02)}
-.isheet.fixed{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:6;background:linear-gradient(180deg,#262a3c,#1c1f2c);box-shadow:0 -8px 24px rgba(0,0,0,.55);border-radius:16px 16px 12px 12px;border-top:2px solid var(--rc)}
+.isheet.fixed{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;top:calc(58px + var(--safe-top));min-height:170px;z-index:6;background:linear-gradient(180deg,#262a3c,#1c1f2c);box-shadow:0 10px 24px rgba(0,0,0,.6);border-radius:14px;border:2px solid var(--rc)}   /* la ficha del arma tapa el héroe de arriba (arma equipada y grimorio) */
+.tgfs .isheet.fixed{top:calc(48px + var(--safe-top))}
 .isn{font-size:17px}.isheet .rar{display:block;font-size:11px;font-weight:800;letter-spacing:1.5px}
 .isx{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
-.isacts{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px}.isacts .btn{padding:11px 6px;letter-spacing:.5px}
-.ilist.has-sheet{padding-bottom:230px}
+.isacts{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.1fr);gap:6px}.isacts .btn{padding:11px 2px;letter-spacing:0;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:374px){.isacts .btn{font-size:12px}}
 .mgrid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .mcard2{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:3px;min-height:170px;padding:12px;border-radius:16px;border:1px solid var(--line);background-size:cover;background-position:center;text-align:left;color:var(--ink);overflow:hidden;box-shadow:0 6px 16px rgba(0,0,0,.4)}
 .mcard2.wide{grid-column:1 / -1;min-height:150px}
@@ -455,7 +456,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609301018-cd20af2';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609301026-4775871';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
