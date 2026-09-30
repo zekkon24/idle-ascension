@@ -574,7 +574,7 @@ function createGame(opts){
   function pvpFight(){ const P=pvpState(), r=P.rival; if(!r||inEvent()||!pvpCanFight()) return false;
     const g=ghostOf(r.save); if(!g) return false; if(pvpFreeLeft()>0) P.used++; else S.pvpTickets--;
     P.fight={name:r.name,cls:r.cls,bot:r.bot,rating:r.rating,id:r.id,match:r.match};   // si se cierra la app a mitad, cuenta como derrota
-    const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.ttk*(dps(a,b)+dps(b,a))/(a.hp+b.hp);   // vida para que un golpe normal tarde ~ttk s en matar
+    const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.hpMul?CFG.pvp.hpMul:CFG.pvp.ttk*(dps(a,b)+dps(b,a))/(a.hp+b.hp);   // vida en PvP: × hpMul (igual para los dos)
     const gs=g.duelEnter({...a,name:S.name,cls:S.cls},M), ms=duelEnter({...b,name:r.name,cls:r.cls},M); GH=g;
     Object.assign(B.enemies[0],{hp:gs.hp,max:gs.hp}); Object.assign(g.B.enemies[0],{hp:ms.hp,max:ms.hp});
     save(); emit('eventStart',B); emit('change'); return true }

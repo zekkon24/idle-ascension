@@ -202,6 +202,7 @@ function updateHUD(){
   const gb=$('#grimBtn'); if(gb){ const shown=!ev&&(G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk();
     gb.hidden=!shown; gb.classList.toggle('on',evoNow); gb.dataset.act=evoNow?'evoOpen':'grimOpen'; gb.setAttribute('aria-label',evoNow?'Evolucionar':'Grimorio'); $('#grimN').hidden=!evoNow; }
   const es=$('#evoSlot'); if(es){ const soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(); setHTML(es,soon&&!ev?'<span class="pill">Evolución: próximamente</span>':''); }
+  const sbs=document.querySelector('.sidebtns'); if(sbs) sbs.hidden=ev;   // en los eventos no se ven los iconos del combate
   const db=$('#dailyBtn'); if(db){ db.hidden=ev; $('#dailyN').hidden=!(G.calState().can||G.wheelState().free); }   // premios diarios: calendario y ruleta
   const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
   $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#hpTxt').textContent=fmt(Math.ceil(hpv));
@@ -212,7 +213,7 @@ function updateHUD(){
   const lb=$('#lootBtn'); if(lb){ lb.hidden=!S.loot; const n=S.loot?S.loot.n:0, ln=$('#lootN'); ln.hidden=!n; ln.textContent=n; }
   const ep=$('#evPause'); if(ep){ const l=G.evPauseLeft(); if(l>0) ep.textContent=mmss(l); else if(tab==='ev') renderTab(); }
   const bl=G.boostLeft(), bt=$('#boostTime'), bb=$('#boostBtn');
-  if(bt){ bt.hidden=!bl; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
+  if(bt){ bt.hidden=!bl||ev; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   // habilidades: solo las desbloqueadas; la recarga se ve con el reloj gris (sin números). En los eventos, botón Auto/Manual
@@ -591,7 +592,7 @@ const RARC={C:'var(--rC)',R:'var(--rR)',L:'var(--rL)'};
 function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of TC.rewards) if(f%r.every===0) return {f,b:r.b} })();
   let body='';
-  if(!run) body=`<p class="hint">Entras con tu héroe. La vida no se recupera entre combates (solo en los descansos). En cada piso eliges camino; al ganar eliges una mejora (pasiva, objeto o hechizo de cualquier clase) que se suma a lo tuyo durante la partida. ${TC.lives} vidas: si pierdes un combate repites el piso.</p>
+  if(!run) body=`<p class="hint">Elige camino en cada piso y una mejora al ganar. La vida no se recupera entre combates. ${TC.lives} vidas.</p>
       <button class="btn gold" data-act="towerStart">Empezar partida</button>`;
   else if(run.lives<=0) body=`<p class="hint">Te quedaste sin vidas en el piso ${run.floor}.</p><div class="ctrl"><button class="btn gold" data-act="towerLife" ${G.tokens()>=TC.lifeCost?'':'disabled'}>+1 vida · ${TC.lifeCost} tokens</button><button class="btn" data-act="towerQuit">Terminar partida</button></div>`;
   else if(run.pick) body=`<p class="hint">Elige una mejora:</p><div class="mlist">${run.pick.map(boonCard).join('')||'<p class="hint">No quedan mejoras nuevas.</p>'}</div>${run.pick.length?'':'<button class="btn gold" data-act="towerPick" data-k="0">Seguir</button>'}`;
@@ -599,31 +600,31 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{
   const boons=run&&run.boons.length?`<div class="tchips">${Object.values(run.boons.reduce((o,b)=>{ const f=G.boonInfo(b), k=f.name; (o[k]=o[k]||{f,n:0}).n++; return o },{})).map(({f,n})=>`<span class="pill" title="${esc(f.desc)}" style="color:${RARC[f.r]}">${f.name}${n>1?' ×'+n:''}</span>`).join('')}</div>`:'';
   return `<section class="panel"><h3>Torre</h3><div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Vidas</span><b>${run?'♥'.repeat(Math.max(0,run.lives))||'0':'–'}</b></div><div><span class="s">Salud</span><b>${run?Math.round((run.hp==null?1:run.hp)*100)+' %':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
     ${body}${boons}${run&&run.lives>0&&!G.inEvent()?'<button class="btn sm" data-act="towerQuit">Abandonar partida</button>':''}
-    <p class="hint">Premios (la 1.ª vez que llegas): cofre de madera cada 5 pisos, de plata cada 25 y de modo cada 50. Siguiente: piso ${nxt.f} · ${bundleHTML(nxt.b)}</p></section>` }
+    <p class="hint">Siguiente premio: piso ${nxt.f} · ${bundleHTML(nxt.b)}</p></section>` }
 /* ---------- PvP: contra el fantasma de otro jugador (su partida al 100 %) · Elo ---------- */
 // Dentro de Telegram el servidor elige el rival (jugadores reales con puntos parecidos; si no hay, bot) y guarda los puntos.
 // Fuera de Telegram: bots (tu partida con otra clase) y puntos solo en el móvil.
 const pvpOnline=()=>!!(window.Telemetry&&Telemetry.canSync&&Telemetry.canSync(CFG));
 let PVI=null, pvpBusy=false;
 function pvpLoad(){ if(!pvpOnline()) return; Telemetry.pvp(CFG,'pvpInfo').then(j=>{ if(!j||!j.ok) return; PVI=j; G.pvpSync(j.me); if(tab==='ev'&&modView==='pvp') renderTab(); }) }
-// insignia de liga según los puntos
-const badge=pts=>{ const L=G.pvpLeague(pts); return `<span class="pill" style="color:${L.color};border-color:${L.color}">${L.name}</span>` };
 const clName=c=>CFG.classes[c]?clsLabel(c):(c||'');   // nombre de la clase (con tilde); '' si el servidor no la sabe
-function tabPvp(){ const P=G.pvpState(), on=pvpOnline();
-  const head=`<div class="evhead"><div><span class="s">Puntos</span><b>${fmt(P.rating)}</b>${badge(P.rating)}</div><div><span class="s">Puesto</span><b>${on&&PVI?PVI.me.rank:'–'}</b></div><div><span class="s">Victorias</span><b>${P.wins}/${P.games}</b></div></div>
-    <div class="evhead"><div><span class="s">Gratis hoy</span><b>${G.pvpFreeLeft()}/${CFG.pvp.free}</b></div><div><span class="s">Tickets PvP</span><b>${S.pvpTickets||0}</b></div></div>`;
+// icono de división: escudo del color de la liga con una marca distinta por división (Bronce, Plata, Oro, Diamante, Leyenda)
+const DIVMARK=['','<path d="M8 11l4 3 4-3" stroke="#0008" stroke-width="2" fill="none"/>','<path d="M12 6.5l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#0007"/>','<path d="M12 6l4 4-4 6-4-6z" fill="#fff9" stroke="#0006"/>','<path d="M6.5 14l1-6 2.8 3L12 6.5 13.7 11l2.8-3 1 6z" fill="#0007"/>'];
+function divIcon(pts,sz){ const L=G.pvpLeague(pts), i=Math.max(0,CFG.pvp.leagues.findIndex(x=>x[1]===L.name));
+  return `<svg class="divic" viewBox="0 0 24 24" width="${sz||22}" height="${sz||22}" aria-label="${L.name}"><title>${L.name}</title><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z" fill="${L.color}" stroke="#0008" stroke-width="1"/>${DIVMARK[i]||''}</svg>` }
+function tabPvp(){ const P=G.pvpState(), on=pvpOnline(), L=G.pvpLeague(P.rating);
+  const head=`<div class="evhead pvphead"><div>${divIcon(P.rating,30)}<span class="s" style="color:${L.color}">${L.name}</span></div><div><span class="s">Puntos</span><b>${fmt(P.rating)}</b></div><div><span class="s">V / D</span><b>${P.wins}/${P.games-P.wins}</b></div><div><span class="s">Tickets</span><b>${S.pvpTickets||0}</b><span class="s">${G.pvpFreeLeft()}/${CFG.pvp.free} gratis</span></div></div>`;
   const busy=G.inEvent()||pvpBusy, can=G.pvpCanFight();
-  const riv=`<div class="ctrl"><button class="btn gold" style="flex:1" data-act="pvpGo" ${busy||!can?'disabled':''}>${pvpBusy?'Buscando rival…':G.pvpFreeLeft()?'Luchar (gratis)':can?'Luchar (1 ticket)':'Sin combates'}</button>
-    ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="pvp">+${CFG.pvp.pack} tickets · ${CFG.pvp.packCost} tok</button>`:''}</div>
-    ${can?'':`<p class="hint">Ya usaste tus ${CFG.pvp.free} combates gratis de hoy. ${tokOpen()?'Compra tickets PvP para seguir.':'Vuelve mañana.'}</p>`}`;
-  const top=on?(PVI?`<h3>Ranking</h3><div class="rank">${PVI.top.map((x,i)=>`<div class="${x.me?'me':''}"><span>${i+1}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''} ${badge(x.rating)}</span><b>${fmt(x.rating)}</b></div>`).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}</div>`:'<p class="hint">Cargando ranking…</p>'):'<p class="hint">El ranking y los rivales reales están dentro de Telegram. Aquí luchas contra bots.</p>';
-  const defs=on&&PVI&&PVI.log.length?`<h3>Te han atacado</h3><div class="rank">${PVI.log.map(x=>`<div><span style="color:${x.won?'var(--bad)':'var(--good)'}">${x.won?'✗':'✓'}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''} ${x.won?'ganó a tu fantasma':'perdió contra tu fantasma'}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
-  const hist=P.hist.length?`<h3>Tus combates</h3><div class="rank">${P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''} · ${clName(x.cls)}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
-  return `<section class="panel"><h3>PvP</h3>${head}${riv}
-    <p class="hint">${CFG.pvp.free} combates gratis al día; después, 1 ticket PvP por combate (${CFG.pvp.pack} tickets por ${usd(CFG.pvp.packCost)}). Te toca el jugador más cercano a ti en puntos (no repites rival hasta pasados ${CFG.pvp.recent} duelos). Luchas contra su fantasma: su héroe con todo lo suyo (arma, mejoras, evolución, grimorio y habilidades) manejado por la IA. Tu fantasma también defiende cuando no estás. Máx. ${CFG.pvp.maxT} s; si nadie cae, gana quien tenga más % de vida.</p>
-    ${top}${defs}${hist}</section>
-  <details class="panel fold"><summary><h3>Premios de la semana</h3></summary>${rewTable(CFG.pvp.rewards)}<p class="hint">Cada lunes (00:00 UTC) se premia según tu puesto entre los que lucharon esa semana, y los puntos quedan a medio camino de 1000 (1400 → 1200). Cierra en ${dhm(G.weekLeft())}.${on?'':' Solo dentro de Telegram.'}</p></details>
-  <p class="hint">Ligas: ${CFG.pvp.leagues.map(([p,n,c])=>`<b style="color:${c}">${n}</b> ${p?'desde '+p:''}`).join(' · ')}</p>` }
+  const riv=`<div class="ctrl"><button class="btn gold" style="flex:2" data-act="pvpGo" ${busy||!can?'disabled':''}>${pvpBusy?'Buscando rival…':G.pvpFreeLeft()?'Luchar (gratis)':can?'Luchar (1 ticket)':'Sin combates hoy'}</button>
+    ${tokOpen()?`<button class="btn" style="flex:1" data-act="buyAsk" data-k="pvp">+${CFG.pvp.pack} 🎟 · ${CFG.pvp.packCost} tok</button>`:''}</div>`;
+  const row=(pos,x)=>`<div class="${x.me?'me':''}"><span>${divIcon(x.rating,20)}</span><span>${pos}. ${esc(x.name)}</span><b>${fmt(x.rating)}</b></div>`;
+  const top=on?(PVI?`<div class="rank pvprank"><div class="rh"><span>Rango</span><span>Nombre</span><b>Puntos</b></div>${PVI.top.map((x,i)=>row(i+1,x)).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}${PVI.top.length&&!PVI.top.some(x=>x.me)&&PVI.me.rank?'<div class="gap">…</div>'+row(PVI.me.rank,{name:S.name||'Tú',rating:P.rating,me:1}):''}</div>`:'<p class="hint">Cargando…</p>'):'<p class="hint">Ranking solo en Telegram.</p>';
+  const defs=on&&PVI&&PVI.log.length?PVI.log.map(x=>`<div><span style="color:${x.won?'var(--bad)':'var(--good)'}">${x.won?'✗':'✓'}</span><span>🛡 ${esc(x.name)}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join(''):'';
+  const hist=P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('');
+  return `<section class="panel"><h3>PvP</h3>${head}${riv}<h3>Ranking</h3>${top}</section>
+  ${hist||defs?`<details class="panel fold"><summary><h3>Historial</h3></summary><div class="rank">${hist}${defs}</div></details>`:''}
+  <details class="panel fold"><summary><h3>Premios de la semana</h3></summary>${rewTable(CFG.pvp.rewards)}<p class="hint">Cierra en ${dhm(G.weekLeft())}.</p>
+    <div class="ctrl" style="flex-wrap:wrap;gap:10px">${CFG.pvp.leagues.map(([p,n,c])=>`<span class="ctrl" style="gap:4px">${divIcon(p,18)}<b style="color:${c}">${n}</b> <span class="s">${p||0}</span></span>`).join('')}</div></details>` }
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
@@ -639,16 +640,16 @@ function tabEv(){
     return `<section class="panel"><h3>Modos</h3><div class="mlist">
       ${big('campana','Campaña','Normal · Pesadilla · Infierno',`<span class="pill" style="color:var(--gold)">${M.name} · fase ${S.best}/${CFG.phaseCap}</span>`)}
       ${big('eventos','Eventos','Mazmorra · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
-      ${big('torre','Torre','Roguelike: elige caminos y combina mejoras de todas las clases',(r=>r?`<span class="pill" style="color:var(--gold)">Piso ${r.floor} · ♥ ${r.lives}</span>`:`<span class="pill">Récord ${G.towerState().best}</span>`)(G.towerState().run))}
-      ${big('pvp','PvP','Lucha contra el fantasma de otros jugadores · Elo',`<span class="pill">${fmt(G.pvpState().rating)} puntos · ${G.pvpFreeLeft()} gratis</span>`)}
+      ${big('torre','Torre','Caminos y mejoras',(r=>r?`<span class="pill" style="color:var(--gold)">Piso ${r.floor} · ♥ ${r.lives}</span>`:`<span class="pill">Récord ${G.towerState().best}</span>`)(G.towerState().run))}
+      ${big('pvp','PvP','Duelos por puntos',`<span class="pill">${fmt(G.pvpState().rating)} puntos · ${G.pvpFreeLeft()} gratis</span>`)}
     </div></section>` }
-  if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div><p class="hint">Cada modo tiene ${CFG.phaseCap} fases; al pasar al siguiente vuelves a la fase 1 con enemigos mucho más fuertes.</p></section>`;
+  if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div></section>`;
   if(modView==='torre') return back+tabTower();
   if(modView==='pvp') return back+tabPvp();
   return `${back}<section class="panel"><h3>Eventos</h3>
-    ${card('lab','Mazmorra','Hasta 5 min de monstruos, cada vez más y más rápidos · ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
+    ${card('lab','Mazmorra','Ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
     ${CFG.league&&CFG.league.show?(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow()):''}
-    ${card('boss','Jefe semanal','1 min contra un jefe inmortal · ranking semanal por daño',`Entradas <b>${G.wbFreeLeft()+S.bossTickets}</b>`,paused?'En pausa':bd?`Semana ${fmt(bd)} · puesto ${bpos}`:`Cierra en ${dhm(G.weekLeft())}`,!!bp)}
+    ${card('boss','Jefe semanal','Ranking semanal por daño',`Entradas <b>${G.wbFreeLeft()+S.bossTickets}</b>`,paused?'En pausa':bd?`Semana ${fmt(bd)} · puesto ${bpos}`:`Cierra en ${dhm(G.weekLeft())}`,!!bp)}
   </section>`;
 }
 function tabLab(){
@@ -661,7 +662,7 @@ function tabLab(){
     <div class="evhead"><div><span class="s">Entradas</span><b>${G.evFreeLeft()+S.tickets}</b></div><div><span class="s">${paused?'Total de ayer':'Total hoy'}</span><b>${best||'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="evGo" ${(S.tickets>0||G.evFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Entrar'}</button>
     ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="ticket">+1 ticket · ${V.ticketCost} tok</button>`:''}</div>
-    <p class="hint">Aguanta todo lo que puedas (máx. ${V.maxDur/60} min); cada ${V.ramp.every} s llegan más y más rápidos · suma las muertes de tus intentos del día</p>
+    <p class="hint">Máx. ${V.maxDur/60} min · cuentan las muertes del día</p>
     ${rankHTML(G.evRivals(d),best,pos,x=>x)}</section>
   <details class="panel fold"><summary><h3>Premios del día</h3></summary>${rewTable(V.rewards)}<p class="hint">Se reparten a las 01:00 UTC del día siguiente.</p></details>`;
 }

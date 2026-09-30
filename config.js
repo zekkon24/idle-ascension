@@ -185,7 +185,7 @@ const CFG = {
   // quedan a medio camino de 1000. leagues: insignia según los puntos ([desde, nombre, color])
   pvp:{free:3, pack:3, packCost:100, recent:5, maxT:90,
     rewards:[{to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},{to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
-    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:45, cls:{Guerrero:1.84,Mago:0.86,Arquero:1.31,Asesino:1.11,Clerigo:0.44}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:31, cls:{Guerrero:1.77,Mago:0.75,Arquero:1.12,Asesino:1.04,Clerigo:0.65}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
