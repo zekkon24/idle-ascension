@@ -547,20 +547,24 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{
 const pvpOnline=()=>!!(window.Telemetry&&Telemetry.canSync&&Telemetry.canSync(CFG));
 let PVI=null, pvpBusy=false;
 function pvpLoad(){ if(!pvpOnline()) return; Telemetry.pvp(CFG,'pvpInfo').then(j=>{ if(!j||!j.ok) return; PVI=j; G.pvpSync(j.me); if(tab==='ev'&&modView==='pvp') renderTab(); }) }
+// insignia de liga según los puntos
+const badge=pts=>{ const L=G.pvpLeague(pts); return `<span class="pill" style="color:${L.color};border-color:${L.color}">${L.name}</span>` };
 const clName=c=>CFG.classes[c]?clsLabel(c):(c||'');   // nombre de la clase (con tilde); '' si el servidor no la sabe
 function tabPvp(){ const P=G.pvpState(), on=pvpOnline();
-  const head=`<div class="evhead"><div><span class="s">Puntos</span><b>${fmt(P.rating)}</b></div><div><span class="s">Puesto</span><b>${on&&PVI?PVI.me.rank:'–'}</b></div><div><span class="s">Victorias</span><b>${P.wins}/${P.games}</b></div></div>
+  const head=`<div class="evhead"><div><span class="s">Puntos</span><b>${fmt(P.rating)}</b>${badge(P.rating)}</div><div><span class="s">Puesto</span><b>${on&&PVI?PVI.me.rank:'–'}</b></div><div><span class="s">Victorias</span><b>${P.wins}/${P.games}</b></div></div>
     <div class="evhead"><div><span class="s">Gratis hoy</span><b>${G.pvpFreeLeft()}/${CFG.pvp.free}</b></div><div><span class="s">Tickets PvP</span><b>${S.pvpTickets||0}</b></div></div>`;
   const busy=G.inEvent()||pvpBusy, can=G.pvpCanFight();
   const riv=`<div class="ctrl"><button class="btn gold" style="flex:1" data-act="pvpGo" ${busy||!can?'disabled':''}>${pvpBusy?'Buscando rival…':G.pvpFreeLeft()?'Luchar (gratis)':can?'Luchar (1 ticket)':'Sin combates'}</button>
     ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="pvp">+${CFG.pvp.pack} tickets · ${CFG.pvp.packCost} tok</button>`:''}</div>
     ${can?'':`<p class="hint">Ya usaste tus ${CFG.pvp.free} combates gratis de hoy. ${tokOpen()?'Compra tickets PvP para seguir.':'Vuelve mañana.'}</p>`}`;
-  const top=on?(PVI?`<h3>Ranking</h3><div class="rank">${PVI.top.map((x,i)=>`<div class="${x.me?'me':''}"><span>${i+1}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''}</span><b>${fmt(x.rating)}</b></div>`).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}</div>`:'<p class="hint">Cargando ranking…</p>'):'<p class="hint">El ranking y los rivales reales están dentro de Telegram. Aquí luchas contra bots.</p>';
+  const top=on?(PVI?`<h3>Ranking</h3><div class="rank">${PVI.top.map((x,i)=>`<div class="${x.me?'me':''}"><span>${i+1}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''} ${badge(x.rating)}</span><b>${fmt(x.rating)}</b></div>`).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}</div>`:'<p class="hint">Cargando ranking…</p>'):'<p class="hint">El ranking y los rivales reales están dentro de Telegram. Aquí luchas contra bots.</p>';
   const defs=on&&PVI&&PVI.log.length?`<h3>Te han atacado</h3><div class="rank">${PVI.log.map(x=>`<div><span style="color:${x.won?'var(--bad)':'var(--good)'}">${x.won?'✗':'✓'}</span><span>${esc(x.name)}${x.cls?' · '+clName(x.cls):''} ${x.won?'ganó a tu fantasma':'perdió contra tu fantasma'}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
   const hist=P.hist.length?`<h3>Tus combates</h3><div class="rank">${P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''} · ${clName(x.cls)}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('')}</div>`:'';
   return `<section class="panel"><h3>PvP</h3>${head}${riv}
     <p class="hint">${CFG.pvp.free} combates gratis al día; después, 1 ticket PvP por combate (${CFG.pvp.pack} tickets por ${usd(CFG.pvp.packCost)}). Te toca el jugador más cercano a ti en puntos (no repites rival hasta pasados ${CFG.pvp.recent} duelos). Luchas contra su fantasma: su héroe con todo lo suyo (arma, mejoras, evolución, grimorio y habilidades) manejado por la IA. Tu fantasma también defiende cuando no estás. Máx. ${CFG.pvp.maxT} s; si nadie cae, gana quien tenga más % de vida.</p>
-    ${top}${defs}${hist}</section>` }
+    ${top}${defs}${hist}</section>
+  <details class="panel fold"><summary><h3>Premios de la semana</h3></summary>${rewTable(CFG.pvp.rewards)}<p class="hint">Cada lunes (00:00 UTC) se premia según tu puesto entre los que lucharon esa semana, y los puntos quedan a medio camino de 1000 (1400 → 1200). Cierra en ${dhm(G.weekLeft())}.${on?'':' Solo dentro de Telegram.'}</p></details>
+  <p class="hint">Ligas: ${CFG.pvp.leagues.map(([p,n,c])=>`<b style="color:${c}">${n}</b> ${p?'desde '+p:''}`).join(' · ')}</p>` }
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
@@ -821,12 +825,13 @@ function tabDev(){
 function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG.referral; if(!link) return '';
   return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">Tu amigo recibe ${R.giftSilver} cofre de plata. Tú, ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}${R.buyPct?` y el ${Math.round(R.buyPct*100)} % de sus compras en tokens`:''}.</div></div>
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
-const REW_T={invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
+const REW_T={'pvp:semana':'Ranking semanal de PvP',invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
 // premios del servidor: por invitar o compras con Stars
 const rewTxt=r=>r.kind==='silver'?rw(ICON.silver,'+'+fmt(r.amount)):r.kind==='tokens'||r.kind==='won'?rw(ICON.tok,'+'+fmt(r.amount))
-  :r.kind==='first'?bundleHTML({item:CFG.stars.first.r,tok:CFG.stars.first.tokens,silver:CFG.stars.first.silver}):r.kind==='pass'?'Pase de pago activado':'';
+  :r.kind==='first'?bundleHTML({item:CFG.stars.first.r,tok:CFG.stars.first.tokens,silver:CFG.stars.first.silver}):r.kind==='pass'?'Pase de pago activado':r.kind==='pvp'?`Puesto ${r.amount}: ${(w=>w?evRewText(w):'sin premio')(G.pvpReward(r.amount))}`:'';
 if(window.Telemetry) Telemetry.onReward=list=>{ const paid=list.some(r=>/^stars:/.test(r.reason||'')); if(paid) haptic('ok');
-  later(()=>showModal(`<h3>${paid?'¡Compra recibida!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
+  const pvp=list.every(r=>r.kind==='pvp');
+  later(()=>showModal(`<h3>${paid?'¡Compra recibida!':pvp?'¡Premio de la semana PvP!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
 function renderSelect(){
   $('#nav').hidden=true; $('#upFab').hidden=true; upOpen=false;
   $('#app').classList.remove('home');

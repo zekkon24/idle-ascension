@@ -88,12 +88,13 @@ const CFG = {
   tokens:{perUsd:100, open:true, packs:[100,500,1000,2500], bonus:{500:25,1000:100,2500:500}, keep:0.3, withdraw:{fee:0.15, min:100}}, // retiro: solo en pruebas locales (desactivado en Telegram)
   // Misiones diarias (se renuevan cada día): cada una da oro (minutos de farmeo de tu récord) y experiencia del pase
   missions:{list:[
-      // rew: premio de cada misión (gold = minutos de farmeo de tu récord). Entre todas: oro de 3 h, 3 madera, 1 plata (la de anuncios), 1 ticket.
+      // rew: premio de cada misión (gold = minutos de farmeo de tu récord). Entre todas: oro de 4 h, 3 madera, 1 plata (la de anuncios), 1 ticket.
       // La más fácil (enemigos) solo da XP del pase. Todas dan xp del pase.
       {k:'ad',n:5,t:'Mira 5 anuncios',rew:{silver:1}},
       {k:'event',n:1,t:'Juega la Mazmorra o el Jefe semanal',rew:{gold:60,wood:1,ticket:1}},
       {k:'chests',n:5,t:'Abre 5 cofres',rew:{gold:60,wood:1}},
       {k:'upgrade',n:10,t:'Compra 10 mejoras',rew:{gold:60,wood:1}},
+      {k:'pvp',n:3,t:'Juega 3 PvP',rew:{gold:60}},
       {k:'kills',n:300,t:'Derrota 300 enemigos',rew:{}}],
     xp:20, bonus:{gold:60,silver:1,wood:2}, // bonus: al recoger todas las diarias del día
     // Misiones semanales (de lunes a domingo). Entre todas: oro de 6 h, 5 madera, 2 plata (la de anuncios), 1 ticket.
@@ -180,7 +181,11 @@ const CFG = {
   // Mago 55 %, Asesino 52 %, Arquero 50 %, Clérigo 48 %, Guerrero 45 % (el Mago tiene ventaja: es su modo)
   // Rival: el jugador más cercano en puntos, sin repetir ninguno de tus últimos 'recent' duelos (lo decide el servidor)
   // free: duelos gratis al día; después 1 ticket PvP por duelo (paquete de 'pack' tickets por 'packCost' tokens = 1 $)
-  pvp:{free:3, pack:3, packCost:100, recent:5, maxT:90, ttk:45, cls:{Guerrero:1.84,Mago:0.86,Arquero:1.31,Asesino:1.11,Clerigo:0.44}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+  // rewards: premio del ranking semanal según tu puesto (igual que el Jefe semanal); lo reparte el servidor el lunes y los puntos
+  // quedan a medio camino de 1000. leagues: insignia según los puntos ([desde, nombre, color])
+  pvp:{free:3, pack:3, packCost:100, recent:5, maxT:90,
+    rewards:[{to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},{to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
+    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:45, cls:{Guerrero:1.84,Mago:0.86,Arquero:1.31,Asesino:1.11,Clerigo:0.44}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
