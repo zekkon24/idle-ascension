@@ -27,6 +27,8 @@ function fmt(n){ if(n===undefined||n===null||isNaN(n))return '0'; const a=Math.a
   if(a<100000) return Math.round(n).toLocaleString('es-ES');
   const u=[['K',1e3],['M',1e6],['B',1e9]]; let s='';
   for(const [k,v] of u) if(a>=v) s=(n/v).toFixed(n/v<10?2:n/v<100?1:0)+k; return s; }
+// oro abreviado desde 1000: K mil, M millón, B mil millones
+const fmtG=n=>{ const a=Math.abs(n||0); if(a<1000) return fmt(n); let s=''; for(const [k,v] of [['K',1e3],['M',1e6],['B',1e9]]) if(a>=v) s=(n/v).toFixed(n/v<10?2:n/v<100?1:0)+k; return s };
 const pct=v=>(Math.round(v*1000)/10).toLocaleString('es-ES')+' %';
 const clsLabel=c=>CFG.classes[c].label||c;
 const wName=it=>CFG.names[it.cls][R.indexOf(it.r)];
@@ -192,9 +194,9 @@ function updateHUD(){
   $('#faseTxt').classList.toggle('top',ev);
   setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
-  setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span><span class="nc">- ${heroName()}</span>`);   // se recorta el nombre, la clase siempre se ve
+  setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span><span class="nc">${heroName()}</span>`);   // nombre y, debajo, la clase
   setHTML($('#xpLbl'),`Nv ${S.lvl}${S.lvl>=G.lvlCap()?' máx.':''}`);
-  $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
+  $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
@@ -406,7 +408,7 @@ function tabInv(){
 }
 // Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Efecto desde el nivel 25 del grimorio.
 // coste: si lo tienes, "124 ✓" en verde; si no, "tienes / pide" en rojo
-const costRow=(n,have,v)=>`<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${have>=v?fmt(v)+' ✓':fmt(Math.floor(have))+' / '+fmt(v)}</b></div>`;
+const costRow=(n,have,v)=>{ const f=n==='Oro'?fmtG:fmt; return `<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${have>=v?f(v)+' ✓':f(Math.floor(have))+' / '+f(v)}</b></div>` };
 const hms=sec=>{ sec=Math.max(0,Math.ceil(sec)); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60); return h?h+' h '+m+' min':m+' min' };
 // camino: nombre, pasiva y habilidad de evolución (la del camino B puede estar por decidir)
 function pathCard(k,P,cur){ const sk=(k==='B'?(CFG.skills.evoB||{}):CFG.skills.evo)[S.cls];
@@ -493,7 +495,7 @@ const SHOP={
   ev:{name:'Emblema',desc:'Se usa para la Evolución y para desbloquear Grimorios. También se gana en los premios de Mazmorra y Jefe semanal.'},
 };
 const usd=t=>(t/CFG.tokens.perUsd).toLocaleString('es-ES',{minimumFractionDigits:t%CFG.tokens.perUsd?2:0,maximumFractionDigits:2})+' $';
-const priceTxt=(k,n=1)=>k==='silver'?`${fmt(G.silverCost(n))} oro`:`${fmt(G.shopPrice(k)*n)} tokens`;
+const priceTxt=(k,n=1)=>k==='silver'?`${fmtG(G.silverCost(n))} oro`:`${fmt(G.shopPrice(k)*n)} tokens`;
 // ¿Se puede pagar con tokens? Hasta tener Telegram Stars no se pueden comprar: los botones en tokens salen como "Próximamente"
 // (salvo en local con herramientas de prueba o si el jugador ya tiene tokens, p. ej. ganados)
 const tokOpen=()=>!!(CFG.devTools||CFG.tokens.open||G.tokens()>0);
@@ -546,7 +548,7 @@ function buyModal(){
       <input type="number" id="buyQty" aria-label="Cantidad" min="1" max="${mx}" value="${n}" style="width:80px;text-align:center;font-size:16px;padding:8px">
       <button class="btn" data-act="qty" data-v="1" aria-label="Uno más">+</button></div>
     <div class="ctrl">${[1,5,10].map(v=>`<button class="btn sm" data-act="qtyset" data-v="${v}">${v}</button>`).join('')}<button class="btn sm" data-act="qtyset" data-v="${Math.max(1,mx)}">Máx. (${mx})</button></div>
-    <div class="loot"><div><span>Total</span><b id="buyTotal">${priceTxt(k,n)}</b></div><div><span>Tienes</span><b>${k==='silver'?fmt(S.gold)+' oro':fmt(G.tokens())+' tokens'}</b></div>${k==='silver'&&Number.isFinite(G.silverLeft())?`<div><span>Quedan hoy</span><b>${G.silverLeft()}</b></div>`:''}</div>
+    <div class="loot"><div><span>Total</span><b id="buyTotal">${priceTxt(k,n)}</b></div><div><span>Tienes</span><b>${k==='silver'?fmtG(S.gold)+' oro':fmt(G.tokens())+' tokens'}</b></div>${k==='silver'&&Number.isFinite(G.silverLeft())?`<div><span>Quedan hoy</span><b>${G.silverLeft()}</b></div>`:''}</div>
     ${mx<1?`<p class="hint">${k==='silver'&&!G.silverLeft()?'Ya compraste los de hoy.':k==='silver'?'Oro insuficiente.':'Tokens insuficientes. <button class="btn sm gold" data-act="goTokens">Conseguir tokens</button>'}</p>`:''}
     <div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="buyConfirm" id="buyOk" ${ok?'':'disabled'}>Comprar</button></div>`);
 }
@@ -761,7 +763,7 @@ function boostModal(){
       <div class="acts"><button class="btn sm gold" data-act="adWatch" data-k="${k}" ${left>0?'':'disabled'}>Ver anuncio (${a.p[k]||0}/${B[k].ads})</button></div></div>`};
   showModal(`<h3>Potenciadores</h3>
     ${row('speed',`Velocidad ×${B.speed.mult} · ${B.speed.min} min`,boostSub('speed'))}
-    ${row('gold',`+${fmt(G.goldBoostValue())} oro`,boostSub('gold'))}
+    ${row('gold',`+${fmtG(G.goldBoostValue())} oro`,boostSub('gold'))}
     <button class="btn" data-act="boostClose">Cerrar</button>`);
 }
 function boostSub(k){
@@ -772,7 +774,7 @@ function boostSub(k){
 function updateBoostModal(){ const e=$('#bs_speed'); if(e) e.textContent=boostSub('speed') }
 // Anuncio simulado hasta que haya proveedor real de anuncios
 function showAd(k){ playAd(()=>{ const r=G.watchAd(k);
-  if(r.applied) toast(k==='speed'?`Velocidad ×${CFG.boosts.speed.mult} activada`:`+${fmt(r.gold)} oro`);
+  if(r.applied) toast(k==='speed'?`Velocidad ×${CFG.boosts.speed.mult} activada`:`+${fmtG(r.gold)} oro`);
   boostModal(); }) }
 function playAd(done){
   boostModalOpen=false; let t=3;
@@ -817,7 +819,7 @@ function quitModal(q){ const p=q.pvp, t=q.tower;
 function offlineModal(off){
   const h=Math.floor(off.secs/3600), mi=Math.round((off.secs%3600)/60);
   showModal(`<h3>Mientras no estabas</h3><p class="hint">Fase ${off.fase} · ${h?h+' h ':''}${mi?mi+' min':''}${off.capped?' · máximo':''}</p>
-    <div class="loot"><div><span>Oro</span><b>+${fmt(off.gold)}</b></div>${off.lvlTo>off.lvlFrom?`<div><span>Nivel</span><b>${off.lvlFrom} → ${off.lvlTo}</b></div>`:''}</div>
+    <div class="loot"><div><span>Oro</span><b>+${fmtG(off.gold)}</b></div>${off.lvlTo>off.lvlFrom?`<div><span>Nivel</span><b>${off.lvlFrom} → ${off.lvlTo}</b></div>`:''}</div>
     <div class="ctrl"><button class="btn${off.capped?'':' gold'}" data-act="close">Recoger</button>
     ${off.bonus?`<button class="btn gold" data-act="offAd">×${CFG.offlineAdMult.toLocaleString('es-ES')} con anuncio (+${fmt(off.bonus)})</button>`:''}</div>`);
 }

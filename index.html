@@ -38,9 +38,9 @@ button{cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:10px 90px;display:flex;flex-direction:column;gap:10px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.uname{font-family:var(--display);font-weight:800;font-size:14px;flex:1;min-width:0;display:flex;align-items:baseline;gap:5px;white-space:nowrap}
-.uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:24px}
-.uname .nc{flex:none;margin-left:-2px}
+.uname{font-family:var(--display);font-weight:800;font-size:14px;flex:1;min-width:0;display:flex;flex-direction:column;gap:0;white-space:nowrap;line-height:1.15}
+.uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.uname .nc{font-family:var(--body);font-weight:600;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
 .uname em{flex:none;font-style:normal;color:var(--muted);font-family:var(--body);font-size:11px}
 .res{flex:none}
 .namebox{display:flex;flex-direction:column;gap:4px}
@@ -363,7 +363,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609300624-3350f69';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609300626-ede112f';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
