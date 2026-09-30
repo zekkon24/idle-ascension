@@ -37,13 +37,17 @@ button,select,input{font:inherit;color:inherit}
 button{cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:10px 90px;display:flex;flex-direction:column;gap:10px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.uname{font-family:var(--display);font-weight:800;font-size:16px;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.uname{font-family:var(--display);font-weight:800;font-size:14px;flex:1;min-width:0;display:flex;align-items:baseline;gap:5px;white-space:nowrap}
+.uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:24px}
+.uname .nc{flex:none;margin-left:-2px}
+.uname em{flex:none;font-style:normal;color:var(--muted);font-family:var(--body);font-size:11px}
+.res{flex:none}
 .namebox{display:flex;flex-direction:column;gap:4px}
 #pNameIn,.nameinp{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;width:100%}
 .fase{font-family:var(--display);font-size:20px;letter-spacing:.5px}
 .fase small{font-family:var(--body);font-size:12px;color:var(--muted);letter-spacing:0;margin-left:6px}
-.res{display:flex;gap:10px;font-variant-numeric:tabular-nums;font-weight:800}
+.res{display:flex;gap:8px;font-variant-numeric:tabular-nums;font-weight:800}
 .res span{display:flex;align-items:center;gap:4px}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
 .ic{width:15px;height:15px;flex:none}
@@ -66,12 +70,11 @@ canvas{display:block;width:100%;height:300px}
 .hero .name .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .hero .name em{flex:none}
 .hero #evoSlot:empty{display:none}
-.app.home .top .uname{visibility:hidden}   /* en Inicio el nombre ya sale encima de las barras */
 .hero .name em{font-style:normal;color:var(--muted);font-family:var(--body);font-size:12px;margin-left:6px}
 .bar{height:8px;border-radius:5px;background:var(--panel2);overflow:hidden;grid-column:1 / -1}
 .bar i{display:block;height:100%;background:var(--good);width:0%}
 .bar.xp i{background:var(--tok)}
-.hbar{grid-column:1 / -1;display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hbar{grid-column:1 / -1;display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .hbar .bar{grid-column:auto}
 .hbar b{color:var(--ink);min-width:44px;text-align:right}
 .statline{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
@@ -211,6 +214,15 @@ input[type=number]{width:64px}
 .tile.win{box-shadow:0 0 0 2px var(--rc),0 0 18px var(--rc)}
 .win-card{border:1px solid var(--rc);border-radius:12px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel2);box-shadow:0 0 22px -6px var(--rc);text-align:center}
 .win-card b{font-size:16px}
+/* premios: iconos que vuelan (botín de jefe) y rayos detrás del arma que sale del cofre */
+.flyi{position:fixed;left:0;top:0;z-index:50;pointer-events:none;width:24px;height:24px;display:grid;place-items:center;filter:drop-shadow(0 0 6px rgba(255,211,90,.8))}
+.flyi .ic{width:22px;height:22px}
+.win-card{position:relative;overflow:hidden;isolation:isolate}
+.win-card::before{content:'';position:absolute;inset:-60%;z-index:-1;background:repeating-conic-gradient(from 0deg,transparent 0 14deg,var(--rc) 14deg 20deg);opacity:.16;animation:rays 9s linear infinite}
+.win-card.big::before{opacity:.32;animation-duration:5s}
+.win-card.big{animation:bigwin .6s ease-out}
+@keyframes rays{to{transform:rotate(360deg)}}
+@keyframes bigwin{0%{transform:scale(.8)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
 #rlOut{display:flex;flex-direction:column;gap:8px}
 .nav button{font-size:11px;white-space:nowrap;position:relative}
 .nav button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;transition:color .15s,background .15s}
@@ -322,6 +334,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .misTop{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
 .bar.big{height:12px;border-radius:7px}
 @media (max-width:340px){.nav button{font-size:10px}}
+@media (max-width:374px){.res{font-size:12px;gap:6px}.res .ic{width:12px;height:12px}.uname{font-size:13px}}
 @media (max-width:374px){.ihd .meta .rar{display:none}} /* móvil pequeño: el color del nombre ya dice la rareza (al abrir el arma se ve escrita) */
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -347,7 +360,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609300557-6421d85';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609300605-43ce2b1';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

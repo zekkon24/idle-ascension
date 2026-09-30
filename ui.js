@@ -75,10 +75,23 @@ G.on('hit',({e,d,crit,ranged,thorns,clone,skill,frost,burst,bolt,cleave})=>{ if(
   if(d>=0.5) fx.floats.push({e,txt:fmt(d),crit,life:0.9}) });   // (sin «0» de golpes que no hacen daño)
 G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(d>0.08*G.heroStats().hp) ART.shake(3); if(d>=0.5) fx.floats.push({hero:true,txt:'-'+fmt(d),life:0.8}) });
 G.on('dodge',()=>{ if(!battery()&&tab==='up') fx.floats.push({hero:true,txt:'esquiva',life:0.8}) });
-G.on('level',l=>toast('¡Nivel '+l+'!'));
+G.on('level',l=>{ if(tab==='up'&&!battery()){ ART.addFx('levelup',{text:'¡Nivel '+l+'!'}); haptic('light') } else toast('¡Nivel '+l+'!') });
 // Jefes: sin ventana; el botín va a la bolsa (icono de cofre) y el icono da un pequeño salto
-G.on('boss',()=>{ haptic('medium'); const b=$('#lootBtn'); if(b){ updateHUD(); if(!reduceMotion()) b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:450}); } });
-G.on('bossFarm',({mat})=>{ if(mat){ const b=$('#lootBtn'); updateHUD(); if(b&&!reduceMotion()) b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:450}); } });
+// Botín de jefe: el cofre y los materiales salen del jefe y vuelan al icono del botín (los monstruos normales no sueltan nada)
+const stageXY=e=>{ const cv=$('#cv'); if(!cv||!e||e.x==null||!fx.sc) return null; const r=cv.getBoundingClientRect(); return {x:r.left+e.x*fx.sc,y:r.top+(fx.gy-30)*fx.sc} };
+function flyLoot(items){ const B=G.B, boss=B&&B.enemies.find(e=>e.x!=null), from=stageXY(boss), to=$('#lootBtn');
+  if(to) to.hidden=false; if(!from||!to||tab!=='up'||battery()||reduceMotion()) return false;
+  if(boss) ART.addFx('loot',{e:boss}); const tr=to.getBoundingClientRect(), tx=tr.left+tr.width/2, ty=tr.top+tr.height/2;
+  items.forEach((html,i)=>{ const el=document.createElement('div'); el.className='flyi'; el.innerHTML=html; document.body.appendChild(el);
+    const dx=(i-(items.length-1)/2)*26, up=-50-Math.random()*20;
+    el.animate([{transform:`translate(${from.x-12}px,${from.y-12}px) scale(.4)`,opacity:0},{transform:`translate(${from.x-12+dx}px,${from.y-12+up}px) scale(1.3)`,opacity:1,offset:.35},
+      {transform:`translate(${from.x-12+dx}px,${from.y-12+up+8}px) scale(1.1)`,offset:.55},{transform:`translate(${tx-12}px,${ty-12}px) scale(.6)`,opacity:.9}],{duration:1100+i*120,easing:'cubic-bezier(.3,.7,.4,1)'})
+      .onfinish=()=>{ el.remove(); to.animate([{transform:'scale(1)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:300}) } }); return true }
+const MATI='<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l5 5-5 9-5-9z" fill="#c86bff"/><path d="M8 1l2 5-2 9-2-9z" fill="#fff5"/></svg>';
+function bossLoot(mat,chest){ const b=$('#lootBtn'); updateHUD(); const items=[...(chest?[ICON.wood]:[]),ICON.scrap,...Array(Math.min(3,mat||0)).fill(MATI)];
+  if(!flyLoot(items)&&b&&!reduceMotion()) b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:450}) }
+G.on('boss',({mat})=>{ haptic('medium'); bossLoot(mat,true) });
+G.on('bossFarm',({mat})=>{ if(mat) bossLoot(mat,false) });
 G.on('mode',({name})=>{ upOpen=false; showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves a la fase 1. Los enemigos son mucho más fuertes, dan más oro y los jefes sueltan ${G.modeCfg().mat}.</p><button class="btn gold" data-act="close">Continuar</button>`) });
 G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase));
 G.on('fase',()=>refreshTabIfStatic());
@@ -162,8 +175,8 @@ function renderShell(){
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
     <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
   <div id="battle" class="battle">
-  <div class="hero"><div class="name" id="hName"></div><div id="evoSlot"></div>
-    <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span>XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
+  <div class="hero"><div id="evoSlot"></div>
+    <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span id="xpLbl">XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
     </div>
   <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="calBtn" data-act="calOpen" aria-label="Calendario" title="Calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><i class="lootn" id="calN" hidden>!</i></button><button class="calbtn" id="wheelBtn" data-act="wheelOpen" aria-label="Ruleta diaria" title="Ruleta diaria"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg><i class="lootn" id="wheelN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><button class="calbtn" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg><i class="lootn" id="grimN" hidden>!</i></button><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div><span class="boosttime" id="boostTime" hidden></span></div>
   </div>
@@ -179,12 +192,12 @@ function updateHUD(){
   $('#faseTxt').classList.toggle('top',ev);
   setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
-  setHTML($('#uName'),esc(S.name||''));
+  setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span><span class="nc">- ${heroName()}</span>`);   // se recorta el nombre, la clase siempre se ve
+  setHTML($('#xpLbl'),`Nv ${S.lvl}${S.lvl>=G.lvlCap()?' máx.':''}`);
   $('#rGold').textContent=fmt(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||ev;
-  $('#hName').innerHTML=`<span class="nt">${esc(S.name||'')} - ${heroName()}</span><em>Nv ${S.lvl}${S.lvl>=G.lvlCap()?' · máx.':''}</em>`;
   // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
   const gb=$('#grimBtn'); if(gb){ const shown=!ev&&(G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk();
     gb.hidden=!shown; gb.classList.toggle('on',evoNow); gb.dataset.act=evoNow?'evoOpen':'grimOpen'; gb.setAttribute('aria-label',evoNow?'Evolucionar':'Grimorio'); $('#grimN').hidden=!evoNow; }
@@ -852,7 +865,8 @@ function spinDone(){
   const rl=$('#rl'), box=$('#cbox'); if(box) box.hidden=true;
   if(rl&&rl.hidden){rl.hidden=false;$('#rlStrip').style.transform=`translateX(${rl.clientWidth/2-(8+42*94+44)}px)`}
   const tile=$('#rlStrip').children[42]; if(tile) tile.classList.add('win');
-  out.innerHTML=`<div class="win-card" style="--rc:var(--r${best.r})"><span class="rar" style="color:var(--r${best.r})">${CFG.rarName[best.r]}</span><b>${wName(best)}</b>${best.autoEq?'<span class="s">equipada</span>':''}</div>
+  if(R.indexOf(best.r)>=R.indexOf('E')&&!reduceMotion()) haptic('ok');
+  out.innerHTML=`<div class="win-card${R.indexOf(best.r)>=R.indexOf('E')?' big':''}" style="--rc:var(--r${best.r})"><span class="rar" style="color:var(--r${best.r})">${CFG.rarName[best.r]}</span><b>${wName(best)}</b>${best.autoEq?'<span class="s">equipada</span>':''}</div>
     ${loot.length>1?lootHTML(loot):''}
     <button class="btn gold" data-act="close">Continuar</button>`;
 }
@@ -1089,7 +1103,7 @@ function draw(dt){
   const zoneOf=f=>Math.floor(((f-1)%150)/30), modeOf=f=>Math.min(2,Math.floor((f-1)/150));
   const zone=!B?zoneOf(S.fase):B.kind==='pvp'?'arena':B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):B.event?zoneOf(B.groups||1):zoneOf(S.fase);
   const smode=!B||!B.event?S.mode:B.kind?0:modeOf(B.groups||1);
-  const gy=Math.min(H-30,Math.round(H*0.72));
+  const gy=Math.min(H-30,Math.round(H*0.72)); fx.sc=sc; fx.gy=gy;
   ART.scene(g,W,H,gy,zone,battery()?0:fx.scroll||0,smode,battery()?0:performance.now()/1000);
   const hx=W*0.24, c=CFG.classes[S.cls], now=performance.now(), T=now/1000, anim=!battery();
   const prog=(at,ms)=>at&&anim?Math.max(0,Math.min(1,(now-at)/ms)):0, pulse=(at,ms)=>{ const k=prog(at,ms); return k>0&&k<1?k:0 };
