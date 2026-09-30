@@ -76,6 +76,9 @@ function pushFloat(f){ const last=fx.floats.filter(o=>(f.hero?o.hero:o.e===f.e)&
 
 /* ---------- Telegram: colores, vibración y botón atrás ---------- */
 const TG=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData?Telegram.WebApp:null;
+// Pantalla completa en el móvil (Telegram 8.0+); si no, al menos ocupa toda la altura. Sin cerrar el juego al deslizar hacia abajo.
+if(TG){ try{ TG.ready(); TG.expand(); if(TG.disableVerticalSwipes) TG.disableVerticalSwipes();
+  if(/^(ios|android)$/.test(TG.platform)&&TG.isVersionAtLeast&&TG.isVersionAtLeast('8.0')&&TG.requestFullscreen&&!TG.isFullscreen) TG.requestFullscreen(); }catch(e){} }
 if(TG){ try{ TG.setHeaderColor('#12141c'); TG.setBackgroundColor('#12141c'); if(TG.setBottomBarColor) TG.setBottomBarColor('#1b1e2a'); }catch(e){} }
 // vibración corta (jefe vencido, cofres, evolución); no en modo batería
 function haptic(kind){ if(!TG||!TG.HapticFeedback||battery()) return; try{ kind==='ok'?TG.HapticFeedback.notificationOccurred('success'):TG.HapticFeedback.impactOccurred(kind||'light') }catch(e){} }
