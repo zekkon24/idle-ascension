@@ -79,6 +79,9 @@ const TG=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData?Telegram.Web
 // Pantalla completa en el móvil (Telegram 8.0+); si no, al menos ocupa toda la altura. Sin cerrar el juego al deslizar hacia abajo.
 if(TG){ try{ TG.ready(); TG.expand(); if(TG.disableVerticalSwipes) TG.disableVerticalSwipes();
   if(/^(ios|android)$/.test(TG.platform)&&TG.isVersionAtLeast&&TG.isVersionAtLeast('8.0')&&TG.requestFullscreen&&!TG.isFullscreen) TG.requestFullscreen(); }catch(e){} }
+// en pantalla completa la cabecera va justo debajo de los botones de Telegram (sin margen extra)
+const fsMark=()=>{ try{ document.documentElement.classList.toggle('tgfs',!!(TG&&TG.isFullscreen)) }catch(e){} };
+if(TG){ fsMark(); try{ TG.onEvent('fullscreenChanged',fsMark) }catch(e){} }
 if(TG){ try{ TG.setHeaderColor('#12141c'); TG.setBackgroundColor('#12141c'); if(TG.setBottomBarColor) TG.setBottomBarColor('#1b1e2a'); }catch(e){} }
 // vibración corta (jefe vencido, cofres, evolución); no en modo batería
 function haptic(kind){ if(!TG||!TG.HapticFeedback||battery()) return; try{ kind==='ok'?TG.HapticFeedback.notificationOccurred('success'):TG.HapticFeedback.impactOccurred(kind||'light') }catch(e){} }
