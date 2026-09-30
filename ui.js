@@ -41,6 +41,7 @@ const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 /* ---------- estado de la interfaz ---------- */
 let tab='up', invView='main', shopView='cofres', evView=null, modView=null;
+let chestSel=null; const CHEST_RAR={wood:'C',silver:'R',mode:'E'};   // cofre elegido en Inventario → Cofres y color de rareza de cada cofre
 let expandedId=null, forgeId=null, lockSel=[], forjaBack='armas'; // forjaBack: adónde vuelve "← Volver" desde la Forja
 let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -279,7 +280,7 @@ function renderTab(){
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||G.inEvent();
   // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
-    el.innerHTML=nbsp((invView==='forja'?'':invView==='grim'?back('main','Volver al inventario'):invBanner())+tabInv()); if(invView==='armas'||invView==='main') renderList(); }
+    el.innerHTML=nbsp((invView==='forja'?'':invView==='grim'?back('main','Volver al inventario'):invBanner())+tabInv()); if(invView==='armas'||invView==='main') renderList(); fitSheet(); }
   if(tab==='shop') el.innerHTML=nbsp(tabShop());
   if(tab==='ev') el.innerHTML=nbsp(tabEv());
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
@@ -404,13 +405,15 @@ function tabInv(){
 </div>`;
   if(invView==='grim') return `<section class="panel">${tabGrim()}</section>`;
   if(invView==='cofres'){
-    const row=k=>{const n=G.chestCount(k);return `<div class="chest inv">
-      <div><div class="cn">${rw(ICON[k],'')}${CFG.chests[k].name}</div><div class="s">${n} ${n===1?'cofre':'cofres'}</div></div>
-      <div class="acts"><button class="btn sm" data-act="info" data-k="${k}">Info</button>
-        <button class="btn sm gold" data-act="open1" data-k="${k}">Abrir 1</button>
-        <button class="btn sm" data-act="openAll" data-k="${k}" ${n>1?'':'disabled'}>Abrir todos</button></div></div>`}; // siempre los 3 botones: quedan alineados entre filas
-    const owned=CHEST_TYPES.filter(k=>G.chestCount(k)>0);
-    return `${head}<section class="panel">${owned.map(row).join('')||'<p class="hint">Vacío.</p>'}</section>`;
+    // Cofres en casillas como las armas (borde del color de su rareza); al tocar uno, su ficha tapa el héroe
+    const owned=CHEST_TYPES.filter(k=>G.chestCount(k)>0); if(!owned.includes(chestSel)) chestSel=null;
+    const tile=k=>`<button class="itile ctile${chestSel===k?' sel':''}" style="--rc:var(--r${CHEST_RAR[k]})" data-act="chestSel" data-k="${k}" aria-pressed="${chestSel===k}" aria-label="Cofre de ${CFG.chests[k].name.toLowerCase()}">${ICON[k]}<span class="tl">×${G.chestCount(k)}</span></button>`;
+    const sheet=k=>{ const n=G.chestCount(k), r=CHEST_RAR[k]; return `<div class="isheet fixed" style="--rc:var(--r${r})">
+      <div class="ishd"><div class="isart ctile">${ICON[k]}</div><div style="min-width:0;flex:1"><b class="isn">Cofre de ${CFG.chests[k].name.toLowerCase()}</b><span class="rar" style="color:var(--r${r})">${CFG.rarName[r].toUpperCase()}</span>
+        <div class="s">Tienes ${n} · ${CFG.chests[k].from}</div></div>
+        <button class="isx" data-act="chestSel" data-k="${k}" aria-label="Cerrar">✕</button></div>
+      <div class="isacts"><button class="btn" data-act="info" data-k="${k}">Info</button><button class="btn gold" data-act="open1" data-k="${k}">Abrir 1</button><button class="btn" data-act="openAll" data-k="${k}" ${n>1?'':'disabled'}>Abrir todos</button></div></div>` };
+    return `${head}<section class="panel">${chestSel?sheet(chestSel):''}${owned.length?`<div class="igrid">${owned.map(tile).join('')}</div>`:'<p class="hint">Vacío.</p>'}</section>`;
   }
   if(invView==='mat'){
     const t=[], add=(n,c,name,ic)=>{ if(n>0) t.push(`<div class="mtile" style="--mc:${c}" title="${name}"><span class="mi">${IC(ic||ICONS.mat,26)}</span><b>${fmt(n)}</b><span class="mn">${name}</span></div>`) };
@@ -1108,6 +1111,7 @@ const ACT={
   ref:(b,k,id)=>doReforge(id,b.dataset.pay),
   applyReforge:()=>{if(pendingReforge)G.applyReforge(pendingReforge.id);pendingReforge=null;closeModal();renderTab()},
   info:(b,k)=>oddsModal(k),
+  chestSel:(b,k)=>{ chestSel=chestSel===k?null:k; renderTab() },
   shopInfo:(b,k)=>showModal(`<h3>${SHOP[k].name}</h3><p class="hint">${SHOP[k].desc}</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button></div>`),
   open1:(b,k)=>openChests(k,false),
   openAll:(b,k)=>openChests(k,true),
