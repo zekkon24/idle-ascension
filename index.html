@@ -30,7 +30,7 @@ button,select,input{font:inherit;color:inherit}
 button{cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:10px 90px;display:flex;flex-direction:column;gap:10px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-inline:-10px}   /* la cabecera va casi pegada al borde (6 px) */
 .uname{font-family:var(--display);font-weight:800;font-size:14px;flex:1;min-width:0;display:flex;flex-direction:column;gap:0;white-space:nowrap;line-height:1.15}
 .uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .uname em{flex:none;font-style:normal;color:var(--muted);font-family:var(--body);font-size:11px}
@@ -363,7 +363,8 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .upt{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px 5px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);opacity:.55;min-width:0}
 .upt.ok{opacity:1;border-color:var(--gold);box-shadow:inset 0 -2px 0 rgba(232,176,74,.35)}
 .upt:active{transform:scale(.96)}
-.upt .un{font-size:10px;color:var(--muted);font-weight:700}
+.upt .un{font-size:10px;color:var(--muted);font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:374px){.upt .un{font-size:9px;letter-spacing:-.2px}.scrhd b{font-size:15px;letter-spacing:1.5px}}
 .upt b{font-size:14px;font-variant-numeric:tabular-nums}
 .upt .uc{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
 .upt .uc .dot{width:8px;height:8px}
@@ -374,7 +375,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .av{flex:none;width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);background:#1b1e2a no-repeat;background-size:230%;background-position:41% 22%;box-shadow:0 0 0 2px #0b0c10}
 .hbar .bar{height:10px}
 .scrhd{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 2px;border-bottom:1px solid var(--line);margin-bottom:4px}
-.scrhd b{flex:1;font-size:17px;letter-spacing:2.5px;font-weight:800}
+.scrhd b{flex:1;font-size:17px;letter-spacing:2.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scrb{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-size:24px;line-height:1;color:var(--ink)}
 .scrg{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-variant-numeric:tabular-nums}
 .fgp{display:flex;flex-direction:column;gap:10px;align-items:stretch}
@@ -390,25 +391,28 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .fgcta{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px;border:0;border-radius:14px;background:linear-gradient(180deg,#f0c060,#d49a2e);color:var(--gold-ink);box-shadow:0 4px 0 #8a611c,0 8px 18px rgba(0,0,0,.4)}
 .fgcta b{font-size:17px;letter-spacing:2px}.fgcta span{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;opacity:.85}
 .fgcta:disabled{filter:grayscale(.7) brightness(.6);box-shadow:none}
-.ibanner{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px;min-height:170px;padding:12px;border-radius:14px;border:1px solid var(--line);background-size:cover;background-position:center bottom;overflow:hidden}
+.ibanner{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:8px;min-height:170px;padding:12px;border-radius:14px;border:1px solid var(--line);background-size:cover;background-position:center bottom;overflow:hidden}
 .ibart img{width:118px;height:auto;display:block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.6))}
-.ibinfo{display:flex;flex-direction:column;gap:2px;padding-bottom:6px}
+.ibinfo{display:flex;flex-direction:column;gap:2px;padding-bottom:6px;min-width:0}
+.ibinfo b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ibinfo small{font-size:12px;color:#d8d2c4;font-weight:700}
 .ibinfo b{font-size:22px;font-weight:800;text-shadow:0 2px 6px #000}.ibinfo span{font-size:11px;font-weight:800;color:var(--gold);letter-spacing:1.5px}
-.ibslots{display:flex;flex-direction:column;gap:8px;align-self:center}
+.ibslots{display:flex;flex-direction:column;gap:8px;align-self:start;grid-column:3;grid-row:1}
+.ibart{grid-row:1 / 3}.ibinfo{grid-column:2 / 4;grid-row:2}   /* nombre abajo a todo lo ancho; huecos arriba a la derecha */
+.ibinfo span,.ibinfo small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ibslot{position:relative;width:56px;height:56px;border-radius:12px;display:grid;place-items:center;border:2px solid var(--rc,var(--line));background:rgba(10,11,16,.7);color:var(--rE);padding:0}
 .ibslot.empty{border-style:dashed;color:var(--muted);font-size:18px}
 .ibl{position:absolute;right:-6px;bottom:-6px;padding:1px 5px;border-radius:6px;background:var(--rc,var(--line));color:#0c0d12;font-size:10px;font-weight:800}
 .utabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
 .utabs button{background:none;border:0;border-bottom:3px solid transparent;padding:11px 4px 9px;font-weight:800;letter-spacing:1px;color:var(--muted);font-size:13px}
 .utabs button.on{color:var(--ink);border-bottom-color:var(--gold)}
-.utabs small{font-weight:600;color:var(--muted);font-size:11px;letter-spacing:0}
+.utabs small{display:block;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:0}
 .fdet summary{cursor:pointer;color:var(--muted);font-weight:800;font-size:13px;padding:2px 2px 6px}
 .itile .tl{left:3px;top:3px;bottom:auto;padding:0 4px;border-radius:5px;background:var(--rc);color:#0c0d12;text-shadow:none;font-size:10px}
 .itile .tf{left:auto;right:4px;top:auto;bottom:2px}
 .itile.empty{border:2px dashed var(--line);background:rgba(255,255,255,.02)}
 .isheet.fixed{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:6;background:linear-gradient(180deg,#262a3c,#1c1f2c);box-shadow:0 -8px 24px rgba(0,0,0,.55);border-radius:16px 16px 12px 12px;border-top:2px solid var(--rc)}
-.isn{font-size:17px}.isheet .rar{font-size:11px;font-weight:800;letter-spacing:1.5px;margin-left:4px}
+.isn{font-size:17px}.isheet .rar{display:block;font-size:11px;font-weight:800;letter-spacing:1.5px}
 .isx{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--muted)}
 .isacts{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px}.isacts .btn{padding:11px 6px;letter-spacing:.5px}
 .ilist.has-sheet{padding-bottom:230px}
@@ -421,7 +425,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .mcard2 .ms{font-size:12px;color:#cfcad0;display:block;line-height:1.35}
 .mcard2 .mf{font-size:12px;font-weight:800;color:var(--gold)}
 .mcard2 .mm{display:flex;gap:10px;font-size:10px;font-weight:800;letter-spacing:1px;color:var(--muted)}.mcard2 .mm .on{color:var(--good)}
-.mcard2 .mp{position:absolute;right:12px;bottom:18px;text-align:right;display:flex;flex-direction:column}.mcard2 .mp small{font-size:11px;color:var(--muted)}.mcard2 .mp b{font-size:16px}
+.mcard2 .mp{position:absolute;right:12px;top:12px;text-align:right;display:flex;flex-direction:column}.mcard2 .mp small{font-size:11px;color:var(--muted)}.mcard2 .mp b{font-size:16px}
 .mcard2 .mbar{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(0,0,0,.5)}.mcard2 .mbar i{display:block;height:100%;background:var(--gold)}
 .mbadge{position:absolute;top:10px;left:10px;padding:2px 8px;border-radius:6px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;letter-spacing:1px}
 .mbadge.g{background:rgba(0,0,0,.6);color:var(--gold);border:1px solid var(--gold)}
@@ -449,7 +453,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609300937-8595fd8';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609300955-a3707a3';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

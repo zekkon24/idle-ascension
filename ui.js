@@ -310,24 +310,6 @@ function modeRows(){
 /* ---------- Inventario ---------- */
 // ¿daño y velocidad base mejores que el arma equipada? (las armas ya no se equipan solas)
 function betterThanEquipped(it){ const e=G.equipped(); if(!e) return true; const a=G.weaponMain(it), b=G.weaponMain(e); return a.d+a.s*0.5>b.d+b.s*0.5 }
-function itemCard(it){
-  const m=G.weaponMain(it), eq=it.id===S.equippedId, own=it.cls===S.cls, open=expandedId===it.id, up=own&&!eq&&betterThanEquipped(it);
-  return `<div class="irow${eq?' eq':''}${open?' open':''}">
-    <div class="ihd" data-act="expand" data-id="${it.id}" role="button" tabindex="0" aria-expanded="${open}">
-      <span class="nm" style="color:var(--r${it.r})"><span class="wn">${wName(it)}</span> <span class="s">nv${it.lvl}</span>${eq?' <span class="pill">Equipada</span>':''}${up?' <span class="better" title="Mejor que tu arma equipada" aria-label="Mejor que tu arma equipada">▲</span>':''}</span>
-      <span class="meta"><span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r]}</span>
-      <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear: no se desmonta ni se usa para forjar'}" title="Bloquear: no se desmonta ni se usa para forjar">★</button></span>
-    </div>
-    ${open?`<div class="idet">
-      <div class="s">${CFG.rarName[it.r]} · Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div>${legendLine(it)}
-      <div class="sec">${chips(it.sec,false,it.r)}</div>
-      <div class="ctrl">
-        ${eq?'':`<button class="btn sm" data-act="equip" data-id="${it.id}" ${own?'':'disabled title="Es de otra clase"'}>Equipar</button>`}
-        <button class="btn sm gold" data-act="forge" data-id="${it.id}">Forjar</button>
-        ${eq||it.fav?'':`<button class="btn sm" data-act="dis1" data-id="${it.id}">Desmontar +${G.disValue(it)}</button>`}
-      </div></div>`:''}
-  </div>`;
-}
 // Forja: arriba el arma y Subir nivel; abajo Reforja siempre a la vista. Cada stat es una fila con su barra (mín → máx),
 // candado para fijarlo y ↑ para subir solo ese stat. Un solo botón Reforjar con el precio (sube si fijas stats).
 const LOCK_SVG=on=>`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="${on?'M8 11V7a4 4 0 0 1 8 0v4':'M8 11V7a4 4 0 0 1 7.5-2'}"/></svg>`;
@@ -703,7 +685,7 @@ function tabEv(){
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
     const tw=G.towerState(), tr=tw.run, pv=G.pvpState(), cap=CFG.phaseCap, bg=(z,w,h)=>`background-image:linear-gradient(180deg,rgba(10,10,16,0) 35%,rgba(10,10,16,.8)),url(${sceneImg(z,w,h)})`;
     const modesTxt=CFG.modes.map((x,i)=>`<span class="${i===S.mode?'on':''}">${x.name.toUpperCase()}</span>`).join('');
-    return `<div class="scrhd"><b>MODOS DE JUEGO</b><span class="scrg">${ICON.gold}${fmtG(S.gold)}</span></div><div class="mgrid2">
+    return `<div class="scrhd"><b>MODOS</b><span class="scrg">${ICON.gold}${fmtG(S.gold)}</span></div><div class="mgrid2">
       <button class="mcard2 wide" style="${bg(zoneNow(),360,150)}" data-act="modview" data-v="campana">
         <span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
         <span class="mp"><small>Progreso</small><b>Fase ${S.best} / ${cap}</b></span><span class="mbar"><i style="width:${S.best/cap*100}%"></i></span></button>
