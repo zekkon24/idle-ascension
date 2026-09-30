@@ -267,8 +267,10 @@ input[type=number]{width:64px}
 .skb{position:relative;width:58px;height:58px;border-radius:50%;border:2px solid var(--line);background:var(--panel2);color:var(--ink);display:grid;place-items:center;overflow:hidden;padding:0}
 .skb.ready{border-color:var(--gold);box-shadow:0 0 10px rgba(232,176,74,.5)}
 .skb.lock{opacity:.4}
-.skb .skn{font-size:10px;font-weight:800;line-height:1.1;text-align:center;padding:0 4px;z-index:1}
-.skb .skn.long{font-size:8px;padding:0 1px;letter-spacing:-.2px}
+.skb .ski{z-index:1;position:relative;filter:drop-shadow(0 1px 2px #000)}
+.skb.ready{color:var(--gold)}
+.skb{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.sktip{position:absolute;left:10px;right:10px;bottom:76px;z-index:6;background:var(--panel2);border:1px solid var(--gold);border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.35;pointer-events:none}
 #skMode .mrow.bonus{border-color:var(--gold);background:linear-gradient(135deg,rgba(232,176,74,.14),transparent)}
 .wheelg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .wcell{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);text-align:center;font-size:11px;min-width:0}
@@ -365,7 +367,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609300641-233d7be';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609300646-cdae561';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

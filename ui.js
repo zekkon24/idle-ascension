@@ -48,6 +48,27 @@ const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion
 const setHTML=(el,h)=>{ if(el&&el.__h!==h){ el.__h=h; el.innerHTML=nbsp(h); } };
 const F={rar:'all',stat:'any',min:'',max:''};
 const fx={shots:[],floats:[],flash:0};
+// Habilidades: el botón solo lleva su dibujo; manteniéndolo pulsado se ve el nombre y qué hace (sin números)
+const SKI={
+  muro:['<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M12 7v10M8.5 11h7"/>','Levanta un escudo y golpea a los enemigos cercanos.'],
+  bola:['<circle cx="14" cy="10" r="5"/><path d="M10 13l-6 7M11 16l-4 5M8 11l-5 4"/>','Lanza una bola de fuego que quema a varios enemigos.'],
+  perforante:['<path d="M3 12h16M15 8l4 4-4 4"/><path d="M6 9l-3 3 3 3"/><path d="M10 6v12"/>','Un disparo que atraviesa a todos los enemigos.'],
+  ejecutar:['<path d="M5 19L17 7M14 4l6 6-3 1-4-4z"/><path d="M4 16l4 4"/>','Un golpe enorme; si mata, se recarga antes.'],
+  luz:['<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/><path d="M19 3v3M17.5 4.5h3"/>','Golpes de luz encadenados que después vuelven y te curan.'],
+  sed:['<path d="M12 3c3 5 6 8 6 12a6 6 0 0 1-12 0c0-4 3-7 6-12z"/><path d="M9.5 15a2.5 2.5 0 0 0 2.5 2.5"/>','Sacrificas vida a cambio de un escudo y robo de vida.'],
+  combustion:['<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 2 1 3 3 3 5 1-2 0-5 0-8z"/>','Tus quemaduras hacen más daño y saltan a otros enemigos.'],
+  rapido:['<path d="M4 6l7 6-7 6M12 6l7 6-7 6"/>','Atacas mucho más rápido durante un rato.'],
+  clon:['<circle cx="9" cy="7" r="3"/><path d="M4 20c0-4 2-7 5-7s5 3 5 7"/><circle cx="16" cy="8" r="2.5" opacity=".55"/><path d="M13 20c0-3 1-6 3-6s4 3 4 6" opacity=".55"/>','Un clon de sombra copia tus golpes durante un rato.'],
+  juicio:['<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>','Un aura que te cura y quema a los enemigos cercanos.'],
+  baluarte:['<path d="M4 20V8h3V5h3v3h4V5h3v3h3v12z"/><path d="M10 20v-5h4v5"/>','Más defensa y devuelves parte del daño que recibes.'],
+  armaduraHielo:['<path d="M12 2v20M3.5 7l17 10M3.5 17l17-10"/><path d="M9 4l3 2 3-2M9 20l3-2 3 2"/>','Esquirlas de hielo a todos; quien te golpea recibe más.'],
+  marca:['<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>','Marcas a un enemigo y recibe más daño.'],
+  nube:['<path d="M7 17a4 4 0 0 1 0-8 5 5 0 0 1 9.5-1.5A3.5 3.5 0 0 1 17 17z"/><path d="M8 20h.01M12 21h.01M16 20h.01"/>','Una nube tóxica que envenena a todos los enemigos.'],
+  sacrificio:['<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/><path d="M12 8l-1.5 4 3 1-1.5 4"/>','Sacrificas vida para golpear más fuerte a los jefes.'],
+};
+const skIcon=id=>`<svg class="ski" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(SKI[id]||['<circle cx="12" cy="12" r="6"/>'])[0]}</svg>`;
+const skTip=x=>`<b>${esc(x.name||'')}</b><br>${(SKI[x.id]||[0,esc(x.desc||'')])[1]}`;
+
 // números de daño: suben sin parar; si llega otro golpe al mismo objetivo en menos de 0,3 s se suma al último número (no se amontonan)
 function pushFloat(f){ const last=fx.floats.filter(o=>(f.hero?o.hero:o.e===f.e)&&!o.crit===!f.crit&&o.v!=null&&f.v!=null).pop();
   if(last&&last.max-last.life<0.3){ last.v+=f.v; last.txt=(f.hero?'-':'')+fmt(last.v); return }
@@ -184,7 +205,7 @@ function renderShell(){
   <div class="hero"><div id="evoSlot"></div>
     <div class="hbar"><span>HP</span><div class="bar"><i id="hpBar"></i></div><b id="hpTxt"></b></div><div class="hbar"><span id="xpLbl">XP</span><div class="bar xp"><i id="xpBar"></i></div><b id="xpTxt"></b></div>
     </div>
-  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M2 9h20M12 9v12M12 9c-2-4-7-5-7-2s5 2 7 2zM12 9c2-4 7-5 7-2s-5 2-7 2z"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div><button class="calbtn grimcorner" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg><i class="lootn" id="grimN" hidden>!</i></button><span class="boosttime" id="boostTime" hidden></span></div>
+  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="1.5"/><path d="M2 9h20M12 9v12M12 9c-2-4-7-5-7-2s5 2 7 2zM12 9c2-4 7-5 7-2s-5 2-7 2z"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></button><button class="calbtn lootbtn" id="lootBtn" data-act="lootOpen" aria-label="Botín de jefes" title="Botín de jefes" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/></svg><i class="lootn" id="lootN"></i></button></div><button class="calbtn grimcorner" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></svg><i class="lootn" id="grimN" hidden>!</i></button><span class="boosttime" id="boostTime" hidden></span></div>
   </div>
   <div id="tab"></div>`;
   for(const k in NAVL) navSet(k,0);
@@ -223,8 +244,8 @@ function updateHUD(){
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   // habilidades: solo las desbloqueadas; la recarga se ve con el reloj gris (sin números). En los eventos, botón Auto/Manual
-  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?!(S.opt&&S.opt.pvpAuto===false):inEv&&!!(S.opt&&S.opt.evAuto), key=L.map(x=>x.slot).join()+inEv+auto;
-    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}"><span class="skn${(x.name||'').split(' ')[0].length>8?' long':''}">${esc((x.name||'').split(' ')[0])}</span><i class="skcd"></i></button>`).join(''); }
+  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?!(S.opt&&S.opt.pvpAuto===false):inEv&&!!(S.opt&&S.opt.evAuto), key=L.map(x=>x.slot+x.id).join()+inEv+auto;
+    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}">${skIcon(x.id)}<i class="skcd"></i></button>`).join(''); }
     const sm=$('#skMode'), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false);
     setHTML(sm,L.length?`<button class="skmode${on?' on':''}" data-act="skAuto" aria-pressed="${on}" aria-label="Habilidades automáticas">Habilidades: ${on?'Auto':'Manual'}</button>`:'');
     L.forEach((x,i)=>{ const b=sb.children[i]; if(!b) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
@@ -942,7 +963,7 @@ const ACT={
   nameSave:()=>{ const n=($('#nameIn')||{}).value; if(!G.setName(n)) return toast('Escribe tu nombre (3-16 letras)'); closeModal(); toast('Nombre guardado'); updateHUD(); if(tab==='dev') renderTab(); },
   upOpen:()=>showUpgrades(),
   upClose:()=>{upOpen=false;closeModal()},
-  skill:(b,k)=>{ const x=G.skills().find(s=>s.slot===k); if(!x) return; if(x.locked) return toast(`${x.name}: ${x.desc}`);
+  skill:(b,k)=>{ const x=G.skills().find(s=>s.slot===k); if(!x) return; if(x.locked) return toast(`${x.name}: ${(SKI[x.id]||[0,x.desc])[1]}`);
     const r=G.useSkill(k); if(r.ok){ haptic('medium'); toast(x.name) } else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate') },
   // botón Auto/Manual del combate: en los eventos cambia opt.evAuto; en la campaña, opt.autoSkills
   skAuto:()=>{ if(G.pvpOn()){ G.setOpt('pvpAuto',S.opt&&S.opt.pvpAuto===false); toast(S.opt.pvpAuto?'Habilidades automáticas en PvP':'Habilidades a mano en PvP'); }
@@ -1076,7 +1097,16 @@ function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0)
   if(need>G.invFree()) return showModal(`<h3>Inventario lleno</h3><p class="hint">Para abrir ${need} cofre${need>1?'s':''} necesitas ${need} hueco${need>1?'s':''} libre${need>1?'s':''} y tienes ${G.invFree()} (${G.invCount()}/${G.invMax()} armas). Libera espacio desmontando armas.</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button><button class="btn gold" data-act="invFull">Ir a Armas</button></div>`);
   const l=G.openChests(k,all); if(!l.length) return; haptic('medium'); renderTab(); spin(k,l,n0-G.chestCount(k)) }
 
+// mantener pulsada una habilidad: se ve su nombre y qué hace (y no se lanza)
+let skPress=null, skSkip=false;
+function skTipHide(){ const t=$('#skTip'); if(t) t.hidden=true }
+document.addEventListener('pointerdown',e=>{ const b=e.target.closest('.skb'); if(!b) return; clearTimeout(skPress);
+  skPress=setTimeout(()=>{ const x=G.skills().find(s=>s.slot===b.dataset.k), t=$('#skTip'); if(!x||!t) return; skSkip=true; haptic('light');
+    t.innerHTML=skTip(x); t.hidden=false; clearTimeout(t._h); t._h=setTimeout(skTipHide,2500) },450) });
+['pointerup','pointercancel','pointerleave'].forEach(ev=>document.addEventListener(ev,()=>clearTimeout(skPress)));
+document.addEventListener('contextmenu',e=>{ if(e.target.closest('.skb')) e.preventDefault() });
 document.addEventListener('click',e=>{
+  if(skSkip&&e.target.closest('.skb')){ skSkip=false; return } skSkip=false;
   const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
   if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ upOpen=false;boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;lockSel=[];renderTab();return}
   if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
