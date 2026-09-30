@@ -345,14 +345,16 @@ const WOOD_FIX=[{1:{C:95,U:5},100:{C:90,U:10}},{1:{C:60,U:38,R:2}},{1:{C:50,U:45
     const den=P.own*days*(S+P.rho*W), t=idx(T), pT=Math.min(1,P.copies/(P.eta*den)), pN=t<R.length-1?-Math.log(1-luck)/den:0;
     const mk=k=>{ const o={}; o[R[t+1]]=pN*k; o[T]=Math.min(1-pN*k,pT*k); if(t>0) o[R[t-1]]=(o[R[t-1]]||0)+1-o[T]-pN*k; else o[T]=1-pN*k; return fix(vec(o)) };
     silver[m].push([from,mk(1)]); const wf=WOOD_FIX[m]&&WOOD_FIX[m][from]; wood[m].push([from,wf?R.map(r=>wf[r]||0):mk(P.rho)]);
-    if(wf){ const sv=silver[m].slice(-1)[0][1], wT=(wf[T]||0)/100, need=Math.min(1,(P.copies/(P.eta*P.own*days)-W*wT)/S), d=Math.max(0,r2(need)-sv[t]);
-      if(d>0){ sv[t]=Math.round((sv[t]+d)*10)/10; sv[t-1]=Math.round((sv[t-1]-d)*10)/10; } }   // la plata compensa lo que la madera ya no da (mismo ritmo)
     const sv=silver[m].slice(-1)[0][1]; sceS[m]=R.reduce((a,r,i)=>a+sv[i]/100*Math.pow(P.beta,i-t),0);   // valor de 1 plata en copias de T (último tramo del modo)
   }
   P.mode.forEach((M,m)=>{ const t=idx(M.T), val=r=>Math.pow(P.beta,idx(r)-t), V=P.itemSCE*sceS[m];
     let fs=0, fv=0; for(const r in M.fixed){ fs+=M.fixed[r]; fv+=M.fixed[r]*val(r); }
     const pJ=Math.max(0,(V-fv-(1-fs)*val(M.main))/(val(M.jackpot)-val(M.main))), o={...M.fixed}; o[M.jackpot]=(o[M.jackpot]||0)+pJ; o[M.main]=(o[M.main]||0)+1-fs-pJ;
     mode.push([[1,fix(vec(o))]]); });
+  // plata: reparto fijo elegido a mano (siempre mejor que la madera); el cofre de modo se queda como estaba
+  const fx=o=>C.rar.map(r=>o[r]||0);
+  silver[0]=[[1,fx({C:80,U:20})],[100,fx({C:70,U:28,R:2})]]; silver[1]=[[1,fx({C:30,U:55,R:15})]]; silver[2]=[[1,fx({U:50,R:42,E:8})]];
+  mode[0]=[[1,fx({U:83.6,R:16.4})]]; mode[1]=[[1,fx({R:89.8,E:10.2})]]; mode[2]=[[1,fx({E:97.2,L:2.3,M:0.5})]];
   C.chests.wood.odds=wood; C.chests.silver.odds=silver; C.chests.mode.odds=mode;
   C.chestPlan=P;
 })(CHEST_PLAN,CFG);
