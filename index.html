@@ -209,8 +209,25 @@ input[type=number]{width:64px}
 .win-card b{font-size:16px}
 #rlOut{display:flex;flex-direction:column;gap:8px}
 .nav button{font-size:11px;white-space:nowrap;position:relative}
-.nav button{padding-top:13px;padding-bottom:7px}
-.nav .nb{top:0;right:0;line-height:13px;min-width:13px}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;transition:color .15s,background .15s}
+.nav .ni{position:relative;display:grid;place-items:center;height:22px}
+.nav .nl{font-size:10.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.nav .nb{top:-4px;right:-10px;line-height:13px;min-width:13px}
+.nav button[aria-selected="true"] .ico{filter:drop-shadow(0 0 4px rgba(232,176,74,.55))}
+/* botones con relieve y pequeño rebote al tocar */
+.btn,.fab,.mcard,.fchips button,.calbtn,.skb,.evcard{transition:transform .08s ease-out,box-shadow .08s,border-color .15s}
+.btn{box-shadow:0 2px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
+.btn.gold{background:linear-gradient(#f3c466,#d99a2e);box-shadow:0 2px 0 #8a5a14,inset 0 1px 0 rgba(255,255,255,.35)}
+.btn:active:not(:disabled),.fab:active,.mcard:active,.fchips button:active,.calbtn:active,.skb:active,.evcard:active{transform:translateY(1px) scale(.97)}
+.btn:active:not(:disabled){box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.btn.gold:active:not(:disabled){box-shadow:0 1px 0 #8a5a14}
+.cat{display:inline-flex;align-items:center;gap:8px}.cat .ico{color:var(--gold)}
+.fchips button{display:inline-flex;align-items:center;gap:5px}
+/* entrada de pantallas y ventanas */
+#tab.enter{animation:tabIn .2s ease-out}
+@keyframes tabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.modal .box.pop{animation:boxIn .18s cubic-bezier(.2,1.3,.4,1)}
+@keyframes boxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 .nb{position:absolute;top:2px;right:2px;min-width:15px;padding:0 3px;border-radius:8px;background:#c9302c;color:#fff;font-size:9px;font-weight:800;line-height:15px;text-align:center} /* globo encima: no ocupa ancho */
 /* inventario compacto */
 .ilist{display:flex;flex-direction:column;gap:4px}
@@ -326,7 +343,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609300416-760e812';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609300516-f3c8213';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

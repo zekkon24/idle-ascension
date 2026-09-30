@@ -115,6 +115,25 @@ const ICON={
   wood:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#9a6a3e"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#9a6a3e" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#5c3b1e"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>',
   silver:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#b9c0cc"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#b9c0cc" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#6f7785"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>',
   mode:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#9b6ad6"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#9b6ad6" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#5a3a86"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>'};
+// iconos de la barra de abajo y de las categorías (trazo del color del texto)
+const IC=(d,sz=20)=>`<svg class="ico" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONS={
+  up:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+  inv:'<path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  shop:'<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v1.5a2.7 2.7 0 0 1-5.3.6 2.7 2.7 0 0 1-5.4 0A2.7 2.7 0 0 1 4 10.5z"/><path d="M5.5 13v7h13v-7"/>',
+  ev:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  mis:'<path d="M7 4h11v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2h3z"/><path d="M7 4a2 2 0 0 0-2 2v2h2"/><path d="M10 9h5M10 13h5"/>',
+  dev:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+  campana:'<path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/>',
+  eventos:'<path d="M12 3a7 7 0 0 0-7 7c0 2.5 1.3 4 3 5v3h8v-3c1.7-1 3-2.5 3-5a7 7 0 0 0-7-7z"/><circle cx="9.5" cy="10.5" r="1.3"/><circle cx="14.5" cy="10.5" r="1.3"/><path d="M10.5 18v2M13.5 18v2"/>',
+  torre:'<path d="M7 21V9h10v12"/><path d="M6 9V4h2.5v2h2V4h3v2h2V4H18v5"/><path d="M10 21v-4h4v4"/>',
+  pvp:'<path d="M5 3l12 12M19 3L7 15"/><path d="M14 18l4-4M10 18l-4-4"/><path d="M16 16l3 3M8 16l-3 3"/>',
+  armas:'<path d="M20 4L9 15"/><path d="M20 4h-4.5M20 4v4.5"/><path d="M7 13l4 4"/><path d="M8 16l-4 4"/>',
+  cofres:'<path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/>',
+  mat:'<path d="M6 4h12l3 5-9 11L3 9z"/><path d="M3 9h18M12 20L9 9l3-5 3 5z"/>'};
+const NAVL={up:'Inicio',inv:'Inventario',shop:'Tienda',ev:'Modos',mis:'Misiones',dev:'Ajustes'};
+// botón de la barra: icono + nombre (+ globo)
+const navSet=(k,n)=>setHTML(document.querySelector(`[data-tab="${k}"]`),`<span class="ni">${IC(ICONS[k])}${n?`<sup class="nb">${n}</sup>`:''}</span><span class="nl">${NAVL[k]}</span>`);
 function renderShell(){
   $('#app').innerHTML=`
   <div class="top"><div class="uname" id="uName"></div>
@@ -127,6 +146,7 @@ function renderShell(){
     </div>
   </div>
   <div id="tab"></div>`;
+  for(const k in NAVL) navSet(k,0);
   $('#nav').hidden=false; { const st=document.querySelector('[data-tab="shop"]'); if(st) st.hidden=!CFG.shopTab; } if(tab==='shop'&&!CFG.shopTab) tab='up'; renderTab();
 }
 function updateHUD(){
@@ -168,12 +188,16 @@ function updateHUD(){
     setHTML(sm,L.length?`<button class="skmode${on?' on':''}" data-act="skAuto" aria-pressed="${on}" aria-label="Habilidades automáticas">Habilidades: ${on?'Auto':'Manual'}</button>`:'');
     L.forEach((x,i)=>{ const b=sb.children[i]; if(!b) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
       b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; }); }
-  { const n=misBadge(); setHTML(document.querySelector('[data-tab="mis"]'),n?`Misiones<sup class="nb">${n}</sup>`:'Misiones'); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
+  { const n=misBadge(); navSet('mis',n); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
-  setHTML(document.querySelector('[data-tab="ev"]'),(n=>n?`Modos<sup class="nb">${n}</sup>`:'Modos')((G.evPaused()?0:G.evFreeLeft()+G.wbFreeLeft())+G.pvpFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
-  setHTML(document.querySelector('[data-tab="inv"]'),nc?`Inventario<sup class="nb">${nc>99?'99+':nc}</sup>`:'Inventario');
+  navSet('ev',((G.evPaused()?0:G.evFreeLeft()+G.wbFreeLeft())+G.pvpFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
+  navSet('inv',nc>99?'99+':nc);
 }
+// entrada suave de la pantalla nueva (al cambiar de pestaña o de sección)
+let lastView='';
+function viewEnter(){ const v=[tab,invView,modView,evView,misView].join('|'); if(v===lastView) return; lastView=v; const el=$('#tab'); if(!el||reduceMotion()||battery()) return;
+  el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter') }
 function renderTab(){
   if(!S) return;
   document.querySelectorAll('.nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
@@ -191,6 +215,7 @@ function renderTab(){
   if(tab==='shop') el.innerHTML=nbsp(tabShop());
   if(tab==='ev') el.innerHTML=nbsp(tabEv());
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
+  viewEnter();
   if(tab==='mis'){ misKey=misKeyNow(); const pl=$('.plist'), y=window.scrollY, py=pl?pl.scrollTop:0; el.innerHTML=nbsp(tabMis());   // se conserva el scroll
     const pl2=$('.plist'); if(pl2) pl2.scrollTop=py; window.scrollTo(0,y); }
   updateHUD();
@@ -302,9 +327,9 @@ function tabInv(){
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0)+(S.pvpTickets>0?1:0);
   // pantalla principal: solo las pestañas, sin nada abierto hasta que toques una
   const head=`<div class="fchips" role="tablist">
-    <button data-act="invview" data-v="armas" aria-pressed="false">Armas (${G.invCount()})</button>
-    <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">Cofres (${nc})</button>
-    <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">Materiales (${nm})</button>
+    <button data-act="invview" data-v="armas" aria-pressed="false">${IC(ICONS.armas,14)}Armas (${G.invCount()})</button>
+    <button data-act="invview" data-v="cofres" aria-pressed="${invView==='cofres'}">${IC(ICONS.cofres,14)}Cofres (${nc})</button>
+    <button data-act="invview" data-v="mat" aria-pressed="${invView==='mat'}">${IC(ICONS.mat,14)}Materiales (${nm})</button>
 </div>`;
   if(invView==='grim') return `<section class="panel">${tabGrim()}</section>`;
   if(invView==='main') return `<section class="panel"><h3>Inventario</h3>${head}</section>`;
@@ -576,7 +601,7 @@ function tabEv(){
   // Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Jefe semanal; la Liga está oculta) y PvP (próximamente)
   const back=`<button class="back" data-act="modview" data-v="">← Modos</button>`;
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
-    const big=(v,t,sub,st,lock)=>`<button class="mcard mbig${lock?' lock':''}" data-act="modview" data-v="${v}"><div class="ctrl" style="justify-content:space-between"><b>${t}</b>${st}</div><span class="s">${sub}</span></button>`;
+    const big=(v,t,sub,st,lock)=>`<button class="mcard mbig${lock?' lock':''}" data-act="modview" data-v="${v}"><div class="ctrl" style="justify-content:space-between"><b class="cat">${IC(ICONS[v],22)}${t}</b>${st}</div><span class="s">${sub}</span></button>`;
     return `<section class="panel"><h3>Modos</h3><div class="mlist">
       ${big('campana','Campaña','Normal · Pesadilla · Infierno',`<span class="pill" style="color:var(--gold)">${M.name} · fase ${S.best}/${CFG.phaseCap}</span>`)}
       ${big('eventos','Eventos','Mazmorra · Jefe semanal',pend?`<span class="pill" style="color:var(--gold)">${pend} premio${pend>1?'s':''}</span>`:`<span class="pill">${G.evFreeLeft()+G.wbFreeLeft()} gratis</span>`)}
@@ -851,7 +876,7 @@ function withX(html){ let act=null; html=html.replace(/<button class="btn[^"]*" 
   return act?`<button class="xclose" data-act="${act}" aria-label="Cerrar">✕</button>`+html:html }
 // «50 %» sin que el % se quede solo en la línea siguiente
 const nbsp=h=>h.replace(/(\d) %/g,'$1\u00a0%');
-function showModal(html){$('#modal').innerHTML=`<div class="modal"><div class="box" role="dialog" aria-modal="true">${nbsp(withX(html))}</div></div>`; const f=$('#modal .box button.gold')||$('#modal .box button:not(.xclose)'); if(f&&!reduceMotion()) f.focus({preventScroll:true})}
+function showModal(html){const pop=!modalOpen()&&!reduceMotion();$('#modal').innerHTML=`<div class="modal"><div class="box${pop?' pop':''}" role="dialog" aria-modal="true">${nbsp(withX(html))}</div></div>`; const f=$('#modal .box button.gold')||$('#modal .box button:not(.xclose)'); if(f&&!reduceMotion()) f.focus({preventScroll:true})}
 function closeModal(){$('#modal').innerHTML=''; if(modalQ.length) setTimeout(drainQ,150)}
 // Avisos que no deben pisar otra ventana (fin del evento, tiempo sin conexión): esperan su turno
 const modalQ=[];
