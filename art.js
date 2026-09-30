@@ -205,5 +205,59 @@ function status(g,x,gy,r,st,t){ const s=r/13;
   if(st.mark){ g.save(); g.strokeStyle='#ff4d4d'; g.lineWidth=1.5; g.globalAlpha=0.9; const yy=gy-r*3.7-14, rr2=5; g.beginPath(); g.arc(x,yy,rr2,0,TAU); g.moveTo(x-rr2-3,yy); g.lineTo(x+rr2+3,yy); g.moveTo(x,yy-rr2-3); g.lineTo(x,yy+rr2+3); g.stroke(); g.restore(); } }
 const clearFx=()=>{ FX=[]; SH=0 };
 
-root.ART={hero,monster,kindFor,burst,parts,clearParts,shade,addFx,drawFx,status,shake,shakeOffset,clearFx};
+/* ---------- escenarios ----------
+   scene(g, W, H, gy, zone, scroll, mode, t): fondo en capas (lejos, medio y suelo) que se desplazan a distinta velocidad
+   (parallax) según 'scroll' (cuánto ha andado el héroe). zone: 0 bosque, 1 cueva, 2 cripta, 3 fortaleza, 4 infierno, 'arena' (PvP).
+   mode: 1 Pesadilla (tinte morado), 2 Infierno (tinte rojo). */
+const rnd=i=>{ const x=Math.sin(i*127.1+311.7)*43758.5453; return x-Math.floor(x) };   // azar fijo (siempre igual para cada i)
+// repite un dibujo cada 'tw' unidades, desplazado por 'off'
+function tiles(W,tw,off,fn){ const o=((off%tw)+tw)%tw; for(let k=-1;k*tw-o<W+tw;k++) fn(k*tw-o,k) }
+const SC={0:{sky:['#0f2233','#1d3b3a'],far:'#21424c',mid:'#173424',ground:'#2b3a22',top:'#3f5a2c'},
+  1:{sky:['#120e18','#241a2a'],far:'#1d1622',mid:'#2a2230',ground:'#2b2630',top:'#3a3342'},
+  2:{sky:['#10131c','#1e2230'],far:'#1a1e2a',mid:'#262b38',ground:'#272a33',top:'#363a45'},
+  3:{sky:['#2a1520','#6a3326'],far:'#2b1a22',mid:'#3a2a2e',ground:'#3b3233',top:'#4d4244'},
+  4:{sky:['#1a0706','#4a120c'],far:'#2a0c0a',mid:'#3a110d',ground:'#2a1512',top:'#3d1c16'},
+  arena:{sky:['#1b1626','#3a2a3a'],far:'#2c2233',mid:'#3d3140',ground:'#6b5638',top:'#826a45'}};
+function scene(g,W,H,gy,zone,scroll,mode,t){ const z=SC[zone]||SC[0];
+  const sky=g.createLinearGradient(0,0,0,gy); sky.addColorStop(0,z.sky[0]); sky.addColorStop(1,z.sky[1]); g.fillStyle=sky; g.fillRect(0,0,W,gy+1);
+  g.save();
+  if(zone===0){   // bosque: luna, montañas y pinos
+    g.fillStyle='rgba(230,240,255,.85)'; g.beginPath(); g.arc(W*0.78,gy*0.22,9,0,TAU); g.fill(); g.fillStyle=z.sky[0]; g.beginPath(); g.arc(W*0.78+4,gy*0.22-2,8,0,TAU); g.fill();
+    g.fillStyle=z.far; tiles(W,160,scroll*0.15,(x,k)=>{ g.beginPath(); g.moveTo(x,gy); g.lineTo(x+50,gy-55-rnd(k)*25); g.lineTo(x+95,gy-30); g.lineTo(x+130,gy-60-rnd(k+9)*20); g.lineTo(x+160,gy); g.fill() });
+    g.fillStyle=z.mid; tiles(W,70,scroll*0.45,(x,k)=>{ const h=28+rnd(k)*22, px=x+rnd(k+3)*30; for(let j=0;j<3;j++){ g.beginPath(); g.moveTo(px-12+j*2,gy-j*h*0.28); g.lineTo(px,gy-h-j*6); g.lineTo(px+12-j*2,gy-j*h*0.28); g.fill() } }); }
+  else if(zone===1){   // cueva: estalactitas, columnas y cristales que brillan
+    g.fillStyle=z.far; tiles(W,90,scroll*0.2,(x,k)=>{ g.beginPath(); g.moveTo(x,0); g.lineTo(x+20+rnd(k)*20,18+rnd(k+1)*30); g.lineTo(x+45,0); g.fill(); g.beginPath(); g.moveTo(x+50,0); g.lineTo(x+62,10+rnd(k+2)*18); g.lineTo(x+80,0); g.fill() });
+    g.fillStyle=z.mid; tiles(W,120,scroll*0.45,(x,k)=>{ const w=14+rnd(k)*10; g.fillRect(x+30,0,w,gy); g.beginPath(); g.moveTo(x+30-6,gy); g.lineTo(x+30+w/2,gy-18); g.lineTo(x+30+w+6,gy); g.fill() });
+    tiles(W,120,scroll*0.45,(x,k)=>{ g.fillStyle=rnd(k+5)>0.5?'#5fd3ff':'#b56cff'; g.globalAlpha=0.55+0.25*Math.sin(t*2+k); g.shadowColor=g.fillStyle; g.shadowBlur=8;
+      const cx=x+85; g.beginPath(); g.moveTo(cx,gy); g.lineTo(cx+3,gy-12); g.lineTo(cx+6,gy); g.fill(); g.beginPath(); g.moveTo(cx+5,gy); g.lineTo(cx+9,gy-8); g.lineTo(cx+12,gy); g.fill(); g.shadowBlur=0; g.globalAlpha=1 }); }
+  else if(zone===2){   // cripta: arcos góticos al fondo, lápidas y niebla
+    g.fillStyle=z.far; tiles(W,110,scroll*0.2,(x)=>{ g.fillRect(x,gy-70,14,70); g.beginPath(); g.moveTo(x+14,gy-40); g.quadraticCurveTo(x+55,gy-95,x+96,gy-40); g.lineTo(x+96,gy-48); g.quadraticCurveTo(x+55,gy-100,x+14,gy-48); g.fill();
+      g.fillStyle='rgba(150,190,255,.12)'; g.beginPath(); g.moveTo(x+44,gy-40); g.quadraticCurveTo(x+55,gy-62,x+66,gy-40); g.lineTo(x+66,gy-20); g.lineTo(x+44,gy-20); g.fill(); g.fillStyle=z.far });
+    g.fillStyle=z.mid; tiles(W,75,scroll*0.5,(x,k)=>{ const px=x+rnd(k)*40; if(rnd(k+7)>0.5){ g.beginPath(); g.moveTo(px,gy); g.lineTo(px,gy-16); g.arc(px+7,gy-16,7,Math.PI,0); g.lineTo(px+14,gy); g.fill() } else { g.fillRect(px+5,gy-22,4,22); g.fillRect(px,gy-17,14,4) } });
+    g.fillStyle='rgba(180,190,210,.07)'; tiles(W,140,scroll*0.8+t*6,(x)=>{ g.beginPath(); g.ellipse(x+70,gy-6,70,9,0,0,TAU); g.fill() }); }
+  else if(zone===3){   // fortaleza: torres del castillo al atardecer, muralla con antorchas y estandartes
+    g.fillStyle=z.far; tiles(W,180,scroll*0.15,(x,k)=>{ const h=50+rnd(k)*25; g.fillRect(x+20,gy-h,28,h); for(let j=0;j<4;j++) g.fillRect(x+20+j*8,gy-h-6,5,6); g.fillRect(x+60,gy-35,90,35); for(let j=0;j<11;j++) g.fillRect(x+60+j*8,gy-40,5,5);
+      g.beginPath(); g.moveTo(x+110,gy-35); g.lineTo(x+125,gy-72); g.lineTo(x+140,gy-35); g.fill() });
+    g.fillStyle=z.mid; tiles(W,90,scroll*0.5,(x,k)=>{ g.fillRect(x,gy-26,90,26); g.fillStyle='#2e2226'; for(let j=0;j<6;j++) g.fillRect(x+j*15,gy-26+((j%2)*8),14,1); g.fillStyle=z.mid;
+      g.fillStyle='#7a1f2a'; g.fillRect(x+40,gy-24,10,16); g.beginPath(); g.moveTo(x+40,gy-8); g.lineTo(x+45,gy-4); g.lineTo(x+50,gy-8); g.fill();
+      g.fillStyle='#ffb347'; g.shadowColor='#ff8a2a'; g.shadowBlur=10; g.beginPath(); g.ellipse(x+15,gy-30+Math.sin(t*9+k)*0.8,2.5,4,0,0,TAU); g.fill(); g.shadowBlur=0; g.fillStyle=z.mid }); }
+  else if(zone===4){   // infierno: volcanes, rocas y ascuas que suben
+    g.fillStyle=z.far; tiles(W,170,scroll*0.15,(x,k)=>{ const h=55+rnd(k)*20; g.beginPath(); g.moveTo(x,gy); g.lineTo(x+60,gy-h); g.lineTo(x+75,gy-h); g.lineTo(x+140,gy); g.fill();
+      g.fillStyle='#ff5a1a'; g.globalAlpha=0.5+0.3*Math.sin(t*2+k); g.shadowColor='#ff5a1a'; g.shadowBlur=14; g.fillRect(x+61,gy-h-2,13,3); g.shadowBlur=0; g.globalAlpha=1; g.fillStyle=z.far });
+    g.fillStyle=z.mid; tiles(W,80,scroll*0.5,(x,k)=>{ const px=x+rnd(k)*30; g.beginPath(); g.moveTo(px,gy); g.lineTo(px+8,gy-14-rnd(k+2)*12); g.lineTo(px+20,gy-8); g.lineTo(px+26,gy); g.fill() });
+    g.fillStyle='#ffb347'; for(let i=0;i<14;i++){ const px=(rnd(i)*W+t*6*(i%3+1))%W, py=gy-((t*20*(1+rnd(i+4))+rnd(i+8)*gy)%gy); g.globalAlpha=0.6*rnd(i+2)+0.2; g.fillRect(px,py,1.6,1.6) } g.globalAlpha=1; }
+  else {   // arena del PvP: gradas con arcos
+    g.fillStyle=z.far; g.fillRect(0,gy-60,W,60); g.fillStyle=z.sky[0]; tiles(W,36,0,(x)=>{ g.beginPath(); g.moveTo(x+6,gy-30); g.quadraticCurveTo(x+18,gy-48,x+30,gy-30); g.lineTo(x+30,gy-8); g.lineTo(x+6,gy-8); g.fill() });
+    g.fillStyle=z.mid; g.fillRect(0,gy-66,W,6); tiles(W,60,0,(x,k)=>{ g.fillStyle=['#8a2a2a','#2a4a8a','#c9a23a'][k&3?k%3:0]; g.fillRect(x+26,gy-66,8,14); g.beginPath(); g.moveTo(x+26,gy-52); g.lineTo(x+30,gy-48); g.lineTo(x+34,gy-52); g.fill() }); }
+  // suelo (se mueve con el héroe)
+  g.fillStyle=z.ground; g.fillRect(0,gy,W,H-gy); g.fillStyle=z.top; g.fillRect(0,gy,W,3);
+  g.fillStyle='rgba(0,0,0,.18)'; tiles(W,24,scroll,(x,k)=>{ g.fillRect(x,gy+7+(k&1)*5,10+(k%3)*3,2) });
+  if(zone===0){ g.fillStyle='#4f6e33'; tiles(W,30,scroll,(x,k)=>{ g.fillRect(x+rnd(k)*20,gy-3,1.5,4); g.fillRect(x+rnd(k)*20+3,gy-2,1.5,3) }) }
+  if(zone===4){ g.strokeStyle='#ff6a1a'; g.lineWidth=1; g.globalAlpha=0.5+0.2*Math.sin(t*3); g.shadowColor='#ff5a1a'; g.shadowBlur=6; tiles(W,90,scroll,(x)=>{ g.beginPath(); g.moveTo(x+10,gy+8); g.lineTo(x+22,gy+14); g.lineTo(x+30,gy+11); g.stroke() }); g.shadowBlur=0; g.globalAlpha=1 }
+  // tinte del modo (Pesadilla morado, Infierno rojo) y viñeta
+  if(mode){ g.fillStyle=mode===1?'rgba(90,40,140,.18)':'rgba(170,20,20,.16)'; g.fillRect(0,0,W,H) }
+  const v=g.createRadialGradient(W/2,gy*0.7,Math.min(W,H)*0.3,W/2,gy*0.7,Math.max(W,H)*0.8); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.45)'); g.fillStyle=v; g.fillRect(0,0,W,H);
+  g.restore() }
+
+root.ART={scene,hero,monster,kindFor,burst,parts,clearParts,shade,addFx,drawFx,status,shake,shakeOffset,clearFx};
 })(typeof window!=='undefined'?window:globalThis);

@@ -1085,17 +1085,18 @@ function draw(dt){
   const g=C.ctx; g.setTransform(dpr*sc,0,0,dpr*sc,0,0);
   if(!battery()){ const [sx,sy]=ART.shakeOffset(dt); g.translate(sx,sy); }   // sacudida (críticos, golpes fuertes)
   const bars=!battery();
-  const tier=Math.floor((S.fase-1)/10), hue=(220+tier*37)%360, gk=hue+'|'+H;
-  if(C.gk!==gk){ C.gk=gk; C.grd=g.createLinearGradient(0,0,0,H); C.grd.addColorStop(0,`hsl(${hue} 30% 16%)`); C.grd.addColorStop(1,`hsl(${hue} 25% 9%)`); }
-  g.fillStyle=C.grd; g.fillRect(0,0,W,H);
-  // suelo más abajo que antes: menos franja vacía
-  const gy=Math.min(H-30,Math.round(H*0.72)); g.fillStyle=`hsl(${hue} 20% 22%)`; g.fillRect(0,gy,W,H-gy);
-  g.fillStyle=`hsl(${hue} 20% 28%)`; for(let x=(bars?-(performance.now()/40)%24:0);x<W;x+=24) g.fillRect(x,gy+6,10,3); // en modo batería el suelo no se mueve
+  // escenario según dónde luchas: campaña (zona de la fase), Mazmorra (zona del último grupo), Torre (piso), Jefe semanal (infierno), PvP (arena)
+  const zoneOf=f=>Math.floor(((f-1)%150)/30), modeOf=f=>Math.min(2,Math.floor((f-1)/150));
+  const zone=!B?zoneOf(S.fase):B.kind==='pvp'?'arena':B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):B.event?zoneOf(B.groups||1):zoneOf(S.fase);
+  const smode=!B||!B.event?S.mode:B.kind?0:modeOf(B.groups||1);
+  const gy=Math.min(H-30,Math.round(H*0.72));
+  ART.scene(g,W,H,gy,zone,battery()?0:fx.scroll||0,smode,battery()?0:performance.now()/1000);
   const hx=W*0.24, c=CFG.classes[S.cls], now=performance.now(), T=now/1000, anim=!battery();
   const prog=(at,ms)=>at&&anim?Math.max(0,Math.min(1,(now-at)/ms)):0, pulse=(at,ms)=>{ const k=prog(at,ms); return k>0&&k<1?k:0 };
   // el héroe anda mientras no hay enemigo delante (entre oleadas o mientras se acercan)
   const walking=!B||B.over||!B.enemies.some(e=>!e.dead&&B.t>=e.arrive-0.05);
   fx.walkT=walking&&anim?(fx.walkT||0)+dt:0;
+  if(walking&&anim) fx.scroll=(fx.scroll||0)+dt*40;
   ART.hero(g,hx,gy,{cls:S.cls,color:c.color,evo:S.evo,path:S.path,walk:fx.walkT,atk:pulse(fx.atkAt,260),hit:fx.flash>0?fx.flash/0.15:0,t:anim?T:0});
   if(!B){ if(anim) ART.parts(g,dt); return }
   const h=G.heroStats(), contact=hx+34, spawnX=W+24;
@@ -1105,7 +1106,7 @@ function draw(dt){
     g.textAlign='center'; g.font='700 9px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#ece7da'; g.fillText(nm(e.name),x,gy-92); g.fillText(nm(S.name),hx,gy-92);
     if(bars){ g.fillStyle='#0009'; g.fillRect(x-20,gy-84,40,5); g.fillStyle='#e2605a'; g.fillRect(x-20,gy-84,40*Math.max(0,e.hp/e.max),5); } }
   // monstruos: tipo según la zona (campaña: la fase; Mazmorra: el grupo; Torre: el piso) y color según el modo
-  const zoneOf=f=>Math.floor(((f-1)%150)/30), modeHue=m=>[0,190,300][Math.min(2,m||0)];
+  const modeHue=m=>[0,190,300][Math.min(2,m||0)];
   let q=0, idx=0;
   for(const e of B.enemies){ if(B.kind==='pvp') break;
     const dieK=e.dead?(B.t-(e.deadAt||0))/0.45:0; if(e.dead&&(dieK>=1||e.x===undefined)) continue;
