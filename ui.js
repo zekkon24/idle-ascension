@@ -28,7 +28,7 @@ function fmt(n){ if(n===undefined||n===null||isNaN(n))return '0'; const a=Math.a
   const u=[['K',1e3],['M',1e6],['B',1e9]]; let s='';
   for(const [k,v] of u) if(a>=v) s=(n/v).toFixed(n/v<10?2:n/v<100?1:0)+k; return s; }
 // oro abreviado desde 1000: K mil, M millón, B mil millones
-const fmtG=n=>{ const a=Math.abs(n||0); if(a<1000) return fmt(n); let s=''; for(const [k,v] of [['K',1e3],['M',1e6],['B',1e9]]) if(a>=v) s=(n/v).toFixed(n/v<10?2:n/v<100?1:0)+k; return s };
+const fmtG=n=>{ const a=Math.abs(n||0); if(a<1000) return fmt(n); let s=''; for(const [k,v] of [['K',1e3],['M',1e6],['B',1e9]]) if(a>=v) s=String(+(n/v).toFixed(n/v<10?2:n/v<100?1:0))+k; return s };
 const pct=v=>(Math.round(v*1000)/10).toLocaleString('es-ES')+' %';
 const clsLabel=c=>CFG.classes[c].label||c;
 const wName=it=>CFG.names[it.cls][R.indexOf(it.r)];
@@ -48,6 +48,10 @@ const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion
 const setHTML=(el,h)=>{ if(el&&el.__h!==h){ el.__h=h; el.innerHTML=nbsp(h); } };
 const F={rar:'all',stat:'any',min:'',max:''};
 const fx={shots:[],floats:[],flash:0};
+// números de daño: suben sin parar; si llega otro golpe al mismo objetivo en menos de 0,3 s se suma al último número (no se amontonan)
+function pushFloat(f){ const last=fx.floats.filter(o=>(f.hero?o.hero:o.e===f.e)&&!o.crit===!f.crit&&o.v!=null&&f.v!=null).pop();
+  if(last&&last.max-last.life<0.3){ last.v+=f.v; last.txt=(f.hero?'-':'')+fmt(last.v); return }
+  f.max=f.life; fx.floats.push(f); if(fx.floats.length>40) fx.floats.shift() }
 
 /* ---------- Telegram: colores, vibración y botón atrás ---------- */
 const TG=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData?Telegram.WebApp:null;
@@ -74,9 +78,9 @@ function attackFx(cls,side,e,crit){ const k=PROJ[cls]; if(k) ART.addFx('proj',{k
   if(crit){ ART.addFx('crit',{side,e}); ART.shake(2) } }
 G.on('hit',({e,d,crit,ranged,thorns,clone,skill,frost,burst,bolt,cleave})=>{ if(e) e._hitAt=performance.now(); if(!thorns&&!clone) fx.atkAt=performance.now(); if(battery()||tab!=='up') return; if(e&&e.rival) fx.rflash=0.12;
   if(!skill&&!thorns&&!clone&&!frost&&!burst&&!bolt&&!cleave) attackFx(S.cls,'hero',e,crit);
-  if(d>=0.5) fx.floats.push({e,txt:fmt(d),crit,life:0.9}) });   // (sin «0» de golpes que no hacen daño)
-G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(d>0.08*G.heroStats().hp) ART.shake(3); if(d>=0.5) fx.floats.push({hero:true,txt:'-'+fmt(d),life:0.8}) });
-G.on('dodge',()=>{ if(!battery()&&tab==='up') fx.floats.push({hero:true,txt:'esquiva',life:0.8}) });
+  if(d>=0.5) pushFloat({e,v:d,txt:fmt(d),crit,life:0.9}) });   // (sin «0» de golpes que no hacen daño)
+G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(d>0.08*G.heroStats().hp) ART.shake(3); if(d>=0.5) pushFloat({hero:true,v:d,txt:'-'+fmt(d),life:0.8}) });
+G.on('dodge',()=>{ if(!battery()&&tab==='up') pushFloat({hero:true,txt:'esquiva',life:0.8}) });
 G.on('level',l=>{ if(tab==='up'&&!battery()){ ART.addFx('levelup',{text:'¡Nivel '+l+'!'}); haptic('light') } else toast('¡Nivel '+l+'!') });
 // Jefes: sin ventana; el botín va a la bolsa (icono de cofre) y el icono da un pequeño salto
 // Botín de jefe: el cofre y los materiales salen del jefe y vuelan al icono del botín (los monstruos normales no sueltan nada)
@@ -353,12 +357,18 @@ function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy
     Clerigo:`<path d="M40 22l10-18 10 18z"/><path d="M28 46h44l8 82H20z" opacity=".85"/><circle cx="50" cy="30" r="17" fill="none" stroke="${c}" stroke-width="2" opacity=".6"/><rect x="78" y="44" width="4" height="40" rx="2"/><circle cx="80" cy="42" r="7"/>`,
   }[cls]||'';
   return `<svg class="silh" viewBox="0 0 100 130" width="92" height="120" aria-hidden="true" fill="${c}">${body}${extra}</svg>` }
+// Inventario: el héroe con el mismo dibujo del combate (se pinta una vez y se guarda como imagen)
+const heroImgCache={};
+function heroImg(){ const c=CFG.classes[S.cls], k=[S.cls,S.evo,S.path].join();
+  if(!heroImgCache[k]&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=184; cv.height=240; const g=cv.getContext('2d');
+    g.scale(2*1.6,2*1.6); ART.hero(g,25,73,{cls:S.cls,color:c.color,evo:S.evo,path:S.path}); heroImgCache[k]=cv.toDataURL() }catch(e){} }
+  return heroImgCache[k]?`<img class="silh" src="${heroImgCache[k]}" width="92" height="120" alt="">`:classSVG(S.cls) }
 function equipHud(){ const w=G.equipped();
   const wm=w&&G.weaponMain(w);
   const wslot=w?`<button class="eslot" data-act="forge" data-id="${w.id}" data-from="main" style="--rc:var(--r${w.r})"><span class="s">Arma</span><b style="color:var(--r${w.r})">${wName(w)}</b>
       <span class="s">${CFG.rarName[w.r]} · nv ${w.lvl}/${CFG.weapon.maxLvl} · Daño +${pct(wm.d)} · Vel +${pct(wm.s)}</span><span class="s">Toca para forjar</span></button>`
     :`<button class="eslot" data-act="invview" data-v="armas"><span class="s">Arma</span><b>Sin arma</b><span class="s">Armas: ${G.invCount()}/${G.invMax()} · Toca para verlas</span></button>`;
-  return `<section class="panel equip"><div class="equip-in">${classSVG(S.cls)}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}</div></div></section>` }
+  return `<section class="panel equip"><div class="equip-in">${heroImg()}<div class="eslots"><div class="s" style="font-weight:800">${heroName()} · nv ${S.lvl}</div>${wslot}</div></div></section>` }
 function tabInv(){
   if(invView==='forja') return tabForja();
   const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0)+(S.pvpTickets>0?1:0);
@@ -730,7 +740,7 @@ function tabMis(){ const P=G.passState();
       rows.push(`<div class="prow${open?' open':''}"><span class="pl">${l}</span>${cell(false)}${cell(true)}</div>`) }
     body=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${P.lvl}/${L}</b><span class="s">Quedan ${P.daysLeft} días</span></div>
       <div class="rbar"><i style="width:${P.lvl>=L?100:P.into/P.need*100}%;background:var(--gold)"></i></div><span class="s">${P.lvl>=L?'¡Pase completo!':P.into+'/'+P.need+' XP · las misiones dan XP'}</span>
-      ${P.prem?'':`<div class="chest offer"><div><div class="cn">Pase de pago</div><div class="s">Desbloquea la columna dorada de esta temporada</div></div><div class="acts">${payBtn('pass',CFG.stars.pass.stars,'data-act="devPass"')}</div></div>`}
+      ${P.prem?'':`<div class="chest offer"><div><div class="cn">Pase de pago</div><div class="s">Premios dorados</div></div><div class="acts">${payBtn('pass',CFG.stars.pass.stars,'data-act="devPass"')}</div></div>`}
       <button class="btn gold" data-act="passAll" ${G.passReady()?'':'disabled'}>Reclamar todo (${G.passReady()})</button>
       <div class="prow ph"><span class="pl">Nv</span><div class="pc">Gratis</div><div class="pc">De pago</div></div>
       <div class="plist">${rows.join('')}</div>`; }
@@ -821,7 +831,7 @@ function offlineModal(off){
   showModal(`<h3>Mientras no estabas</h3><p class="hint">Fase ${off.fase} · ${h?h+' h ':''}${mi?mi+' min':''}${off.capped?' · máximo':''}</p>
     <div class="loot"><div><span>Oro</span><b>+${fmtG(off.gold)}</b></div>${off.lvlTo>off.lvlFrom?`<div><span>Nivel</span><b>${off.lvlFrom} → ${off.lvlTo}</b></div>`:''}</div>
     <div class="ctrl"><button class="btn${off.capped?'':' gold'}" data-act="close">Recoger</button>
-    ${off.bonus?`<button class="btn gold" data-act="offAd">×${CFG.offlineAdMult.toLocaleString('es-ES')} con anuncio (+${fmt(off.bonus)})</button>`:''}</div>`);
+    ${off.bonus?`<button class="btn gold" data-act="offAd">×${CFG.offlineAdMult.toLocaleString('es-ES')} con anuncio (+${fmtG(off.bonus)})</button>`:''}</div>`);
 }
 
 /* ---------- ruleta al abrir cofres ---------- */
@@ -878,7 +888,7 @@ function spinDone(){
 /* ---------- Ajustes ---------- */
 function tabDev(){
   const on=battery();
-  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña se lanzan solas; también con el botón Auto/Manual del combate (los eventos tienen el suyo)</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Sin barras de vida, números, proyectiles ni parpadeo</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
+  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Menos efectos, gasta menos</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
   </section>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
   <div class="ctrl">Velocidad: ${[1,2,5,20].map(v=>`<button class="btn sm ${S.speed===v?'gold':''}" data-act="speed" data-v="${v}">×${v}</button>`).join('')}</div>
@@ -1147,7 +1157,7 @@ function draw(dt){
       drawClone:(x,side)=>{ if(side==='rival'){ const e=B.enemies[0], rv=G.pvpState().rival||{}; ART.hero(g,x,gy,{cls:e.cls,color:(CFG.classes[e.cls]||c).color,evo:rv.evo,path:rv.path,flip:true,t:T}) } else ART.hero(g,x,gy,{cls:S.cls,color:ART.shade(c.color,0.5),evo:S.evo,path:S.path,t:T+0.5}) }}); }
   fx.floats=fx.floats.filter(f=>(f.life-=dt)>0);
   g.textAlign='center'; g.font='800 13px "Nunito Sans", system-ui, sans-serif';
-  for(const f of fx.floats){ const y=(f.hero?gy-80:gy-52)-(0.9-f.life)*30; const x=f.hero?hx:(f.e&&f.e.x)||0;
+  for(const f of fx.floats){ const y=(f.hero?gy-58:gy-52)-(0.9-f.life)*50; const x=f.hero?hx:(f.e&&f.e.x)||0;
     g.globalAlpha=Math.min(1,f.life*2); g.fillStyle=f.hero?'#e2605a':(f.crit?'#e8b04a':'#ece7da');
     g.fillText(f.txt+(f.crit?'!':''),x,y); }
   g.globalAlpha=1; fx.flash=Math.max(0,fx.flash-dt);

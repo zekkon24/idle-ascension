@@ -134,9 +134,9 @@ canvas{display:block;width:100%;height:300px}
 .mrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
 .mrow.done{opacity:.6}
 .mrow .mi{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
-.calg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.calg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .cald{display:flex;flex-direction:column;gap:3px;padding:8px 6px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:11px;text-align:center;min-height:74px;justify-content:center}
-.cald b{font-size:11px;line-height:1.2}
+.cald b{font-size:11px;line-height:1.2;overflow-wrap:anywhere}
 .cald.got{opacity:.5}
 .cald.now{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
 .cald:last-child{grid-column:span 2}
@@ -164,6 +164,8 @@ canvas{display:block;width:100%;height:300px}
 .tw{overflow-x:auto}
 .odds-t tr.here td{color:var(--gold);font-weight:800}
 .odds-t td,.odds-t th{white-space:nowrap}
+.odds-t td:first-child{white-space:normal}
+@media (max-width:374px){.odds-t{font-size:11px}.odds-t th,.odds-t td{padding:5px 2px}.calg{grid-template-columns:repeat(3,minmax(0,1fr))}.cald:last-child{grid-column:span 3}}
 .odds-t th{font-size:10px}
 .classes{display:grid;grid-template-columns:1fr;gap:10px} /* una clase por fila: nombre y pasiva */
 .ccard{text-align:left;border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--panel);display:flex;flex-direction:column;gap:6px}
@@ -195,7 +197,7 @@ input[type=number]{width:64px}
 .modal h3{margin:0;font-family:var(--display);font-size:20px;font-weight:600}
 .loot{display:flex;flex-direction:column;gap:6px}
 .loot div{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:var(--panel2);font-size:13px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(128px + env(safe-area-inset-bottom,0px));pointer-events:none;background:var(--panel2);border:1px solid var(--gold);padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;z-index:20;max-width:90%;text-align:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(52px + env(safe-area-inset-top,0px));pointer-events:none;background:var(--panel2);border:1px solid var(--gold);padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;z-index:20;max-width:90%;text-align:center}
 /* ruleta */
 .rl{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#0b0d13;height:110px}
 .rl::before,.rl::after{content:"";position:absolute;top:0;bottom:0;width:40px;z-index:2;pointer-events:none}
@@ -363,7 +365,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202609300626-ede112f';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202609300641-233d7be';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
