@@ -373,7 +373,11 @@ function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy
   return `<svg class="silh" viewBox="0 0 100 130" width="92" height="120" aria-hidden="true" fill="${c}">${body}${extra}</svg>` }
 // Retrato redondo (cabeza del dibujo del héroe) y escenarios de art.js como imagen de fondo (se pintan una vez)
 let avKey=null;
-function avatar(){ const k=[S.cls,S.evo,S.path].join(), el=$('#avatar'); if(!el||k===avKey) return; heroImg(); const src=heroImgCache[k]; if(src){ avKey=k; el.style.backgroundImage=`url(${src})` } }   // solo cuando cambia el dibujo
+function avatar(){ const k=[S.cls,S.evo,S.path].join(), el=$('#avatar'); if(!el||k===avKey) return;   // solo cuando cambia el dibujo
+  const f=window.ART&&ART.face(S.cls), cw=el.clientWidth;
+  if(f&&cw){ const h=0.8*cw/f.d, w=h*f.ar; avKey=k;   // sprite: la cara llena el círculo
+    el.style.cssText=`background-image:url(${f.src});background-size:${w.toFixed(1)}px ${h.toFixed(1)}px;background-position:${(cw/2-f.x*w).toFixed(1)}px ${(cw/2-f.y*h).toFixed(1)}px`; return }
+  heroImg(); const src=heroImgCache[k]; if(src){ avKey=k; el.style.cssText=''; el.style.backgroundImage=`url(${src})` } }
 const sceneCache={};
 function sceneImg(zone,w,h){ const k=zone+'_'+w+'_'+h; if(!sceneCache[k]&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const g=cv.getContext('2d');
   ART.scene(g,w,h,Math.round(h*0.8),zone,0,0,0); sceneCache[k]=cv.toDataURL('image/jpeg',0.8) }catch(e){ sceneCache[k]='' } } return sceneCache[k]||'' }
@@ -382,9 +386,12 @@ const scrHead=(t,backV)=>`<div class="scrhd">${backV?`<button class="scrb" data-
 // Inventario: el héroe con el mismo dibujo del combate (se pinta una vez y se guarda como imagen)
 const heroImgCache={};
 function heroImg(){ const c=CFG.classes[S.cls], k=[S.cls,S.evo,S.path].join();
-  if(!heroImgCache[k]&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=184; cv.height=240; const g=cv.getContext('2d');
-    g.scale(2*1.6,2*1.6); ART.hero(g,25,73,{cls:S.cls,color:c.color,evo:S.evo,path:S.path}); heroImgCache[k]=cv.toDataURL() }catch(e){} }
+  if(!heroImgCache[k]&&window.ART){ const sp=ART.hasSprite(S.cls);   // con sprite: centrado y algo más pequeño (es más ancho que el dibujo)
+    try{ const cv=document.createElement('canvas'); cv.width=184; cv.height=240; const g=cv.getContext('2d');
+    g.scale(sp?3:3.2,sp?3:3.2); ART.hero(g,sp?30.6:25,sp?78:73,{cls:S.cls,color:c.color,evo:S.evo,path:S.path,center:sp}); heroImgCache[k]=cv.toDataURL() }catch(e){ if(sp) heroImgCache[k]=ART.spriteSrc(S.cls) } }
   return heroImgCache[k]?`<img class="silh" src="${heroImgCache[k]}" width="92" height="120" alt="">`:classSVG(S.cls) }
+// al cargar los sprites, el retrato y el héroe del inventario se vuelven a pintar con ellos
+if(window.ART) ART.onSprites(()=>{ for(const k in heroImgCache) delete heroImgCache[k]; avKey=null; if(!S) return; avatar(); const b=$('.ibart'); if(b) b.innerHTML=heroImg() });
 // Cabecera del inventario: el héroe grande sobre el escenario de su zona y sus huecos (arma y grimorio)
 function invBanner(){ const w=G.equipped(), bg=sceneImg(zoneNow(),390,190), gshown=G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1;
   const ws=w?`<button class="ibslot" style="--rc:var(--r${w.r})" data-act="forge" data-id="${w.id}" data-from="main" aria-label="Arma: ${wName(w)}">${MINISWORD}<span class="ibl">Nv ${w.lvl}</span></button>`:`<button class="ibslot empty" data-act="invview" data-v="armas" aria-label="Sin arma">—</button>`;
@@ -1187,7 +1194,7 @@ function draw(dt){
   if(walking&&anim) fx.scroll=(fx.scroll||0)+dt*40;
   ART.hero(g,hx,gy,{cls:S.cls,color:c.color,evo:S.evo,path:S.path,walk:fx.walkT,atk:pulse(fx.atkAt,260),hit:fx.flash>0?fx.flash/0.15:0,t:anim?T:0});
   if(!B){ if(anim) ART.parts(g,dt); return }
-  const h=G.heroStats(), contact=hx+34, spawnX=W+24;
+  const h=G.heroStats(), contact=hx+44, spawnX=W+24;   // los sprites son más anchos que los dibujos: algo más de hueco
   if(B.kind==='pvp'){ const e=B.enemies[0], rc=CFG.classes[e.cls]||c, rv=G.pvpState().rival||{}, rx=Math.max(W*0.7,hx+100), p=Math.min(1,B.t/(e.walk||0.8)), x=spawnX-(spawnX-rx)*p; e.x=x;
     ART.hero(g,x,gy,{cls:e.cls,color:rc.color,evo:rv.evo||0,path:rv.path,flip:true,walk:p<1&&anim?T:0,atk:pulse(fx.ratkAt,260),hit:fx.rflash>0?fx.rflash/0.12:0,t:anim?T+1.3:0}); fx.rflash=Math.max(0,(fx.rflash||0)-dt);
     const nm=n=>{ n=String(n||''); return n.length>10?n.slice(0,9)+'…':n };   // nombres cortos: no se pisan
@@ -1203,7 +1210,7 @@ function draw(dt){
     idx++;
     const p=Math.min(1,(B.t-e.spawn)/(e.walk||CFG.enemy.walk));
     const r=B.boss?(B.elite?26:21):13, y=gy, cx=contact+(r-13)*2.4;   // los grandes se paran más lejos (no tapan al héroe)
-    let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*20;q++}
+    let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*26;q++}
     e.x=x;
     if(e.dead&&!e._burst){ e._burst=1; if(anim) ART.burst(x,gy-r,'#d9d2c0',8); }
     ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:B.boss,elite:B.elite,t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK)});
@@ -1213,7 +1220,7 @@ function draw(dt){
   if(anim) ART.parts(g,dt);
   if(anim){ const foes=B.kind==='pvp'?[]:B.enemies.filter(e=>!e.dead&&e.x!=null).map(e=>({x:e.x}));
     ART.drawFx(g,{W,hx,rx:B.kind==='pvp'?B.enemies[0].x:null,gy,foes,now:now/1000,
-      drawClone:(x,side)=>{ if(side==='rival'){ const e=B.enemies[0], rv=G.pvpState().rival||{}; ART.hero(g,x,gy,{cls:e.cls,color:(CFG.classes[e.cls]||c).color,evo:rv.evo,path:rv.path,flip:true,t:T}) } else ART.hero(g,x,gy,{cls:S.cls,color:ART.shade(c.color,0.5),evo:S.evo,path:S.path,t:T+0.5}) }}); }
+      drawClone:(x,side)=>{ if(side==='rival'){ const e=B.enemies[0], rv=G.pvpState().rival||{}; ART.hero(g,x,gy,{cls:e.cls,color:(CFG.classes[e.cls]||c).color,evo:rv.evo,path:rv.path,flip:true,t:T}) } else ART.hero(g,x,gy,{cls:S.cls,color:ART.shade(c.color,0.5),evo:S.evo,path:S.path,ghost:true,t:T+0.5}) }}); }
   fx.floats=fx.floats.filter(f=>(f.life-=dt)>0);
   g.textAlign='center'; g.font='800 13px "Nunito Sans", system-ui, sans-serif';
   for(const f of fx.floats){ const y=(f.hero?gy-58:gy-52)-(0.9-f.life)*50; const x=f.hero?hx:(f.e&&f.e.x)||0;

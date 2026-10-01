@@ -1,11 +1,15 @@
-/* Idle Ascension · DIBUJOS (héroes y monstruos en vectores, dibujados en el canvas del combate)
-   Sin imágenes: todo con formas, así pesa poco y se anima por código. Solo dibuja; no sabe nada de las reglas.
+/* Idle Ascension · DIBUJOS (héroes y monstruos en el canvas del combate: sprites de sprites/ y vectores)
+   Lo que no tiene sprite se dibuja con formas; todo se anima por código. Solo dibuja; no sabe nada de las reglas.
    ART.hero(g, x, y, o)     o = {cls, color, evo, path, flip, walk, atk, hit, t}
      walk: fase de andar (segundos, 0 = quieto) · atk: 0..1 progreso del golpe (0 = sin golpe) · hit: 0..1 recibe golpe
    ART.monster(g, x, y, o)  o = {kind, r, hue, boss, elite, t, walk, atk, hit, die}
      kind: slime, goblin, bat, skeleton, golem, demon · die: 0..1 (animación de muerte)
    ART.kindFor(zone, i)     tipo de monstruo de la zona (0 bosque, 1 cueva, 2 cripta, 3 fortaleza, 4 infierno)
-   ART.burst(x, y, color, n) · ART.parts(g, dt)   partículas (golpes y muertes) */
+   ART.burst(x, y, color, n) · ART.parts(g, dt)   partículas (golpes y muertes)
+   Sprites (carpeta sprites/, WebP): las 5 clases, el goblin, el murciélago y el esqueleto se dibujan con su imagen en cuanto carga;
+   hasta entonces (o si no carga) se dibujan en vectores. Slime, gólem y demonio siguen en vectores.
+   ART.onSprites(fn) avisa cuando han terminado de cargar · ART.spriteSrc(cls) dirección de la imagen de una clase
+   ART.face(cls) imagen y encuadre de la cara (retrato) · ART.hasSprite(cls) */
 (function(root){
 'use strict';
 const TAU=Math.PI*2;
@@ -16,6 +20,33 @@ function shade(hex,f){ const n=parseInt(hex.slice(1),16); let r=n>>16&255, gg=n>
 const SKIN='#e9c7a0', STEEL='#c9ced8', WOOD='#8a5a34', DARK='#1a1c26';
 function rr(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath() }
 function shadow(g,w){ g.fillStyle='rgba(0,0,0,.45)'; g.beginPath(); g.ellipse(0,2,w,w*0.28,0,0,TAU); g.fill() }
+
+/* ---------- sprites ---------- */
+// H: alto en unidades del combate (héroes 10, esqueleto 7, goblin 6, murciélago 5) · ax: eje del cuerpo (fracción del ancho)
+// hx: centro de la cabeza (corona de jefe) · fly: altura de vuelo · los héroes miran a la derecha y los monstruos a la izquierda
+// face: centro de la cara (fracciones del ancho y del alto) y su tamaño (fracción del alto), para el retrato de la cabecera
+const SPR={Guerrero:{f:'guerrero',H:64,ax:0.46,face:[0.55,0.24,0.40]}, Mago:{f:'mago',H:64,ax:0.365,face:[0.57,0.30,0.42]}, Arquero:{f:'arquero',H:64,ax:0.36,face:[0.38,0.25,0.40]},
+  Asesino:{f:'asesino',H:61.5,ax:0.44,face:[0.44,0.24,0.40]}, Clerigo:{f:'clerigo',H:64,ax:0.415,face:[0.50,0.33,0.40]},
+  skeleton:{f:'esqueleto',H:45.2,ax:0.46,hx:0.52}, goblin:{f:'goblin',H:38.9,ax:0.485,hx:0.485}, bat:{f:'murcielago',H:32.6,ax:0.38,hx:0.22,fly:9}};
+const sprWait=[]; let sprLeft=0;
+const sprSrc=k=>{ const v=root.APP_VERSION; return 'sprites/'+SPR[k].f+'.webp'+(v&&v!=='DEV'?'?v='+v:'') };
+if(typeof Image!=='undefined') for(const k in SPR){ const sp=SPR[k], im=new Image(); sprLeft++;
+  const done=ok=>{ if(ok){ sp.img=im; sp.W=sp.H*im.naturalWidth/im.naturalHeight } if(--sprLeft===0) sprWait.splice(0).forEach(fn=>{ try{ fn() }catch(e){} }) };
+  im.onload=()=>done(im.naturalWidth>0); im.onerror=()=>done(false); im.src=sprSrc(k) }
+const onSprites=fn=>{ if(sprLeft===0) fn(); else sprWait.push(fn) };
+const sprOf=k=>SPR[k]&&SPR[k].img?SPR[k]:null;
+// copias de la imagen: silueta blanca (al recibir un golpe) y teñida (modos Pesadilla e Infierno); se hacen una vez
+function sprCopy(sp,key,paint){ sp.c=sp.c||{}; if(sp.c[key]!==undefined) return sp.c[key];
+  try{ const im=sp.img, cv=document.createElement('canvas'); cv.width=im.naturalWidth; cv.height=im.naturalHeight; const c=cv.getContext('2d');
+    c.drawImage(im,0,0); paint(c,cv.width,cv.height); c.globalCompositeOperation='destination-in'; c.globalAlpha=1; c.drawImage(im,0,0); sp.c[key]=cv }
+  catch(e){ sp.c[key]=null }
+  return sp.c[key] }
+const sprWhite=sp=>sprCopy(sp,'w',(c,w,h)=>{ c.globalCompositeOperation='source-in'; c.fillStyle='#fff'; c.fillRect(0,0,w,h) });
+const sprHue=(sp,hue)=>!hue?sp.img:sprCopy(sp,'h'+hue,(c,w,h)=>{ c.globalCompositeOperation='color'; c.globalAlpha=0.5; c.fillStyle=`hsl(${hue} 70% 50%)`; c.fillRect(0,0,w,h) })||sp.img;
+// dibuja el sprite con los pies en (0,0); cx: eje horizontal (fracción del ancho)
+function sprDraw(g,sp,img,cx,hit){ const w=sp.W, h=sp.H, x=-w*cx;
+  g.drawImage(img,x,-h,w,h);
+  if(hit){ const wi=sprWhite(sp); if(wi){ const a=g.globalAlpha; g.globalAlpha=a*hit*0.6; g.drawImage(wi,x,-h,w,h); g.globalAlpha=a } } }
 
 /* ---------- héroes ---------- */
 // arma en la mano, dibujada con el brazo girado 'a' radianes (0 = hacia delante)
@@ -39,6 +70,15 @@ function hero(g,x,y,o){
   g.save(); g.translate(x,y); if(o.flip) g.scale(-1,1);
   if(hit) g.translate(-hit*4,0);
   shadow(g,15);
+  const sp=sprOf(cls);
+  if(sp){   // sprite: respira quieto, se balancea al andar, se lanza al golpear (o retrocede al disparar) y destella al recibir
+    if(o.ghost) g.globalAlpha=0.55;
+    if(evo){ const a=g.globalAlpha; g.globalAlpha=a*(0.2+0.08*Math.sin(t*3)); g.fillStyle=trim; g.beginPath(); g.ellipse(0,-sp.H*0.48,sp.H*0.4,sp.H*0.56,0,0,TAU); g.fill(); g.globalAlpha=a; }
+    const ranged=cls==='Arquero'||cls==='Mago'||cls==='Clerigo', k=atk?Math.sin(atk*Math.PI):0;
+    g.translate(ranged?-k*3:k*8,-bob); g.rotate(walk?Math.sin(walk*9)*0.035:ranged?-k*0.05:k*0.13);
+    const br=walk||atk?0:Math.sin(t*2.2)*0.015; g.scale(1-br*0.5,1+br);
+    sprDraw(g,sp,sp.img,o.center?0.5:sp.ax,hit);
+    g.restore(); return; }
   g.translate(0,-bob);
   // aura de los caminos (evolución)
   if(evo){ g.globalAlpha=0.18+0.08*Math.sin(t*3); g.fillStyle=trim; g.beginPath(); g.ellipse(0,-30,22,34,0,0,TAU); g.fill(); g.globalAlpha=1; }
@@ -89,7 +129,12 @@ function monster(g,x,y,o){
   g.scale(s,s);
   if(die) g.rotate(die*0.5);
   const eye=(ex,ey,c)=>{ g.fillStyle=c||'#fff'; g.beginPath(); g.arc(ex,ey,2.2,0,TAU); g.fill(); g.fillStyle=DARK; g.beginPath(); g.arc(ex-0.7,ey,1.1,0,TAU); g.fill(); };
-  if(k==='slime'){ const sq=1+Math.sin(t*6+(walk||0)*8)*0.08;
+  const sp=sprOf(k);
+  if(sp){ const a=atk?Math.sin(atk*Math.PI):0;
+    if(k==='bat'){ const f=Math.sin(t*14); g.translate(0,-sp.fly+Math.sin(t*3)*3); g.scale(1,1+f*0.06); }
+    else{ g.translate(0,walk?-Math.abs(Math.sin(walk*10))*1.5:0); g.rotate(walk?Math.sin(walk*10)*0.05:-a*0.15); const br=walk||atk?0:Math.sin(t*2.4)*0.015; g.scale(1-br*0.5,1+br); }
+    sprDraw(g,sp,sprHue(sp,hue),sp.ax,hit); }
+  else if(k==='slime'){ const sq=1+Math.sin(t*6+(walk||0)*8)*0.08;
     g.fillStyle=hsl((110+hue)%360,55,48); g.beginPath(); g.ellipse(0,-10*sq,14/sq,10*sq,0,Math.PI,0); g.lineTo(14/sq,0); g.lineTo(-14/sq,0); g.fill();
     g.fillStyle='rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(4,-15*sq,4,2.5,-0.4,0,TAU); g.fill(); eye(-5,-9); eye(1,-9); }
   else if(k==='goblin'){ const leg=walk?Math.sin(walk*10)*3:0, c=hsl((95+hue)%360,40,42);
@@ -122,9 +167,10 @@ function monster(g,x,y,o){
     g.save(); g.translate(-7,-20); g.rotate(-0.4-(atk?Math.sin(atk*Math.PI)*1.1:0)); g.strokeStyle='#444'; g.lineWidth=2; g.beginPath(); g.moveTo(0,0); g.lineTo(0,-20); g.stroke();
       g.strokeStyle=STEEL; g.beginPath(); g.moveTo(-4,-20); g.lineTo(-4,-26); g.moveTo(0,-20); g.lineTo(0,-27); g.moveTo(4,-20); g.lineTo(4,-26); g.stroke(); g.restore(); }   // tridente
   // jefes: corona (élite: morada y más grande)
-  if(o.boss){ const top=k==='bat'?-36:k==='slime'?-22:k==='golem'?-44:k==='skeleton'?-40:k==='demon'?-47:-37;
+  if(o.boss){ if(sp) g.translate((sp.hx-sp.ax)*sp.W,k==='bat'?7-sp.H:5-sp.H);   // sprite: corona sobre la cabeza
+    const top=sp?0:k==='bat'?-36:k==='slime'?-22:k==='golem'?-44:k==='skeleton'?-40:k==='demon'?-47:-37;
     g.fillStyle=o.elite?'#c86bff':'#e8b04a'; g.beginPath(); g.moveTo(-8,top); g.lineTo(-6,top-8); g.lineTo(-2,top-3); g.lineTo(0,top-9); g.lineTo(2,top-3); g.lineTo(6,top-8); g.lineTo(8,top); g.closePath(); g.fill(); }
-  if(hit){ g.globalAlpha=hit*0.3; g.fillStyle='#fff'; g.beginPath(); g.ellipse(0,-16,12,14,0,0,TAU); g.fill(); g.globalAlpha=1; }
+  if(hit&&!sp){ g.globalAlpha=hit*0.3; g.fillStyle='#fff'; g.beginPath(); g.ellipse(0,-16,12,14,0,0,TAU); g.fill(); g.globalAlpha=1; }
   g.restore();
 }
 
@@ -263,5 +309,5 @@ function scene(g,W,H,gy,zone,scroll,mode,t){ const z=SC[zone]||SC[0];
   const v=g.createRadialGradient(W/2,gy*0.7,Math.min(W,H)*0.3,W/2,gy*0.7,Math.max(W,H)*0.8); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.45)'); g.fillStyle=v; g.fillRect(0,0,W,H);
   g.restore() }
 
-root.ART={scene,hero,monster,kindFor,burst,parts,clearParts,shade,addFx,drawFx,status,shake,shakeOffset,clearFx};
+root.ART={scene,hero,monster,onSprites,spriteSrc:cls=>SPR[cls]&&SPR[cls].img?sprSrc(cls):null,face:cls=>{ const sp=sprOf(cls); return sp&&sp.face?{src:sprSrc(cls),x:sp.face[0],y:sp.face[1],d:sp.face[2],ar:sp.W/sp.H}:null },hasSprite:cls=>!!sprOf(cls),kindFor,burst,parts,clearParts,shade,addFx,drawFx,status,shake,shakeOffset,clearFx};
 })(typeof window!=='undefined'?window:globalThis);
