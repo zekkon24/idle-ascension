@@ -134,12 +134,12 @@ const CFG = {
   // Base de los enemigos = (los de tu fase récord)^w × (los «a tu medida»)^(1−w): con w bajo, tus estadísticas pesan poco.
   // «A tu medida»: tardas tKill s en matar a uno normal y cada golpe suyo te quita hitPct de tu vida (en el piso 1).
   // Crecimiento por tramos: curve=[[desde piso, ×vida por piso, ×ataque por piso], …] (suave hasta el 50, duro hasta el 100, muy duro después).
-  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.012, curve:[[1,1.05,1.035],[50,1.13,1.08],[100,1.22,1.13]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
-    elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:2,atk:2}, maxSkills:2,
+  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.009, curve:[[1,1.05,1.035],[50,1.13,1.08],[100,1.22,1.13]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
+    elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:1.2,atk:1.6}, maxSkills:2,
     // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
     // todo sube de golpe (×jump); desde 'forcedFrom', a veces (forced) el piso solo ofrece combates (élite y/o combate, sin hoguera ni cofre)
     hard:{eliteFrom:30, eliteEvery:10, eliteUp:1.4, jumpEvery:25, jump:1.3, forcedFrom:15, forced:0.3},
-    nodes:{fight:42,elite:18,treasure:10,rest:12,event:12,altar:6}, // peso de cada tipo de camino
+    nodes:{fight:40,elite:16,treasure:8,rest:12,event:10,altar:6,shop:8}, // peso de cada tipo de camino
     // Torre = roguelike puro: tu personaje NO cuenta (ni nivel, arma, mejoras, evolución ni grimorio). Todos empiezan con este
     // héroe único y solo se hacen fuertes con las mejoras de la partida. Los enemigos tampoco dependen de tu cuenta.
     hero:{hp:1000,atk:100,df:20,spd:1,cr:0.05,cd:0.5}, foeDf:10,
@@ -152,7 +152,7 @@ const CFG = {
     traits:{rapido:{name:'Rápido',spd:1.4}, regenera:{name:'Regenera',regen:0.03}, escudo:{name:'Escudo',shield:0.3}, espinas:{name:'Espinas',reflect:0.2},
       furioso:{name:'Furioso',below:0.5,atk:1.5}, gigante:{name:'Gigante',hp:2,spd:0.75}},
     // jefes: la mecánica rota cada 10 pisos (invocador, enfurecido, escudo de fases)
-    bossMech:{order:['invocador','enfurecido','fases'], invocador:{every:8,n:2}, enfurecido:{below:0.5,atk:2,spd:1.5}, fases:{at:[0.66,0.33],inv:3,heal:0.1}},
+    bossMech:{order:['invocador','enfurecido','fases'], invocador:{every:10,n:1}, enfurecido:{below:0.5,atk:2,spd:1.5}, fases:{at:[0.66,0.33],inv:3,heal:0.1}},
     // eventos ?: id → coste/efecto
     events:{fuente:{hp:0.2}, mercader:{cost:30}, trampa:{good:0.6,hp:0.25}, santuario:{cost:25,heal:0.4}},
     // maldiciones (altar maldito: eliges 1 de 3 legendarias y te llevas una maldición al azar; también con Pacto)
@@ -160,7 +160,11 @@ const CFG = {
       rasgo:{name:'Élites temibles',desc:'Los élites traen un rasgo más'}},
     rewards:[{every:50,b:{mode:1}},{every:25,b:{silver:1}},{every:5,b:{wood:1}}],
     // rareza de las cartas: C común, R rara, L legendaria (las pasivas de camino, objetos y hechizos existentes son legendarias)
-    rarity:{normal:{C:50,R:35,L:15}, better:{C:30,R:45,L:25}},   // better: élite y jefe
+    // calidades de las cartas: C común, R rara, E épica, L legendaria. Peso de cada calidad según de dónde sale la carta:
+    // élite 2 cartas (hasta Épica) · jefe 2 cartas (Épica o Legendaria) · tienda 3 (todas) · normal: cofre sospechoso y Pacto
+    rarity:{normal:{C:45,R:35,E:20}, elite:{C:40,R:35,E:25}, boss:{E:60,L:40}, shop:{C:35,R:30,E:22,L:13}},
+    // tienda: 3 cartas de cualquier calidad; compras las que quieras con almas
+    shop:{n:3, price:{C:15,R:30,E:50,L:80}},
     // mejoras propias de la Torre (las comunes se pueden repetir y se acumulan)
     fx:{
       fuerza:{r:'C',name:'Fuerza',desc:'+15 % de daño',atk:0.15},
@@ -169,13 +173,13 @@ const CFG = {
       precision:{r:'C',name:'Precisión',desc:'+8 % de crítico',cr:0.08},
       vampiro:{r:'C',name:'Vampiro',desc:'5 % de robo de vida',ls:0.05},
       aliento:{r:'C',name:'Segundo aliento',desc:'Al ganar cada combate recuperas el 15 % de la vida',heal:0.15},
-      escudo:{r:'R',name:'Escudo inicial',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
+      escudo:{r:'E',name:'Escudo inicial',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
       espinas:{r:'R',name:'Espinas',desc:'Devuelves el 30 % del daño que recibes',reflect:0.3},
       ejecutor:{r:'R',name:'Ejecutor',desc:'+50 % de daño a enemigos por debajo del 30 % de vida',below:0.3,mult:0.5},
       recarga:{r:'R',name:'Recarga rápida',desc:'Las habilidades recargan un 25 % más rápido',cd:0.75},
-      cadena:{r:'R',name:'Cadena',desc:'Cada 5.º golpe salta también a otro enemigo',every:5},
-      cristal:{r:'R',name:'Cristal',desc:'+40 % de daño, pero −25 % de vida',atk:0.4,hp:-0.25},
-      furia:{r:'R',name:'Furia sangrienta',desc:'+1 % de daño por cada 1 % de vida que te falta',per:1},
+      cadena:{r:'E',name:'Cadena',desc:'Cada 5.º golpe salta también a otro enemigo',every:5},
+      cristal:{r:'E',name:'Cristal',desc:'+40 % de daño, pero −25 % de vida',atk:0.4,hp:-0.25},
+      furia:{r:'E',name:'Furia sangrienta',desc:'+1 % de daño por cada 1 % de vida que te falta',per:1},
       explosion:{r:'L',name:'Explosión',desc:'Los enemigos que mueren explotan: 30 % de su vida a los cercanos',pct:0.3},
       eco:{r:'L',name:'Eco',desc:'Tus hechizos de la Torre se lanzan dos veces'},
       maestria:{r:'L',name:'Maestría',desc:'Tus pasivas de la Torre son un 50 % más fuertes',mult:1.5},
@@ -183,7 +187,7 @@ const CFG = {
       // objetos de la Torre (obj:true)
       afilar:{r:'C',obj:true,name:'Piedra de afilar',desc:'Los 3 primeros golpes de cada combate son críticos',n:3},
       talisman:{r:'C',obj:true,name:'Talismán de piedra',desc:'Recibes un 10 % menos de daño',taken:0.1},
-      hielo:{r:'R',obj:true,name:'Orbe de hielo',desc:'15 % de congelar 1 s al enemigo que golpeas',chance:0.15,dur:1},
+      hielo:{r:'E',obj:true,name:'Orbe de hielo',desc:'15 % de congelar 1 s al enemigo que golpeas',chance:0.15,dur:1},
       colmillo:{r:'R',obj:true,name:'Colmillo',desc:'Los críticos te curan el 2 % de tu vida',heal:0.02},
       corona:{r:'L',obj:true,name:'Corona del rey',desc:'Si caes, revives una vez con el 50 % de vida'},
       reloj:{r:'L',obj:true,name:'Reloj de arena',desc:'Cada 20 s todas tus habilidades se recargan al instante',every:20},

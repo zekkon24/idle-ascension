@@ -653,10 +653,10 @@ const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), 
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 /* ---------- Torre (roguelike) ---------- */
-const NODE={fight:['⚔️','Combate','Enemigos normales · +'+CFG.tower.souls.fight+' almas'],elite:['💀','Élite','Con rasgos · 1 grimorio'],treasure:['🎁','Cofre','Sin luchar · 1 objeto'],rest:['🔥','Hoguera','Te curas del todo'],boss:['👑','Jefe','Jefe del piso · 1 mejora'],event:['❓','Evento','Algo inesperado'],altar:['🕯️','Altar maldito','Legendaria a cambio de una maldición']};
+const NODE={fight:['⚔️','Combate','Enemigos normales · +'+CFG.tower.souls.fight+' almas'],elite:['💀','Élite','Con rasgos · 2 cartas hasta Épica, eliges 1'],treasure:['🎁','Cofre','Sin luchar · 1 objeto'],rest:['🔥','Hoguera','Te curas del todo'],boss:['👑','Jefe','2 cartas Épica o Legendaria, eliges 1'],shop:['🛒','Tienda','Compra cartas con almas'],event:['❓','Evento','Algo inesperado'],altar:['🕯️','Altar maldito','1 Legendaria al azar y 1 maldición']};
 // mapa de la Torre (estilo Slay the Spire): abajo el piso de donde vienes (✓), encima el actual (los caminos que puedes
 // tomar brillan y llevan su nombre) y arriba los 3 siguientes. Cada tipo de casilla tiene su color.
-const NCOL={fight:'#b0644f',elite:'#9b59d6',treasure:'#e8b04a',rest:'#f08a3c',event:'#4f95e6',altar:'#c0392b',boss:'#e5484d'};
+const NCOL={shop:'#2fb37a',fight:'#b0644f',elite:'#9b59d6',treasure:'#e8b04a',rest:'#f08a3c',event:'#4f95e6',altar:'#c0392b',boss:'#e5484d'};
 function towerMapSvg(run){ const map=G.towerMap(), past=(run.trail||[]).filter(t=>t.f===run.floor-1).slice(-1)[0], rows=(past?[{...past.row,past:past.i}]:[]).concat(map);
   const W=320, rowH=84, H=rows.length*rowH+18, X=c=>[60,160,260][c], Y=r=>H-46-r*rowH, near=(a,b)=>Math.abs(a-b)<=1, cur=past?1:0;
   const links=(A,B)=>{ const L=[]; A.c.forEach((ca,i)=>{ let t=B.c.map((cb,j)=>near(ca,cb)?j:-1).filter(j=>j>=0); if(!t.length) t=B.c.map((_,j)=>j); t.forEach(j=>L.push([i,j])) }); return L };
@@ -678,9 +678,9 @@ function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==nu
     mercader:['Mercader errante',`Elige 1 de 3 mejoras raras por ${E.mercader.cost} almas.`,[['si',`Comprar · ${E.mercader.cost} almas`,so>=E.mercader.cost]]],
     trampa:['Cofre sospechoso',`${Math.round(E.trampa.good*100)} %: una mejora. Si no, pierdes el ${E.trampa.hp*100} % de vida.`,[['si','Abrir',true]]],
     santuario:['Santuario',`Por ${E.santuario.cost} almas: te curas el ${E.santuario.heal*100} % o quitas una maldición.`,[['si',`Curar · ${E.santuario.cost}`,so>=E.santuario.cost],['quitar',`Quitar maldición · ${E.santuario.cost}`,so>=E.santuario.cost&&cu>0]]],
-    altar:['Altar maldito','Eliges una mejora legendaria, pero te llevas una maldición al azar.',[['si','Aceptar',true]]]}[id];
+    altar:['Altar maldito','Recibes una carta Legendaria al azar y una maldición al azar.',[['si','Aceptar',true]]]}[id];
   return `<div class="misTop"><b>${V[0]}</b><p class="hint">${V[1]}</p><div class="ctrl">${V[2].map(([c,t,ok])=>`<button class="btn gold" data-act="towerEv" data-k="${c}" ${ok?'':'disabled'}>${t}</button>`).join('')}<button class="btn" data-act="towerEv" data-k="no">Irse</button></div></div>` }
-const RARC={C:'var(--rC)',R:'var(--rR)',L:'var(--rL)'};
+const RARC={C:'var(--rC)',R:'var(--rR)',E:'var(--rE)',L:'var(--rL)'};
 function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower;
   let body='';
@@ -688,14 +688,21 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower;
       <button class="btn gold" data-act="towerStart">Empezar partida</button>`;
   else if(run.lives<=0) body=`<p class="hint">Has caído en el piso ${run.floor}.</p><div class="ctrl">${run.adRev?'':'<button class="btn gold" data-act="towerRev">Revivir · anuncio</button>'}<button class="btn" data-act="towerQuit">Terminar partida</button></div>`;
   else if(run.ev) body=towerEvView(run);
+  else if(run.shop) body=towerShopView(run);
   else if(run.pick) body=`<p class="hint">Elige una mejora:</p><div class="mlist">${run.pick.map(boonCard).join('')||'<p class="hint">No quedan mejoras nuevas.</p>'}</div>${run.pick.length?'':'<button class="btn gold" data-act="towerPick" data-k="0">Seguir</button>'}`;
   else body=towerMapSvg(run);
   const nfx=run?run.boons.length+(run.curses||[]).length:0;
   return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Torre</h3>${run?`<button class="btn sm" data-act="towerFx">Efectos${nfx?` · ${nfx}`:''}</button>`:''}</div>
     <div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Almas</span><b>${run?run.souls||0:'–'}</b></div><div><span class="s">Salud</span><b>${run?Math.round((run.hp==null?1:run.hp)*100)+' %':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
     ${body}</section>` }
+// tienda: 3 cartas de cualquier calidad, compras las que puedas pagar con almas
+function towerShopView(run){ const sh=run.shop;
+  return `<p class="hint">Tienda · tienes <b>${run.souls||0}</b> almas</p><div class="mlist">${sh.items.map((b,i)=>{ const f=G.boonInfo(b), c=RARC[f.r], got=sh.bought.includes(i), pr=G.towerPrice(b);
+    return `<div class="mcard bcard" style="border-color:${c}${got?';opacity:.45':''}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}</span></div><span class="s">${esc(f.desc)}</span>
+      <div class="ctrl" style="justify-content:flex-end">${got?'<span class="pill" style="color:var(--good)">Comprada</span>':`<button class="btn sm gold" data-act="towerBuy" data-k="${i}" ${(run.souls||0)>=pr?'':'disabled'}>${pr} almas</button>`}</div></div>` }).join('')}</div>
+    <button class="btn" data-act="towerShopLeave">Salir de la tienda</button>` }
 // Efectos de la partida (ocultos en la pantalla): por calidad (Legendaria → Rara → Común) y las maldiciones al final
-function towerFxModal(){ const T=G.towerState(), run=T.run; if(!run) return; const ord={L:0,R:1,C:2};
+function towerFxModal(){ const T=G.towerState(), run=T.run; if(!run) return; const ord={L:0,E:1,R:2,C:3};
   const list=Object.values(run.boons.reduce((o,b)=>{ const f=G.boonInfo(b), k=f.name; (o[k]=o[k]||{f,n:0}).n++; return o },{})).sort((a,b)=>ord[a.f.r]-ord[b.f.r]||a.f.name.localeCompare(b.f.name));
   const nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of CFG.tower.rewards) if(f%r.every===0) return {f,b:r.b} })();
   showModal(`<h3>Efectos</h3><div class="tfx">${list.map(({f,n})=>`<div style="border-color:${RARC[f.r]}"><b style="color:${RARC[f.r]}">${f.name}${n>1?' ×'+n:''}</b><span class="s">${f.kind} · ${esc(f.desc)}</span></div>`).join('')||'<p class="hint">Aún no tienes mejoras.</p>'}
@@ -1050,7 +1057,9 @@ const ACT={
   dailyOpen:()=>G.calState().can||!G.wheelState().free?calModal():wheelModal(),
   towerStart:()=>{ G.towerStart(); renderTab() },
   towerFx:()=>towerFxModal(),
-  towerEv:(b,k)=>{ const r=G.towerEvent(k); if(!r) return; if(r.curse) toast('Maldición: '+CFG.tower.curses[r.curse].name); if(r.good===false) toast('¡Era una trampa!'); renderTab() },
+  towerBuy:(b,k)=>{ if(G.towerShopBuy(+k)){ haptic('ok'); renderTab() } },
+  towerShopLeave:()=>{ G.towerShopLeave(); renderTab() },
+  towerEv:(b,k)=>{ const r=G.towerEvent(k); if(!r) return; if(r.curse) toast((r.got?G.boonInfo(r.got).name+' · ':'')+'Maldición: '+CFG.tower.curses[r.curse].name); if(r.good===false) toast('¡Era una trampa!'); renderTab() },
   towerRev:()=>playAd(()=>{ closeModal(); if(G.towerRevive()){ toast('¡Has revivido!'); renderTab() } }),
   towerQuit:()=>showModal(`<h3>¿Terminar la partida?</h3><p class="hint">Pierdes las mejoras de esta partida. El récord y los premios se quedan.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="towerQuitYes">Terminar</button></div>`),
   towerQuitYes:()=>{ G.towerAbandon(); closeModal(); renderTab() },

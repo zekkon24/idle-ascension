@@ -621,12 +621,13 @@ function createGame(opts){
     for(const c of Object.keys(CFG.classes)){ out.push({t:'pas',cls:c,path:'A'},{t:'pas',cls:c,path:'B'},{t:'leg',cls:c}); for(const src of ['cls','evo','evoB']) if(CFG.skills[src][c]) out.push({t:'sk',src,cls:c}); }
     for(const id in T.fx) out.push({t:'fx',id});
     const nSk=run.boons.filter(b=>b.t==='sk').length;
-    return out.filter(b=>!(b.t==='fx'&&T.fx[b.id].r==='C')&&have.has(boonKey(b))?false:!mine.has(boonKey(b))&&!(b.t==='sk'&&nSk>=T.maxSkills)&&!(b.t==='fx'&&b.id==='pacto'&&run.lives<=1)) }
+    return out.filter(b=>!(b.t==='fx'&&T.fx[b.id].r==='C')&&have.has(boonKey(b))?false:!mine.has(boonKey(b))&&!(b.t==='sk'&&nSk>=T.maxSkills) ) }
+  const RNAME={C:'Común',R:'Rara',E:'Épica',L:'Legendaria'};
   const boonKey=b=>b.t==='fx'?'fx:'+b.id:b.t==='pas'?'pas:'+b.cls+':'+b.path:b.t==='leg'?'leg:'+b.cls:'sk:'+b.src+':'+b.cls;
-  function boonInfo(b){ if(b.t==='fx'){ const d=CFG.tower.fx[b.id]; return {kind:(d.obj?'Objeto · ':'')+{C:'Común',R:'Rara',L:'Legendaria'}[d.r],name:d.name,desc:d.desc,r:d.r} }
-    if(b.t==='pas'){ const p=boonPas(b); return {kind:'Grimorio',name:p.name,desc:p.passive,r:'L'} }
-    if(b.t==='leg'){ const d=CFG.weapon.legend[b.cls]; return {kind:'Objeto',name:d.name,desc:d.desc,r:'L'} }
-    const k=CFG.skills[b.src][b.cls]; return {kind:'Hechizo',name:k.name,desc:k.desc,r:'L'} }
+  function boonInfo(b){ if(b.t==='fx'){ const d=CFG.tower.fx[b.id]; return {kind:(d.obj?'Objeto · ':'')+RNAME[d.r],name:d.name,desc:d.desc,r:d.r} }
+    if(b.t==='pas'){ const p=boonPas(b); return {kind:'Grimorio · Épica',name:p.name,desc:p.passive,r:'E'} }
+    if(b.t==='leg'){ const d=CFG.weapon.legend[b.cls]; return {kind:'Objeto · Legendaria',name:d.name,desc:d.desc,r:'L'} }
+    const k=CFG.skills[b.src][b.cls]; return {kind:'Hechizo · Épica',name:k.name,desc:k.desc,r:'E'} }
   function towerNodes(f){ const T=CFG.tower, Hd=T.hard; if(f%T.boss.every===0) return ['boss'];
     // pisos sin escapatoria: solo combates (a veces solo élite)
     if(Hd&&f>=Hd.forcedFrom&&rand()<Hd.forced){ const r=rand(); return r<0.3?['elite']:r<0.65?['elite','elite']:['elite','fight'] }
@@ -646,21 +647,25 @@ function createGame(opts){
     const ok=m.c.map(c=>Math.abs(c-run.from)<=1); return ok.some(x=>x)?!!ok[i]:true }
   function towerAbandon(){ const T=towerState(); if(inEvent()) return false; T.run=null; save(); emit('change'); return true }
   // elegir camino: combate (normal/élite/jefe) o directo a la recompensa (tesoro/descanso)
-  function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k||!towerCanGo(i)) return false;
+  function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||run.shop||run.ev||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k||!towerCanGo(i)) return false;
     { const m=towerMap()[0]; run.from=m&&m.n===run.nodes?m.c[i]:null; if(m&&m.n===run.nodes) run.trail=(run.trail||[]).concat([{f:run.floor,row:m,i}]).slice(-2); }
-    if(k==='treasure'){ run.pick=towerOffer(3,false,'obj'); run.cat='obj'; run.after='next'; save(); emit('change'); return {k} }
+    if(k==='shop'){ run.shop={items:towerOffer(CFG.tower.shop.n,'shop'),bought:[]}; save(); emit('change'); return {k} }
+    if(k==='treasure'){ run.pick=towerOffer(3,'normal','obj'); run.cat='obj'; run.after='next'; save(); emit('change'); return {k} }
     if(k==='event'){ const E=Object.keys(CFG.tower.events); run.ev={id:E[Math.floor(rand()*E.length)]}; save(); emit('change'); return {k,ev:run.ev.id} }
     if(k==='altar'){ run.ev={id:'altar'}; save(); emit('change'); return {k,ev:'altar'} }
     // descanso: vida al máximo (si ya estaba llena, solo te ahorras el combate)
     if(k==='rest'){ const full=!(run.hp<1); run.hp=1; towerNext(); save(); emit('change'); return {k,full} }
     towerFight(k); return {k} }
-  const boonRar=b=>b.t==='fx'?CFG.tower.fx[b.id].r:'L';
+  const boonRar=b=>b.t==='fx'?CFG.tower.fx[b.id].r:b.t==='leg'?'L':'E';   // hechizos y grimorios: Épica · objetos de arma: Legendaria
   // tipo de carta: 'upg' mejoras (efectos de la Torre y hechizos) · 'obj' objetos (de la Torre y de armas legendarias) · 'grim' grimorios (pasivas de camino)
   const boonCat=b=>b.t==='pas'?'grim':b.t==='leg'||(b.t==='fx'&&CFG.tower.fx[b.id].obj)?'obj':'upg';
-  function towerOffer(n,better,cat){ let pool=boonPool(); if(cat){ const f=pool.filter(b=>boonCat(b)===cat); if(f.length) pool=f; } const o=[], P=CFG.tower.rarity[better?'better':'normal'];
-    while(o.length<n&&pool.length){ let r=rand()*(P.C+P.R+P.L); const want=r<P.C?'C':r<P.C+P.R?'R':'L';
+  // n cartas distintas; q = pesos por calidad (CFG.tower.rarity[...]); cat: solo de un tipo ('obj' en el cofre)
+  function towerOffer(n,q,cat){ let pool=boonPool(); if(cat){ const f=pool.filter(b=>boonCat(b)===cat); if(f.length) pool=f; }
+    const P=typeof q==='string'?CFG.tower.rarity[q]:q&&typeof q==='object'?q:CFG.tower.rarity.normal, K=Object.keys(P), o=[];
+    pool=pool.filter(b=>P[boonRar(b)]); if(!pool.length) pool=boonPool();
+    while(o.length<n&&pool.length){ let r=rand()*K.reduce((a,k)=>a+P[k],0), want=K[K.length-1]; for(const k of K){ r-=P[k]; if(r<0){ want=k; break } }
       let cand=pool.filter(b=>boonRar(b)===want); if(!cand.length) cand=pool; const b=cand[Math.floor(rand()*cand.length)];
-      o.push(b); for(let i=pool.length-1;i>=0;i--) if(boonKey(pool[i])===boonKey(b)) pool.splice(i,1); } return o }
+      o.push(b); pool=pool.filter(x=>boonKey(x)!==boonKey(b)); } return o }
   // n cartas solo de una rareza (Legendaria en la fuente y el altar, Rara en el mercader)
   function towerOfferR(n,r){ let pool=boonPool().filter(b=>boonRar(b)===r); const o=[];
     while(o.length<n&&pool.length){ const b=pool[Math.floor(rand()*pool.length)]; o.push(b); pool=pool.filter(x=>boonKey(x)!==boonKey(b)); } return o }
@@ -671,11 +676,11 @@ function createGame(opts){
     if(c==='no'){ run.ev=null; towerNext(); save(); emit('change'); return res }
     if(id==='fuente'){ if(hp()<=E.fuente.hp) return false; run.hp=hp()-E.fuente.hp; pick(towerOfferR(3,'L')); }
     else if(id==='mercader'){ if((run.souls||0)<E.mercader.cost) return false; run.souls-=E.mercader.cost; pick(towerOfferR(3,'R')); }
-    else if(id==='trampa'){ if(rand()<E.trampa.good){ res.good=true; pick(towerOffer(3,false,null)); } else { res.good=false; run.hp=Math.max(0.01,hp()-E.trampa.hp); run.ev=null; towerNext(); } }
+    else if(id==='trampa'){ if(rand()<E.trampa.good){ res.good=true; pick(towerOffer(3,'normal')); } else { res.good=false; run.hp=Math.max(0.01,hp()-E.trampa.hp); run.ev=null; towerNext(); } }
     else if(id==='santuario'){ if((run.souls||0)<E.santuario.cost) return false;
       if(c==='quitar'){ if(!(run.curses||[]).length) return false; run.curses.pop(); } else run.hp=Math.min(1,hp()+E.santuario.heal);
       run.souls-=E.santuario.cost; run.ev=null; towerNext(); }
-    else if(id==='altar'){ res.curse=addCurse(run); pick(towerOfferR(3,'L')); }
+    else if(id==='altar'){ res.curse=addCurse(run); const b=towerOfferR(1,'L')[0]; if(b){ res.got=b; towerGain(run,b); } run.ev=null; if(!(run.extra>0&&towerExtra(run))) towerNext(); }   // 1 legendaria al azar + 1 maldición
     save(); emit('change'); return res }
   // Torre: guarda de los enemigos (escudo de élite e invulnerabilidad de jefe) — devuelve true si el enemigo no muere
   function towerGuard(e){ const seen=e.hpSeen==null?e.max:e.hpSeen, dealt=seen-e.hp; if(!(dealt>0)) return e.hp>0;
@@ -727,7 +732,7 @@ function createGame(opts){
     if(won){ run.hp=Math.min(1,frac+CFG.tower.fx.aliento.heal*tfxRun('aliento')); const so=CFG.tower.souls[k]||0; run.souls=(run.souls||0)+so;
       res={won:true,floor:run.floor,k,hp:run.hp,souls:so};
       if(k==='fight'){ res.pick=false; save(); emit('towerEnd',res); startWave(); towerNext(); return res }   // combate normal: solo almas, sin mejora
-      run.cat=k==='elite'?'grim':'upg'; run.pick=towerOffer(3,k==='elite'||k==='boss',run.cat); run.after='next'; res.pick=true }   // 1 carta por casilla
+      run.cat=null; run.pick=towerOffer(2,k==='boss'?'boss':'elite'); run.after='next'; res.pick=true }   // élite: 2 cartas hasta Épica · jefe: 2 entre Épica y Legendaria (eliges 1)
     else if(run.rev>0){ run.rev--; run.hp=CFG.tower.revHp; res={won:false,floor:run.floor,lives:run.lives,crown:true} }   // Corona del rey: revives una vez
     else { run.lives--; run.hp=0; res={won:false,floor:run.floor,lives:run.lives,canRevive:!run.adRev} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
@@ -735,12 +740,21 @@ function createGame(opts){
   function towerRevive(){ const run=S.tower&&S.tower.run; if(!run||run.lives>0||run.adRev) return false; run.adRev=true; run.lives=1; run.hp=CFG.tower.revHp; save(); emit('change'); return true }
   // elegir mejora (o saltarla si no quedan); después, al siguiente piso
   const tfxRun=id=>(S.tower&&S.tower.run?S.tower.run.boons:[]).filter(b=>b.t==='fx'&&b.id===id).length;
-  function towerPick(i){ const run=S.tower&&S.tower.run; if(!run||!run.pick) return false; const b=run.pick[i]; if(b) run.boons.push(b);
-    if(b&&b.t==='fx'&&b.id==='aguante'){ const g=CFG.tower.fx.aguante.hp, m0=1+g*(tfxRun('aguante')-1); run.hp=Math.min(1,((run.hp==null?1:run.hp)*m0+g)/(m0+g)); }   // (se suma: cura la parte nueva)
-    if(b&&b.t==='fx'&&b.id==='pacto'){ addCurse(run); run.extra=(run.extra||0)+2; }   // Pacto: una maldición a cambio de 2 mejoras más
-    if(b&&b.t==='fx'&&b.id==='corona') run.rev=(run.rev||0)+1;                        // Corona: revives una vez
-    if(run.extra){ run.extra--; run.pick=towerOffer(3,false,run.cat); if(run.pick.length){ save(); emit('change'); return true } }
+  // conseguir una carta (elegida, comprada o al azar): efectos al momento de Aguante, Pacto y Corona
+  function towerGain(run,b){ run.boons.push(b); if(b.t!=='fx') return;
+    if(b.id==='aguante'){ const g=CFG.tower.fx.aguante.hp, m0=1+g*(tfxRun('aguante')-1); run.hp=Math.min(1,((run.hp==null?1:run.hp)*m0+g)/(m0+g)); }   // (se suma: cura la parte nueva)
+    if(b.id==='pacto'){ addCurse(run); run.extra=(run.extra||0)+2; }   // Pacto: una maldición a cambio de 2 mejoras más
+    if(b.id==='corona') run.rev=(run.rev||0)+1; }                      // Corona: revives una vez
+  // Pacto pendiente: ofrece otra carta (devuelve true si la hay)
+  function towerExtra(run){ while(run.extra>0){ run.extra--; run.pick=towerOffer(3,'normal'); run.after='next'; if(run.pick.length){ save(); emit('change'); return true } } run.pick=null; return false }
+  function towerPick(i){ const run=S.tower&&S.tower.run; if(!run||!run.pick) return false; const b=run.pick[i]; if(b) towerGain(run,b);
+    if(run.extra&&towerExtra(run)) return true;
     run.pick=null; towerNext(); return true }
+  // tienda: compra cualquiera de sus cartas si tienes almas; al salir, al siguiente piso
+  function towerShopBuy(i){ const run=S.tower&&S.tower.run, sh=run&&run.shop; if(!sh||sh.bought.includes(i)) return false; const b=sh.items[i]; if(!b) return false;
+    const c=CFG.tower.shop.price[boonRar(b)]; if((run.souls||0)<c) return false; run.souls-=c; sh.bought.push(i); towerGain(run,b); save(); emit('change'); return true }
+  function towerShopLeave(){ const run=S.tower&&S.tower.run; if(!run||!run.shop) return false; run.shop=null; if(!(run.extra>0&&towerExtra(run))) towerNext(); save(); emit('change'); return true }
+  const towerPrice=b=>CFG.tower.shop.price[boonRar(b)];
   function towerNext(){ const T=towerState(), run=T.run; run.floor++; const f=run.floor-1;
     let got=null; if(f>T.best){ T.best=f; for(const r of CFG.tower.rewards) if(f%r.every===0){ got=r.b; giveBundle(r.b); break } }
     const map=towerMap(); map.shift(); while(map.length<(CFG.tower.look||1)) map.push(towerRow(run.floor+map.length)); run.nodes=map[0].n;
@@ -1172,7 +1186,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, boonInfo, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerPrice, boonInfo, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,
