@@ -131,8 +131,11 @@ G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+f
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡El jefe se enfurece!':'¡El jefe llama refuerzos!'); });
-G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab(); later(()=>showModal(r.won?`<h3>¡Piso ${r.floor} superado!</h3><p class="hint">${r.k==='elite'?'Élite: eliges 2 grimorios.':'Elige tu mejora en la Torre.'}</p><button class="btn gold" data-act="close">Elegir</button>`
-  :`<h3>Derrota en el piso ${r.floor}</h3><p class="hint">${r.lives>0?`Te quedan ${r.lives} vida${r.lives>1?'s':''}: vuelve a intentarlo.`:'Sin vidas: puedes comprar una o terminar la partida.'}</p><button class="btn gold" data-act="close">Vale</button>`)); });
+G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab();
+  if(r.won&&!r.pick){ toast(`Piso ${r.floor} superado · +${r.souls} almas`); return }   // combate normal: sin mejora, solo almas
+  later(()=>showModal(r.won?`<h3>¡Piso ${r.floor} superado!</h3><p class="hint">${r.k==='elite'?'Élite: eliges 2 grimorios.':'Elige tu mejora.'}${r.souls?` +${r.souls} almas.`:''}</p><button class="btn gold" data-act="close">Elegir</button>`
+  :r.crown?`<h3>¡La corona te salva!</h3><p class="hint">Revives con el ${Math.round(CFG.tower.revHp*100)} % de vida en el piso ${r.floor}.</p><button class="btn gold" data-act="close">Seguir</button>`
+  :`<h3>Has caído en el piso ${r.floor}</h3><p class="hint">${r.canRevive?'Puedes revivir una vez viendo un anuncio.':'Fin de la partida.'}</p><div class="ctrl">${r.canRevive?'<button class="btn gold" data-act="towerRev">Revivir · anuncio</button>':''}<button class="btn" data-act="close">Vale</button></div>`)); });
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
   else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
@@ -233,7 +236,7 @@ function updateHUD(){
   avatar();   // nombre y, debajo, la clase
   setHTML($('#xpLbl'),`Nv ${S.lvl}${S.lvl>=G.lvlCap()?' máx.':''}`);
   $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
+  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor+(B.mech?' · '+MECH[B.mech].toUpperCase():B.node==='elite'?' · '+[...new Set(B.enemies.flatMap(e=>e.traits||[]))].map(TRAIT).join(', ').toUpperCase():''):B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
   const fab=$('#upFab'); if(fab){ fab.hidden=tab!=='up'||ev; if(!fab.hidden) setHTML(fab,upStrip()); }
   // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
@@ -650,19 +653,41 @@ const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), 
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 /* ---------- Torre (roguelike) ---------- */
-const NODE={fight:['⚔️','Combate','Enemigos normales · elige 1 mejora'],elite:['💀','Élite','Pocos y muy duros · elige 2 grimorios (pasivas de camino)'],treasure:['🎁','Cofre','Sin luchar · elige 1 objeto'],rest:['🔥','Hoguera','Te curas del todo y pasas al siguiente piso sin luchar'],boss:['👑','Jefe','Jefe del piso · elige 1 mejora']};
+const NODE={fight:['⚔️','Combate','Enemigos normales · +'+CFG.tower.souls.fight+' almas'],elite:['💀','Élite','Con rasgos · 2 grimorios'],treasure:['🎁','Cofre','Sin luchar · 1 objeto'],rest:['🔥','Hoguera','Te curas del todo'],boss:['👑','Jefe','Jefe del piso · 1 mejora'],event:['❓','Evento','Algo inesperado'],altar:['🕯️','Altar maldito','Legendaria a cambio de una maldición']};
+// mapa de la Torre (estilo Slay the Spire): abajo el piso actual, arriba los siguientes; las líneas unen columnas vecinas
+function towerMapSvg(run){ const map=G.towerMap(), W=320, rowH=74, H=map.length*rowH+20, X=c=>[52,160,268][c], Y=r=>H-30-r*rowH, near=(a,b)=>Math.abs(a-b)<=1;
+  const links=(A,B)=>{ const L=[]; A.c.forEach((ca,i)=>{ let t=B.c.map((cb,j)=>near(ca,cb)?j:-1).filter(j=>j>=0); if(!t.length) t=B.c.map((_,j)=>j); t.forEach(j=>L.push([ca,B.c[j]])) }); return L };
+  let svg='';
+  for(let r=0;r<map.length-1;r++) for(const [a,b] of links(map[r],map[r+1])) svg+=`<line x1="${X(a)}" y1="${Y(r)-22}" x2="${X(b)}" y2="${Y(r+1)+22}" class="tml"/>`;
+  if(run.from!=null) map[0].c.forEach((c,i)=>{ if(G.towerCanGo(i)) svg+=`<line x1="${X(run.from)}" y1="${H-6}" x2="${X(c)}" y2="${Y(0)+22}" class="tml on"/>` });
+  map.forEach((row,r)=>{ svg+=`<text x="6" y="${Y(r)+4}" class="tmf">${run.floor+r}</text>`;
+    row.n.forEach((k,i)=>{ const x=X(row.c[i]), y=Y(r), cur=r===0, ok=cur&&G.towerCanGo(i), N=NODE[k];
+      svg+=`<g class="tmn${cur?(ok?' ok':' no'):''}${k==='boss'?' boss':''}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}><circle cx="${x}" cy="${y}" r="${k==='boss'?27:22}"/><text x="${x}" y="${y+7}" text-anchor="middle">${N[0]}</text></g>` }) });
+  return `<svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%">${svg}</svg>` }
+const TRAIT=k=>CFG.tower.traits[k].name, MECH={invocador:'Invocador',enfurecido:'Enfurecido',fases:'Escudo de fases'};
+// eventos ?: título, texto y botones [c, etiqueta, ¿se puede?]
+function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==null?1:run.hp, so=run.souls||0, cu=(run.curses||[]).length;
+  const V={fuente:['Fuente de sangre',`Pierdes el ${E.fuente.hp*100} % de vida y eliges una mejora legendaria.`,[['si','Beber',hp>E.fuente.hp]]],
+    mercader:['Mercader errante',`Elige 1 de 3 mejoras raras por ${E.mercader.cost} almas.`,[['si',`Comprar · ${E.mercader.cost} almas`,so>=E.mercader.cost]]],
+    trampa:['Cofre sospechoso',`${Math.round(E.trampa.good*100)} %: una mejora. Si no, pierdes el ${E.trampa.hp*100} % de vida.`,[['si','Abrir',true]]],
+    santuario:['Santuario',`Por ${E.santuario.cost} almas: te curas el ${E.santuario.heal*100} % o quitas una maldición.`,[['si',`Curar · ${E.santuario.cost}`,so>=E.santuario.cost],['quitar',`Quitar maldición · ${E.santuario.cost}`,so>=E.santuario.cost&&cu>0]]],
+    altar:['Altar maldito','Eliges una mejora legendaria, pero te llevas una maldición al azar.',[['si','Aceptar',true]]]}[id];
+  return `<div class="misTop"><b>${V[0]}</b><p class="hint">${V[1]}</p><div class="ctrl">${V[2].map(([c,t,ok])=>`<button class="btn gold" data-act="towerEv" data-k="${c}" ${ok?'':'disabled'}>${t}</button>`).join('')}<button class="btn" data-act="towerEv" data-k="no">Irse</button></div></div>` }
 const RARC={C:'var(--rC)',R:'var(--rR)',L:'var(--rL)'};
 function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower, nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of TC.rewards) if(f%r.every===0) return {f,b:r.b} })();
   let body='';
-  if(!run) body=`<p class="hint">Elige camino en cada piso y una mejora al ganar. La vida no se recupera entre combates. ${TC.lives} vidas.</p>
+  if(!run) body=`<p class="hint">Roguelike: todos empiezan con el mismo héroe, tu personaje no cuenta. 1 vida.</p>
       <button class="btn gold" data-act="towerStart">Empezar partida</button>`;
-  else if(run.lives<=0) body=`<p class="hint">Te quedaste sin vidas en el piso ${run.floor}.</p><div class="ctrl"><button class="btn gold" data-act="towerLife" ${G.tokens()>=TC.lifeCost?'':'disabled'}>+1 vida · ${TC.lifeCost} tokens</button><button class="btn" data-act="towerQuit">Terminar partida</button></div>`;
+  else if(run.lives<=0) body=`<p class="hint">Has caído en el piso ${run.floor}.</p><div class="ctrl">${run.adRev?'':'<button class="btn gold" data-act="towerRev">Revivir · anuncio</button>'}<button class="btn" data-act="towerQuit">Terminar partida</button></div>`;
+  else if(run.ev) body=towerEvView(run);
   else if(run.pick) body=`<p class="hint">Elige una mejora:</p><div class="mlist">${run.pick.map(boonCard).join('')||'<p class="hint">No quedan mejoras nuevas.</p>'}</div>${run.pick.length?'':'<button class="btn gold" data-act="towerPick" data-k="0">Seguir</button>'}`;
-  else body=`<p class="hint">${run.nodes.every(k=>k==='elite'||k==='fight')&&run.floor>=CFG.tower.hard.forcedFrom&&run.floor%CFG.tower.boss.every?'<b style="color:var(--bad)">¡Sin escapatoria!</b> Solo quedan combates. ':''}${run.floor>=CFG.tower.hard.eliteFrom?'Los élites están reforzados. ':''}Elige camino:</p><div class="mlist">${run.nodes.map((k,i)=>{ const N=NODE[k]; return `<button class="mcard mbig" data-act="towerGo" data-k="${i}"><div class="ctrl" style="justify-content:space-between"><b>${N[0]} ${N[1]}</b></div><span class="s">${N[2]}</span></button>` }).join('')}</div>`;
+  else body=`${run.nodes.every(k=>k==='elite'||k==='fight')&&run.floor>=CFG.tower.hard.forcedFrom&&run.floor%CFG.tower.boss.every?'<p class="hint"><b style="color:var(--bad)">¡Sin escapatoria!</b></p>':''}${towerMapSvg(run)}
+    <div class="tleg">${Object.entries(NODE).map(([k,N])=>`<span title="${N[2]}">${N[0]} ${N[1]}</span>`).join('')}</div>`;
+  const curses=run&&(run.curses||[]).length?`<div class="tchips">${run.curses.map(c=>`<span class="pill" style="color:var(--bad)" title="${esc(CFG.tower.curses[c].desc)}">☠ ${CFG.tower.curses[c].name}</span>`).join('')}</div>`:'';
   const boons=run&&run.boons.length?`<div class="tchips">${Object.values(run.boons.reduce((o,b)=>{ const f=G.boonInfo(b), k=f.name; (o[k]=o[k]||{f,n:0}).n++; return o },{})).map(({f,n})=>`<span class="pill" title="${esc(f.desc)}" style="color:${RARC[f.r]}">${f.name}${n>1?' ×'+n:''}</span>`).join('')}</div>`:'';
-  return `<section class="panel"><h3>Torre</h3><div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Vidas</span><b>${run?'♥'.repeat(Math.max(0,run.lives))||'0':'–'}</b></div><div><span class="s">Salud</span><b>${run?Math.round((run.hp==null?1:run.hp)*100)+' %':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
-    ${body}${boons}${run&&run.lives>0&&!G.inEvent()?'<button class="btn sm" data-act="towerQuit">Abandonar partida</button>':''}
+  return `<section class="panel"><h3>Torre</h3><div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Almas</span><b>${run?run.souls||0:'–'}</b></div><div><span class="s">Salud</span><b>${run?Math.round((run.hp==null?1:run.hp)*100)+' %':'–'}</b></div><div><span class="s">Récord</span><b>${T.best}</b></div></div>
+    ${body}${curses}${boons}${run&&run.lives>0&&!G.inEvent()?'<button class="btn sm" data-act="towerQuit">Abandonar partida</button>':''}
     <p class="hint">Siguiente premio: piso ${nxt.f} · ${bundleHTML(nxt.b)}</p></section>` }
 /* ---------- PvP: contra el fantasma de otro jugador (su partida al 100 %) · Elo ---------- */
 // Dentro de Telegram el servidor elige el rival (jugadores reales con puntos parecidos; si no hay, bot) y guarda los puntos.
@@ -1011,6 +1036,8 @@ const ACT={
   calOpen:()=>calModal(),
   dailyOpen:()=>G.calState().can||!G.wheelState().free?calModal():wheelModal(),
   towerStart:()=>{ G.towerStart(); renderTab() },
+  towerEv:(b,k)=>{ const r=G.towerEvent(k); if(!r) return; if(r.curse) toast('Maldición: '+CFG.tower.curses[r.curse].name); if(r.good===false) toast('¡Era una trampa!'); renderTab() },
+  towerRev:()=>playAd(()=>{ closeModal(); if(G.towerRevive()){ toast('¡Has revivido!'); renderTab() } }),
   towerQuit:()=>showModal(`<h3>¿Terminar la partida?</h3><p class="hint">Pierdes las mejoras de esta partida. El récord y los premios se quedan.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="towerQuitYes">Terminar</button></div>`),
   towerQuitYes:()=>{ G.towerAbandon(); closeModal(); renderTab() },
   towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Hoguera: ya tenías la vida llena':'Hoguera: vida al máximo'); if(G.inEvent()){ tab='up'; } renderTab() },
