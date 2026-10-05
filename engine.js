@@ -647,7 +647,7 @@ function createGame(opts){
   function towerAbandon(){ const T=towerState(); if(inEvent()) return false; T.run=null; save(); emit('change'); return true }
   // elegir camino: combate (normal/élite/jefe) o directo a la recompensa (tesoro/descanso)
   function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k||!towerCanGo(i)) return false;
-    { const m=towerMap()[0]; run.from=m&&m.n===run.nodes?m.c[i]:null; }
+    { const m=towerMap()[0]; run.from=m&&m.n===run.nodes?m.c[i]:null; if(m&&m.n===run.nodes) run.trail=(run.trail||[]).concat([{f:run.floor,row:m,i}]).slice(-2); }
     if(k==='treasure'){ run.pick=towerOffer(3,false,'obj'); run.cat='obj'; run.after='next'; save(); emit('change'); return {k} }
     if(k==='event'){ const E=Object.keys(CFG.tower.events); run.ev={id:E[Math.floor(rand()*E.length)]}; save(); emit('change'); return {k,ev:run.ev.id} }
     if(k==='altar'){ run.ev={id:'altar'}; save(); emit('change'); return {k,ev:'altar'} }
@@ -727,7 +727,7 @@ function createGame(opts){
     if(won){ run.hp=Math.min(1,frac+CFG.tower.fx.aliento.heal*tfxRun('aliento')); const so=CFG.tower.souls[k]||0; run.souls=(run.souls||0)+so;
       res={won:true,floor:run.floor,k,hp:run.hp,souls:so};
       if(k==='fight'){ res.pick=false; save(); emit('towerEnd',res); startWave(); towerNext(); return res }   // combate normal: solo almas, sin mejora
-      run.cat=k==='elite'?'grim':'upg'; run.pick=towerOffer(3,k==='elite'||k==='boss',run.cat); run.after='next'; if(k==='elite') run.extra=1; res.pick=true }
+      run.cat=k==='elite'?'grim':'upg'; run.pick=towerOffer(3,k==='elite'||k==='boss',run.cat); run.after='next'; res.pick=true }   // 1 carta por casilla
     else if(run.rev>0){ run.rev--; run.hp=CFG.tower.revHp; res={won:false,floor:run.floor,lives:run.lives,crown:true} }   // Corona del rey: revives una vez
     else { run.lives--; run.hp=0; res={won:false,floor:run.floor,lives:run.lives,canRevive:!run.adRev} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
