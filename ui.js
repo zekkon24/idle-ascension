@@ -1342,10 +1342,14 @@ function draw(dt){
     g.fillText(f.txt+(f.crit?'!':''),x,y); }
   g.globalAlpha=1; fx.flash=Math.max(0,fx.flash-dt);
   // barras de vida: la tuya (con el escudo en azul) y la de los enemigos (todos juntos), iguales y a la misma altura
-  if(bars){ const bw=Math.min(150,W*0.36), by=Math.max(16,gy-122), hp=Math.max(0,G.B.hp/h.hp), sh=Math.min(1,G.heroShield()/h.hp);
-    hpBar(g,Math.max(8,hx-bw/2),by,bw,hp,['#7fdc8c','#3f9d55'],fmt(Math.ceil(Math.max(0,G.B.hp))),sh);
+  if(bars){ const by=Math.max(16,gy-122), hp=Math.max(0,G.B.hp/h.hp), sh=Math.min(1,G.heroShield()/h.hp);
+    // los iconos de la derecha (premios diarios y potenciadores) no deben tapar la barra de los enemigos: acaba antes de ellos
+    let x1=W-12; { const sb=document.querySelector('.sidebtns'); if(sb&&!sb.hidden){ const r=sb.getBoundingClientRect(), c=cv.getBoundingClientRect(), t=(r.top-c.top)/sc, b=(r.bottom-c.top)/sc;
+      if(r.width&&b>by-4&&t<by+16) x1=Math.min(x1,(r.left-c.left)/sc-6); } }
+    const bw=Math.max(60,Math.min(150,W*0.36,x1-(hx+70))), x0=Math.max(8,hx-bw/2);
+    hpBar(g,x0,by,bw,hp,['#7fdc8c','#3f9d55'],fmt(Math.ceil(Math.max(0,G.B.hp))),sh);
     const fb=B.kind==='pvp'?{p:Math.max(0,B.enemies[0].hp/B.enemies[0].max)}:!(B.event&&!B.kind)?foeBar(B):null;
-    if(fb) hpBar(g,W-12-bw,by,bw,fb.p,['#f07a6e','#b8433a'],fb.inf?'∞':Math.ceil(fb.p*100)+' %',0); }
+    if(fb) hpBar(g,x1-bw,by,bw,fb.p,['#f07a6e','#b8433a'],fb.inf?'∞':Math.ceil(fb.p*100)+' %',0); }
 }
 // barra de vida bonita: fondo oscuro con borde, relleno con degradado y brillo, escudo en azul encima y el texto dentro
 function hpBar(g,x,y,w,p,col,txt,sh){ const h=12, r=6, rr=(X,Y,W2,H2,R)=>{ g.beginPath(); g.moveTo(X+R,Y); g.arcTo(X+W2,Y,X+W2,Y+H2,R); g.arcTo(X+W2,Y+H2,X,Y+H2,R); g.arcTo(X,Y+H2,X,Y,R); g.arcTo(X,Y,X+W2,Y,R); g.closePath(); };
