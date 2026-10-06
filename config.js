@@ -134,12 +134,13 @@ const CFG = {
   // Base de los enemigos = (los de tu fase récord)^w × (los «a tu medida»)^(1−w): con w bajo, tus estadísticas pesan poco.
   // «A tu medida»: tardas tKill s en matar a uno normal y cada golpe suyo te quita hitPct de tu vida (en el piso 1).
   // Crecimiento por tramos: curve=[[desde piso, ×vida por piso, ×ataque por piso], …] (suave hasta el 50, duro hasta el 100, muy duro después).
-  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.009, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
+  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.008, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
     elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:1.2,atk:1.6},
     // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
-    // todo sube de golpe (×jump); desde 'forcedFrom', a veces (forced) el piso solo ofrece combates (élite y/o combate, sin hoguera ni cofre)
-    hard:{eliteFrom:40, eliteEvery:10, eliteUp:1.25, jumpEvery:25, jump:1.15, forcedFrom:25, forced:0.3},
-    nodes:{fight:40,elite:16,treasure:8,rest:12,event:10,altar:6,shop:8}, // peso de cada tipo de camino
+    // todo sube de golpe (×jump)
+    hard:{eliteFrom:40, eliteEvery:10, eliteUp:1.25, jumpEvery:25, jump:1.15},
+    nodes:{fight:62,elite:16,treasure:5,event:7,shop:6,altar:4}, // peso de cada casilla en las rutas (la hoguera solo sale antes del jefe)
+    route:{mergeAt:5, mergeFrom:15, merge:0.08},   // desde el piso 15, las 2 rutas se juntan en un élite: el piso 5 de cada 10 y un 8 % de los demás
     // Torre = roguelike puro: tu personaje NO cuenta (ni nivel, arma, mejoras, evolución ni grimorio). Todos empiezan con este
     // héroe único y solo se hacen fuertes con las mejoras de la partida. Los enemigos tampoco dependen de tu cuenta.
     hero:{hp:1000,atk:100,df:20,spd:1,cr:0.05,cd:0.5}, foeDf:10,

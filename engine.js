@@ -657,11 +657,21 @@ function createGame(opts){
   const TYPEN={stat:'Estadística',skill:'Habilidad',fx:'Efecto',pas:'Pasiva'}, FAMN={f:'Fuerza y Crítico',e:'Escudo y Espinas',s:'Sangre'};
   function boonInfo(b){ const d=boonDef(b); if(!d) return {kind:'',name:'?',desc:'',r:'C'};
     return {kind:(b.t==='g'?'Grimorio':'Carta')+' · '+TYPEN[d.type]+' · '+RNAME[d.r],name:d.name,desc:d.desc,r:d.r,fam:d.fam,famName:FAMN[d.fam]||'',type:d.type,grim:b.t==='g'} }
-  function towerNodes(f){ const T=CFG.tower, Hd=T.hard; if(f%T.boss.every===0) return ['boss'];
-    // pisos sin escapatoria: solo combates (a veces solo élite)
-    if(Hd&&f>=Hd.forcedFrom&&rand()<Hd.forced){ const r=rand(); return r<0.3?['elite']:r<0.65?['elite','elite']:['elite','fight'] }
-    const types=Object.keys(T.nodes), w=types.map(k=>T.nodes[k]), n=2+(rand()<0.5?1:0), out=[];
-    for(let i=0;i<n;i++){ let r=rand()*w.reduce((a,b)=>a+b,0), j=0; for(;j<types.length-1;j++){ r-=w[j]; if(r<0) break; } out.push(types[j]); }
+  // Mapa en 2 rutas (izquierda y derecha) que no se cruzan. De vez en cuando se juntan en un élite que no se puede evitar
+  // (desde mergeFrom: el piso 5 de cada tramo de 10 y, a veces, al azar), y siempre en la hoguera (el piso antes del
+  // jefe) y en el jefe. Cofres, eventos, tiendas y altares son raros (nodes).
+  // Mapa en 2 rutas (izquierda y derecha) que no se cruzan. De vez en cuando se juntan en un élite que no se puede evitar
+  // (desde mergeFrom: el piso 5 de cada tramo de 10 y, a veces, al azar), y siempre en la hoguera (el piso antes del
+  // jefe) y en el jefe. Justo antes de cada élite obligatorio, una ruta tiene tienda y la otra hoguera. Cofres, eventos,
+  // tiendas y altares son raros (nodes).
+  const towerMerge=f=>{ const T=CFG.tower, R=T.route, run=S.tower&&S.tower.run, sd=(run&&run.seed)||0; if(f<R.mergeFrom||f%T.boss.every===0||f%T.boss.every===T.boss.every-1) return false;
+    if(f%T.boss.every===R.mergeAt) return true; const x=Math.sin(f*12.9898+sd*78.233)*43758.5453; return x-Math.floor(x)<R.merge };   // fijo para cada partida (se puede ver por adelantado)
+  function towerNodes(f){ const T=CFG.tower; if(f%T.boss.every===0) return ['boss'];
+    if(f%T.boss.every===T.boss.every-1) return ['rest'];   // hoguera: antes del jefe
+    if(towerMerge(f)) return ['elite'];                     // las dos rutas se juntan en un élite
+    if(towerMerge(f+1)) return rand()<0.5?['shop','rest']:['rest','shop'];   // antes del élite: tienda o hoguera, según la ruta
+    const types=Object.keys(T.nodes), w=types.map(k=>T.nodes[k]), out=[];
+    for(let i=0;i<2;i++){ let r=rand()*w.reduce((a,b)=>a+b,0), j=0; for(;j<types.length-1;j++){ r-=w[j]; if(r<0) break; } out.push(types[j]); }
     if(!out.some(t=>t==='fight'||t==='elite')) out[0]='fight'; return out }
   function towerState(){ const T=S.tower=S.tower||{best:0,run:null,got:0};
     if(T.run&&(T.run.boons||[]).some(b=>b.t!=='c'&&b.t!=='g')) T.run=null;   // partida de la Torre antigua (otras mejoras): se cierra
@@ -669,9 +679,9 @@ function createGame(opts){
     return T }
   // run.hp: fracción de vida que te queda en la partida (no se cura entre combates; al perder una vida vuelves con la vida llena)
   // mapa estilo Slay the Spire: cada piso tiene caminos en 3 columnas (0-2); desde una columna solo puedes ir a la misma o a las vecinas
-  function towerRow(f){ const n=towerNodes(f), c=n.length>=3?[0,1,2]:n.length===2?(r=>r<1/3?[0,1]:r<2/3?[1,2]:[0,2])(rand()):[1]; return {n,c} }
+  function towerRow(f){ const n=towerNodes(f), c=n.length>=2?[0,2]:[1]; return {n,c} }   // 2 rutas: columna 0 (izquierda) y 2 (derecha); el cruce, en el centro
   function towerStart(){ if(inEvent()) return false; const T=towerState(), L=CFG.tower.look||1, map=[]; for(let i=0;i<L;i++) map.push(towerRow(1+i));
-    T.run={floor:1,lives:CFG.tower.lives,hp:1,boons:[],map,nodes:map[0].n,from:null,pick:null,souls:0,curses:[],ev:null}; save(); emit('change'); return true }
+    T.run={seed:Math.floor(rand()*1e6),floor:1,lives:CFG.tower.lives,hp:1,boons:[],map,nodes:map[0].n,from:null,pick:null,souls:0,curses:[],ev:null}; save(); emit('change'); return true }
   // mapa: los pisos que se ven (el primero es el actual), cada uno {n: tipos, c: columnas}
   function towerMap(){ const run=S.tower&&S.tower.run; if(!run) return []; if(!run.map||!run.map[0]||!run.map[0].n) run.map=[{n:run.nodes,c:run.nodes.map((_,i)=>run.nodes.length===1?1:i)}];
     if(run.map[0].n!==run.nodes&&JSON.stringify(run.map[0].n)===JSON.stringify(run.nodes)) run.nodes=run.map[0].n;   // al cargar la partida (JSON) se vuelve a enlazar
