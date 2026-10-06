@@ -272,7 +272,7 @@ function updateHUD(){
   const db=$('#dailyBtn'); if(db){ db.hidden=ev; $('#dailyN').hidden=!(G.calState().can||G.wheelState().free); }   // premios diarios: calendario y ruleta
   const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
   const shv=G.heroShield();   // escudo: barra azul encima de la vida (y +escudo en el número)
-  $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#shBar').style.width=Math.min(100,shv/h.hp*100)+'%'; $('#hpTxt').textContent=fmt(Math.ceil(hpv))+(shv>=1?' +'+fmt(Math.ceil(shv)):'');
+  { const tot=Math.max(1,(hpv+shv)/h.hp); $('#hpBar').style.width=hpv/h.hp/tot*100+'%'; const sb=$('#shBar'); sb.style.left=hpv/h.hp/tot*100+'%'; sb.style.width=shv/h.hp/tot*100+'%'; $('#hpBar').parentNode.classList.toggle('shon',shv>=1); } $('#hpTxt').textContent=fmt(Math.ceil(hpv))+(shv>=1?' +'+fmt(Math.ceil(shv)):'');
   $('#xpBar').style.width=xpp+'%'; $('#xpTxt').textContent=Math.floor(xpp)+' %';
   const hs=$('#hStats'); if(hs) hs.innerHTML=`<div class="sl">
       <span>Vida <b>${fmt(h.hp)}</b></span><span>Def <b>${fmt(h.df)}</b></span>${h.ls?`<span>Robo <b>${pct(h.ls)}</b></span>`:''}${h.ev?`<span>Evasión <b>${pct(h.ev)}</b></span>`:''}</div>
@@ -1347,18 +1347,27 @@ function draw(dt){
     let x1=W-12; { const sb=document.querySelector('.sidebtns'); if(sb&&!sb.hidden){ const r=sb.getBoundingClientRect(), c=cv.getBoundingClientRect(), t=(r.top-c.top)/sc, b=(r.bottom-c.top)/sc;
       if(r.width&&b>by-4&&t<by+16) x1=Math.min(x1,(r.left-c.left)/sc-6); } }
     const bw=Math.max(60,Math.min(150,W*0.36,x1-(hx+70))), x0=Math.max(8,hx-bw/2);
-    hpBar(g,x0,by,bw,hp,['#7fdc8c','#3f9d55'],fmt(Math.ceil(Math.max(0,G.B.hp))),sh);
+    hpBar(g,x0,by,bw,hp,['#7fdc8c','#3f9d55'],Math.ceil(hp*100)+' %',sh);
     const fb=B.kind==='pvp'?{p:Math.max(0,B.enemies[0].hp/B.enemies[0].max)}:!(B.event&&!B.kind)?foeBar(B):null;
     if(fb) hpBar(g,x1-bw,by,bw,fb.p,['#f07a6e','#b8433a'],fb.inf?'∞':Math.ceil(fb.p*100)+' %',0); }
 }
-// barra de vida bonita: fondo oscuro con borde, relleno con degradado y brillo, escudo en azul encima y el texto dentro
+// barra de vida bonita: fondo oscuro con borde, relleno con degradado y brillo, y el texto dentro.
+// Escudo: tramo azul justo después de la vida (si vida + escudo pasan del 100 %, se reparte la barra), borde azul brillante
+// y «+X %» en azul junto al texto.
 function hpBar(g,x,y,w,p,col,txt,sh){ const h=12, r=6, rr=(X,Y,W2,H2,R)=>{ g.beginPath(); g.moveTo(X+R,Y); g.arcTo(X+W2,Y,X+W2,Y+H2,R); g.arcTo(X+W2,Y+H2,X,Y+H2,R); g.arcTo(X,Y+H2,X,Y,R); g.arcTo(X,Y,X+W2,Y,R); g.closePath(); };
-  g.save(); rr(x-1.5,y-1.5,w+3,h+3,r+1.5); g.fillStyle='rgba(8,8,14,.78)'; g.fill(); g.strokeStyle='rgba(236,231,218,.35)'; g.lineWidth=1; g.stroke();
+  const S=sh>0.004, tot=Math.max(1,p+(S?sh:0)), pw=w*p/tot, sw=S?w*sh/tot:0;
+  g.save(); rr(x-1.5,y-1.5,w+3,h+3,r+1.5); g.fillStyle='rgba(8,8,14,.78)'; g.fill();
+  if(S){ g.shadowColor='#5fb2ff'; g.shadowBlur=6; g.strokeStyle='#7cc2ff'; g.lineWidth=1.5; } else { g.strokeStyle='rgba(236,231,218,.35)'; g.lineWidth=1; }
+  g.stroke(); g.shadowBlur=0;
   rr(x,y,w,h,r); g.clip();
-  if(p>0){ const gr=g.createLinearGradient(0,y,0,y+h); gr.addColorStop(0,col[0]); gr.addColorStop(1,col[1]); g.fillStyle=gr; g.fillRect(x,y,w*p,h); }
-  if(sh>0){ const gs=g.createLinearGradient(0,y,0,y+h); gs.addColorStop(0,'#8cc8ff'); gs.addColorStop(1,'#3d7fd6'); g.fillStyle=gs; g.globalAlpha=0.9; g.fillRect(x,y,w*sh,h*0.42); g.globalAlpha=1; }
+  if(pw>0){ const gr=g.createLinearGradient(0,y,0,y+h); gr.addColorStop(0,col[0]); gr.addColorStop(1,col[1]); g.fillStyle=gr; g.fillRect(x,y,pw,h); }
+  if(sw>0){ const gs=g.createLinearGradient(0,y,0,y+h); gs.addColorStop(0,'#b6dcff'); gs.addColorStop(1,'#3a7fe0'); g.fillStyle=gs; g.fillRect(x+pw,y,sw,h);
+    g.fillStyle='rgba(255,255,255,.55)'; g.fillRect(x+pw,y,1.2,h); }   // separación vida | escudo
   g.fillStyle='rgba(255,255,255,.18)'; g.fillRect(x,y,w,h*0.35);
-  g.restore(); g.textAlign='center'; g.font='800 9px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#fff'; g.strokeStyle='rgba(0,0,0,.7)'; g.lineWidth=2.5; g.strokeText(txt,x+w/2,y+h-2.5); g.fillText(txt,x+w/2,y+h-2.5); }
+  g.restore(); g.font='800 9px "Nunito Sans", system-ui, sans-serif'; g.lineWidth=2.5; g.strokeStyle='rgba(0,0,0,.75)';
+  const st=S?' +'+Math.ceil(sh*100)+' %':'', tw=g.measureText(txt).width, sw2=st?g.measureText(st).width:0, tx=x+w/2-(tw+sw2)/2, ty=y+h-2.5;
+  g.textAlign='left'; g.strokeText(txt,tx,ty); g.fillStyle='#fff'; g.fillText(txt,tx,ty);
+  if(st){ g.strokeText(st,tx+tw,ty); g.fillStyle='#a9d6ff'; g.fillText(st,tx+tw,ty); } }
 
 /* ---------- bucle ---------- */
 let last=performance.now(), hudT=0, drawT=0, offT=0;
