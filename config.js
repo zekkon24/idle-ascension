@@ -143,6 +143,23 @@ const CFG = {
     // Torre = roguelike puro: tu personaje NO cuenta (ni nivel, arma, mejoras, evolución ni grimorio). Todos empiezan con este
     // héroe único y solo se hacen fuertes con las mejoras de la partida. Los enemigos tampoco dependen de tu cuenta.
     hero:{hp:1000,atk:100,df:20,spd:1,cr:0.05,cd:0.5}, foeDf:10,
+    // cartas que no salen en la Torre (no sirven con el héroe único): Sacrificio, Oscuro, Oráculo, Vacío y Filo del vacío
+    exclude:['sk:evoB:Clerigo','pas:Clerigo:B','pas:Clerigo:A','leg:Mago','leg:Asesino'],
+    // ajustes SOLO para la Torre (la campaña no cambia): hechizos, objetos de arma y extras de los grimorios flojos
+    skillTune:{armaduraHielo:{cd:40,burst:1,shards:1,desc:'Lanza 1 esquirla a todos; 8 s: quien te pega recibe 1 esquirla'},
+      juicio:{heal:0.02,dps:0.35,desc:'6 s: aura que te cura el 2 % por segundo y quema a los enemigos cercanos'},
+      bola:{mult:2,burn:0.3,desc:'200 % en área hasta a 3 enemigos y los quema'},
+      baluarte:{cd:30,reflect:1.2,desc:'8 s: +25 % de defensa y devuelves el 120 % del daño que recibes'},
+      marca:{cd:25,mult:0.8,desc:'8 s: el objetivo recibe +80 % de daño'},
+      perforante:{mult:2.5,desc:'Disparo que atraviesa a todos (250 %)'}, ejecutar:{mult:6.5,desc:'Golpe del 650 %; si mata, la recarga baja a la mitad'}, sed:{ls:0.3,desc:'Pierdes el 20 % de vida: escudo de la mitad y +30 % de robo de vida 12 s'},
+      nube:{cd:25,dur:5,desc:'5 s: una nube envenena a todos cada segundo (+3 acumulaciones)'},
+      clon:{mult:0.6,desc:'8 s: un clon copia tus golpes al 60 %'},
+      combustion:{burnHit:0.8,desc:'8 s: tus golpes queman (80 % de su daño por segundo, 3 s)'}},
+    skillRar:{armaduraHielo:'L'},   // hechizos que en la Torre son Legendarios (los demás, Épicos)
+    legTune:{tajo:{mult:1.5,desc:'Tus golpes dan también al enemigo de detrás (150 %)'}, rafaga:{every:2,arrows:3,desc:'Cada 2.º golpe son 3 flechas'}, llamarada:{every:4,pct:1.4,desc:'Cada 4.º golpe quema a todos (140 % por s, 3 s)'}},
+    grimTune:{veneno:{pct:0.35}},   // Envenenador más suave en la Torre
+    pasBonus:{'Guerrero:A':{atk:0.3,txt:'+30 % de daño'}, 'Arquero:A':{spd:0.25,txt:'+25 % de velocidad'}, 'Asesino:A':{cr:0.1,txt:'+10 % de crítico'},
+      'Guerrero:B':{hp:0.25,txt:'+25 % de vida'}, 'Arquero:B':{atk:0.3,txt:'+30 % de daño'}},
     look:3,   // el mapa enseña los caminos de los próximos 3 pisos
     // almas: moneda de la partida (solo para los eventos ?). Combate normal / élite / jefe
     souls:{fight:10,elite:5,boss:20},
@@ -170,28 +187,28 @@ const CFG = {
       fuerza:{r:'C',name:'Fuerza',desc:'+15 % de daño',atk:0.15},
       aguante:{r:'C',name:'Aguante',desc:'+20 % de vida máxima (y te cura esa parte)',hp:0.2},
       rapidez:{r:'C',name:'Rapidez',desc:'+12 % de velocidad de ataque',spd:0.12},
-      precision:{r:'C',name:'Precisión',desc:'+8 % de crítico',cr:0.08},
+      precision:{r:'C',name:'Precisión',desc:'+15 % de crítico y +40 % de daño crítico',cr:0.15,cd:0.4},
       vampiro:{r:'C',name:'Vampiro',desc:'5 % de robo de vida',ls:0.05},
       aliento:{r:'C',name:'Segundo aliento',desc:'Al ganar cada combate recuperas el 15 % de la vida',heal:0.15},
       escudo:{r:'E',name:'Escudo inicial',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
-      espinas:{r:'R',name:'Espinas',desc:'Devuelves el 30 % del daño que recibes',reflect:0.3},
-      ejecutor:{r:'R',name:'Ejecutor',desc:'+50 % de daño a enemigos por debajo del 30 % de vida',below:0.3,mult:0.5},
-      recarga:{r:'R',name:'Recarga rápida',desc:'Las habilidades recargan un 25 % más rápido',cd:0.75},
-      cadena:{r:'E',name:'Cadena',desc:'Cada 5.º golpe salta también a otro enemigo',every:5},
-      cristal:{r:'E',name:'Cristal',desc:'+40 % de daño, pero −25 % de vida',atk:0.4,hp:-0.25},
-      furia:{r:'E',name:'Furia sangrienta',desc:'+1 % de daño por cada 1 % de vida que te falta',per:1},
-      explosion:{r:'L',name:'Explosión',desc:'Los enemigos que mueren explotan: 30 % de su vida a los cercanos',pct:0.3},
-      eco:{r:'L',name:'Eco',desc:'Tus hechizos de la Torre se lanzan dos veces'},
-      maestria:{r:'L',name:'Maestría',desc:'Tus pasivas de la Torre son un 50 % más fuertes',mult:1.5},
+      espinas:{r:'R',name:'Espinas',desc:'Devuelves el 60 % del daño que recibes',reflect:0.6},
+      ejecutor:{r:'R',name:'Ejecutor',desc:'+120 % de daño a enemigos por debajo del 50 % de vida',below:0.5,mult:1.2},
+      recarga:{r:'R',name:'Recarga rápida',desc:'Tus hechizos recargan un 35 % más rápido (solo sirve con hechizos)',cd:0.65},
+      cadena:{r:'E',name:'Cadena',desc:'Cada 2.º golpe salta también a otro enemigo',every:2},
+      cristal:{r:'E',name:'Cristal',desc:'+60 % de daño, pero −20 % de vida',atk:0.6,hp:-0.2},
+      furia:{r:'E',name:'Furia sangrienta',desc:'+2 % de daño por cada 1 % de vida que te falta',per:2},
+      explosion:{r:'L',name:'Explosión',desc:'Los enemigos que mueren explotan: 120 % de su vida a los cercanos',pct:1.2},
+      eco:{r:'L',name:'Eco',desc:'Tus hechizos se lanzan dos veces (solo sirve con hechizos)'},
+      maestria:{r:'L',name:'Maestría',desc:'Tus grimorios son un 50 % más fuertes (solo sirve con grimorios)',mult:1.5},
       pacto:{r:'L',name:'Pacto',desc:'Te llevas una maldición y eliges 2 mejoras más'},
       // objetos de la Torre (obj:true)
       afilar:{r:'C',obj:true,name:'Piedra de afilar',desc:'Los 3 primeros golpes de cada combate son críticos',n:3},
       talisman:{r:'C',obj:true,name:'Talismán de piedra',desc:'Recibes un 10 % menos de daño',taken:0.1},
-      hielo:{r:'E',obj:true,name:'Orbe de hielo',desc:'15 % de congelar 1 s al enemigo que golpeas',chance:0.15,dur:1},
-      colmillo:{r:'R',obj:true,name:'Colmillo',desc:'Los críticos te curan el 2 % de tu vida',heal:0.02},
+      hielo:{r:'E',obj:true,name:'Orbe de hielo',desc:'35 % de congelar 2 s al enemigo que golpeas',chance:0.35,dur:2},
+      colmillo:{r:'R',obj:true,name:'Colmillo',desc:'+10 % de crítico y los críticos te curan el 3 % de tu vida',heal:0.03,cr:0.1},
       corona:{r:'L',obj:true,name:'Corona del rey',desc:'Si caes, revives una vez con el 50 % de vida'},
-      reloj:{r:'L',obj:true,name:'Reloj de arena',desc:'Cada 20 s todas tus habilidades se recargan al instante',every:20},
-      martillo:{r:'L',obj:true,name:'Martillo del trueno',desc:'Cada 8 s un rayo golpea a todos los enemigos (200 % de tu daño)',every:8,mult:2}}},
+      reloj:{r:'L',obj:true,name:'Reloj de arena',desc:'Cada 15 s tus hechizos se recargan al instante (solo sirve con hechizos)',every:15},
+      martillo:{r:'L',obj:true,name:'Martillo del trueno',desc:'Cada 5 s un rayo golpea a todos los enemigos (400 % de tu daño)',every:5,mult:4}}},
   // PvP asíncrono: duelo al mejor de 3 contra la copia de otro jugador o un «fantasma» (rival generado a tu nivel).
   // Antes de cada ronda eliges 1 de 3 cartas (mejoras de la Torre, se acumulan en el duelo). Ronda: hasta 'round' s (si nadie
   // cae, gana quien tenga más % de vida). Estadísticas mezcladas: tu^mix × media^(1−mix). Liga semanal con puntos tipo ELO (k).

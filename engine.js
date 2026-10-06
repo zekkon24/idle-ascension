@@ -121,13 +121,14 @@ function createGame(opts){
     };
   }
   // Torre: héroe único (CFG.tower.hero) + solo las mejoras y maldiciones de la partida
-  function towerStats(){ const H=CFG.tower.hero, TF=CFG.tower.fx, ps=towerBase(), sec={hpp:0,dfp:0,bd:0}, gs=grimSet(), GFX=grimFxT();
+  function towerStats(){ const H=CFG.tower.hero, TF=CFG.tower.fx, ps=towerBase(), sec={hpp:0,dfp:0,bd:0}, gs=grimSet(), GFX=grimFxT(), X={atk:0,hp:0,spd:0,cr:0};
+    for(const b of tBoons()) if(b.t==='pas'){ const x=CFG.tower.pasBonus[b.cls+':'+b.path]; if(x) for(const k in X) X[k]+=x[k]||0; }   // extras de los grimorios flojos
     if(gs.has('fortaleza')){ sec.dfp+=GFX.fortaleza.df; sec.bd+=GFX.fortaleza.boss||0; } if(gs.has('cazador')) sec.bd+=GFX.cazador.boss;
     return { hpK:1, dfK:1,
-      hp:H.hp*Math.max(0.2,1+TF.aguante.hp*tfx('aguante')+TF.cristal.hp*tfx('cristal')+CFG.tower.curses.fragil.hp*tcurse('fragil')),
-      atk:H.atk*(1+TF.fuerza.atk*tfx('fuerza')+TF.cristal.atk*tfx('cristal')), df:H.df*(1+sec.dfp),
-      spd:H.spd*(ps.spd||1)*(1+TF.rapidez.spd*tfx('rapidez')),
-      cr:Math.min(CFG.caps.cr,H.cr+(ps.cr||0)+TF.precision.cr*tfx('precision')), cd:H.cd+(ps.cd||0), ev:0,
+      hp:H.hp*Math.max(0.2,1+X.hp+TF.aguante.hp*tfx('aguante')+TF.cristal.hp*tfx('cristal')+CFG.tower.curses.fragil.hp*tcurse('fragil')),
+      atk:H.atk*(1+X.atk+TF.fuerza.atk*tfx('fuerza')+TF.cristal.atk*tfx('cristal')), df:H.df*(1+sec.dfp),
+      spd:H.spd*(ps.spd||1)*(1+X.spd+TF.rapidez.spd*tfx('rapidez')),
+      cr:Math.min(CFG.caps.cr,H.cr+X.cr+(ps.cr||0)+TF.precision.cr*tfx('precision')+TF.colmillo.cr*tfx('colmillo')), cd:H.cd+(ps.cd||0)+TF.precision.cd*tfx('precision'), ev:0,
       ls:Math.min(CFG.caps.ls,TF.vampiro.ls*tfx('vampiro')), bd:sec.bd, ranged:false,
       regen:ps.regen||0, dmgTaken:(ps.dmgTaken||1)*Math.max(0.5,1-TF.talisman.taken*tfx('talisman')), xpMult:1, noHeal:false } }
   // Modos (Normal, Pesadilla, Infierno): la fase f de un modo usa los enemigos de la fase f+off
@@ -196,7 +197,7 @@ function createGame(opts){
     if((k==='cls'||k==='evo')&&towerOn()) return null;   // Torre: solo los hechizos que consigues en la partida
     if(k==='cls') return K.cls[S.cls]||null;
     if(k==='evo') return S.evo>=1?(S.path==='B'?(K.evoB||{})[S.cls]:K.evo[S.cls])||null:null;
-    if(k[0]==='t'&&towerOn()){ const t=towerSkills()[+k.slice(1)-1]; return t?K[t.src][t.cls]:null } return null }
+    if(k[0]==='t'&&towerOn()){ const t=towerSkills()[+k.slice(1)-1]; if(!t) return null; const d=K[t.src][t.cls]; return {...d,...(CFG.tower.skillTune[d.id]||{})} } return null }   // (ajustes de la Torre)
   const SLOTS0=['cls','evo'], TSL=['t1','t2'];
   const SLOTS_=()=>towerOn()?SLOTS0.concat(TSL.slice(0,towerSkills().length)):SLOTS0;
   const skillSlots=()=>SLOTS_().filter(skillDef);
@@ -299,6 +300,7 @@ function createGame(opts){
       if(GS.has('escarcha')&&!tg.dead&&(tg.shards=(tg.shards||0)+1)>=FX.escarcha.need){ const GF=FX.escarcha; tg.shards=0; const x=dmgF(h.atk,tg.df*(1-GF.ignoreDf))*GF.mult*(B.boss?1+h.bd:1)*buffMul('atk'); tg.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x);   // Escarcha: 3 esquirlas → daño y congela
         tg.frozen=B.t+FX.escarcha.freeze; emit('hit',{e:tg,d:x,crit:false,frost:true}); emit('fx',{k:'congelar',e:tg}); }
       if(LS.llamarada&&(B.flare=(B.flare||0)+1)%LS.llamarada.every===0) for(const e of B.enemies){ if(e.dead) continue; e.dot=B.t+LS.llamarada.dur; e.dotDps=LS.llamarada.pct*(LS.llamarada.n||1)*d; e.dotKind='fuego'; }   // Llamarada solar
+      if(CT<(BUF.combust||0)&&BUF.burnHit&&!(P&&P.burnPct)){ tg.dot=B.t+3; tg.dotDps=Math.max(tg.dotKind==='fuego'&&tg.dot>B.t?tg.dotDps||0:0,BUF.burnHit*d); tg.dotKind='fuego'; }   // Combustión (Torre): tus golpes queman
       if(GS.has('veneno')){ const GF=FX.veneno; tg.poison=(tg.poison||[]).filter(x=>x.until>B.t); tg.poison.push({until:B.t+GF.dur,dps:GF.pct*d}); if(tg.poison.length>GF.max) tg.poison.shift(); }
       if(bonOn()&&tfx('hielo')&&!tg.dead&&rand()<Math.min(0.6,CFG.tower.fx.hielo.chance*tfx('hielo'))) tg.frozen=Math.max(tg.frozen||0,B.t+CFG.tower.fx.hielo.dur);   // Torre: Orbe de hielo
       if(tg.hp<=0) kill(tg);
@@ -324,7 +326,7 @@ function createGame(opts){
           case 'luz': { for(let i=0;i<sk.hits;i++){ const e=alive()[0]; if(e) hurt(e,base(e)*sk.mult,k); }   // golpes encadenados al mismo objetivo (si muere, siguen con el siguiente)
             BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
           case 'sed': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.shield=(BUF.shield||0)+sk.shield*Math.max(0,lost); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
-          case 'combustion': BUF.combust=CT+sk.dur; BUF.burnUp=sk.burnUp||0; break;
+          case 'combustion': BUF.combust=CT+sk.dur; BUF.burnUp=sk.burnUp||0; BUF.burnHit=sk.burnHit||0; break;
           case 'perforante': for(const e of alive()) hurt(e,base(e)*sk.mult,k); break;
           case 'clon': BUF.clone={until:CT+sk.dur,mult:sk.mult}; break;
           case 'juicio': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps}; break;
@@ -459,10 +461,10 @@ function createGame(opts){
   function stepP(){ const L=tBoons().filter(b=>b.t==='pas'&&b.path!=='B'); const P=towerOn()?null:evoP(); if(!L.length) return P;
     const o={...(P||{})}, m=1+(CFG.tower.fx.maestria.mult-1)*tfx('maestria'); for(const b of L){ const p={...boonPas(b)}; if(m!==1) for(const k of MAEK) if(typeof p[k]==='number') p[k]*=m; Object.assign(o,p); } return o }
   // efectos de grimorio de la Torre (con Maestría, más fuertes)
-  function grimFxT(){ const F=CFG.grimoire.fx; if(!tfx('maestria')) return F; const m=1+(CFG.tower.fx.maestria.mult-1)*tfx('maestria'), o={}; for(const k in F){ o[k]={...F[k]}; for(const q of ['pct','mult','boss','atk','df']) if(typeof o[k][q]==='number') o[k][q]*=m; } return o }
+  function grimFxT(){ const F0=CFG.grimoire.fx, GT=CFG.tower.grimTune||{}, F={}; for(const k in F0) F[k]={...F0[k],...(GT[k]||{})}; if(!tfx('maestria')) return F; const m=1+(CFG.tower.fx.maestria.mult-1)*tfx('maestria'), o={}; for(const k in F){ o[k]={...F[k]}; for(const q of ['pct','mult','boss','atk','df']) if(typeof o[k][q]==='number') o[k][q]*=m; } return o }
   function towerBase(){ const o={}; for(const b of tBoons()) if(b.t==='pas'&&b.path!=='B') Object.assign(o,boonPas(b).base||{}); return o }
   function grimSet(){ const s=new Set(); const g=towerOn()?null:grimFx(); if(g) s.add(g); for(const b of tBoons()) if(b.t==='pas'&&b.path==='B') s.add(boonPas(b).grim); return s }
-  function legendSet(){ const o={}, L=towerOn()?null:legendFx(); if(L) o[L.id]=L; for(const b of tBoons()) if(b.t==='leg'){ const d=CFG.weapon.legend[b.cls]; o[d.id]={...d,n:o[d.id]&&o[d.id].n?o[d.id].n+1:1}; } return o }   // (las copias se acumulan)
+  function legendSet(){ const o={}, L=towerOn()?null:legendFx(); if(L) o[L.id]=L; for(const b of tBoons()) if(b.t==='leg'){ const d={...CFG.weapon.legend[b.cls],...(CFG.tower.legTune[CFG.weapon.legend[b.cls].id]||{})}; o[d.id]={...d,n:o[d.id]&&o[d.id].n?o[d.id].n+1:1}; } return o }   // (las copias se acumulan)
   // cuánto sube el daño medio por la pasiva: estimación que solo se usa hasta tener DPS medido (dpsK)
   function evoDps(h){ const P=evoP(); if(!P) return 1; let m=1;
     if(P.double) m*=1+P.double; if(P.critNext) m*=1+h.cr*P.critNext; if(P.rage) m*=1+P.rageCap*0.5;
@@ -621,14 +623,15 @@ function createGame(opts){
     for(const c of Object.keys(CFG.classes)){ out.push({t:'pas',cls:c,path:'A'},{t:'pas',cls:c,path:'B'},{t:'leg',cls:c}); for(const src of ['cls','evo','evoB']) if(CFG.skills[src][c]) out.push({t:'sk',src,cls:c}); }
     for(const id in T.fx) out.push({t:'fx',id});
     const nSk=run.boons.filter(b=>b.t==='sk').length;
+    const EX=new Set(T.exclude||[]);
     const stack=b=>b.t==='fx'||(b.t==='leg'&&b.cls!=='Asesino');   // se acumulan: todas las mejoras y objetos (no grimorios, hechizos ni Filo del vacío)
-    return out.filter(b=>!stack(b)&&have.has(boonKey(b))?false:!mine.has(boonKey(b))&&!(b.t==='sk'&&nSk>=T.maxSkills) ) }
+    return out.filter(b=>EX.has(boonKey(b))?false:!stack(b)&&have.has(boonKey(b))?false:!mine.has(boonKey(b))&&!(b.t==='sk'&&nSk>=T.maxSkills) ) }
   const RNAME={C:'Común',R:'Rara',E:'Épica',L:'Legendaria'};
   const boonKey=b=>b.t==='fx'?'fx:'+b.id:b.t==='pas'?'pas:'+b.cls+':'+b.path:b.t==='leg'?'leg:'+b.cls:'sk:'+b.src+':'+b.cls;
   function boonInfo(b){ if(b.t==='fx'){ const d=CFG.tower.fx[b.id]; return {kind:(d.obj?'Objeto · ':'')+RNAME[d.r],name:d.name,desc:d.desc,r:d.r} }
-    if(b.t==='pas'){ const p=boonPas(b); return {kind:'Grimorio · Épica',name:p.name,desc:p.passive,r:'E'} }
-    if(b.t==='leg'){ const d=CFG.weapon.legend[b.cls]; return {kind:'Objeto · Legendaria',name:d.name,desc:d.desc,r:'L'} }
-    const k=CFG.skills[b.src][b.cls]; return {kind:'Hechizo · Épica',name:k.name,desc:k.desc,r:'E'} }
+    if(b.t==='pas'){ const p=boonPas(b), x=CFG.tower.pasBonus[b.cls+':'+b.path]; return {kind:'Grimorio · Épica',name:p.name,desc:p.passive+(x?' · Torre: '+x.txt:''),r:'E'} }
+    if(b.t==='leg'){ const d={...CFG.weapon.legend[b.cls],...(CFG.tower.legTune[CFG.weapon.legend[b.cls].id]||{})}; return {kind:'Objeto · Legendaria',name:d.name,desc:d.desc,r:'L'} }
+    const k={...CFG.skills[b.src][b.cls]}; Object.assign(k,CFG.tower.skillTune[k.id]||{}); const r=(CFG.tower.skillRar||{})[k.id]||'E'; return {kind:'Hechizo · '+RNAME[r],name:k.name,desc:k.desc,r} }
   function towerNodes(f){ const T=CFG.tower, Hd=T.hard; if(f%T.boss.every===0) return ['boss'];
     // pisos sin escapatoria: solo combates (a veces solo élite)
     if(Hd&&f>=Hd.forcedFrom&&rand()<Hd.forced){ const r=rand(); return r<0.3?['elite']:r<0.65?['elite','elite']:['elite','fight'] }
@@ -659,7 +662,7 @@ function createGame(opts){
     // descanso: vida al máximo (si ya estaba llena, solo te ahorras el combate)
     if(k==='rest'){ const full=!(run.hp<1); run.hp=1; towerNext(); save(); emit('change'); return {k,full} }
     towerFight(k); return {k} }
-  const boonRar=b=>b.t==='fx'?CFG.tower.fx[b.id].r:b.t==='leg'?'L':'E';   // hechizos y grimorios: Épica · objetos de arma: Legendaria
+  const boonRar=b=>b.t==='fx'?CFG.tower.fx[b.id].r:b.t==='leg'?'L':b.t==='sk'?(CFG.tower.skillRar||{})[CFG.skills[b.src][b.cls].id]||'E':'E';   // hechizos y grimorios: Épica · objetos de arma: Legendaria
   // tipo de carta: 'upg' mejoras (efectos de la Torre y hechizos) · 'obj' objetos (de la Torre y de armas legendarias) · 'grim' grimorios (pasivas de camino)
   const boonCat=b=>b.t==='pas'?'grim':b.t==='leg'||(b.t==='fx'&&CFG.tower.fx[b.id].obj)?'obj':'upg';
   // n cartas distintas; q = pesos por calidad (CFG.tower.rarity[...]); cat: solo de un tipo ('obj' en el cofre)
