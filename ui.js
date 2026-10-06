@@ -228,6 +228,7 @@ function updateHUD(){
   if(!S||!$('#rGold')) return;
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
+  { const tp=document.querySelector('.top'); if(tp) tp.hidden=!(tab==='up'&&!ev); }   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   $('#faseTxt').classList.toggle('top',ev);
   setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`:ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
