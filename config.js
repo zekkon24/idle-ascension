@@ -244,6 +244,7 @@ const CFG = {
   wheel:[{b:{gold:30},w:20},{b:{gold:60},w:15},{b:{gold:180},w:6},{b:{wood:1},w:15},{b:{wood:2},w:10},{b:{wood:3},w:5},
     {b:{silver:1},w:8},{b:{ticket:1},w:6},{b:{ess:1},w:5},{b:{ev:3},w:8},{b:{mode:1},w:2}],
   shopTab:false, // pestaña Tienda: oculta hasta tener el juego casi terminado (su contenido sigue en el código)
+  skillGap:0.75,   // segundos de espera entre una habilidad y la siguiente (en todos los modos, a mano o solas)
   startWeapon:'C',
   // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube
   // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.

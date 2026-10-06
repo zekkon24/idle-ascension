@@ -189,7 +189,7 @@ function createGame(opts){
 
   /* ---------- habilidades activas ---------- */
   // CT: reloj de combate (no se guarda). CD[slot]: cuándo vuelve a estar lista. BUF: efectos de habilidades que duran unos segundos.
-  let CT=0; const CD={}; const BUF={list:[]};
+  let CT=0, GCD=0; const CD={}; const BUF={list:[]};   // GCD: hasta cuándo hay que esperar para lanzar la siguiente habilidad
   function buffMul(k){ BUF.list=BUF.list.filter(b=>b.until>CT); let m=1;
     for(const b of BUF.list){ if(k==='atk') m*=1+(b.atk||0); else if(k==='taken') m*=b.taken||1; else if(k==='spd') m*=b.spd||1; else if(k==='thorns') m*=b.thorns||1; else if(k==='df') m*=b.df||1; } return m }
   function buffAdd(k){ let a=0; for(const b of BUF.list) if(b.until>CT) a+=b[k]||0; return a }
@@ -206,7 +206,8 @@ function createGame(opts){
     :{slot:k,locked:true,name:S.evo>=1?'Por decidir':'Evolución',desc:S.evo>=1?'Habilidad de este camino: aún por decidir':'Se desbloquea al evolucionar'} }) }
   function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'};
     if(CT<(CD[k]||0)) return {ok:false,why:'cd',left:CD[k]-CT};
-    CD[k]=CT+d.cd; (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
+    if(CT<GCD) return {ok:false,why:'gap',left:GCD-CT};   // aún no ha pasado la espera desde la anterior
+    GCD=CT+(CFG.skillGap||0); CD[k]=CT+d.cd; (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
   // en los eventos se usan a mano, salvo que el jugador ponga «Auto» (opt.evAuto); en la campaña, solas (opt.autoSkills)
   // en PvP, solas salvo que el jugador ponga «Manual» (opt.pvpAuto=false); el fantasma siempre en automático
   // en la Torre, solas salvo que el jugador ponga «Manual» (opt.towerAuto=false)
@@ -328,10 +329,10 @@ function createGame(opts){
     const canHit=e=>!e.dead&&((h.ranged&&!B.event)||e.arrive<=B.t); // en el evento nadie dispara antes de que llegue (igual para todas las clases)
     // habilidades: las pedidas a mano (B.cast) y, en automático, las que estén listas
     if(skillsAuto()&&B.enemies.some(e=>!e.dead&&e.arrive<=B.t+0.3))
-      for(const k of skillSlots()){ const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;
+      for(const k of skillSlots()){ if(CT<GCD) break; const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;   // entre una habilidad y la siguiente, una pequeña espera (CFG.skillGap)
         if((sk.id==='sed'||sk.id==='sacrificio')&&B.hp<0.5*h.hp) continue;         // no gastar vida si va mal
         if((sk.id==='tSed'||sk.id==='tSangria')&&B.hp<0.35*h.hp) continue;
-        CD[k]=CT+sk.cd; (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
+        CD[k]=CT+sk.cd; GCD=CT+(CFG.skillGap||0); (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
     if(B.cast&&B.cast.length){ const list=B.cast; B.cast=[];
       const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*tMul(e);
       const hurt=(e,d,k)=>{ zap(e,d,{skill:k}); return e.dead };
