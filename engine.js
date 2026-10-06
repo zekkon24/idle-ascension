@@ -734,7 +734,7 @@ function createGame(opts){
   function towerEnd(won){ const run=S.tower.run, k=B.node, frac=Math.max(0,B.hp/heroStats().hp); B=null; BUF.crits=0; statsDirty(); run.fight=null; let res;
     if(won){ run.hp=Math.min(1,frac+CFG.tower.fx.aliento.heal*tfxRun('aliento')); const so=CFG.tower.souls[k]||0; run.souls=(run.souls||0)+so;
       res={won:true,floor:run.floor,k,hp:run.hp,souls:so};
-      if(k==='fight'){ res.pick=false; save(); emit('towerEnd',res); startWave(); towerNext(); return res }   // combate normal: solo almas, sin mejora
+      if(k==='fight'){ res.pick=false; towerNext(); save(); emit('towerEnd',res); startWave(); emit('change'); return res }   // combate normal: solo almas, sin mejora (se avanza ANTES de avisar a la pantalla)
       run.cat=null; run.pick=towerOffer(2,k==='boss'?'boss':'elite'); run.after='next'; res.pick=true }   // élite: 2 cartas hasta Épica · jefe: 2 entre Épica y Legendaria (eliges 1)
     else if(run.rev>0){ run.rev--; run.hp=CFG.tower.revHp; res={won:false,floor:run.floor,lives:run.lives,crown:true} }   // Corona del rey: revives una vez
     else { run.lives--; run.hp=0; res={won:false,floor:run.floor,lives:run.lives,canRevive:!run.adRev} }
