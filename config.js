@@ -146,7 +146,8 @@ const CFG = {
     // Piso final: el jefe del piso 100 tiene vida infinita. Se le pega hasta caer; el daño hecho va al ranking.
     // Se enfurece: su ataque sube ×rage cada 'every' s.
     maxFloor:100, final:{atk:1.6, every:10, rage:1.2},
-    enrage:{after:60, every:5, mult:1.15},   // en cualquier combate de más de 60 s, los enemigos pegan un 15 % más cada 5 s
+    enrage:{after:60, every:5, mult:1.15},
+    speed:0.8, endDelay:0.8,   // los combates de la Torre van al 80 % de velocidad y, al matar a todos, se espera 0,8 s antes de salir   // en cualquier combate de más de 60 s, los enemigos pegan un 15 % más cada 5 s
     look:3,   // el mapa enseña los caminos de los próximos 3 pisos
     // almas: moneda de la partida (solo para los eventos ?). Combate normal / élite / jefe
     souls:{fight:10,elite:5,boss:20},

@@ -423,7 +423,7 @@ function createGame(opts){
       if(towerTick(h,dt)){ endEvent(); return }   // rasgos de los élites y mecánicas de los jefes
       if(!tgH('barricada')&&BUF.shield>0) BUF.shield*=Math.exp(-CFG.tower.shieldDecay*dt);   // el escudo se gasta con el tiempo
       { const n=tcN('escudoReg'); if(n&&CT>=B.regAt){ B.regAt=CT+TC.escudoReg.every; addShield(TC.escudoReg.shield*n*h.hp); } }   // Escudo regenerable
-      if(B.enemies.every(e=>e.dead)){ endEvent(); return } }
+      if(B.enemies.every(e=>e.dead)){ if(B.endAt==null) B.endAt=B.t+(CFG.tower.endDelay||0); if(B.t>=B.endAt){ endEvent(); return } } }   // al matar a todos, una pausa antes de salir
     if(B.event){ if(B.enemies.length>40) B.enemies=B.enemies.filter(e=>!e.dead); return }
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
   }
