@@ -549,9 +549,10 @@ const WSVG={Guerrero:BIGSWORD.replace(/<svg[^>]*>|<\/svg>/g,''),
   Asesino:'<path d="M52 8c-2 10-10 20-20 26l-4-4C34 20 42 12 52 8z" fill="#dfe4ee"/><path d="M52 8C44 16 38 24 32 32" stroke="#fff" stroke-width="1.6" opacity=".6"/><path d="M22 30l12 12-3 3-12-12z" fill="var(--gold)"/><path d="M24 40l-12 12" stroke="#3a2a40" stroke-width="5" stroke-linecap="round"/><circle cx="10" cy="54" r="3.5" fill="var(--gold)"/>',
   Clerigo:'<path d="M12 56L36 32" stroke="#8a5a34" stroke-width="5" stroke-linecap="round"/><path d="M10 58l4-4" stroke="var(--gold)" stroke-width="6" stroke-linecap="round"/><circle cx="42" cy="22" r="13" fill="#cfd4de"/><path d="M42 4v6M42 34v6M24 22h6M54 22h6M29 9l4 4M55 35l-4-4M29 35l4-4M55 9l-4 4" stroke="#cfd4de" stroke-width="4" stroke-linecap="round"/><circle cx="38" cy="18" r="4" fill="#fff" opacity=".6"/><circle cx="42" cy="22" r="4" fill="var(--gold)"/>'};
 const wIcon=(it,sz=38)=>`<svg viewBox="0 0 64 64" width="${sz}" height="${sz}" aria-hidden="true">${WSVG[it&&it.cls]||WSVG.Guerrero}</svg>`;
+const RLET={C:'C',U:'PC',R:'R',E:'É',L:'L',M:'M'};   // inicial de la rareza (para no depender solo del color)
 function itemTile(it){ const eq=it.id===S.equippedId, own=it.cls===S.cls, up=own&&!eq&&betterThanEquipped(it), sel=expandedId===it.id;
-  return `<button class="itile${sel?' sel':''}${own?'':' other'}" style="--rc:var(--r${it.r})" data-act="expand" data-id="${it.id}" aria-pressed="${sel}" aria-label="${wName(it)} nivel ${it.lvl}${own?'':' (otra clase)'}">
-    ${wIcon(it)}<span class="tl">Nv ${it.lvl}</span>${it.fav?'<span class="tf">★</span>':''}${up?'<span class="tu">▲</span>':''}<span class="td">+${Math.round(G.weaponMain(it).d*100)}%</span></button>` }
+  return `<button class="itile${sel?' sel':''}${own?'':' other'}" style="--rc:var(--r${it.r})" data-act="expand" data-id="${it.id}" aria-pressed="${sel}" aria-label="${wName(it)} ${CFG.rarName[it.r]} nivel ${it.lvl}${own?'':' (otra clase)'}">
+    ${wIcon(it)}<span class="tl"><b>${RLET[it.r]||''}</b>Nv ${it.lvl}</span>${it.fav?'<span class="tf">★</span>':''}${up?'<span class="tu">▲</span>':''}<span class="td">+${Math.round(G.weaponMain(it).d*100)}%</span></button>` }
 function itemSheet(it){ const m=G.weaponMain(it), own=it.cls===S.cls;
   return `<div class="isheet fixed" style="--rc:var(--r${it.r})">
     <div class="ishd"><div class="isart">${wIcon(it)}</div><div style="min-width:0;flex:1"><b class="isn">${wName(it)}</b> <span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r].toUpperCase()}</span>
@@ -648,7 +649,7 @@ const SHOPTONE={silver:'#b9c0cc',mode:'#9b6ad6',ticket:'#e8964a',bossTicket:'#d9
 const priceHTML=(k,n=1)=>k==='silver'?`${ICON.gold}${fmtG(G.silverCost(n))}`:`${ICON.tok}${fmt(G.shopPrice(k)*n)}`;
 function shopCard(k){ const it=SHOP[k];
   return `<div class="scard" style="--tone:${SHOPTONE[k]||'var(--gold)'}"><button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button>
-    <div class="sc-ic">${ICON[k]||''}</div><div class="sc-n">${it.name}</div><div class="sc-s">${k==='silver'?silverNote():'&nbsp;'}</div>
+    <button class="sc-ic" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Qué es ${it.name}">${ICON[k]||''}</button><div class="sc-n">${it.name}</div><div class="sc-s">${k==='silver'?silverNote():'&nbsp;'}</div>
     ${k==='silver'||tokOpen()?`<button class="btn gold sc-buy" data-act="buyAsk" data-k="${k}">${priceHTML(k)}</button>`:soon}</div>` }
 function tabShop(){
   const today=G.dayKey();
@@ -732,9 +733,9 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
       if(A.past){ if(a===A.pick&&G.towerCanGo(b)) lines+=`<line x1="${X(A.c[a])}" y1="${Y(r)}" x2="${X(Bn.c[b])}" y2="${Y(r+1)}" class="tml on"/>`; continue }   // de dónde vienes a dónde puedes ir
       lines+=`<line x1="${X(A.c[a])}" y1="${Y(r)}" x2="${X(Bn.c[b])}" y2="${Y(r+1)}" class="tml${A.now&&!G.towerCanGo(a)?' off':''}"/>`; } }
   rows.forEach((row,r)=>{ nodes+=`<text x="6" y="${Y(r)+4}" class="tmf${row.now?' cur':''}">${row.f}</text>`;
-    row.n.forEach((k,i)=>{ const x=X(row.c[i]), y=Y(r), N=NODE[k], col=NCOL[k]||'#888', ok=row.now&&G.towerCanGo(i), rr=k==='boss'?28:ok?25:19;
+    row.n.forEach((k,i)=>{ const x=X(row.c[i]), y=Y(r), N=NODE[k], col=NCOL[k]||'#888', ok=row.now&&G.towerCanGo(i), rr=k==='boss'?30:ok?27:22;
       const cls=row.past?(i===row.pick?' done':' gone'):row.now?(ok?' ok':' no'):' fu';
-      nodes+=`<g class="tmn${cls}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}><circle cx="${x}" cy="${y}" r="${rr}" style="--nc:${col}"/><text x="${x}" y="${y+7}" text-anchor="middle" class="tmi">${row.past&&i===row.pick?'✓':N[0]}</text>${ok?`<text x="${x}" y="${y+rr+15}" text-anchor="middle" class="tmk">${N[1]}</text>`:''}</g>` }) });
+      nodes+=`<g class="tmn${cls}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}>${ok?`<circle cx="${x}" cy="${y}" r="${rr+10}" fill="transparent" stroke="none"/>`:''}<circle cx="${x}" cy="${y}" r="${rr}" style="--nc:${col}"/><text x="${x}" y="${y+7}" text-anchor="middle" class="tmi">${row.past&&i===row.pick?'✓':N[0]}</text>${ok?`<text x="${x}" y="${y+rr+15}" text-anchor="middle" class="tmk">${N[1]}</text>`:''}</g>` }) });
   return `<p class="hint" style="text-align:center;margin:6px 0 0">Elige tu camino${trail.length?' · desliza para ver tu ruta':''}</p><div class="tmapbox"><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%" data-now="${nowR}">${lines}${nodes}</svg></div>` }
 const MECH={invocador:'Invocador',enfurecido:'Enfurecido',fases:'Escudo de fases',final:'Jefe final'};
 // eventos ?: título, texto y botones [c, etiqueta, ¿se puede?]
@@ -931,7 +932,8 @@ const misRank=m=>m.claimed?2:m.done?0:1, misRows=(L,act,M)=>[...L].sort((a,b)=>m
 function tabMis(){ const P=G.passState();
   const chips=`<div class="fchips">${[['dia','Diarias',G.missionsReady()],['sem','Semanal',G.weeklyReady()],['pass','Pase',G.passReady()],['soc','Socios',0]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
   let body='';
-  const bonusRow=(kind,t)=>{ const st=G.bonusState(kind); return `<div class="mrow bonus${st.got?' done':st.can?' ready':''}"><div class="mi"><b>${t}</b><div class="mrw">${bundleHTML(st.b)}</div></div>
+  const bonusRow=(kind,t)=>{ const st=G.bonusState(kind), L=kind==='week'?G.weekMissions():G.missions(), n=L.filter(m=>m.claimed).length;
+    return `<div class="mrow bonus${st.got?' done':st.can?' ready':''}"><div class="mi"><b>${t}</b><div class="mbar"><div class="rbar"><i style="width:${n/L.length*100}%"></i></div><span>${n}/${L.length}</span></div><div class="mrw">${bundleHTML(st.b)}</div></div>
       ${st.got?'<span class="mcheck" aria-label="Recogido">✓</span>':st.can?`<button class="btn sm gold mclaim" data-act="misBonus" data-k="${kind}">Recoger</button>`:'<span class="mlock" aria-label="Aún no">🔒</span>'}</div>` };
   if(misView==='dia') body=bonusRow('day','Bonus: completa todas las diarias')+misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
   if(misView==='sem') body=bonusRow('week','Bonus: completa todas las semanales')+misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;

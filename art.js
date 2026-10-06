@@ -208,7 +208,8 @@ const clearParts=()=>{ P=[] };
    side: 'hero' (lo lanza tu héroe, va hacia los enemigos) o 'rival' (lo lanza el rival del PvP, va hacia ti). */
 let FX=[], SH=0;
 const now=()=>performance.now()/1000;
-function addFx(type,o){ const f={type,t0:now(),side:'hero',...(o||{})}; if(type==='name') f.row=FX.filter(x=>x.type==='name'&&x.side===f.side&&now()-x.t0<(LIFE.name)).length; FX.push(f); if(FX.length>80) FX=FX.slice(-80) }
+// los textos (nombre de habilidad, ¡Nivel!) se apilan uno encima de otro, no se pisan
+function addFx(type,o){ const f={type,t0:now(),side:'hero',...(o||{})}; if(type==='name'||type==='levelup') f.row=FX.filter(x=>(x.type==='name'||x.type==='levelup')&&x.side===f.side&&now()-x.t0<(LIFE[x.type])).length; FX.push(f); if(FX.length>80) FX=FX.slice(-80) }
 function shake(a){ SH=Math.min(8,Math.max(SH,a)) }
 function shakeOffset(dt){ if(SH<0.05){ SH=0; return [0,0] } const o=[(Math.random()*2-1)*SH,(Math.random()*2-1)*SH]; SH*=Math.pow(0.02,dt); return o }
 // duración de cada efecto (s); las de habilidad con efecto largo usan su 'dur'
@@ -232,7 +233,7 @@ function drawFx(g,c){
       for(let i=0;i<6;i++){ const a=i*TAU/6+k; g.beginPath(); g.moveTo(to+Math.cos(a)*(8+k*14),gy-22+Math.sin(a)*(8+k*14)); g.lineTo(to+Math.cos(a)*(14+k*24),gy-22+Math.sin(a)*(14+k*24)); g.stroke() } }
     else if(f.type==='name'){ g.globalAlpha=Math.min(1,(1-k)*3); g.font='800 11px "Nunito Sans", system-ui, sans-serif'; g.textAlign='center'; g.fillStyle='#ffd35a'; glow(g,'#000',4);
       const w=g.measureText(f.text).width, x=Math.max(w/2+4,Math.min((c.W||1e4)-w/2-4,me));   // dentro del escenario
-      g.fillText(f.text,x,gy-100-k*12-(f.row||0)*13); }   // si salen varias a la vez, una encima de otra
+      g.fillText(f.text,x,gy-100-k*12-(f.row||0)*16); }   // si salen varias a la vez, una encima de otra
     // ----- habilidades -----
     else if(f.type==='muro'||f.type==='baluarte'){ const col=f.type==='muro'?'#7fb6ff':'#b9b2a4';
       g.globalAlpha=f.type==='muro'?(1-k)*0.8:0.35+0.1*Math.sin(age*6); g.strokeStyle=col; g.fillStyle=col+'33'; g.lineWidth=2.5; glow(g,col,10);
@@ -261,7 +262,7 @@ function drawFx(g,c){
     else if(f.type==='luzVuelve'){ for(let i=0;i<(f.n||3);i++){ const kk=Math.min(1,k*1.4-i*0.1); if(kk<0) continue; orb(g,front+(me-front)*kk,gy-30-Math.sin(kk*Math.PI)*20,3,'#ffe066') } }
     else if(f.type==='levelup'){ const r=10+k*46; g.globalAlpha=1-k; g.strokeStyle='#ffd35a'; g.lineWidth=3; glow(g,'#ffd35a',16); g.beginPath(); g.ellipse(me,gy-30,r,r*0.6,0,0,TAU); g.stroke();
       for(let i=0;i<10;i++){ const a=i*TAU/10+age, rr2=14+k*40; orb(g,me+Math.cos(a)*rr2,gy-30+Math.sin(a)*rr2*0.6-k*20,2,'#ffe38a') }
-      g.globalAlpha=Math.min(1,(1-k)*2); g.font='900 15px "Nunito Sans", system-ui, sans-serif'; g.textAlign='center'; g.fillStyle='#ffd35a'; glow(g,'#000',5); g.fillText(f.text,Math.max(40,me),gy-104-k*16); }
+      g.globalAlpha=Math.min(1,(1-k)*2); g.font='900 15px "Nunito Sans", system-ui, sans-serif'; g.textAlign='center'; g.fillStyle='#ffd35a'; glow(g,'#000',5); g.fillText(f.text,Math.max(40,me),gy-104-k*16-(f.row||0)*16); }
     else if(f.type==='loot'){ const x=to; g.globalAlpha=1-k; g.fillStyle='#ffd35a'; glow(g,'#ffd35a',18); for(let i=0;i<10;i++){ const a=i*TAU/10+age*1.5; g.save(); g.translate(x,gy-30); g.rotate(a); g.fillRect(8,-1.5,20+k*30,3); g.restore() } }
     else if(f.type==='reloj'){ g.globalAlpha=1-k; g.strokeStyle='#ffd35a'; g.lineWidth=2; glow(g,'#ffd35a',10); g.beginPath(); g.arc(me,gy-32,14+k*20,0,TAU); g.stroke(); }
     else if(f.type==='combustionHit'){ tx.forEach(x=>{ g.globalAlpha=1-k; orb(g,x,gy-14,4+k*12,'#ff7a1a') }); }
