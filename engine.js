@@ -669,8 +669,8 @@ function createGame(opts){
     for(let m=1;m<=E;m++){ const f=t*E+m;
       rows.push(m===E?['boss']:m===E-1?['rest']:towerMerge(f)?['elite']:towerMerge(f+1)?(rand()<0.5?['shop','rest']:['rest','shop']):m===1?['fight','fight']:m===R.treasureAt?['treasure','treasure']:null); }
     // bolsa con los % de StS para las casillas libres
-    const free=rows.reduce((a,r)=>a+(r?0:2),0), bag=[], P=R.pct; let tot=0;
-    for(const k in P){ if(k==='fight') continue; const n=Math.round(free*P[k]/100); tot+=n; for(let i=0;i<n;i++) bag.push(k); }
+    const free=rows.reduce((a,r)=>a+(r?0:2),0), bag=[], P=R.pct;
+    for(const k in P){ if(k==='fight') continue; const n=Math.round(free*P[k]/100); for(let i=0;i<n;i++) bag.push(k); }
     while(bag.length<free) bag.push('fight');
     for(let i=bag.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [bag[i],bag[j]]=[bag[j],bag[i]]; }
     const NOREP=new Set(['elite','shop','rest','treasure']);

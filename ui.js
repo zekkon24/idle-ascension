@@ -709,7 +709,7 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
       const cls=row.past?(i===row.pick?' done':' gone'):row.now?(ok?' ok':' no'):' fu';
       nodes+=`<g class="tmn${cls}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}><circle cx="${x}" cy="${y}" r="${rr}" style="--nc:${col}"/><text x="${x}" y="${y+7}" text-anchor="middle" class="tmi">${row.past&&i===row.pick?'✓':N[0]}</text>${ok?`<text x="${x}" y="${y+rr+15}" text-anchor="middle" class="tmk">${N[1]}</text>`:''}</g>` }) });
   return `<p class="hint" style="text-align:center;margin:6px 0 0">Elige tu camino${trail.length?' · desliza para ver tu ruta':''}</p><div class="tmapbox"><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%" data-now="${nowR}">${lines}${nodes}</svg></div>` }
-const TRAIT=k=>CFG.tower.traits[k].name, MECH={invocador:'Invocador',enfurecido:'Enfurecido',fases:'Escudo de fases',final:'Jefe final'};
+const MECH={invocador:'Invocador',enfurecido:'Enfurecido',fases:'Escudo de fases',final:'Jefe final'};
 // eventos ?: título, texto y botones [c, etiqueta, ¿se puede?]
 function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==null?1:run.hp, so=run.souls||0, cu=(run.curses||[]).length;
   const V={fuente:['Fuente de sangre',`Pierdes el ${E.fuente.hp*100} % de vida y eliges 1 de 3 épicas (cartas o grimorios).`,[['si','Beber',hp>E.fuente.hp]]],
