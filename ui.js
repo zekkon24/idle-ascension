@@ -140,7 +140,7 @@ G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; towerTab='run'; ren
   const fin=r.final?`<p class="hint">Daño al jefe final: <b>${fmt(r.dmg||0)}</b> (récord ${fmt(G.towerState().bossDmg||0)}).</p>`:'';
   later(()=>showModal(r.crown?`<h3>¡La cola de lagarto te salva!</h3><p class="hint">Revives con el ${Math.round(CFG.tower.grims.lagarto.hp*100)} % de vida en el piso ${r.floor}.</p>${fin}<button class="btn gold" data-act="close">Seguir</button>`
   :`<h3>Has caído en el piso ${r.floor}</h3>${fin}<p class="hint">${r.canRevive?'Puedes revivir una vez viendo un anuncio.':'Fin de la partida.'}</p><div class="ctrl">${r.canRevive?'<button class="btn gold" data-act="towerRev">Revivir · anuncio</button>':''}<button class="btn" data-act="close">Vale</button></div>`)); });
-// Torre: al conseguir una carta o grimorio, en medio de la pantalla «Obtenido» con su nombre y qué hace (se encolan si son varios)
+// Torre: al conseguir un grimorio AL AZAR (cofre, altar), en medio de la pantalla «Obtenido» con su nombre y qué hace (se encolan si son varios)
 const gotQ=[]; let gotOn=false;
 function gotShow(){ if(gotOn||!gotQ.length) return; gotOn=true; const b=gotQ.shift(), f=G.boonInfo(b), c=RARC[f.r], el=document.createElement('div');
   el.className='gotpop'; el.style.borderColor=c; el.innerHTML=`<span class="s">Obtenido</span><b style="color:${c}">${FAMI[f.fam]||''} ${esc(f.name)}</b><span class="pill" style="color:${c}">${f.kind}</span><p>${esc(f.desc)}</p>`;

@@ -680,7 +680,7 @@ function createGame(opts){
   function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||run.shop||run.ev||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k||!towerCanGo(i)) return false;
     { const m=towerMap()[0]; run.from=m&&m.n===run.nodes?m.c[i]:null; if(m&&m.n===run.nodes) run.trail=(run.trail||[]).filter(t=>t.f<run.floor).concat([{f:run.floor,row:m,i}]).slice(-40); }   // camino recorrido (para el mapa)
     if(k==='shop'){ const SH=CFG.tower.shop, c=towerOffer(SH.cards,'shop',['c']), g=towerOffer(SH.grims,'shop',['g']); run.shop={items:c.concat(g),bought:[],removed:false}; save(); emit('change'); return {k} }
-    if(k==='treasure'){ const b=towerOffer(1,'chest',['g'])[0]; if(b) towerGain(run,b); towerNext(); return {k,got:b||null} }
+    if(k==='treasure'){ const b=towerOffer(1,'chest',['g'])[0]; if(b){ towerGain(run,b); emit('towerGot',b); } towerNext(); return {k,got:b||null} }   // al azar: la pantalla enseña «Obtenido»
     if(k==='event'){ const E=Object.keys(CFG.tower.events); run.ev={id:E[Math.floor(rand()*E.length)]}; save(); emit('change'); return {k,ev:run.ev.id} }
     if(k==='altar'){ run.ev={id:'altar'}; save(); emit('change'); return {k,ev:'altar'} }
     // hoguera: vida al máximo (si ya estaba llena, solo te ahorras el combate)
@@ -706,7 +706,7 @@ function createGame(opts){
     else if(id==='santuario'){ if((run.souls||0)<E.santuario.cost) return false;
       if(c==='quitar'){ if(!(run.curses||[]).length) return false; run.curses.pop(); } else run.hp=Math.min(1,hp()+E.santuario.heal);
       run.souls-=E.santuario.cost; run.ev=null; towerNext(); }
-    else if(id==='altar'){ res.curse=addCurse(run); const b=towerOfferR(1,'L',['g'])[0]; if(b){ res.got=b; towerGain(run,b); } run.ev=null; towerNext(); }   // 1 grimorio legendario al azar + 1 maldición
+    else if(id==='altar'){ res.curse=addCurse(run); const b=towerOfferR(1,'L',['g'])[0]; if(b){ res.got=b; towerGain(run,b); emit('towerGot',b); } run.ev=null; towerNext(); }   // 1 grimorio legendario al azar + 1 maldición
     save(); emit('change'); return res }
   // Torre: guarda de los enemigos (escudo de élite e invulnerabilidad de jefe) — devuelve true si el enemigo no muere
   function towerGuard(e){ const seen=e.hpSeen==null?e.max:e.hpSeen, dealt=seen-e.hp; if(!(dealt>0)) return e.hp>0;
@@ -776,8 +776,7 @@ function createGame(opts){
   // conseguir una carta o grimorio (elegido, comprado o al azar)
   function towerGain(run,b){ const m0=runHpMul(run); run.boons.push(b); const m1=runHpMul(run);
     if(m1>m0) run.hp=Math.min(1,((run.hp==null?1:run.hp)*m0+(m1-m0))/m1);   // más vida máxima: se cura la parte nueva
-    if(b.t==='g'&&b.id==='lagarto') run.rev=(run.rev||0)+1;                 // Cola de lagarto: revives una vez
-    emit('towerGot',b); }                                                     // la pantalla enseña «Obtenido»
+    if(b.t==='g'&&b.id==='lagarto') run.rev=(run.rev||0)+1; }               // Cola de lagarto: revives una vez
   // quitar una carta o grimorio (tienda): la vida que tienes no sube
   function towerLose(run,i){ const b=run.boons[i]; if(!b) return null; const m0=runHpMul(run); run.boons.splice(i,1); const m1=runHpMul(run);
     if(m1<m0) run.hp=Math.min(1,(run.hp==null?1:run.hp)*m0/m1);
