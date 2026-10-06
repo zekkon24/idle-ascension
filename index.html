@@ -32,6 +32,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 :root{--safe-top:calc(var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px))}   /* hueco de los botones de Telegram en pantalla completa */
 .app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:calc(10px + var(--safe-top)) 90px;display:flex;flex-direction:column;gap:10px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-inline:-10px}   /* la cabecera va casi pegada al borde (6 px) */
+.lvring{--p:0;flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--rR,#4f95e6) calc(var(--p)*1%),#4a4f5e 0);transition:background .3s}
+.lvring b{width:26px;height:26px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.lvring.cap{background:conic-gradient(var(--gold) 100%,#4a4f5e 0)}
 .uname{font-family:var(--display);font-weight:800;font-size:14px;flex:1;min-width:0;display:flex;flex-direction:column;gap:0;white-space:nowrap;line-height:1.15}
 .uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .uname em{flex:none;font-style:normal;color:var(--muted);font-family:var(--body);font-size:11px}
@@ -67,7 +70,6 @@ canvas{display:block;width:100%;height:300px}
 .hero .name em{font-style:normal;color:var(--muted);font-family:var(--body);font-size:12px;margin-left:6px}
 .bar{height:8px;border-radius:5px;background:var(--panel2);overflow:hidden;grid-column:1 / -1}
 .bar i{display:block;height:100%;background:var(--good);width:0%}
-.bar.hpb{position:relative;overflow:visible}.bar.hpb #hpBar{border-radius:5px}.bar i.sh{position:absolute;left:0;top:-5px;height:3px;width:0;border-radius:2px;background:linear-gradient(180deg,#d4ecff,#4a95f0);box-shadow:0 0 5px #62b6ff}   /* escudo: barra azul fina encima de la vida */
 .bar.xp i{background:var(--tok)}
 .hbar{grid-column:1 / -1;display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 .hbar .bar{grid-column:auto}
@@ -484,7 +486,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610061151-ed1a3fe';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610061201-2561202';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
