@@ -250,7 +250,7 @@ function updateHUD(){
    // el nivel solo cuenta farmeando: en eventos, Torre y PvP no se ve   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   $('#faseTxt').classList.add('top');   // debajo de tu barra de vida (los iconos de abajo a la derecha quedan libres)
-  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:`♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
+  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:''):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:G.streak().mul>1?`<span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:'');   // campaña: la fase ya va en el emblema de arriba
   { const f=$('#faseTxt'); f.hidden=!f.innerHTML; }
   setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span>`);   // solo el nombre: la clase ya se ve en el retrato
@@ -259,10 +259,12 @@ function updateHUD(){
   $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   // emblema del centro (entre las dos barras): dónde estás y si es jefe o élite
   { const sp=!ev&&G.surpriseState(), run=ev&&B&&B.kind==='tower'?G.towerState().run:null;
-    const [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',run.floor,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
-      :B.kind==='boss'?['SEMANAL','JEFE','boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',S.fase,B.elite?'elite':'boss']
-      :sp?[sp.k==='horde'?'HORDA':'ERRANTE',Math.ceil(sp.left)+'s','boss']:['FASE',S.fase,''];
-    const c=$('#vsC'); if(c){ c.className='vsc'+(cl?' '+cl:''); c.firstChild.textContent=lb; c.lastChild.textContent=mn; } }
+    // jefe: calavera morada · jefe de élite: calavera roja · élite (Torre): ÉLITE en naranja · horda: HORDA en rojo · errante: naranja · PvP: VS en azul
+    const SK='\u0000skull', [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',SK,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
+      :B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',SK,B.elite?'eboss':'boss']
+      :sp?[Math.ceil(sp.left)+' s',sp.k==='horde'?'HORDA':'ERRANTE',sp.k==='horde'?'horde':'wander']:['FASE',S.fase,''];
+    const c=$('#vsC'), k=lb+'|'+mn+'|'+cl; if(c&&c.dataset.k!==k){ c.dataset.k=k; c.className='vsc'+(cl?' '+cl:'')+(mn===SK?' sk':'')+(String(mn).length>3?' long':'');
+      c.innerHTML=`<small>${esc(lb)}</small>`+(mn===SK?`<svg viewBox="0 0 24 24" width="22" height="22" aria-label="Jefe"><path fill="currentColor" d="M12 2C6.9 2 3 5.6 3 10.3c0 2.9 1.5 5.2 3.8 6.6V20a1 1 0 0 0 1 1h1.6v-2h1.4v2h2.4v-2h1.4v2h1.6a1 1 0 0 0 1-1v-3.1c2.3-1.4 3.8-3.7 3.8-6.6C21 5.6 17.1 2 12 2Zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2Zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2ZM12 13.3l1.2 2.2h-2.4l1.2-2.2Z"/></svg>`:`<b>${esc(String(mn))}</b>`); } }
   const fab=$('#upFab'); if(fab){ fab.hidden=tab!=='up'||ev; if(!fab.hidden) setHTML(fab,upStrip()); }
   // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
   const gb=$('#grimBtn'); if(gb){ const shown=!ev&&(G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk();
@@ -281,10 +283,11 @@ function updateHUD(){
   if(boostModalOpen) updateBoostModal();
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   // habilidades: solo las desbloqueadas; la recarga se ve con el reloj gris (sin números). En los eventos, botón Auto/Manual
-  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?!(S.opt&&S.opt.pvpAuto===false):G.towerOn()?!(S.opt&&S.opt.towerAuto===false):inEv&&!!(S.opt&&S.opt.evAuto), key=L.map(x=>x.slot+x.id).join()+inEv+auto;
-    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.classList.toggle('many',L.length>4); sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}">${skIcon(x.id)}<i class="skcd"></i></button>`).join(''); }
-    const sm=$('#skMode'), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false);
-    setHTML(sm,L.length?`<button class="skmode${on?' on':''}" data-act="skAuto" aria-pressed="${on}" aria-label="Habilidades automáticas">Habilidades: ${on?'Auto':'Manual'}</button>`:'');
+  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?!(S.opt&&S.opt.pvpAuto===false):G.towerOn()?!(S.opt&&S.opt.towerAuto===false):inEv&&!!(S.opt&&S.opt.evAuto), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false), key=L.map(x=>x.slot+x.id).join()+inEv+on;
+    // al final de las habilidades, un círculo AUTO/MAN (se lanzan solas o a mano)
+    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.classList.toggle('many',L.length>4); sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}">${skIcon(x.id)}<i class="skcd"></i></button>`).join('')
+      +(L.length?`<button class="skmode${on?' on':''}" data-act="skAuto" aria-pressed="${on}" aria-label="Habilidades ${on?'automáticas':'a mano'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg><small>${on?'AUTO':'MAN'}</small></button>`:''); }
+    { const sm=$('#skMode'); if(sm&&sm.innerHTML) sm.innerHTML=''; }
     L.forEach((x,i)=>{ const b=sb.children[i]; if(!b) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
       b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; }); }
   { const n=misBadge(); navSet('mis',n); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
@@ -1353,7 +1356,7 @@ function draw(dt){
 // El escudo es una barra azul fina justo debajo de la tuya. Con menos del 25 % de vida tu barra late en rojo.
 const VST={B:null,me:{cur:1,from:0,at:0},foe:{cur:1,from:0,at:0}};
 // iconos de estado bajo las barras: [icono, nombre, qué hace, ¿malo?]
-const ST_ICO={atk:['⚔️','Más daño','Tus golpes hacen más daño'],spd:['💨','Más velocidad','Atacas más rápido'],ls:['🩸','Robo de vida','Te curas con el daño que haces'],
+const ST_ICO={life:['❤️','Vida','Si caes, pierdes una vida (sin vidas, la partida termina)'],atk:['⚔️','Más daño','Tus golpes hacen más daño'],spd:['💨','Más velocidad','Atacas más rápido'],ls:['🩸','Robo de vida','Te curas con el daño que haces'],
   baluarte:['🛡️','Baluarte','Más defensa y devuelves el daño que recibes'],atk1:['👑','Contra jefes','Más daño a los jefes'],taken:['🧱','Protegido','Recibes menos daño'],
   sang:['🗡️','Sangría','Tus próximos golpes hacen +100 %'],combust:['🔥','Combustión','Tus golpes queman'],clone:['👥','Clon de sombra','Un clon copia tus golpes'],
   aura:['✨','Luz del juicio','Te curas y quemas a los cercanos'],ice:['❄️','Armadura de hielo','Quien te pega recibe esquirlas'],cloud:['☁️','Nube tóxica','Envenena a todos los enemigos'],
@@ -1361,7 +1364,7 @@ const ST_ICO={atk:['⚔️','Más daño','Tus golpes hacen más daño'],spd:['�
   t_rapido:['⚡'],t_regenera:['💚'],t_escudo:['🛡️'],t_espinas:['🌵'],t_furioso:['😡'],t_gigante:['🗿'],
   m_invocador:['👥'],m_enfurecido:['💢'],m_fases:['🔰'],m_final:['♾️'],p_rage:['💢','Enfurecido','Pega y ataca más rápido'],p_summon:['👥','Refuerzos','Ha llamado ayudantes']};
 function stIcons(list){ return list.map(([k,extra])=>{ const d=ST_ICO[k]||['❔',k,'']; const n=d[1]||'', t=d[2]||'';
-  return `<i class="sti${d[3]?' bad':''}" data-tip="${esc(d[0]+' '+n)}|${esc(t+(extra||''))}">${d[0]}</i>` }).join('') }
+  return `<i class="sti${d[3]?' bad':''}${k==='life'?' life':''}" data-tip="${esc(d[0]+' '+n)}|${esc(t+(extra||''))}">${d[0]}</i>` }).join('') }
 function vsHud(B,h){ const el=$('#vsHud'); if(!el) return; el.hidden=!B; if(!B) return;
   if(VST.B!==B){ VST.B=B; VST.me={cur:Math.max(0,B.hp/h.hp),from:0,at:0}; VST.foe={cur:1,from:0,at:0}; }
   const now=performance.now();
@@ -1369,15 +1372,16 @@ function vsHud(B,h){ const el=$('#vsHud'); if(!el) return; el.hidden=!B; if(!B) 
   const set=(w,st,p,txt)=>{ const fl=w.querySelector('.fl'), tr=w.querySelector('.tr'), pc=x=>Math.max(0,Math.min(100,x*100))+'%';
     if(p<st.cur-0.0005){ st.from=st.cur; st.at=now; } st.cur=p;
     const age=now-st.at, on=st.from>p&&age<650; tr.style.width=on?pc(st.from):'0%'; tr.style.opacity=on?(age<400?1:1-(age-400)/250):0;
-    fl.style.width=pc(p); const b=w.querySelector('b'); if(b.textContent!==txt) b.textContent=txt; };
+    fl.style.width=pc(p); };   // sin texto: la barra se lee sola
   const hp=Math.max(0,B.hp/h.hp), me=el.querySelector('.me'), foe=el.querySelector('.foe');
   set(me,VST.me,hp,Math.ceil(hp*100)+' %'); me.classList.toggle('low',hp<0.25);
-  me.querySelector('.vssh').style.width=Math.min(100,G.heroShield()/h.hp*100)+'%';
+  { const sh=me.querySelector('.vssh'), v=Math.min(100,G.heroShield()/h.hp*100); sh.style.width=v+'%'; sh.style.display=v>0.3?'':'none'; }
   const fb=B.kind==='pvp'?{p:Math.max(0,B.enemies[0].hp/B.enemies[0].max)}:!(B.event&&!B.kind)?foeBar(B):null;
   foe.style.visibility=fb?'visible':'hidden'; if(fb) set(foe,VST.foe,fb.p,fb.inf?'∞':Math.ceil(fb.p*100)+' %');
   // iconos: lo tuyo (efectos de habilidades y maldiciones de la Torre) y lo de los enemigos (rasgos, mecánica del jefe, fases)
   const run=B.kind==='tower'?G.towerState().run:null, TT=CFG.tower;
-  const mine=G.heroBuffs().map(x=>[x.k,x.left!=null?` · ${Math.ceil(x.left)} s`:x.n?` · quedan ${x.n}`:'']).concat(run?(run.curses||[]).map(c=>['c_'+c]):[]);
+  const lives=run?Array(Math.max(0,run.lives||0)).fill(['life']):[];   // Torre: tus vidas, como corazones
+  const mine=lives.concat(G.heroBuffs().map(x=>[x.k,x.left!=null?` · ${Math.ceil(x.left)} s`:x.n?` · quedan ${x.n}`:'']),run?(run.curses||[]).map(c=>['c_'+c]):[]);
   const foes=[]; if(run){ if(B.mech) foes.push(['m_'+B.mech]); if(B.node==='elite') for(const t of new Set(B.enemies.flatMap(e=>e.traits||[]))) foes.push(['t_'+t]); }
   for(const e of B.enemies) if(!e.dead&&e.phase&&!foes.some(f=>f[0]==='p_'+e.phase)) foes.push(['p_'+e.phase]);
   for(const [k] of foes){ if(k[0]==='t'&&!ST_ICO[k][1]){ const t=TT.traits[k.slice(2)]; ST_ICO[k][1]=t.name; ST_ICO[k][2]=t.desc; } if(k[0]==='m'&&!ST_ICO[k][1]){ ST_ICO[k][1]=MECH[k.slice(2)]; ST_ICO[k][2]=TT.bossMech.desc[k.slice(2)]; } }
