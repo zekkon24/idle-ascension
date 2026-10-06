@@ -287,6 +287,9 @@ input[type=number]{width:64px}
 .rw .ic{width:14px;height:14px}
 .skmode{position:absolute;right:10px;bottom:6px;z-index:4;white-space:nowrap;margin:0}
 .skb .skcd{position:absolute;inset:0;border-radius:50%}
+.gotpop{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:30;width:min(300px,86vw);background:var(--panel);border:2px solid var(--gold);border-radius:14px;padding:14px 16px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.6);animation:gotin .25s ease-out}
+.gotpop b{font-size:18px}.gotpop p{margin:0;font-size:13px;color:var(--ink)}.gotpop.out{opacity:0;transition:opacity .25s}
+@keyframes gotin{from{opacity:0;transform:translate(-50%,-40%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .skbar.many{flex-wrap:wrap;max-width:200px;gap:6px}.skbar.many .skb{width:42px;height:42px}.skbar.many .ski{width:22px;height:22px}
 .twtabs{margin:6px 0}.twcols{display:grid;grid-template-columns:1fr 1fr;gap:8px}.twcols h4{margin:4px 0;font-size:13px}
 .rank.twrank div{grid-template-columns:20px minmax(0,1fr) auto;gap:4px;padding:5px 6px;font-size:12px}.rank.twrank div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -479,7 +482,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610061003-f5e7331';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610061110-e47ec30';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

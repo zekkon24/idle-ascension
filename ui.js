@@ -140,6 +140,13 @@ G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; towerTab='run'; ren
   const fin=r.final?`<p class="hint">Daño al jefe final: <b>${fmt(r.dmg||0)}</b> (récord ${fmt(G.towerState().bossDmg||0)}).</p>`:'';
   later(()=>showModal(r.crown?`<h3>¡La cola de lagarto te salva!</h3><p class="hint">Revives con el ${Math.round(CFG.tower.grims.lagarto.hp*100)} % de vida en el piso ${r.floor}.</p>${fin}<button class="btn gold" data-act="close">Seguir</button>`
   :`<h3>Has caído en el piso ${r.floor}</h3>${fin}<p class="hint">${r.canRevive?'Puedes revivir una vez viendo un anuncio.':'Fin de la partida.'}</p><div class="ctrl">${r.canRevive?'<button class="btn gold" data-act="towerRev">Revivir · anuncio</button>':''}<button class="btn" data-act="close">Vale</button></div>`)); });
+// Torre: al conseguir una carta o grimorio, en medio de la pantalla «Obtenido» con su nombre y qué hace (se encolan si son varios)
+const gotQ=[]; let gotOn=false;
+function gotShow(){ if(gotOn||!gotQ.length) return; gotOn=true; const b=gotQ.shift(), f=G.boonInfo(b), c=RARC[f.r], el=document.createElement('div');
+  el.className='gotpop'; el.style.borderColor=c; el.innerHTML=`<span class="s">Obtenido</span><b style="color:${c}">${FAMI[f.fam]||''} ${esc(f.name)}</b><span class="pill" style="color:${c}">${f.kind}</span><p>${esc(f.desc)}</p>`;
+  const done=()=>{ if(!el.parentNode) return; el.classList.add('out'); setTimeout(()=>{ el.remove(); gotOn=false; gotShow() },250) };
+  el.addEventListener('click',done); document.body.appendChild(el); haptic('ok'); setTimeout(done,2600) }
+G.on('towerGot',b=>{ gotQ.push(b); gotShow() });
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
   else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
@@ -710,9 +717,11 @@ function towerRankView(){ const T=G.towerState(), on=typeof Telemetry!=='undefin
   return `<p class="hint">Los 10 mejores. El jefe del piso ${CFG.tower.maxFloor} tiene vida infinita: gana quien más daño le hace.</p>${cols}
     <div class="evhead"><div><span class="s">Tu piso más alto</span><b>${T.reach||0}</b></div><div><span class="s">Tu daño al jefe final</span><b>${fmt(T.bossDmg||0)}</b></div></div>` }
 function tabTower(){ const T=G.towerState(), run=T.run;
+  if(run) towerTab='run';   // dentro de una partida no se ve el ranking ni los récords
   let body='';
   if(towerTab==='rank') body=towerRankView();
   else if(!run) body=`<p class="hint">Roguelike: todos empiezan con el mismo héroe, tu personaje no cuenta. 1 vida. Las cartas te hacen más fuerte; los grimorios deciden tu build. En el piso ${CFG.tower.maxFloor} espera un jefe con vida infinita.</p>
+      <div class="evhead"><div><span class="s">Tu piso más alto</span><b>${T.reach||0}</b></div><div><span class="s">Tu daño al jefe final</span><b>${fmt(T.bossDmg||0)}</b></div></div>
       <button class="btn gold" data-act="towerStart">Empezar partida</button>`;
   else if(run.lives<=0) body=`<p class="hint">Has caído en el piso ${run.floor}.${run.finalDmg?` Daño al jefe final: <b>${fmt(run.finalDmg)}</b>.`:''}</p><div class="ctrl">${run.adRev?'':'<button class="btn gold" data-act="towerRev">Revivir · anuncio</button>'}<button class="btn" data-act="towerQuit">Terminar partida</button></div>`;
   else if(run.ev) body=towerEvView(run);
@@ -721,8 +730,8 @@ function tabTower(){ const T=G.towerState(), run=T.run;
   else body=towerMapSvg(run);
   const nfx=run?run.boons.length+(run.curses||[]).length:0;
   const tabs=`<div class="fchips twtabs"><button data-act="towerTab" data-k="run" aria-pressed="${towerTab==='run'}">Partida</button><button data-act="towerTab" data-k="rank" aria-pressed="${towerTab==='rank'}">Ranking</button></div>`;
-  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Torre</h3>${run&&towerTab==='run'?`<button class="btn sm" data-act="towerFx">Efectos${nfx?` · ${nfx}`:''}</button>`:''}</div>${tabs}
-    ${towerTab==='run'?`<div class="evhead"><div><span class="s">Piso</span><b>${run?run.floor:'–'}</b></div><div><span class="s">Almas</span><b>${run?run.souls||0:'–'}</b></div><div><span class="s">Salud</span><b>${run?Math.round((run.hp==null?1:run.hp)*100)+' %':'–'}</b></div><div><span class="s">Récord</span><b>${T.reach||0}</b></div></div>`:''}
+  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Torre</h3>${run?`<button class="btn sm" data-act="towerFx">Efectos${nfx?` · ${nfx}`:''}</button>`:''}</div>${run?'':tabs}
+    ${run?`<div class="evhead"><div><span class="s">Piso</span><b>${run.floor}</b></div><div><span class="s">Almas</span><b>${run.souls||0}</b></div><div><span class="s">Salud</span><b>${Math.round((run.hp==null?1:run.hp)*100)} %</b></div></div>`:''}
     ${body}</section>` }
 // tienda: 4 cartas y 2 grimorios (compras los que puedas pagar con almas) y quitar 1 cosa que tengas
 function towerShopView(run){ const sh=run.shop, so=run.souls||0, rc=G.towerRemoveCost();
@@ -1100,11 +1109,11 @@ const ACT={
   towerRemove:()=>towerRemoveModal(),
   towerRemoveYes:(b,k)=>{ const x=G.towerShopRemove(+k); closeModal(); if(x){ toast('Quitado: '+G.boonInfo(x).name); haptic('ok'); } renderTab() },
   towerTab:(b,k)=>{ towerTab=k==='rank'?'rank':'run'; renderTab() },
-  towerEv:(b,k)=>{ const r=G.towerEvent(k); if(!r) return; if(r.curse) toast((r.got?G.boonInfo(r.got).name+' · ':'')+'Maldición: '+CFG.tower.curses[r.curse].name); if(r.good===false) toast('¡Era una trampa!'); renderTab() },
+  towerEv:(b,k)=>{ const r=G.towerEvent(k); if(!r) return; if(r.curse) toast('Maldición: '+CFG.tower.curses[r.curse].name); if(r.good===false) toast('¡Era una trampa!'); renderTab() },
   towerRev:()=>playAd(()=>{ closeModal(); if(G.towerRevive()){ toast('¡Has revivido!'); renderTab() } }),
   towerQuit:()=>showModal(`<h3>¿Terminar la partida?</h3><p class="hint">Pierdes las mejoras de esta partida. El récord y los premios se quedan.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="towerQuitYes">Terminar</button></div>`),
   towerQuitYes:()=>{ G.towerAbandon(); closeModal(); renderTab() },
-  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Hoguera: ya tenías la vida llena':'Hoguera: vida al máximo'); if(r.k==='treasure') toast(r.got?'Cofre: '+G.boonInfo(r.got).name:'Cofre vacío: ya tienes todos los grimorios'); if(G.inEvent()){ tab='up'; } renderTab() },
+  towerGo:(b,k)=>{ const r=G.towerGo(+k); if(!r) return; if(r.k==='rest') toast(r.full?'Hoguera: ya tenías la vida llena':'Hoguera: vida al máximo'); if(r.k==='treasure'&&!r.got) toast('Cofre vacío: ya tienes todos los grimorios'); if(G.inEvent()){ tab='up'; } renderTab() },
   towerPick:(b,k)=>{ if(G.towerPick(+k)) haptic('ok'); closeModal(); renderTab() },
   towerLife:()=>{ if(G.towerBuyLife()){ toast('+1 vida'); renderTab() } else toast('Tokens insuficientes') },
   wheelOpen:()=>wheelModal(),

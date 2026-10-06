@@ -776,7 +776,8 @@ function createGame(opts){
   // conseguir una carta o grimorio (elegido, comprado o al azar)
   function towerGain(run,b){ const m0=runHpMul(run); run.boons.push(b); const m1=runHpMul(run);
     if(m1>m0) run.hp=Math.min(1,((run.hp==null?1:run.hp)*m0+(m1-m0))/m1);   // más vida máxima: se cura la parte nueva
-    if(b.t==='g'&&b.id==='lagarto') run.rev=(run.rev||0)+1; }               // Cola de lagarto: revives una vez
+    if(b.t==='g'&&b.id==='lagarto') run.rev=(run.rev||0)+1;                 // Cola de lagarto: revives una vez
+    emit('towerGot',b); }                                                     // la pantalla enseña «Obtenido»
   // quitar una carta o grimorio (tienda): la vida que tienes no sube
   function towerLose(run,i){ const b=run.boons[i]; if(!b) return null; const m0=runHpMul(run); run.boons.splice(i,1); const m1=runHpMul(run);
     if(m1<m0) run.hp=Math.min(1,(run.hp==null?1:run.hp)*m0/m1);
