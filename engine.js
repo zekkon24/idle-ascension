@@ -102,36 +102,35 @@ function createGame(opts){
   const heroStats=()=>HS||(HS=computeStats());
   function computeStats(){
     if(towerOn()) return towerStats();
-    const c=CFG.classes[S.cls], L=S.lvl-1, u=S.up, U=CFG.upgrades, w=equipped(), ps={...(c.p||{}),...evoBase(),...towerBase()}, A=S.absorb||{}, EV=S.evo?evoP():null;
-    const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}, TF=CFG.tower.fx; let wd=0,ws=0;
-    const gs=grimSet(), GFX=towerOn()?grimFxT():CFG.grimoire.fx;                               // camino B (y Torre): defensa (Guardián) o daño a jefes (Cazador)
+    const c=CFG.classes[S.cls], L=S.lvl-1, u=S.up, U=CFG.upgrades, w=equipped(), ps={...(c.p||{}),...evoBase()}, A=S.absorb||{}, EV=S.evo?evoP():null;
+    const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}; let wd=0,ws=0;
+    const gs=grimSet(), GFX=CFG.grimoire.fx;                               // camino B (y Torre): defensa (Guardián) o daño a jefes (Cazador)
     if(gs.has('fortaleza')){ sec.dfp+=GFX.fortaleza.df; sec.bd+=GFX.fortaleza.boss||0; } if(gs.has('cazador')) sec.bd+=GFX.cazador.boss;
     if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
     return {
       // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida,
       // el Aura del Santo y el daño por defensa del Titán se escalan con ellas para que sigan valiendo lo mismo.
       hpK:Math.pow(U.hp.mult/(U.hp.ref||U.hp.mult),u.hp), dfK:Math.pow(U.df.mult/(U.df.ref||U.df.mult),u.df),
-      hp:(c.hp+(A.hp||0)+c.ghp*L)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*Math.max(0.2,1+TF.aguante.hp*tfx('aguante')+TF.cristal.hp*tfx('cristal')+CFG.tower.curses.fragil.hp*tcurse('fragil'))*(pvpOn()&&B.hpM||1),
-      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(1+TF.fuerza.atk*tfx('fuerza')+TF.cristal.atk*tfx('cristal')),
+      hp:(c.hp+(A.hp||0)+c.ghp*L)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*(pvpOn()&&B.hpM||1),
+      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk'),
       df:(c.df+(A.df||0)+c.gdf*L)*Math.pow(U.df.mult,u.df)*(1+sec.dfp),
-      spd:c.spd*(ps.spd||1)*Math.pow(U.spd.mult,u.spd)*(1+ws)*(1+TF.rapidez.spd*tfx('rapidez')),
-      cr:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr+TF.precision.cr*tfx('precision')), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
-      ls:Math.min(CFG.caps.ls,sec.ls+TF.vampiro.ls*tfx('vampiro')), bd:sec.bd, ranged:c.ranged,
-      regen:EV&&EV.noHeal?0:ps.regen||c.regen||0, dmgTaken:(ps.dmgTaken||c.dmgTaken||1)*Math.max(0.5,1-TF.talisman.taken*tfx('talisman')), xpMult:ps.xp||1, noHeal:!!(EV&&EV.noHeal),
+      spd:c.spd*(ps.spd||1)*Math.pow(U.spd.mult,u.spd)*(1+ws),
+      cr:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
+      ls:Math.min(CFG.caps.ls,sec.ls), bd:sec.bd, ranged:c.ranged,
+      regen:EV&&EV.noHeal?0:ps.regen||c.regen||0, dmgTaken:ps.dmgTaken||c.dmgTaken||1, xpMult:ps.xp||1, noHeal:!!(EV&&EV.noHeal),
     };
   }
-  // Torre: héroe único (CFG.tower.hero) + solo las mejoras y maldiciones de la partida
-  function towerStats(){ const H=CFG.tower.hero, TF=CFG.tower.fx, ps=towerBase(), sec={hpp:0,dfp:0,bd:0}, gs=grimSet(), GFX=grimFxT(), X={atk:0,hp:0,spd:0,cr:0};
-    for(const b of tBoons()) if(b.t==='pas'){ const x=CFG.tower.pasBonus[b.cls+':'+b.path]; if(x) for(const k in X) X[k]+=x[k]||0; }   // extras de los grimorios flojos
-    const crT=H.cr+X.cr+(ps.cr||0)+TF.precision.cr*tfx('precision')+TF.colmillo.cr*tfx('colmillo');
-    if(gs.has('fortaleza')){ sec.dfp+=GFX.fortaleza.df; sec.bd+=GFX.fortaleza.boss||0; } if(gs.has('cazador')) sec.bd+=GFX.cazador.boss;
+  // Torre: héroe único (CFG.tower.hero) + solo las cartas, grimorios y maldiciones de la partida.
+  // Las cartas de estadística se suman por copia; Talismán se multiplica (×0,8 por copia). Sin topes: el crítico de más de
+  // 100 % se suma al daño crítico. Furia ciega: la velocidad extra también suma daño crítico.
+  function towerStats(){ const H=CFG.tower.hero, run=S.tower.run, X={atk:0,hp:0,spd:0,cr:0,cd:0,df:0,ls:0,regen:0,refl:0,dbl:0};
+    for(const b of run.boons){ const d=boonDef(b); if(!d||(d.type!=='stat'&&b.id!=='segador')) continue; for(const k of ['atk','hp','spd','cr','cd','df','ls','regen']) X[k]+=d[k]||0; X.refl+=d.reflect||0; X.dbl+=d.dbl||0; }
+    const spd=H.spd*(1+X.spd), crT=H.cr+X.cr;
     return { hpK:1, dfK:1,
-      hp:H.hp*Math.max(0.2,1+X.hp+TF.aguante.hp*tfx('aguante')+TF.cristal.hp*tfx('cristal')+CFG.tower.curses.fragil.hp*tcurse('fragil')),
-      atk:H.atk*(1+X.atk+TF.fuerza.atk*tfx('fuerza')+TF.cristal.atk*tfx('cristal')), df:H.df*(1+sec.dfp),
-      spd:H.spd*(ps.spd||1)*(1+X.spd+TF.rapidez.spd*tfx('rapidez')),
-      cr:Math.min(1,crT), cd:H.cd+(ps.cd||0)+TF.precision.cd*tfx('precision')+Math.max(0,crT-1), ev:0,   // sin tope: el crítico de más de 100 % se suma al daño crítico
-      ls:Math.min(0.6,TF.vampiro.ls*tfx('vampiro')), bd:sec.bd, ranged:false,
-      regen:ps.regen||0, dmgTaken:(ps.dmgTaken||1)*Math.pow(1-TF.talisman.taken,tfx('talisman')), xpMult:1, noHeal:false } }
+      hp:H.hp*Math.max(0.2,1+X.hp+(run.hpBonus||0)+CFG.tower.curses.fragil.hp*tcurse('fragil')), atk:H.atk*(1+X.atk), df:H.df*(1+X.df), spd,
+      cr:Math.min(1,crT), cd:H.cd+X.cd+Math.max(0,crT-1)+(tgH('furiaCiega')?X.spd:0), ev:0,
+      ls:Math.min(1,X.ls), bd:0, ranged:false, regen:X.regen, refl:X.refl, dbl:X.dbl,
+      dmgTaken:Math.pow(1-CFG.tower.cards.talisman.taken,tcN('talisman')), xpMult:1, noHeal:false } }
   // Modos (Normal, Pesadilla, Infierno): la fase f de un modo usa los enemigos de la fase f+off
   const MODES=()=>CFG.modes||[{name:'Normal',off:0,gold:1}];
   const modeCfg=()=>MODES()[S?S.mode||0:0];
@@ -198,8 +197,8 @@ function createGame(opts){
     if((k==='cls'||k==='evo')&&towerOn()) return null;   // Torre: solo los hechizos que consigues en la partida
     if(k==='cls') return K.cls[S.cls]||null;
     if(k==='evo') return S.evo>=1?(S.path==='B'?(K.evoB||{})[S.cls]:K.evo[S.cls])||null:null;
-    if(k[0]==='t'&&towerOn()){ const t=towerSkills()[+k.slice(1)-1]; if(!t) return null; const d=K[t.src][t.cls]; return {...d,...(CFG.tower.skillTune[d.id]||{})} } return null }   // (ajustes de la Torre)
-  const SLOTS0=['cls','evo'], TSL=['t1','t2'];
+    if(k[0]==='t'&&towerOn()){ const t=towerSkills()[+k.slice(1)-1]; return t?{...CFG.tower.cards[t.id],id:t.id}:null } return null }   // Torre: las cartas de habilidad
+  const SLOTS0=['cls','evo'], TSL=['t1','t2','t3','t4','t5','t6','t7','t8'];
   const SLOTS_=()=>towerOn()?SLOTS0.concat(TSL.slice(0,towerSkills().length)):SLOTS0;
   const skillSlots=()=>SLOTS_().filter(skillDef);
   // estado para la pantalla: nombre, recarga y si está lista. Las bloqueadas dicen cómo se consiguen.
@@ -207,10 +206,11 @@ function createGame(opts){
     :{slot:k,locked:true,name:S.evo>=1?'Por decidir':'Evolución',desc:S.evo>=1?'Habilidad de este camino: aún por decidir':'Se desbloquea al evolucionar'} }) }
   function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'};
     if(CT<(CD[k]||0)) return {ok:false,why:'cd',left:CD[k]-CT};
-    CD[k]=CT+d.cd*cdMul(); (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
+    CD[k]=CT+d.cd; (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
   // en los eventos se usan a mano, salvo que el jugador ponga «Auto» (opt.evAuto); en la campaña, solas (opt.autoSkills)
   // en PvP, solas salvo que el jugador ponga «Manual» (opt.pvpAuto=false); el fantasma siempre en automático
-  const autoOpt=()=>B&&B.kind==='pvp'?!(S.opt&&S.opt.pvpAuto===false):B&&B.event?!!(S.opt&&S.opt.evAuto):!(S.opt&&S.opt.autoSkills===false);
+  // en la Torre, solas salvo que el jugador ponga «Manual» (opt.towerAuto=false)
+  const autoOpt=()=>B&&B.kind==='pvp'?!(S.opt&&S.opt.pvpAuto===false):B&&B.kind==='tower'?!(S.opt&&S.opt.towerAuto===false):B&&B.event?!!(S.opt&&S.opt.evAuto):!(S.opt&&S.opt.autoSkills===false);
   const skillsAuto=autoOpt;
   const manualSkills=()=>!!(B&&B.event&&!autoOpt());
 
@@ -252,7 +252,7 @@ function createGame(opts){
   function stepCore(dt){
     if(!S||!B) return;
     if(B.over){ B.wait-=dt; if(B.wait<=0) startWave(); return }
-    const h=heroStats(), P=stepP(), GS=grimSet(), FX=towerOn()?grimFxT():CFG.grimoire.fx, LS=legendSet();
+    const h=heroStats(), P=stepP(), GS=grimSet(), FX=CFG.grimoire.fx, LS=legendSet(), TW=towerOn(), TC=CFG.tower.cards, TG=CFG.tower.grims;
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); }
@@ -261,14 +261,28 @@ function createGame(opts){
     // curación: lo que de verdad se recupera (Santo: cada curación se convierte en daño en área durante unos segundos)
     // solo la regeneración (Fe) alimenta el aura; lo curado se pasa a la escala antigua (÷ hpK) para que el aura siga pegando igual
     // curación (el Oscuro solo se cura robando vida: ls)
-    const heal=(x,aura,ls)=>{ if(h.noHeal&&!ls) return; const b=B.hp; B.hp=Math.min(h.hp,B.hp+x); const got=B.hp-b; if(aura&&got>0&&P&&P.aura) B.auraPool=(B.auraPool||0)+got*P.aura/h.hpK; };
+    const heal=(x,aura,ls)=>{ if(h.noHeal&&!ls) return; const b=B.hp; B.hp=Math.min(h.hp,B.hp+x); const got=B.hp-b; if(aura&&got>0&&P&&P.aura) B.auraPool=(B.auraPool||0)+got*P.aura/h.hpK;
+      if(ls&&TW&&x>got&&tgH('sangreHirviente')) addShield(x-got); };   // Torre · Sangre hirviente: el robo de vida que sobra es escudo
+    // Torre: multiplicador de daño de las cartas y grimorios (golpes y habilidades)
+    const tMul=tg=>{ if(!TW) return 1; let m=1; const ne=tcN('ejecutor'); if(ne&&tg.hp<TC.ejecutor.below*tg.max) m*=1+TC.ejecutor.mult*ne;
+      if(tgH('demonio')) m*=1+TG.demonio.per*B.t; if(tgH('furiaSangre')) m*=1+TG.furiaSangre.per*Math.max(0,1-B.hp/h.hp);
+      return m*(1+(B.heart||0))*(1+(B.shur||0)) };
+    // Torre: ganar escudo (Juggernaut: golpe a un enemigo al azar, como mucho cada 0,5 s)
+    const addShield=x=>{ if(!(x>0)) return; BUF.shield=Math.min((BUF.shield||0)+x,TW?h.hp*CFG.tower.shieldMax:Infinity);   // Torre: el escudo no pasa de tu vida máxima
+      if(TW&&tgH('juggernaut')&&CT>=(B.jugAt||0)){ const os=B.enemies.filter(e=>!e.dead&&e.arrive<=B.t+0.5), o=os[Math.floor(rand()*os.length)]; if(o){ B.jugAt=CT+0.5; zap(o,dmgF(h.atk,o.df)*TG.juggernaut.mult*tMul(o),{jug:true}); } } };
+    // Torre: perder vida (por golpes o por tus cartas): Corazón de sangre, Arcilla viva y Último aliento
+    const onLoss=x=>{ if(!TW||!(x>0)) return; if(tgH('corazon')) B.heart=(B.heart||0)+TG.corazon.per; if(tgH('arcilla')) addShield(TG.arcilla.pct*x);
+      const nu=tcN('ultimo'); if(nu&&!B.lastUsed&&B.hp>0&&B.hp<TC.ultimo.below*h.hp){ B.lastUsed=true; heal(TC.ultimo.heal*nu*h.hp); emit('fx',{k:'ultimo'}); } };
+    const loseHp=x=>{ const l=Math.max(0,Math.min(B.hp-1,x)); B.hp-=l; onLoss(l); return l };
     if(h.regen){ const lit=P&&P.lightMult&&B.t<(B.lightUntil||0); heal(h.regen*(lit?P.lightMult:1)*h.hp*dt,true); }
-    const kill=e=>{ if(e.dead) return; if(B.kind==='tower'&&towerGuard(e)) return; e.dead=true; e.deadAt=B.t;
-      if(bonOn()&&tfx('explosion')){ const x=e.max*CFG.tower.fx.explosion.pct*tfx('explosion'); for(const o of B.enemies){ if(o.dead||o===e||o.arrive>B.t+0.5) continue; const xo=x*(o.frozen>B.t&&combo('Cristales explosivos')?2:1); o.hp-=xo; B.mD+=x; emit('hit',{e:o,d:x,crit:false,burst:true}); if(o.hp<=0) kill(o); } }   // Torre: Explosión
+    const kill=e=>{ if(e.dead) return; if(e.inf){ e.hp=e.max; return } if(B.kind==='tower'&&towerGuard(e)) return; e.dead=true; e.deadAt=B.t;
+      if(TW&&tgH('explosion')&&!e.inf){ const x=e.max*TG.explosion.pct; for(const o of B.enemies){ if(o.dead||o===e||o.arrive>B.t+0.5) continue; zap(o,x,{burst:true}); } }   // Torre: Explosión
       if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
       if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return }
       if(e.wander){ giveBundle(CFG.surprise.wander.reward); SUR.kind=null; emit('surprise',{k:'wanderWin',reward:CFG.surprise.wander.reward}); }
       onKill(e); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
+    // daño que no es un golpe normal (habilidades, espinas, efectos): Torre · Segador también cura con él
+    const zap=(e,d,o)=>{ if(e.dead) return; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e,d,crit:false,...(o||{})}); if(TW&&!(o&&o.thorns)&&tgH('segador')) heal(d*h.ls,false,true); if(e.hp<=0) kill(e); };
     if(B.auraPool>0){ const d=B.auraPool*Math.min(1,dt/P.auraDur); B.auraPool-=d;                    // Santo: aura sagrada (en área)
       for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const dd=d*(B.boss?1+h.bd:1); e.hp-=dd; B.auraDmg=(B.auraDmg||0)+dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); if(e.hp<=0) kill(e); } }
     if(P&&P.burnPct) for(const e of B.enemies){ // Archimago: quemaduras (cada acumulación hace burnPct del daño por segundo)
@@ -278,7 +292,7 @@ function createGame(opts){
       const d=e.dotDps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     for(const e of B.enemies){ if(e.dead||!e.poison||!e.poison.length) continue; e.poison=e.poison.filter(x=>x.until>B.t); // Veneno: acumulaciones
       const d=e.poison.reduce((a,x)=>a+x.dps,0)*dt; if(!d) continue; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
-    const hitOnce=tg=>{
+    const hitOnce=(tg,extra)=>{   // extra: golpe de más (Golpe doble, Tormenta, Lluvia): no vuelve a repetir
       if(tg.thorns) tg.thN=(tg.thN||0)+1;   // Torre: élite con Espinas (te devuelve parte de cada golpe)
       const atkE=h.atk+(P&&P.defDmg?P.defDmg*h.df/h.dfK:0), dfE=tg.df*(LS.vacio?Math.pow(1-LS.vacio.ignoreDf,LS.vacio.n||1):1);   // Titán: daño extra según su defensa · Vacío: ignora defensa
       let d=dmgF(atkE,dfE)*(B.boss?1+h.bd:1), crit=false;
@@ -286,15 +300,17 @@ function createGame(opts){
       if(P&&P.dblBuff&&B.dblSt){ B.dblSt=B.dblSt.filter(u=>u>B.t); d*=1+P.dblBuff*B.dblSt.length; } // Ojo de Halcón: racha tras disparo doble
       if(B.critBuff){ d*=1+P.critNext; B.critBuff=false; }                // Sombra: golpe potenciado tras un crítico
       d*=buffMul('atk');                                                        // habilidades: +daño
-      if(bonOn()){ const TX=CFG.tower.fx; if(tfx('ejecutor')&&(tg.hp<TX.ejecutor.below*tg.max||(tg.frozen>B.t&&combo('Golpe helado')))) d*=1+TX.ejecutor.mult*tfx('ejecutor'); if(tfx('furia')) d*=1+TX.furia.per*tfx('furia')*Math.max(0,1-B.hp/h.hp); }   // Torre: Ejecutor y Furia
+      if(TW){ d*=tMul(tg); if(tgH('coloso')) d+=TG.coloso.pct*(BUF.shield||0);   // Torre: cartas y grimorios · Coloso: el escudo suma daño
+        if(!B.firstHit){ B.firstHit=true; if(tgH('primerGolpe')) d*=1+TG.primerGolpe.mult; }
+        if(BUF.sang>0){ BUF.sang--; d*=1+BUF.sangMult; } }   // Sangría
       { const a1=buffAdd('atk1'); if(a1&&(B.boss||B.kind==='boss')) d*=1+a1; }   // +daño solo contra jefes
       if(tg.mark>B.t) d*=1+tg.markMult;                                         // Marca del cazador
       if(GS.has('sacrificio')&&B.hp>1){ const GF=FX.sacrificio; B.hp=Math.max(1,B.hp-GF.cost*h.hp); if(!GF.single||B.boss||B.kind==='boss') d*=1+GF.atk; }   // Oscuro: el extra solo contra jefes   // Sacrificio: vida por daño
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
-      if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; if(bonOn()&&tfx('colmillo')) heal(CFG.tower.fx.colmillo.heal*tfx('colmillo')*(combo('Instinto asesino')?2:1)*h.hp,false,true); if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE);   // Filo del vacío: el crítico ignora la defensa
+      if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE);   // Filo del vacío: el crítico ignora la defensa
         B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
       else if(P&&P.critStack) B.critAcc=Math.min(P.critStackMax||1,(B.critAcc||0)+P.critStack); // Segador: cada golpe sin crítico suma probabilidad de crítico
-      tg.hp-=d; B.mD+=d; heal(d*(bonOn()&&B.hp<0.3*h.hp&&combo('Sed de sangre')?2:1)*(h.ls+buffAdd('ls')+(GS.has('sacrificio')?FX.sacrificio.lsMax*Math.max(0,1-B.hp/h.hp):0))*h.hpK,false,true); if(B.kind==='boss') addDmg(d);   // (Oscuro: roba más cuanta menos vida)   // robo de vida: cura la misma parte de tu vida máxima que antes
+      tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls')+(GS.has('sacrificio')?FX.sacrificio.lsMax*Math.max(0,1-B.hp/h.hp):0))*h.hpK,false,true); if(B.kind==='boss') addDmg(d);   // (Oscuro: roba más cuanta menos vida)   // robo de vida: cura la misma parte de tu vida máxima que antes
       if(P&&P.burnPct){ tg.burn=tg.burn||[]; if(tg.burn.length>=P.burnMax) tg.burn.shift(); tg.burn.push(B.t+P.burnDur); }
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
       if(BUF.clone&&CT<BUF.clone.until&&!tg.dead){ const c=d*BUF.clone.mult; tg.hp-=c; B.mD+=c; if(B.kind==='boss') addDmg(c); emit('hit',{e:tg,d:c,crit,clone:true}); }   // Clon de sombra
@@ -303,9 +319,9 @@ function createGame(opts){
       if(LS.llamarada&&(B.flare=(B.flare||0)+1)%LS.llamarada.every===0) for(const e of B.enemies){ if(e.dead) continue; e.dot=B.t+LS.llamarada.dur; e.dotDps=LS.llamarada.pct*(LS.llamarada.n||1)*d; e.dotKind='fuego'; }   // Llamarada solar
       if(CT<(BUF.combust||0)&&BUF.burnHit&&!(P&&P.burnPct)){ tg.dot=B.t+3; tg.dotDps=Math.max(tg.dotKind==='fuego'&&tg.dot>B.t?tg.dotDps||0:0,BUF.burnHit*d); tg.dotKind='fuego'; }   // Combustión (Torre): tus golpes queman
       if(GS.has('veneno')){ const GF=FX.veneno; tg.poison=(tg.poison||[]).filter(x=>x.until>B.t); tg.poison.push({until:B.t+GF.dur,dps:GF.pct*d}); if(tg.poison.length>GF.max) tg.poison.shift(); }
-      if(bonOn()&&tfx('hielo')&&!tg.dead&&rand()<Math.min(0.9,CFG.tower.fx.hielo.chance*tfx('hielo'))) tg.frozen=Math.max(tg.frozen||0,B.t+CFG.tower.fx.hielo.dur);   // Torre: Orbe de hielo
-      if(bonOn()&&tfx('ejecutor')&&!tg.dead&&tg.hp>0&&(!B.boss||tg.minion)){ const TX=CFG.tower.fx.ejecutor, thr=(TX.exec+TX.execUp*(tfx('ejecutor')-1))*(tg.frozen>B.t&&combo('Golpe helado')?2:1); if(tg.hp<thr*tg.max) tg.hp=0; }   // Ejecutor: remata
+      if(TW&&tgH('shuriken')&&(B.shN=(B.shN||0)+1)%TG.shuriken.every===0) B.shur=(B.shur||0)+TG.shuriken.atk;   // Shuriken
       if(tg.hp<=0) kill(tg);
+      if(TW&&crit&&!extra&&tgH('tormenta')) for(let i=0;i<TG.tormenta.n;i++){ const os=B.enemies.filter(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5), o=os.length?os[Math.floor(rand()*os.length)]:!tg.dead?tg:null; if(o) hitOnce(o,true); }   // Tormenta de acero
       // Tajo partido (después de matar: también alcanza al que acaba de salir)
       if(LS.tajo){ const o=B.enemies.find(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5); if(o){ const x=d*LS.tajo.mult*(LS.tajo.n||1); o.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); emit('hit',{e:o,d:x,crit:false,cleave:true}); if(o.hp<=0) kill(o); } }
     };
@@ -314,17 +330,27 @@ function createGame(opts){
     if(skillsAuto()&&B.enemies.some(e=>!e.dead&&e.arrive<=B.t+0.3))
       for(const k of skillSlots()){ const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;
         if((sk.id==='sed'||sk.id==='sacrificio')&&B.hp<0.5*h.hp) continue;         // no gastar vida si va mal
-        CD[k]=CT+sk.cd*cdMul(); (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
+        if((sk.id==='tSed'||sk.id==='tSangria')&&B.hp<0.35*h.hp) continue;
+        CD[k]=CT+sk.cd; (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
     if(B.cast&&B.cast.length){ const list=B.cast; B.cast=[];
-      const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*(1+(B.spellN||0)*0.1);
-      const hurt=(e,d,k)=>{ e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e,d,crit:false,skill:k}); if(e.hp<=0) kill(e); return e.dead };
-      for(const k of (tfx('eco')?list.flatMap(k=>k[0]==='t'?Array(1+tfx('eco')).fill(k):[k]):list)){ const sk=skillDef(k); if(!sk) continue; if(bonOn()&&combo('Bucle del tiempo')) B.spellN=(B.spellN||0)+1;   // Bucle: cada hechizo, +10 % a los siguientes
+      const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*tMul(e);
+      const hurt=(e,d,k)=>{ zap(e,d,{skill:k}); return e.dead };
+      for(const k of (TW&&tgH('eco')?list.flatMap(k=>k[0]==='t'?[k,k]:[k]):list)){ const sk=skillDef(k); if(!sk) continue;   // Eco: las habilidades de la Torre se lanzan dos veces
         switch(sk.id){
+          // Torre
+          case 'tGolpe': { const e=alive()[0]; if(e) hurt(e,base(e)*sk.mult,k); break; }
+          case 'tMuro': addShield(sk.shield*h.hp); break;
+          case 'tSangria': loseHp(sk.cost*h.hp); BUF.sang=sk.hits; BUF.sangMult=sk.mult; break;
+          case 'tTorbellino': for(const e of alive()) hurt(e,base(e)*sk.mult,k); break;
+          case 'tBaluarte': BUF.list.push({until:CT+sk.dur,df:sk.df,reflect:sk.reflect}); break;
+          case 'tSed': { const l=loseHp(sk.cost*h.hp); addShield(sk.shield*l); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
+          case 'tLluvia': for(let i=0;i<sk.hits;i++){ const e=alive().find(x=>x.arrive<=B.t+0.5); if(e) hitOnce(e,true); } break;
+          case 'tFestin': { const e=alive()[0]; if(e&&hurt(e,base(e)*sk.mult,k)&&!e.minion){ const run=S.tower.run; run.hpBonus=(run.hpBonus||0)+sk.maxHp; statsDirty(); } break; }
           case 'muro': BUF.shield=(BUF.shield||0)+sk.shield*h.df;                                   // escudo según la defensa
             for(const e of alive()) hurt(e,dmgF(sk.dmgDef*h.df/h.dfK,e.df)*(B.boss?1+h.bd:1),k); break;   // golpe en área con la defensa (escala antigua)
           case 'bola': for(const e of alive().slice(0,sk.targets)){ hurt(e,base(e)*sk.mult,k); if(!e.dead){ if(GS.has('escarcha')&&!(P&&P.burnPct)) e.shards=(e.shards||0)+1; else { e.dot=B.t+sk.dur; e.dotDps=base(e)*sk.burn; e.dotKind='fuego'; } } } break;
           case 'rapido': BUF.list.push({until:CT+sk.dur,spd:sk.spd}); break;
-          case 'ejecutar': { const tg=alive()[0]; if(tg&&hurt(tg,base(tg)*sk.mult,k)) CD[k]=CT+sk.cd*sk.refund*cdMul(); break; }   // si mata, media recarga
+          case 'ejecutar': { const tg=alive()[0]; if(tg&&hurt(tg,base(tg)*sk.mult,k)) CD[k]=CT+sk.cd*sk.refund; break; }   // si mata, media recarga
           case 'luz': { for(let i=0;i<sk.hits;i++){ const e=alive()[0]; if(e) hurt(e,base(e)*sk.mult,k); }   // golpes encadenados al mismo objetivo (si muere, siguen con el siguiente)
             BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
           case 'sed': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.shield=(BUF.shield||0)+sk.shield*Math.max(0,lost); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
@@ -355,7 +381,7 @@ function createGame(opts){
         const tg=cand.reduce((a,b)=>a.arrive<=b.arrive?a:b);
         B.mB+=dmgF(h.atk,tg.df)*(B.boss?1+h.bd:1)*(1+h.cr*h.cd);   // lo que diría la fórmula por ataque (para medir el DPS real)
         hitOnce(tg);
-        if(tfx('cadena')&&(B.chainN=(B.chainN||0)+1)%CFG.tower.fx.cadena.every===0){ const os=B.enemies.filter(e=>canHit(e)&&e!==tg).slice(0,tfx('cadena')); for(const o of os) hitOnce(o); }   // (salta a 1 enemigo más por copia)   // Torre: Cadena
+        if(TW&&h.dbl) for(let c=h.dbl;c>0;c--) if(rand()<c){ const t2=tg.dead?B.enemies.filter(canHit)[0]:tg; if(t2) hitOnce(t2,true); }   // Torre · Golpe doble (más del 100 %: golpes seguros)
         if(LS.rafaga&&(B.shots=(B.shots||0)+1)%LS.rafaga.every===0) for(let i=1;i<1+(LS.rafaga.arrows-1)*(LS.rafaga.n||1);i++){ const t2=tg.dead?B.enemies.filter(canHit)[0]:tg; if(t2) hitOnce(t2); }   // Ráfaga: 3 flechas
         if(P&&P.double&&!tg.dead&&rand()<P.double){ hitOnce(tg); if(P.dblBuff){ B.dblSt=(B.dblSt||[]).filter(u=>u>B.t); if(B.dblSt.length<P.dblMax) B.dblSt.push(B.t+P.dblDur); } } // Tirador: disparo doble
         B.th+=1/(h.spd*buffMul('spd'));
@@ -370,10 +396,11 @@ function createGame(opts){
       emit('bossPhase',{k:e.phase}); }
     // recibir un golpe: dfn da el daño tras tu defensa (se calcula después de la esquiva, como siempre)
     const takeHit=(e,dfn)=>{ if(rand()>=h.ev){ let d=dfn()*h.dmgTaken*buffMul('taken'); const d0=d;
-          if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad
+          if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad (y de la Torre)
           if(BUF.gshield>0){ const a=Math.min(BUF.gshield,d); BUF.gshield-=a; d-=a; }    // escudo del Grimorio de la Luz
-          B.hp-=d; emit('heroHit',{d}); if(!B.event&&STK.n){ STK.n=0; emit('streak',{n:0}); }
-          { const rf=buffAdd('reflect')+CFG.tower.fx.espinas.reflect*tfx('espinas'); if(rf>0){ const r=(bonOn()&&combo('Coraza de pinchos')?d0:d)*rf/h.hpK+(bonOn()&&tfx('espinas')?e.max*CFG.tower.fx.espinas.maxPct*tfx('espinas')*(combo('Coraza de pinchos')?2:1):0); e.hp-=r; B.mD+=r; if(B.kind==='boss') addDmg(r); emit('hit',{e,d:r,crit:false,thorns:true}); if(e.hp<=0) kill(e); } }   // Baluarte: devuelve daño
+          B.hp-=d; emit('heroHit',{d}); if(!B.event&&STK.n){ STK.n=0; emit('streak',{n:0}); } if(!(B.hp>0)){ B.hp=0; return } onLoss(d);   // si caes, ya no devuelves daño
+          { const rf=buffAdd('reflect')+(TW?h.refl:0); if(rf>0) zap(e,(TW&&tgH('corazaPuas')?d0:d)*rf/h.hpK,{thorns:true}); }   // Baluarte y Púas: devuelven daño (Coraza de púas: también lo que para el escudo)
+          { const ne=TW?tcN('erizo'):0; if(ne) for(const o of B.enemies) if(!o.dead&&o.arrive<=B.t+0.5) zap(o,dmgF(h.atk,o.df)*TC.erizo.pct*ne*tMul(o),{thorns:true}); }   // Erizo
           if(CT<(BUF.iceArmor||0)&&!e.dead&&(e.shards=(e.shards||0)+(BUF.iceShards||1))>=CFG.grimoire.fx.escarcha.need){ const F=CFG.grimoire.fx.escarcha; e.shards=0;   // Armadura de hielo: esquirla al que pega
             const x=dmgF(h.atk,e.df*(1-F.ignoreDf))*F.mult*(B.boss?1+h.bd:1); e.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); e.frozen=B.t+F.freeze; emit('hit',{e,d:x,crit:false,frost:true}); if(e.hp<=0) kill(e); }
           if(P&&P.rage) B.rage=(B.rage||0)+1;
@@ -392,10 +419,10 @@ function createGame(opts){
         if(e.dead) break;
       }
     }
-    if(B.kind==='tower'){ const TX=CFG.tower.fx;
+    if(B.kind==='tower'){
       if(towerTick(h,dt)){ endEvent(); return }   // rasgos de los élites y mecánicas de los jefes
-      if(tfx('reloj')&&CT>=B.clockAt){ B.clockAt=CT+TX.reloj.every/tfx('reloj'); for(const k of skillSlots()) CD[k]=CT; if(combo('Bucle del tiempo')) for(const k of skillSlots()) if(k[0]==='t'){ CD[k]=CT+skillDef(k).cd*cdMul(); (B.cast=B.cast||[]).push(k); } emit('fx',{k:'reloj'}); }   // Torre: Reloj de arena
-      if(tfx('martillo')&&CT>=B.hammerAt){ B.hammerAt=CT+TX.martillo.every; for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const x=dmgF(h.atk,e.df)*TX.martillo.mult*tfx('martillo'); e.hp-=x; B.mD+=x; emit('hit',{e,d:x,crit:false,bolt:true}); if(e.hp<=0) kill(e); } }   // Torre: Martillo del trueno
+      if(!tgH('barricada')&&BUF.shield>0) BUF.shield*=Math.exp(-CFG.tower.shieldDecay*dt);   // el escudo se gasta con el tiempo
+      { const n=tcN('escudoReg'); if(n&&CT>=B.regAt){ B.regAt=CT+TC.escudoReg.every; addShield(TC.escudoReg.shield*n*h.hp); } }   // Escudo regenerable
       if(B.enemies.every(e=>e.dead)){ endEvent(); return } }
     if(B.event){ if(B.enemies.length>40) B.enemies=B.enemies.filter(e=>!e.dead); return }
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
@@ -452,22 +479,16 @@ function createGame(opts){
   // Torre: las mejoras elegidas en la partida se suman a lo tuyo solo mientras luchas en la Torre
   const towerOn=()=>!!(B&&B.kind==='tower');
   const pvpOn=()=>!!(B&&B.kind==='pvp');
-  const bonOn=()=>towerOn();
+  // run.boons: {t:'c',id} cartas (CFG.tower.cards) y {t:'g',id} grimorios (CFG.tower.grims)
   const tBoons=()=>towerOn()&&S.tower&&S.tower.run?S.tower.run.boons:[];
-  const boonPas=b=>{ const T=evoTiers()[0]; return b.path==='B'?T.alt[b.cls]:T.classes[b.cls] };
-  const towerSkills=()=>tBoons().filter(b=>b.t==='sk');
-  const tfx=id=>tBoons().filter(b=>b.t==='fx'&&b.id===id).length;
-  const tcurse=id=>towerOn()&&S.tower&&S.tower.run?(S.tower.run.curses||[]).filter(c=>c===id).length:0;   // maldiciones de la partida   // cuántas veces tienes esta mejora de la Torre
-  const cdMul=()=>Math.max(0.15,Math.pow(CFG.tower.fx.recarga.cd,tfx('recarga')));
-  const combo=id=>{ const c=CFG.tower.combos.find(x=>x.name===id); return !!(c&&tfx(c.a)&&tfx(c.b)) };   // combos de la Torre
-  const MAEK=['rage','rageCap','burnPct','double','critNext','lightMult'];
-  function stepP(){ const L=tBoons().filter(b=>b.t==='pas'&&b.path!=='B'); const P=towerOn()?null:evoP(); if(!L.length) return P;
-    const o={...(P||{})}, m=1+(CFG.tower.fx.maestria.mult-1)*tfx('maestria'); for(const b of L){ const p={...boonPas(b)}; if(m!==1) for(const k of MAEK) if(typeof p[k]==='number') p[k]*=m; Object.assign(o,p); } return o }
-  // efectos de grimorio de la Torre (con Maestría, más fuertes)
-  function grimFxT(){ const F0=CFG.grimoire.fx, GT=CFG.tower.grimTune||{}, F={}; for(const k in F0) F[k]={...F0[k],...(GT[k]||{})}; if(!tfx('maestria')) return F; const m=1+(CFG.tower.fx.maestria.mult-1)*tfx('maestria'), o={}; for(const k in F){ o[k]={...F[k]}; for(const q of ['pct','mult','boss','atk','df']) if(typeof o[k][q]==='number') o[k][q]*=m; } return o }
-  function towerBase(){ const o={}; for(const b of tBoons()) if(b.t==='pas'&&b.path!=='B') Object.assign(o,boonPas(b).base||{}); return o }
-  function grimSet(){ const s=new Set(); const g=towerOn()?null:grimFx(); if(g) s.add(g); for(const b of tBoons()) if(b.t==='pas'&&b.path==='B') s.add(boonPas(b).grim); return s }
-  function legendSet(){ const o={}, L=towerOn()?null:legendFx(); if(L) o[L.id]=L; for(const b of tBoons()) if(b.t==='leg'){ const d={...CFG.weapon.legend[b.cls],...(CFG.tower.legTune[CFG.weapon.legend[b.cls].id]||{})}; o[d.id]={...d,n:o[d.id]&&o[d.id].n?o[d.id].n+1:1}; } return o }   // (las copias se acumulan)
+  const boonDef=b=>b&&(b.t==='c'?CFG.tower.cards[b.id]:b.t==='g'?CFG.tower.grims[b.id]:null);
+  const towerSkills=()=>tBoons().filter(b=>b.t==='c'&&CFG.tower.cards[b.id]&&CFG.tower.cards[b.id].type==='skill');
+  const tcN=id=>tBoons().filter(b=>b.t==='c'&&b.id===id).length;   // cuántas copias de esta carta
+  const tgH=id=>tBoons().some(b=>b.t==='g'&&b.id===id)?1:0;       // ¿tienes este grimorio?
+  const tcurse=id=>towerOn()&&S.tower&&S.tower.run?(S.tower.run.curses||[]).filter(c=>c===id).length:0;   // maldiciones de la partida
+  const stepP=()=>towerOn()?null:evoP();
+  function grimSet(){ const s=new Set(); const g=towerOn()?null:grimFx(); if(g) s.add(g); return s }
+  function legendSet(){ const o={}, L=towerOn()?null:legendFx(); if(L) o[L.id]=L; return o }
   // cuánto sube el daño medio por la pasiva: estimación que solo se usa hasta tener DPS medido (dpsK)
   function evoDps(h){ const P=evoP(); if(!P) return 1; let m=1;
     if(P.double) m*=1+P.double; if(P.critNext) m*=1+h.cr*P.critNext; if(P.rage) m*=1+P.rageCap*0.5;
@@ -620,28 +641,28 @@ function createGame(opts){
     return {win,d,rating:P.rating,rival:{name:r.name,cls:r.cls,bot:r.bot,id:r.id,match:r.match}} }
   const pvpLoss=r=>({...pvpResult(r,false),quit:true});
   /* ---------- Torre (roguelike) ---------- */
-  // Mejoras posibles: pasivas de los caminos A y B, efectos de armas legendarias y habilidades (de clase y de evolución) de todas las clases
-  function boonPool(){ const T=CFG.tower, run=S.tower.run, have=new Set(run.boons.map(boonKey)), out=[];
-    const mine=new Set();   // (roguelike puro: tu personaje no cuenta, salen las cartas de todas las clases)
-    for(const c of Object.keys(CFG.classes)){ out.push({t:'pas',cls:c,path:'A'},{t:'pas',cls:c,path:'B'},{t:'leg',cls:c}); for(const src of ['cls','evo','evoB']) if(CFG.skills[src][c]) out.push({t:'sk',src,cls:c}); }
-    for(const id in T.fx) out.push({t:'fx',id});
-    const nSk=run.boons.filter(b=>b.t==='sk').length;
-    const EX=new Set(T.exclude||[]);
-    const stack=b=>b.t==='fx'||(b.t==='leg'&&b.cls!=='Asesino');   // se acumulan: todas las mejoras y objetos (no grimorios, hechizos ni Filo del vacío)
-    return out.filter(b=>EX.has(boonKey(b))?false:!stack(b)&&have.has(boonKey(b))?false:!mine.has(boonKey(b))&&!(b.t==='sk'&&nSk>=T.maxSkills) ) }
+  // Cartas y grimorios que pueden salir: las habilidades (hasta maxSkills) y los grimorios, solo 1 de cada
   const RNAME={C:'Común',R:'Rara',E:'Épica',L:'Legendaria'};
-  const boonKey=b=>b.t==='fx'?'fx:'+b.id:b.t==='pas'?'pas:'+b.cls+':'+b.path:b.t==='leg'?'leg:'+b.cls:'sk:'+b.src+':'+b.cls;
-  function boonInfo(b){ if(b.t==='fx'){ const d=CFG.tower.fx[b.id]; return {kind:(d.obj?'Objeto · ':'')+RNAME[d.r],name:d.name,desc:d.desc,r:d.r} }
-    if(b.t==='pas'){ const p=boonPas(b), x=CFG.tower.pasBonus[b.cls+':'+b.path]; return {kind:'Grimorio · Épica',name:p.name,desc:((CFG.tower.pasDesc||{})[b.cls+':'+b.path]||p.passive)+(x?' · Torre: '+x.txt:''),r:'E'} }
-    if(b.t==='leg'){ const d={...CFG.weapon.legend[b.cls],...(CFG.tower.legTune[CFG.weapon.legend[b.cls].id]||{})}; return {kind:'Objeto · Legendaria',name:d.name,desc:d.desc,r:'L'} }
-    const k={...CFG.skills[b.src][b.cls]}; Object.assign(k,CFG.tower.skillTune[k.id]||{}); const r=(CFG.tower.skillRar||{})[k.id]||'E'; return {kind:'Hechizo · '+RNAME[r],name:k.name,desc:k.desc,r} }
+  const boonKey=b=>b.t+':'+b.id, boonRar=b=>(boonDef(b)||{}).r||'C';
+  const rCount=(run,t,id)=>run.boons.filter(b=>b.t===t&&b.id===id).length;   // copias en la partida (también fuera del combate)
+  function boonPool(kinds){ const T=CFG.tower, run=S.tower.run, have=new Set(run.boons.map(boonKey)), out=[];
+    const nSk=run.boons.filter(b=>b.t==='c'&&(T.cards[b.id]||{}).type==='skill').length;
+    if(kinds.includes('c')) for(const id in T.cards){ const d=T.cards[id]; if(d.type==='skill'&&(have.has('c:'+id)||nSk>=T.maxSkills)) continue; out.push({t:'c',id}); }
+    if(kinds.includes('g')) for(const id in T.grims) if(!have.has('g:'+id)) out.push({t:'g',id});
+    return out }
+  const TYPEN={stat:'Estadística',skill:'Habilidad',fx:'Efecto',pas:'Pasiva'}, FAMN={f:'Fuerza y Crítico',e:'Escudo y Espinas',s:'Sangre'};
+  function boonInfo(b){ const d=boonDef(b); if(!d) return {kind:'',name:'?',desc:'',r:'C'};
+    return {kind:(b.t==='g'?'Grimorio':'Carta')+' · '+TYPEN[d.type]+' · '+RNAME[d.r],name:d.name,desc:d.desc,r:d.r,fam:d.fam,famName:FAMN[d.fam]||'',type:d.type,grim:b.t==='g'} }
   function towerNodes(f){ const T=CFG.tower, Hd=T.hard; if(f%T.boss.every===0) return ['boss'];
     // pisos sin escapatoria: solo combates (a veces solo élite)
     if(Hd&&f>=Hd.forcedFrom&&rand()<Hd.forced){ const r=rand(); return r<0.3?['elite']:r<0.65?['elite','elite']:['elite','fight'] }
     const types=Object.keys(T.nodes), w=types.map(k=>T.nodes[k]), n=2+(rand()<0.5?1:0), out=[];
     for(let i=0;i<n;i++){ let r=rand()*w.reduce((a,b)=>a+b,0), j=0; for(;j<types.length-1;j++){ r-=w[j]; if(r<0) break; } out.push(types[j]); }
     if(!out.some(t=>t==='fight'||t==='elite')) out[0]='fight'; return out }
-  function towerState(){ S.tower=S.tower||{best:0,run:null,got:0}; return S.tower }
+  function towerState(){ const T=S.tower=S.tower||{best:0,run:null,got:0};
+    if(T.run&&(T.run.boons||[]).some(b=>b.t!=='c'&&b.t!=='g')) T.run=null;   // partida de la Torre antigua (otras mejoras): se cierra
+    if(T.reach==null) T.reach=T.best?Math.min(CFG.tower.maxFloor,T.best+1):0;
+    return T }
   // run.hp: fracción de vida que te queda en la partida (no se cura entre combates; al perder una vida vuelves con la vida llena)
   // mapa estilo Slay the Spire: cada piso tiene caminos en 3 columnas (0-2); desde una columna solo puedes ir a la misma o a las vecinas
   function towerRow(f){ const n=towerNodes(f), c=n.length>=3?[0,1,2]:n.length===2?(r=>r<1/3?[0,1]:r<2/3?[1,2]:[0,2])(rand()):[1]; return {n,c} }
@@ -655,41 +676,37 @@ function createGame(opts){
   function towerCanGo(i){ const run=S.tower&&S.tower.run; if(!run) return false; const m=towerMap()[0]; if(!m||m.n!==run.nodes||run.from==null) return true;
     const ok=m.c.map(c=>Math.abs(c-run.from)<=1); return ok.some(x=>x)?!!ok[i]:true }
   function towerAbandon(){ const T=towerState(); if(inEvent()) return false; T.run=null; save(); emit('change'); return true }
-  // elegir camino: combate (normal/élite/jefe) o directo a la recompensa (tesoro/descanso)
+  // elegir camino: combate (normal/élite/jefe), cofre (1 grimorio al azar), tienda, evento, altar u hoguera
   function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||run.shop||run.ev||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k||!towerCanGo(i)) return false;
     { const m=towerMap()[0]; run.from=m&&m.n===run.nodes?m.c[i]:null; if(m&&m.n===run.nodes) run.trail=(run.trail||[]).filter(t=>t.f<run.floor).concat([{f:run.floor,row:m,i}]).slice(-40); }   // camino recorrido (para el mapa)
-    if(k==='shop'){ run.shop={items:towerOffer(CFG.tower.shop.n,'shop'),bought:[]}; save(); emit('change'); return {k} }
-    if(k==='treasure'){ run.pick=towerOffer(3,'normal','obj'); run.cat='obj'; run.after='next'; save(); emit('change'); return {k} }
+    if(k==='shop'){ const SH=CFG.tower.shop, c=towerOffer(SH.cards,'shop',['c']), g=towerOffer(SH.grims,'shop',['g']); run.shop={items:c.concat(g),bought:[],removed:false}; save(); emit('change'); return {k} }
+    if(k==='treasure'){ const b=towerOffer(1,'chest',['g'])[0]; if(b) towerGain(run,b); towerNext(); return {k,got:b||null} }
     if(k==='event'){ const E=Object.keys(CFG.tower.events); run.ev={id:E[Math.floor(rand()*E.length)]}; save(); emit('change'); return {k,ev:run.ev.id} }
     if(k==='altar'){ run.ev={id:'altar'}; save(); emit('change'); return {k,ev:'altar'} }
-    // descanso: vida al máximo (si ya estaba llena, solo te ahorras el combate)
+    // hoguera: vida al máximo (si ya estaba llena, solo te ahorras el combate)
     if(k==='rest'){ const full=!(run.hp<1); run.hp=1; towerNext(); save(); emit('change'); return {k,full} }
     towerFight(k); return {k} }
-  const boonRar=b=>b.t==='fx'?CFG.tower.fx[b.id].r:b.t==='leg'?'L':b.t==='sk'?(CFG.tower.skillRar||{})[CFG.skills[b.src][b.cls].id]||'E':'E';   // hechizos y grimorios: Épica · objetos de arma: Legendaria
-  // tipo de carta: 'upg' mejoras (efectos de la Torre y hechizos) · 'obj' objetos (de la Torre y de armas legendarias) · 'grim' grimorios (pasivas de camino)
-  const boonCat=b=>b.t==='pas'?'grim':b.t==='leg'||(b.t==='fx'&&CFG.tower.fx[b.id].obj)?'obj':'upg';
-  // n cartas distintas; q = pesos por calidad (CFG.tower.rarity[...]); cat: solo de un tipo ('obj' en el cofre)
-  function towerOffer(n,q,cat){ let pool=boonPool(); if(cat){ const f=pool.filter(b=>boonCat(b)===cat); if(f.length) pool=f; }
-    const P=typeof q==='string'?CFG.tower.rarity[q]:q&&typeof q==='object'?q:CFG.tower.rarity.normal, K=Object.keys(P), o=[];
-    pool=pool.filter(b=>P[boonRar(b)]); if(!pool.length) pool=boonPool();
-    while(o.length<n&&pool.length){ let r=rand()*K.reduce((a,k)=>a+P[k],0), want=K[K.length-1]; for(const k of K){ r-=P[k]; if(r<0){ want=k; break } }
-      let cand=pool.filter(b=>boonRar(b)===want); if(!cand.length) cand=pool; const b=cand[Math.floor(rand()*cand.length)];
+  // n distintas; q = pesos por calidad (CFG.tower.rarity[q] o un objeto); kinds: ['c'] cartas, ['g'] grimorios o los dos
+  function towerOffer(n,q,kinds){ let pool=boonPool(kinds||['c','g']);
+    const P=typeof q==='string'?CFG.tower.rarity[q]:q, K=Object.keys(P).filter(k=>pool.some(b=>boonRar(b)===k)), o=[];
+    while(o.length<n&&pool.length&&K.length){ let r=rand()*K.reduce((a,k)=>a+P[k],0), want=K[K.length-1]; for(const k of K){ r-=P[k]; if(r<0){ want=k; break } }
+      let cand=pool.filter(b=>boonRar(b)===want); if(!cand.length) cand=pool.filter(b=>P[boonRar(b)]); if(!cand.length) break; const b=cand[Math.floor(rand()*cand.length)];
       o.push(b); pool=pool.filter(x=>boonKey(x)!==boonKey(b)); } return o }
-  // n cartas solo de una rareza (Legendaria en la fuente y el altar, Rara en el mercader)
-  function towerOfferR(n,r){ let pool=boonPool().filter(b=>boonRar(b)===r); const o=[];
+  // n solo de una calidad (Épica en la fuente, Rara en el mercader, Legendaria en jefes y altar)
+  function towerOfferR(n,r,kinds){ let pool=boonPool(kinds||['c','g']).filter(b=>boonRar(b)===r); const o=[];
     while(o.length<n&&pool.length){ const b=pool[Math.floor(rand()*pool.length)]; o.push(b); pool=pool.filter(x=>boonKey(x)!==boonKey(b)); } return o }
   const addCurse=run=>{ const K=Object.keys(CFG.tower.curses), c=K[Math.floor(rand()*K.length)]; (run.curses=run.curses||[]).push(c); return c };
   // eventos ? y altar: c = 'si' (aceptar/abrir/comprar/curar), 'quitar' (santuario: quita una maldición) o 'no' (irse)
   function towerEvent(c){ const run=S.tower&&S.tower.run; if(!run||!run.ev||inEvent()) return false; const id=run.ev.id, E=CFG.tower.events; let res={id,c};
-    const hp=()=>run.hp==null?1:run.hp, pick=o=>{ run.pick=o; run.cat=null; run.after='next'; run.ev=null; if(!o.length){ run.pick=null; towerNext(); } };
+    const hp=()=>run.hp==null?1:run.hp, pick=o=>{ run.pick=o; run.ev=null; if(!o.length){ run.pick=null; towerNext(); } };
     if(c==='no'){ run.ev=null; towerNext(); save(); emit('change'); return res }
-    if(id==='fuente'){ if(hp()<=E.fuente.hp) return false; run.hp=hp()-E.fuente.hp; pick(towerOfferR(3,'L')); }
+    if(id==='fuente'){ if(hp()<=E.fuente.hp) return false; run.hp=hp()-E.fuente.hp; pick(towerOfferR(3,'E')); }
     else if(id==='mercader'){ if((run.souls||0)<E.mercader.cost) return false; run.souls-=E.mercader.cost; pick(towerOfferR(3,'R')); }
-    else if(id==='trampa'){ if(rand()<E.trampa.good){ res.good=true; pick(towerOffer(3,'normal')); } else { res.good=false; run.hp=Math.max(0.01,hp()-E.trampa.hp); run.ev=null; towerNext(); } }
+    else if(id==='trampa'){ if(rand()<E.trampa.good){ res.good=true; pick(towerOffer(3,'trap')); } else { res.good=false; run.hp=Math.max(0.01,hp()-E.trampa.hp); run.ev=null; towerNext(); } }
     else if(id==='santuario'){ if((run.souls||0)<E.santuario.cost) return false;
       if(c==='quitar'){ if(!(run.curses||[]).length) return false; run.curses.pop(); } else run.hp=Math.min(1,hp()+E.santuario.heal);
       run.souls-=E.santuario.cost; run.ev=null; towerNext(); }
-    else if(id==='altar'){ res.curse=addCurse(run); const b=towerOfferR(1,'L')[0]; if(b){ res.got=b; towerGain(run,b); } run.ev=null; if(!(run.extra>0&&towerExtra(run))) towerNext(); }   // 1 legendaria al azar + 1 maldición
+    else if(id==='altar'){ res.curse=addCurse(run); const b=towerOfferR(1,'L',['g'])[0]; if(b){ res.got=b; towerGain(run,b); } run.ev=null; towerNext(); }   // 1 grimorio legendario al azar + 1 maldición
     save(); emit('change'); return res }
   // Torre: guarda de los enemigos (escudo de élite e invulnerabilidad de jefe) — devuelve true si el enemigo no muere
   function towerGuard(e){ const seen=e.hpSeen==null?e.max:e.hpSeen, dealt=seen-e.hp; if(!(dealt>0)) return e.hp>0;
@@ -699,6 +716,8 @@ function createGame(opts){
   // Torre, cada paso: rasgos de élite y mecánicas de jefe. Devuelve true si el héroe cae (Espinas)
   function towerTick(h,dt){ const T=CFG.tower, TR=T.traits, M=T.bossMech;
     for(const e of B.enemies.slice()){ if(e.dead||e.arrive>B.t) { if(!e.dead) e.hpSeen=e.hp; continue; }
+      if(e.inf){ e.hp=e.max; if(B.t>=(e.rageAt||0)){ if(e.rageAt) e.atk*=T.final.rage; e.rageAt=B.t+T.final.every; } e.hpSeen=e.hp; continue; }   // jefe final: vida infinita y cada vez pega más
+      if(B.t>=T.enrage.after&&B.t>=(e.enrAt||0)){ if(e.enrAt) e.atk*=T.enrage.mult; e.enrAt=B.t+T.enrage.every; }   // combates muy largos: los enemigos se enfurecen (no hay empates)
       towerGuard(e);
       if(e.regen&&e.hp<e.max) e.hp=Math.min(e.max,e.hp+e.regen*e.max*dt);
       if(e.fur&&!e.furOn&&e.hp<TR.furioso.below*e.max){ e.furOn=true; e.atk*=TR.furioso.atk; emit('fx',{k:'furia',e}); }
@@ -723,7 +742,8 @@ function createGame(opts){
     const add=(n,hpM,atkM,boss)=>{ for(let i=0;i<n;i++){ const at=CFG.enemy.walk*0.6+Math.floor(i/T.group)*1.2+(i%T.group)*0.35, hp=c.hp*hm*hpM;
       B.enemies.push({hp,max:hp,atk:c.atk*am*atkM,df:c.df,spawn:B.t,walk:at,arrive:at,next:at,first:false,dead:false,spd:boss?1:1+Math.min(0.3,f*0.01)}); } };
     B.minion={hp:c.hp*hm/(eUp||1),atk:c.atk*am/Math.sqrt(eUp||1),df:c.df,spd:1+Math.min(0.3,f*0.01)};   // esbirros del jefe invocador (como un enemigo normal del piso)
-    if(k==='boss'){ add(1,T.boss.hp*Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery)),T.boss.atk,true); const e=B.enemies[0], O=T.bossMech.order;
+    if(k==='boss'&&f>=T.maxFloor){ add(1,1,T.boss.atk*T.final.atk,true); const e=B.enemies[0]; e.inf=true; e.hp=e.max=1e30; e.hpSeen=e.hp; B.final=true; B.mech='final'; }   // jefe final: vida infinita
+    else if(k==='boss'){ add(1,T.boss.hp*Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery)),T.boss.atk,true); const e=B.enemies[0], O=T.bossMech.order;
       e.mech=O[(Math.max(1,Math.floor(f/T.boss.every))-1)%O.length]; if(e.mech==='fases') e.phases=T.bossMech.fases.at.slice(); B.mech=e.mech; }
     else if(k==='elite'){ add(T.elite.n,T.elite.hp,T.elite.atk); const TR=T.traits, K=Object.keys(TR), extra=(run.curses||[]).filter(x=>x==='rasgo').length;
       for(const e of B.enemies){ const n=Math.min(K.length,1+(rand()<0.5?1:0)+extra), pool=K.slice(); e.traits=[];
@@ -732,43 +752,52 @@ function createGame(opts){
           if(t==='regenera') e.regen=TR.regenera.regen; if(t==='espinas') e.thorns=TR.espinas.reflect; if(t==='furioso') e.fur=true; }
         if(e.traits.includes('escudo')) e.sh=TR.escudo.shield*e.max; e.hpSeen=e.hp; } }
     else add(Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery)),1,1);
-    statsDirty(); HS=null; B.hp=heroStats().hp*Math.max(0.01,run.hp==null?1:run.hp);
-    if(tfx('escudo')) BUF.shield=(BUF.shield||0)+CFG.tower.fx.escudo.shield*tfx('escudo')*heroStats().hp;   // Torre: Escudo inicial
-    if(tfx('afilar')){ BUF.crits=CFG.tower.fx.afilar.n*tfx('afilar'); BUF.critsUntil=CT+1e9; }   // Torre: Piedra de afilar
-    B.clockAt=CT+CFG.tower.fx.reloj.every; B.hammerAt=CT+CFG.tower.fx.martillo.every;
+    statsDirty(); HS=null; const H=heroStats(), G=T.grims; B.hp=H.hp*Math.max(0.01,run.hp==null?1:run.hp);
+    BUF.shield=run.shield||0; run.shield=0; BUF.sang=0; B.regAt=CT+T.cards.escudoReg.every;   // Barricada: el escudo que traías
+    if(tgH('vial')) B.hp=Math.min(H.hp,B.hp+G.vial.heal*H.hp);   // Vial de sangre
+    if(tgH('ancla')) BUF.shield+=G.ancla.shield*H.hp;             // Ancla
     run.fight={k}; save(); emit('eventStart',B); emit('change') }
-  function towerEnd(won){ const run=S.tower.run, k=B.node, frac=Math.max(0,B.hp/heroStats().hp); B=null; BUF.crits=0; statsDirty(); run.fight=null; let res;
-    if(won){ run.hp=Math.min(1,frac+CFG.tower.fx.aliento.heal*tfxRun('aliento')); const so=CFG.tower.souls[k]||0; run.souls=(run.souls||0)+so;
+  function towerEnd(won){ const T=CFG.tower, run=S.tower.run, k=B.node, H=heroStats(), frac=Math.max(0,B.hp/H.hp), fin=!!B.final, dmg=B.mD, bar=tgH('barricada');
+    run.shield=bar?Math.min(BUF.shield||0,T.grims.barricada.cap*H.hp):0; BUF.shield=0; BUF.sang=0;   // Barricada: el escudo pasa al siguiente combate
+    B=null; BUF.crits=0; statsDirty(); run.fight=null; let res;
+    if(fin){ const TS=towerState(); run.finalDmg=(run.finalDmg||0)+dmg; if(run.finalDmg>(TS.bossDmg||0)) TS.bossDmg=run.finalDmg; }   // jefe final: el daño (sumando los intentos) va al ranking
+    if(won){ run.hp=Math.min(1,frac+T.cards.aliento.heal*rCount(run,'c','aliento')); const so=Math.round((T.souls[k]||0)*(1+(rCount(run,'g','saco')?T.grims.saco.souls:0))); run.souls=(run.souls||0)+so;
       res={won:true,floor:run.floor,k,hp:run.hp,souls:so};
-      if(CFG.tower.maxFloor&&run.floor>=CFG.tower.maxFloor){ res.pick=false; res.complete=true; towerNext(); save(); emit('towerEnd',res); startWave(); emit('change'); return res }
-      if(k==='fight'){ res.pick=false; towerNext(); save(); emit('towerEnd',res); startWave(); emit('change'); return res }   // combate normal: solo almas, sin mejora (se avanza ANTES de avisar a la pantalla)
-      run.cat=null; run.pick=towerOffer(2,k==='boss'?'boss':'elite'); run.after='next'; res.pick=true }   // élite: 2 cartas hasta Épica · jefe: 2 entre Épica y Legendaria (eliges 1)
-    else if(run.rev>0){ run.rev--; run.hp=CFG.tower.revHp; res={won:false,floor:run.floor,lives:run.lives,crown:true} }   // Corona del rey: revives una vez
-    else { run.lives--; run.hp=0; res={won:false,floor:run.floor,lives:run.lives,canRevive:!run.adRev} }
+      if(k==='fight'){ res.pick=false; towerNext(); save(); emit('towerEnd',res); startWave(); emit('change'); return res }   // combate normal: solo almas (se avanza ANTES de avisar a la pantalla)
+      run.pick=k==='boss'?towerOfferR(3,'L',['g']):towerOffer(3,'elite'); res.pick=true;   // élite: 1 de 3 (cartas y grimorios, hasta Épica) · jefe: 1 de 3 grimorios legendarios
+      if(!run.pick.length){ run.pick=null; res.pick=false; towerNext(); } }
+    else if(run.rev>0){ run.rev--; run.hp=T.grims.lagarto.hp; res={won:false,floor:run.floor,lives:run.lives,crown:true,final:fin,dmg:run.finalDmg} }   // Cola de lagarto: revives una vez
+    else { run.lives--; run.hp=0; res={won:false,floor:run.floor,lives:run.lives,canRevive:!run.adRev,final:fin,dmg:run.finalDmg} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
   // revivir con anuncio (una vez por partida): vuelves al mismo piso con revHp de vida
   function towerRevive(){ const run=S.tower&&S.tower.run; if(!run||run.lives>0||run.adRev) return false; run.adRev=true; run.lives=1; run.hp=CFG.tower.revHp; save(); emit('change'); return true }
-  // elegir mejora (o saltarla si no quedan); después, al siguiente piso
-  const tfxRun=id=>(S.tower&&S.tower.run?S.tower.run.boons:[]).filter(b=>b.t==='fx'&&b.id===id).length;
-  // conseguir una carta (elegida, comprada o al azar): efectos al momento de Aguante, Pacto y Corona
-  function towerGain(run,b){ run.boons.push(b); if(b.t!=='fx') return;
-    if(b.id==='aguante'){ const g=CFG.tower.fx.aguante.hp, m0=1+g*(tfxRun('aguante')-1); run.hp=Math.min(1,((run.hp==null?1:run.hp)*m0+g)/(m0+g)); }   // (se suma: cura la parte nueva)
-    if(b.id==='pacto'){ addCurse(run); run.extra=(run.extra||0)+2; }   // Pacto: una maldición a cambio de 2 mejoras más
-    if(b.id==='corona') run.rev=(run.rev||0)+1; }                      // Corona: revives una vez
-  // Pacto pendiente: ofrece otra carta (devuelve true si la hay)
-  function towerExtra(run){ while(run.extra>0){ run.extra--; run.pick=towerOffer(3,'normal'); run.after='next'; if(run.pick.length){ save(); emit('change'); return true } } run.pick=null; return false }
+  // vida máxima de la partida (para curar la parte nueva al ganar vida máxima)
+  const runHpMul=run=>Math.max(0.2,1+run.boons.reduce((a,b)=>a+((boonDef(b)||{}).type==='stat'?(boonDef(b).hp||0):0),0)+(run.hpBonus||0)+CFG.tower.curses.fragil.hp*(run.curses||[]).filter(c=>c==='fragil').length);
+  // conseguir una carta o grimorio (elegido, comprado o al azar)
+  function towerGain(run,b){ const m0=runHpMul(run); run.boons.push(b); const m1=runHpMul(run);
+    if(m1>m0) run.hp=Math.min(1,((run.hp==null?1:run.hp)*m0+(m1-m0))/m1);   // más vida máxima: se cura la parte nueva
+    if(b.t==='g'&&b.id==='lagarto') run.rev=(run.rev||0)+1; }               // Cola de lagarto: revives una vez
+  // quitar una carta o grimorio (tienda): la vida que tienes no sube
+  function towerLose(run,i){ const b=run.boons[i]; if(!b) return null; const m0=runHpMul(run); run.boons.splice(i,1); const m1=runHpMul(run);
+    if(m1<m0) run.hp=Math.min(1,(run.hp==null?1:run.hp)*m0/m1);
+    if(b.t==='g'&&b.id==='lagarto'&&run.rev>0) run.rev--; return b }
+  // elegir 1 de las que se ofrecen (o seguir si no quedan); después, al siguiente piso
   function towerPick(i){ const run=S.tower&&S.tower.run; if(!run||!run.pick) return false; const b=run.pick[i]; if(b) towerGain(run,b);
-    if(run.extra&&towerExtra(run)) return true;
     run.pick=null; towerNext(); return true }
-  // tienda: compra cualquiera de sus cartas si tienes almas; al salir, al siguiente piso
+  // tienda: compra lo que quieras si tienes almas, y puedes quitar 1 cosa que tengas (no maldiciones); al salir, al siguiente piso
+  const towerPrice=b=>CFG.tower.shop.price[b.t][boonRar(b)];
+  const towerRemoveCost=()=>{ const run=S.tower&&S.tower.run, SH=CFG.tower.shop; return SH.remove+SH.removeUp*((run&&run.removes)||0) };
   function towerShopBuy(i){ const run=S.tower&&S.tower.run, sh=run&&run.shop; if(!sh||sh.bought.includes(i)) return false; const b=sh.items[i]; if(!b) return false;
-    const c=CFG.tower.shop.price[boonRar(b)]; if((run.souls||0)<c) return false; run.souls-=c; sh.bought.push(i); towerGain(run,b); save(); emit('change'); return true }
-  function towerShopLeave(){ const run=S.tower&&S.tower.run; if(!run||!run.shop) return false; run.shop=null; if(!(run.extra>0&&towerExtra(run))) towerNext(); save(); emit('change'); return true }
-  const towerPrice=b=>CFG.tower.shop.price[boonRar(b)];
+    if(boonPool([b.t]).every(x=>boonKey(x)!==boonKey(b))) return false;   // ya no se puede (habilidad repetida, grimorio que ya tienes o huecos llenos)
+    const c=towerPrice(b); if((run.souls||0)<c) return false; run.souls-=c; sh.bought.push(i); towerGain(run,b); save(); emit('change'); return true }
+  function towerShopRemove(i){ const run=S.tower&&S.tower.run, sh=run&&run.shop; if(!sh||sh.removed||!run.boons[i]) return false; const c=towerRemoveCost();
+    if((run.souls||0)<c) return false; run.souls-=c; run.removes=(run.removes||0)+1; sh.removed=true; const b=towerLose(run,i); save(); emit('change'); return b }
+  function towerShopLeave(){ const run=S.tower&&S.tower.run; if(!run||!run.shop) return false; run.shop=null; towerNext(); save(); emit('change'); return true }
+  // siguiente piso. El piso final (maxFloor) no se supera: su jefe tiene vida infinita
   function towerNext(){ const T=towerState(), run=T.run; run.floor++; const f=run.floor-1;
+    if(run.floor>(T.reach||0)) T.reach=run.floor;   // piso más alto al que has llegado (ranking)
     let got=null; if(f>T.best){ T.best=f; for(const r of CFG.tower.rewards) if(f%r.every===0){ got=r.b; giveBundle(r.b); break } }
-    if(CFG.tower.maxFloor&&f>=CFG.tower.maxFloor){ T.done=(T.done||0)+1; T.run=null; save(); if(got) emit('towerReward',{floor:f,b:got}); emit('towerComplete',{floor:f}); emit('change'); return }   // ¡Torre completada!
-    const map=towerMap(); map.shift(); while(map.length<(CFG.tower.look||1)) map.push(towerRow(run.floor+map.length)); run.nodes=map[0].n;
+    const map=towerMap(); map.shift(); while(map.length<(CFG.tower.look||1)&&run.floor+map.length<=CFG.tower.maxFloor) map.push(towerRow(run.floor+map.length)); run.nodes=map[0].n;
     save(); if(got) emit('towerReward',{floor:f,b:got}); emit('change') }
   function towerBuyLife(){ const run=S.tower&&S.tower.run; if(!run) return false; const c=CFG.tower.lifeCost; if(!spend(c)) return false; run.lives++; save(); emit('change'); return true }
   // Ranking con rivales simulados (hasta que haya servidor): su puntuación sigue la curva de un jugador medio con tus días de juego
@@ -1197,7 +1226,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerPrice, boonInfo, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

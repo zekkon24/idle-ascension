@@ -287,6 +287,9 @@ input[type=number]{width:64px}
 .rw .ic{width:14px;height:14px}
 .skmode{position:absolute;right:10px;bottom:6px;z-index:4;white-space:nowrap;margin:0}
 .skb .skcd{position:absolute;inset:0;border-radius:50%}
+.skbar.many{flex-wrap:wrap;max-width:200px;gap:6px}.skbar.many .skb{width:42px;height:42px}.skbar.many .ski{width:22px;height:22px}
+.twtabs{margin:6px 0}.twcols{display:grid;grid-template-columns:1fr 1fr;gap:8px}.twcols h4{margin:4px 0;font-size:13px}
+.rank.twrank div{grid-template-columns:20px minmax(0,1fr) auto;gap:4px;padding:5px 6px;font-size:12px}.rank.twrank div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .skb .skt{position:absolute;inset:0;display:grid;place-items:center;font-size:16px;font-weight:800;z-index:2;text-shadow:0 1px 3px #000}
 .skmode{font-size:10px;font-weight:800;color:var(--muted);background:rgba(0,0,0,.45);padding:2px 6px;border-radius:6px;margin-bottom:2px}
 button.skmode{border:1px solid var(--line);cursor:pointer;padding:4px 8px}
@@ -476,7 +479,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610060542-d575a85';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610061003-f5e7331';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

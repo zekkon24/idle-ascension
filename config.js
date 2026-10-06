@@ -134,42 +134,19 @@ const CFG = {
   // Base de los enemigos = (los de tu fase récord)^w × (los «a tu medida»)^(1−w): con w bajo, tus estadísticas pesan poco.
   // «A tu medida»: tardas tKill s en matar a uno normal y cada golpe suyo te quita hitPct de tu vida (en el piso 1).
   // Crecimiento por tramos: curve=[[desde piso, ×vida por piso, ×ataque por piso], …] (suave hasta el 50, duro hasta el 100, muy duro después).
-  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.009, curve:[[1,1.06,1.03],[50,1.07,1.035]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
-    elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:1.2,atk:1.6}, maxSkills:2,
+  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.009, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
+    elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:1.2,atk:1.6},
     // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
     // todo sube de golpe (×jump); desde 'forcedFrom', a veces (forced) el piso solo ofrece combates (élite y/o combate, sin hoguera ni cofre)
-    hard:{eliteFrom:30, eliteEvery:10, eliteUp:1.25, jumpEvery:25, jump:1.25, forcedFrom:15, forced:0.3},
+    hard:{eliteFrom:40, eliteEvery:10, eliteUp:1.25, jumpEvery:25, jump:1.15, forcedFrom:25, forced:0.3},
     nodes:{fight:40,elite:16,treasure:8,rest:12,event:10,altar:6,shop:8}, // peso de cada tipo de camino
     // Torre = roguelike puro: tu personaje NO cuenta (ni nivel, arma, mejoras, evolución ni grimorio). Todos empiezan con este
     // héroe único y solo se hacen fuertes con las mejoras de la partida. Los enemigos tampoco dependen de tu cuenta.
     hero:{hp:1000,atk:100,df:20,spd:1,cr:0.05,cd:0.5}, foeDf:10,
-    // cartas que no salen en la Torre (no sirven con el héroe único): Sacrificio, Oscuro, Oráculo, Vacío y Filo del vacío
-    exclude:['sk:evoB:Clerigo','pas:Clerigo:B','pas:Clerigo:A','leg:Mago','leg:Asesino'],
-    // ajustes SOLO para la Torre (la campaña no cambia): hechizos, objetos de arma y extras de los grimorios flojos
-    skillTune:{armaduraHielo:{cd:40,burst:1,shards:1,desc:'Lanza 1 esquirla a todos; 8 s: quien te pega recibe 1 esquirla'},
-      juicio:{heal:0.02,dps:0.35,desc:'6 s: aura que te cura el 2 % por segundo y quema a los enemigos cercanos'},
-      bola:{mult:2,burn:0.3,desc:'200 % en área hasta a 3 enemigos y los quema'},
-      baluarte:{cd:30,reflect:1.2,desc:'8 s: +25 % de defensa y devuelves el 120 % del daño que recibes'},
-      marca:{cd:25,mult:0.8,desc:'8 s: el objetivo recibe +80 % de daño'},
-      perforante:{mult:2.5,desc:'Disparo que atraviesa a todos (250 %)'}, ejecutar:{mult:6.5,desc:'Golpe del 650 %; si mata, la recarga baja a la mitad'}, sed:{ls:0.3,desc:'Pierdes el 20 % de vida: escudo de la mitad y +30 % de robo de vida 12 s'},
-      nube:{cd:25,dur:5,desc:'5 s: una nube envenena a todos cada segundo (+3 acumulaciones)'},
-      clon:{mult:0.6,desc:'8 s: un clon copia tus golpes al 60 %'},
-      combustion:{burnHit:0.8,desc:'8 s: tus golpes queman (80 % de su daño por segundo, 3 s)'}},
-    skillRar:{armaduraHielo:'L'},   // hechizos que en la Torre son Legendarios (los demás, Épicos)
-    legTune:{tajo:{mult:1.5,desc:'Tus golpes dan también al enemigo de detrás (150 %)'}, rafaga:{every:2,arrows:3,desc:'Cada 2.º golpe son 3 flechas'}, llamarada:{every:4,pct:1.4,desc:'Cada 4.º golpe quema a todos (140 % por s, 3 s)'}},
-    grimTune:{veneno:{pct:0.35}},
-    pasDesc:{'Asesino:B':'Veneno: cada golpe envenena (35 % por s, 8 s), hasta 8 veces: brilla en peleas largas'},   // texto del grimorio en la Torre si cambia   // Envenenador más suave en la Torre
-    pasBonus:{'Guerrero:A':{atk:0.3,txt:'+30 % de daño'}, 'Arquero:A':{spd:0.25,txt:'+25 % de velocidad'}, 'Asesino:A':{cr:0.1,txt:'+10 % de crítico'},
-      'Guerrero:B':{hp:0.25,txt:'+25 % de vida'}, 'Arquero:B':{atk:0.3,txt:'+30 % de daño'}},
-    maxFloor:100,   // Torre completada al ganar el piso 100
-    // combos entre cartas (sin cartas nuevas). En la Torre no hay topes: crítico hasta 100 % (lo que pase se suma al daño crítico),
-    // robo de vida hasta 60 %, Talismán se multiplica (×0,9 por copia), Recarga rápida hasta el 15 % y Orbe de hielo hasta el 90 %
-    combos:[{a:'hielo',b:'ejecutor',name:'Golpe helado',desc:'Los congelados cuentan como heridos y se rematan con el doble de vida'},
-      {a:'espinas',b:'escudo',name:'Coraza de pinchos',desc:'El daño que para tu escudo también se devuelve y las espinas quitan el doble de vida máxima'},
-      {a:'eco',b:'reloj',name:'Bucle del tiempo',desc:'Cada vez que el Reloj recarga, tus hechizos se lanzan solos, y cada hechizo del combate hace +10 % de daño a los siguientes'},
-      {a:'vampiro',b:'furia',name:'Sed de sangre',desc:'Por debajo del 30 % de vida, el robo de vida se duplica'},
-      {a:'explosion',b:'hielo',name:'Cristales explosivos',desc:'Los enemigos congelados reciben el doble de daño de las explosiones'},
-      {a:'precision',b:'colmillo',name:'Instinto asesino',desc:'Cada crítico cura el doble'}],
+    // Piso final: el jefe del piso 100 tiene vida infinita. Se le pega hasta caer; el daño hecho va al ranking.
+    // Se enfurece: su ataque sube ×rage cada 'every' s.
+    maxFloor:100, final:{atk:1.6, every:10, rage:1.2},
+    enrage:{after:60, every:5, mult:1.15},   // en cualquier combate de más de 60 s, los enemigos pegan un 15 % más cada 5 s
     look:3,   // el mapa enseña los caminos de los próximos 3 pisos
     // almas: moneda de la partida (solo para los eventos ?). Combate normal / élite / jefe
     souls:{fight:10,elite:5,boss:20},
@@ -179,46 +156,71 @@ const CFG = {
     traits:{rapido:{name:'Rápido',desc:'Ataca un 40 % más rápido',spd:1.4}, regenera:{name:'Regenera',desc:'Recupera el 3 % de su vida cada segundo',regen:0.03}, escudo:{name:'Escudo',desc:'Empieza con un escudo del 30 % de su vida',shield:0.3}, espinas:{name:'Espinas',desc:'Cada golpe que le das te devuelve el 20 % de uno de sus golpes',reflect:0.2},
       furioso:{name:'Furioso',desc:'Bajo el 50 % de vida pega un 50 % más',below:0.5,atk:1.5}, gigante:{name:'Gigante',desc:'El doble de vida, pero más lento',hp:2,spd:0.75}},
     // jefes: la mecánica rota cada 10 pisos (invocador, enfurecido, escudo de fases)
-    bossMech:{order:['invocador','enfurecido','fases'], desc:{invocador:'Cada 10 s llama a un esbirro',enfurecido:'Bajo el 50 % de vida pega el doble y va más rápido',fases:'Al 66 % y al 33 % de vida se vuelve invulnerable 3 s y se cura un 10 %'}, invocador:{every:10,n:1}, enfurecido:{below:0.5,atk:2,spd:1.5}, fases:{at:[0.66,0.33],inv:3,heal:0.1}},
+    bossMech:{order:['invocador','enfurecido','fases'], desc:{invocador:'Cada 10 s llama a un esbirro',enfurecido:'Bajo el 50 % de vida pega el doble y va más rápido',fases:'Al 66 % y al 33 % de vida se vuelve invulnerable 3 s y se cura un 10 %',final:'Vida infinita: aguanta todo lo que puedas. Cada 10 s pega un 20 % más. Tu daño va al ranking'}, invocador:{every:10,n:1}, enfurecido:{below:0.5,atk:2,spd:1.5}, fases:{at:[0.66,0.33],inv:3,heal:0.1}},
     // eventos ?: id → coste/efecto
     events:{fuente:{hp:0.2}, mercader:{cost:30}, trampa:{good:0.6,hp:0.25}, santuario:{cost:25,heal:0.4}},
-    // maldiciones (altar maldito: eliges 1 de 3 legendarias y te llevas una maldición al azar; también con Pacto)
+    // maldiciones (altar maldito: recibes 1 grimorio legendario al azar y una maldición al azar)
     curses:{vida:{name:'Enemigos más fuertes',desc:'Los enemigos tienen +20 % de vida',hp:0.2}, fragil:{name:'Frágil',desc:'−15 % de vida máxima',hp:-0.15},
       rasgo:{name:'Élites temibles',desc:'Los élites traen un rasgo más'}},
     rewards:[{every:50,b:{mode:1}},{every:25,b:{silver:1}},{every:5,b:{wood:1}}],
-    // rareza de las cartas: C común, R rara, L legendaria (las pasivas de camino, objetos y hechizos existentes son legendarias)
-    // calidades de las cartas: C común, R rara, E épica, L legendaria. Peso de cada calidad según de dónde sale la carta:
-    // élite 2 cartas (hasta Épica) · jefe 2 cartas (Épica o Legendaria) · tienda 3 (todas) · normal: cofre sospechoso y Pacto
-    rarity:{normal:{C:45,R:35,E:20}, elite:{C:40,R:35,E:25}, boss:{E:60,L:40}, shop:{C:35,R:30,E:22,L:13}},
-    // tienda: 3 cartas de cualquier calidad; compras las que quieras con almas
-    shop:{n:3, price:{C:15,R:30,E:50,L:80}},
-    // mejoras propias de la Torre (las comunes se pueden repetir y se acumulan)
-    fx:{
-      fuerza:{r:'C',name:'Fuerza',desc:'+15 % de daño',atk:0.15},
-      aguante:{r:'C',name:'Aguante',desc:'+20 % de vida máxima (y te cura esa parte)',hp:0.2},
-      rapidez:{r:'C',name:'Rapidez',desc:'+12 % de velocidad de ataque',spd:0.12},
-      precision:{r:'C',name:'Precisión',desc:'+15 % de crítico y +40 % de daño crítico',cr:0.15,cd:0.4},
-      vampiro:{r:'C',name:'Vampiro',desc:'5 % de robo de vida',ls:0.05},
-      aliento:{r:'C',name:'Segundo aliento',desc:'Al ganar cada combate recuperas el 15 % de la vida',heal:0.15},
-      escudo:{r:'E',name:'Escudo inicial',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
-      espinas:{r:'R',name:'Espinas',desc:'Devuelves el 60 % del daño que recibes y quien te pega pierde el 1 % de su vida máxima',reflect:0.6,maxPct:0.01},
-      ejecutor:{r:'R',name:'Ejecutor',desc:'+120 % de daño bajo el 50 % de vida y remata al instante a los que bajan del 8 % (+4 % por copia; jefes no)',below:0.5,mult:1.2,exec:0.08,execUp:0.04},
-      recarga:{r:'R',name:'Recarga rápida',desc:'Tus hechizos recargan un 35 % más rápido (solo sirve con hechizos)',cd:0.65},
-      cadena:{r:'E',name:'Cadena',desc:'Cada 2.º golpe salta también a otro enemigo',every:2},
-      cristal:{r:'E',name:'Cristal',desc:'+60 % de daño, pero −20 % de vida',atk:0.6,hp:-0.2},
-      furia:{r:'E',name:'Furia sangrienta',desc:'+2 % de daño por cada 1 % de vida que te falta',per:2},
-      explosion:{r:'L',name:'Explosión',desc:'Los enemigos que mueren explotan: 120 % de su vida a los cercanos',pct:1.2},
-      eco:{r:'L',name:'Eco',desc:'Tus hechizos se lanzan dos veces (solo sirve con hechizos)'},
-      maestria:{r:'L',name:'Maestría',desc:'Tus grimorios son un 50 % más fuertes (solo sirve con grimorios)',mult:1.5},
-      pacto:{r:'L',name:'Pacto',desc:'Te llevas una maldición y eliges 2 mejoras más'},
-      // objetos de la Torre (obj:true)
-      afilar:{r:'C',obj:true,name:'Piedra de afilar',desc:'Los 3 primeros golpes de cada combate son críticos',n:3},
-      talisman:{r:'C',obj:true,name:'Talismán de piedra',desc:'Recibes un 10 % menos de daño',taken:0.1},
-      hielo:{r:'E',obj:true,name:'Orbe de hielo',desc:'35 % de congelar 2 s al enemigo que golpeas',chance:0.35,dur:2},
-      colmillo:{r:'R',obj:true,name:'Colmillo',desc:'+10 % de crítico y los críticos te curan el 3 % de tu vida',heal:0.03,cr:0.1},
-      corona:{r:'L',obj:true,name:'Corona del rey',desc:'Si caes, revives una vez con el 50 % de vida'},
-      reloj:{r:'L',obj:true,name:'Reloj de arena',desc:'Cada 15 s tus hechizos se recargan al instante (solo sirve con hechizos)',every:15},
-      martillo:{r:'L',obj:true,name:'Martillo del trueno',desc:'Cada 5 s un rayo golpea a todos los enemigos (400 % de tu daño)',every:5,mult:4}}},
+    // CARTAS (multiusos) y GRIMORIOS (deciden la build). Calidades: C común, R rara, E épica, L legendaria (solo grimorios).
+    // fam: familia (solo etiqueta) f Fuerza y Crítico · e Escudo y Espinas · s Sangre · '' neutra
+    // type: stat (número) · skill (activa con recarga, se lanza sola; 1 de cada, hasta maxSkills) · fx (efecto con condición) · pas (pasiva que cambia reglas)
+    // Las cartas stat/fx se acumulan si se repiten; las skill y los grimorios, solo 1 de cada.
+    maxSkills:8, shieldDecay:0.12, shieldMax:1,   // el escudo se gasta un 12 % por segundo (salvo Barricada) y no pasa de tu vida máxima
+    // probabilidad de cada calidad: élite (1 de 3, cartas y grimorios) · cofre (1 grimorio) · tienda (4 cartas y 2 grimorios) · eventos
+    rarity:{elite:{C:50,R:33,E:17}, chest:{C:50,R:33,E:17}, shop:{C:50,R:33,E:15,L:2}, trap:{C:50,R:33,E:17}},
+    shop:{cards:4, grims:2, price:{c:{C:20,R:35,E:60}, g:{C:40,R:70,E:100,L:150}}, remove:30, removeUp:15},
+    cards:{
+      fuerza:{r:'C',fam:'f',type:'stat',name:'Fuerza',desc:'+15 % de daño',atk:0.15},
+      rapidez:{r:'C',fam:'f',type:'stat',name:'Rapidez',desc:'+15 % de velocidad de ataque',spd:0.15},
+      precision:{r:'C',fam:'f',type:'stat',name:'Precisión',desc:'+10 % de crítico y +40 % de daño crítico',cr:0.10,cd:0.40},
+      aguante:{r:'C',fam:'e',type:'stat',name:'Aguante',desc:'+15 % de vida máxima',hp:0.15},
+      armadura:{r:'C',fam:'e',type:'stat',name:'Armadura',desc:'+30 % de defensa',df:0.30},
+      puas:{r:'C',fam:'e',type:'stat',name:'Púas',desc:'Devuelves el 25 % del daño que recibes',reflect:0.25},
+      vampiro:{r:'C',fam:'s',type:'stat',name:'Vampiro',desc:'5 % de robo de vida',ls:0.05},
+      regen:{r:'C',fam:'s',type:'stat',name:'Regeneración',desc:'Recuperas el 0,5 % de tu vida por segundo',regen:0.005},
+      tGolpe:{r:'C',fam:'f',type:'skill',name:'Golpe fuerte',desc:'Golpe del 200 % (cada 8 s)',cd:8,mult:2},
+      tMuro:{r:'C',fam:'e',type:'skill',name:'Muro',desc:'Escudo del 15 % de tu vida (cada 15 s)',cd:15,shield:0.15},
+      tSangria:{r:'C',fam:'s',type:'skill',name:'Sangría',desc:'Pierdes el 10 % de tu vida: tus 3 próximos golpes hacen +100 % (cada 12 s)',cd:12,cost:0.10,hits:3,mult:1},
+      aliento:{r:'C',fam:'s',type:'fx',name:'Segundo aliento',desc:'Al ganar un combate te curas el 15 %',heal:0.15},
+      doble:{r:'R',fam:'f',type:'stat',name:'Golpe doble',desc:'25 % de probabilidad de golpear dos veces',dbl:0.25},
+      talisman:{r:'R',fam:'e',type:'stat',name:'Talismán',desc:'Recibes un 20 % menos de daño',taken:0.20},
+      sanguijuela:{r:'R',fam:'s',type:'stat',name:'Sanguijuela',desc:'+10 % de robo de vida',ls:0.10},
+      tTorbellino:{r:'R',fam:'f',type:'skill',name:'Torbellino',desc:'120 % a todos los enemigos (cada 12 s)',cd:12,mult:1.2},
+      tBaluarte:{r:'R',fam:'e',type:'skill',name:'Baluarte',desc:'8 s con +50 % de defensa y devuelves el 100 % del daño (cada 30 s)',cd:30,dur:8,df:1.5,reflect:1},
+      tSed:{r:'R',fam:'s',type:'skill',name:'Sed de sangre',desc:'Pierdes el 20 % de tu vida: escudo de la mitad y +30 % de robo de vida 10 s (cada 28 s)',cd:28,cost:0.2,shield:0.5,ls:0.3,dur:10},
+      ejecutor:{r:'R',fam:'f',type:'fx',name:'Ejecutor',desc:'+70 % de daño a los enemigos por debajo del 50 % de vida',below:0.5,mult:0.7},
+      escudoReg:{r:'R',fam:'e',type:'fx',name:'Escudo regenerable',desc:'Cada 10 s ganas un escudo del 10 % de tu vida',every:10,shield:0.10},
+      titan:{r:'E',fam:'',type:'stat',name:'Titán',desc:'+20 % de daño y +20 % de vida',atk:0.2,hp:0.2},
+      tLluvia:{r:'E',fam:'f',type:'skill',name:'Lluvia de golpes',desc:'5 golpes rápidos del 100 % que pueden ser críticos (cada 15 s)',cd:15,hits:5},
+      tFestin:{r:'E',fam:'s',type:'skill',name:'Festín',desc:'Golpe del 400 %; si mata, +3 % de vida máxima para toda la partida (cada 20 s)',cd:20,mult:4,maxHp:0.03},
+      erizo:{r:'E',fam:'e',type:'fx',name:'Erizo',desc:'Cada golpe que recibes hace un 35 % de tu daño a todos los enemigos',pct:0.35},
+      ultimo:{r:'E',fam:'s',type:'fx',name:'Último aliento',desc:'La 1.ª vez que bajas del 25 % de vida en cada combate, recuperas el 30 %',below:0.25,heal:0.3}},
+    grims:{
+      furiaCiega:{r:'C',fam:'f',type:'pas',name:'Furia ciega',desc:'Tu velocidad de ataque extra también sube tu daño crítico (lo mismo en %)'},
+      corazaPuas:{r:'C',fam:'e',type:'pas',name:'Coraza de púas',desc:'Púas y Baluarte también devuelven el daño que para tu escudo'},
+      sangreHirviente:{r:'C',fam:'s',type:'pas',name:'Sangre hirviente',desc:'Lo que curas con robo de vida estando a tope se convierte en escudo'},
+      primerGolpe:{r:'C',fam:'f',type:'fx',name:'Primer golpe',desc:'El primer golpe de cada combate hace +300 %',mult:3},
+      ancla:{r:'C',fam:'e',type:'fx',name:'Ancla',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
+      vial:{r:'C',fam:'s',type:'fx',name:'Vial de sangre',desc:'Al empezar cada combate te curas el 5 %',heal:0.05},
+      fresa:{r:'C',fam:'s',type:'stat',name:'Fresa',desc:'+10 % de vida máxima',hp:0.10},
+      saco:{r:'C',fam:'',type:'stat',name:'Saco de almas',desc:'+50 % de almas',souls:0.5},
+      demonio:{r:'R',fam:'f',type:'pas',name:'Forma demoníaca',desc:'+1,5 % de daño por cada segundo de combate',per:0.015},
+      juggernaut:{r:'R',fam:'e',type:'pas',name:'Juggernaut',desc:'Cada vez que ganas escudo, golpe del 100 % a un enemigo al azar',mult:1},
+      furiaSangre:{r:'R',fam:'s',type:'pas',name:'Furia sangrienta',desc:'+1 % de daño por cada 1 % de vida que te falta',per:1},
+      shuriken:{r:'R',fam:'f',type:'fx',name:'Shuriken',desc:'Cada 3 golpes, +3 % de daño hasta el final del combate (sin tope)',every:3,atk:0.03},
+      arcilla:{r:'R',fam:'e',type:'fx',name:'Arcilla viva',desc:'Al perder vida, ganas un escudo del 50 % de lo que has perdido',pct:0.5},
+      mango:{r:'R',fam:'s',type:'stat',name:'Mango',desc:'+15 % de vida máxima',hp:0.15},
+      barricada:{r:'E',fam:'e',type:'pas',name:'Barricada',desc:'Tu escudo ya no se gasta con el tiempo y pasa al siguiente combate (hasta el 50 % de tu vida)',cap:0.5},
+      segador:{r:'E',fam:'s',type:'pas',name:'Segador',desc:'Tus habilidades y efectos también curan con tu robo de vida (las espinas no), y +8 % de robo de vida',ls:0.08},
+      lagarto:{r:'E',fam:'',type:'fx',name:'Cola de lagarto',desc:'Si caes, revives una vez con el 50 % de vida',hp:0.5},
+      halcon:{r:'E',fam:'f',type:'stat',name:'Ojo de halcón',desc:'+15 % de crítico y +50 % de daño crítico',cr:0.15,cd:0.5},
+      tormenta:{r:'L',fam:'f',type:'pas',name:'Tormenta de acero',desc:'Cada crítico lanza 2 golpes extra (100 %) a otros enemigos',n:2},
+      coloso:{r:'L',fam:'e',type:'pas',name:'Coloso',desc:'Cada golpe suma el 25 % de tu escudo actual como daño',pct:0.25},
+      corazon:{r:'L',fam:'s',type:'pas',name:'Corazón de sangre',desc:'Cada vez que pierdes vida, +1 % de daño hasta el final del combate (sin tope)',per:0.01},
+      eco:{r:'L',fam:'',type:'pas',name:'Eco',desc:'Tus habilidades se lanzan dos veces'},
+      explosion:{r:'L',fam:'',type:'fx',name:'Explosión',desc:'Los enemigos que mueren explotan: 120 % de su vida a los cercanos',pct:1.2}}},
   // PvP asíncrono: duelo al mejor de 3 contra la copia de otro jugador o un «fantasma» (rival generado a tu nivel).
   // Antes de cada ronda eliges 1 de 3 cartas (mejoras de la Torre, se acumulan en el duelo). Ronda: hasta 'round' s (si nadie
   // cae, gana quien tenga más % de vida). Estadísticas mezcladas: tu^mix × media^(1−mix). Liga semanal con puntos tipo ELO (k).
