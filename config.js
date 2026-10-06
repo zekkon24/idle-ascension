@@ -134,11 +134,11 @@ const CFG = {
   // Base de los enemigos = (los de tu fase récord)^w × (los «a tu medida»)^(1−w): con w bajo, tus estadísticas pesan poco.
   // «A tu medida»: tardas tKill s en matar a uno normal y cada golpe suyo te quita hitPct de tu vida (en el piso 1).
   // Crecimiento por tramos: curve=[[desde piso, ×vida por piso, ×ataque por piso], …] (suave hasta el 50, duro hasta el 100, muy duro después).
-  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.009, curve:[[1,1.05,1.035],[50,1.13,1.08],[100,1.22,1.13]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
+  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.009, curve:[[1,1.06,1.03],[50,1.07,1.035]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
     elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:1.2,atk:1.6}, maxSkills:2,
     // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
     // todo sube de golpe (×jump); desde 'forcedFrom', a veces (forced) el piso solo ofrece combates (élite y/o combate, sin hoguera ni cofre)
-    hard:{eliteFrom:30, eliteEvery:10, eliteUp:1.4, jumpEvery:25, jump:1.3, forcedFrom:15, forced:0.3},
+    hard:{eliteFrom:30, eliteEvery:10, eliteUp:1.25, jumpEvery:25, jump:1.25, forcedFrom:15, forced:0.3},
     nodes:{fight:40,elite:16,treasure:8,rest:12,event:10,altar:6,shop:8}, // peso de cada tipo de camino
     // Torre = roguelike puro: tu personaje NO cuenta (ni nivel, arma, mejoras, evolución ni grimorio). Todos empiezan con este
     // héroe único y solo se hacen fuertes con las mejoras de la partida. Los enemigos tampoco dependen de tu cuenta.
@@ -160,6 +160,15 @@ const CFG = {
     grimTune:{veneno:{pct:0.35}},   // Envenenador más suave en la Torre
     pasBonus:{'Guerrero:A':{atk:0.3,txt:'+30 % de daño'}, 'Arquero:A':{spd:0.25,txt:'+25 % de velocidad'}, 'Asesino:A':{cr:0.1,txt:'+10 % de crítico'},
       'Guerrero:B':{hp:0.25,txt:'+25 % de vida'}, 'Arquero:B':{atk:0.3,txt:'+30 % de daño'}},
+    maxFloor:100,   // Torre completada al ganar el piso 100
+    // combos entre cartas (sin cartas nuevas). En la Torre no hay topes: crítico hasta 100 % (lo que pase se suma al daño crítico),
+    // robo de vida hasta 60 %, Talismán se multiplica (×0,9 por copia), Recarga rápida hasta el 15 % y Orbe de hielo hasta el 90 %
+    combos:[{a:'hielo',b:'ejecutor',name:'Golpe helado',desc:'Los congelados cuentan como heridos y se rematan con el doble de vida'},
+      {a:'espinas',b:'escudo',name:'Coraza de pinchos',desc:'El daño que para tu escudo también se devuelve y las espinas quitan el doble de vida máxima'},
+      {a:'eco',b:'reloj',name:'Bucle del tiempo',desc:'Cada vez que el Reloj recarga, tus hechizos se lanzan solos, y cada hechizo del combate hace +10 % de daño a los siguientes'},
+      {a:'vampiro',b:'furia',name:'Sed de sangre',desc:'Por debajo del 30 % de vida, el robo de vida se duplica'},
+      {a:'explosion',b:'hielo',name:'Cristales explosivos',desc:'Los enemigos congelados reciben el doble de daño de las explosiones'},
+      {a:'precision',b:'colmillo',name:'Instinto asesino',desc:'Cada crítico cura el doble'}],
     look:3,   // el mapa enseña los caminos de los próximos 3 pisos
     // almas: moneda de la partida (solo para los eventos ?). Combate normal / élite / jefe
     souls:{fight:10,elite:5,boss:20},
@@ -191,8 +200,8 @@ const CFG = {
       vampiro:{r:'C',name:'Vampiro',desc:'5 % de robo de vida',ls:0.05},
       aliento:{r:'C',name:'Segundo aliento',desc:'Al ganar cada combate recuperas el 15 % de la vida',heal:0.15},
       escudo:{r:'E',name:'Escudo inicial',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
-      espinas:{r:'R',name:'Espinas',desc:'Devuelves el 60 % del daño que recibes',reflect:0.6},
-      ejecutor:{r:'R',name:'Ejecutor',desc:'+120 % de daño a enemigos por debajo del 50 % de vida',below:0.5,mult:1.2},
+      espinas:{r:'R',name:'Espinas',desc:'Devuelves el 60 % del daño que recibes y quien te pega pierde el 1 % de su vida máxima',reflect:0.6,maxPct:0.01},
+      ejecutor:{r:'R',name:'Ejecutor',desc:'+120 % de daño bajo el 50 % de vida y remata al instante a los que bajan del 8 % (+4 % por copia; jefes no)',below:0.5,mult:1.2,exec:0.08,execUp:0.04},
       recarga:{r:'R',name:'Recarga rápida',desc:'Tus hechizos recargan un 35 % más rápido (solo sirve con hechizos)',cd:0.65},
       cadena:{r:'E',name:'Cadena',desc:'Cada 2.º golpe salta también a otro enemigo',every:2},
       cristal:{r:'E',name:'Cristal',desc:'+60 % de daño, pero −20 % de vida',atk:0.6,hp:-0.2},

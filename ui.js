@@ -133,9 +133,11 @@ G.on('wave',()=>{});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡El jefe se enfurece!':'¡El jefe llama refuerzos!'); });
 G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; renderTab();
   if(r.won&&!r.pick){ toast(`Piso ${r.floor} superado · +${r.souls} almas`); return }   // combate normal: sin mejora, solo almas
+  if(r.complete) return;
   if(r.won){ toast(`Piso ${r.floor} superado${r.souls?` · +${r.souls} almas`:''}`); return }   // la carta se elige directamente en la pantalla de la Torre
   later(()=>showModal(r.crown?`<h3>¡La corona te salva!</h3><p class="hint">Revives con el ${Math.round(CFG.tower.revHp*100)} % de vida en el piso ${r.floor}.</p><button class="btn gold" data-act="close">Seguir</button>`
   :`<h3>Has caído en el piso ${r.floor}</h3><p class="hint">${r.canRevive?'Puedes revivir una vez viendo un anuncio.':'Fin de la partida.'}</p><div class="ctrl">${r.canRevive?'<button class="btn gold" data-act="towerRev">Revivir · anuncio</button>':''}<button class="btn" data-act="close">Vale</button></div>`)); });
+G.on('towerComplete',({floor})=>{ tab='ev'; modView='torre'; evView=null; renderTab(); later(()=>showModal(`<h3>¡Torre completada!</h3><p class="hint">Has superado los ${floor} pisos. Muy pocos lo consiguen.</p><button class="btn gold" data-act="close">¡Vamos!</button>`)); haptic('ok') });
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
   else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
@@ -691,8 +693,10 @@ function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==nu
 const RARC={C:'var(--rC)',R:'var(--rR)',E:'var(--rE)',L:'var(--rL)'};
 // cuántas copias tienes ya de esta carta (las mejoras y objetos se acumulan)
 const boonHave=b=>{ const run=G.towerState().run; return run?run.boons.filter(x=>JSON.stringify(x)===JSON.stringify(b)).length:0 };
+const comboTag=b=>{ if(b.t!=='fx') return ''; const run=G.towerState().run; const c=CFG.tower.combos.find(x=>x.a===b.id||x.b===b.id); if(!c) return ''; const other=c.a===b.id?c.b:c.a, got=run&&run.boons.some(x=>x.t==='fx'&&x.id===other);
+  return `<span class="s" style="color:var(--gold)">✦ Combo con ${CFG.tower.fx[other].name}${got?' (¡ya la tienes!)':''}: ${c.desc}</span>` };
 const haveTag=b=>{ const n=boonHave(b); return n?` <span class="pill" style="color:var(--good)">Tienes ${n} → ${n+1}</span>`:'' };
-function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}${haveTag(b)}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
+function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}${haveTag(b)}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span>${comboTag(b)}</button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower;
   let body='';
   if(!run) body=`<p class="hint">Roguelike: todos empiezan con el mismo héroe, tu personaje no cuenta. 1 vida.</p>
@@ -709,7 +713,7 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower;
 // tienda: 3 cartas de cualquier calidad, compras las que puedas pagar con almas
 function towerShopView(run){ const sh=run.shop;
   return `<p class="hint">Tienda · tienes <b>${run.souls||0}</b> almas</p><div class="mlist">${sh.items.map((b,i)=>{ const f=G.boonInfo(b), c=RARC[f.r], got=sh.bought.includes(i), pr=G.towerPrice(b);
-    return `<div class="mcard bcard" style="border-color:${c}${got?';opacity:.45':''}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}${got?'':haveTag(b)}</b><span class="pill" style="color:${c}">${f.kind}</span></div><span class="s">${esc(f.desc)}</span>
+    return `<div class="mcard bcard" style="border-color:${c}${got?';opacity:.45':''}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}${got?'':haveTag(b)}</b><span class="pill" style="color:${c}">${f.kind}</span></div><span class="s">${esc(f.desc)}</span>${comboTag(b)}
       <div class="ctrl" style="justify-content:flex-end">${got?'<span class="pill" style="color:var(--good)">Comprada</span>':`<button class="btn sm gold" data-act="towerBuy" data-k="${i}" ${(run.souls||0)>=pr?'':'disabled'}>${pr} almas</button>`}</div></div>` }).join('')}</div>
     <button class="btn" data-act="towerShopLeave">Salir de la tienda</button>` }
 // Efectos de la partida (ocultos en la pantalla): por calidad (Legendaria → Rara → Común) y las maldiciones al final
@@ -718,6 +722,7 @@ function towerFxModal(){ const T=G.towerState(), run=T.run; if(!run) return; con
   const nxt=(()=>{ for(let f=T.best+1;;f++) for(const r of CFG.tower.rewards) if(f%r.every===0) return {f,b:r.b} })();
   showModal(`<h3>Efectos</h3><div class="tfx">${list.map(({f,n})=>`<div style="border-color:${RARC[f.r]}"><b style="color:${RARC[f.r]}">${f.name}${n>1?' ×'+n:''}</b><span class="s">${f.kind} · ${esc(f.desc)}</span></div>`).join('')||'<p class="hint">Aún no tienes mejoras.</p>'}
     ${(run.curses||[]).map(c=>`<div style="border-color:var(--bad)"><b style="color:var(--bad)">☠ ${CFG.tower.curses[c].name}</b><span class="s">Maldición · ${CFG.tower.curses[c].desc}</span></div>`).join('')}</div>
+    ${(()=>{ const has=id=>run.boons.some(b=>b.t==='fx'&&b.id===id), on=CFG.tower.combos.filter(c=>has(c.a)&&has(c.b)); return on.length?`<h3 style="margin-top:8px">Combos activos</h3><div class="tfx">${on.map(c=>`<div style="border-color:var(--gold)"><b style="color:var(--gold)">✦ ${c.name}</b><span class="s">${c.desc}</span></div>`).join('')}</div>`:'' })()}
     <p class="hint">Siguiente premio de récord: piso ${nxt.f} · ${bundleHTML(nxt.b)}</p>
     <div class="ctrl"><button class="btn gold" data-act="close">Cerrar</button>${!G.inEvent()&&run.lives>0?'<button class="btn" data-act="towerQuit">Abandonar partida</button>':''}</div>`) }
 /* ---------- PvP: contra el fantasma de otro jugador (su partida al 100 %) · Elo ---------- */
