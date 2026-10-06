@@ -260,6 +260,7 @@ input[type=number]{width:64px}
 .skb .ski{z-index:1;position:relative;filter:drop-shadow(0 1px 2px #000)}
 .skb.ready{color:var(--gold)}
 .skb{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.sktip.up{bottom:auto;top:40px}
 .sktip{position:absolute;left:10px;right:10px;bottom:76px;z-index:6;background:var(--panel2);border:1px solid var(--gold);border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.35;pointer-events:none}
 #skMode .mrow.bonus{border-color:var(--gold);background:linear-gradient(135deg,rgba(232,176,74,.14),transparent)}
 .wheelg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -292,7 +293,9 @@ button.skmode{border:1px solid var(--line);cursor:pointer;padding:4px 8px}
 button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .fasetxt.top{top:38px;bottom:auto;left:10px;right:auto;font-size:12px;padding:2px 8px}
 .foetxt{position:absolute;top:8px;right:10px;z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:3px}   /* Torre: rasgos del élite o mecánica del jefe (uno por línea) */
-.foetxt span{font-family:var(--display);font-weight:800;font-size:clamp(10px,3.2vw,12px);white-space:nowrap;padding:2px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
+.foetxt.cur{top:auto;right:auto;left:50%;transform:translateX(-50%);bottom:78px;flex-direction:row;flex-wrap:wrap;justify-content:center;max-width:70%}   /* maldiciones: abajo en el centro */
+.foetxt.cur span{color:var(--bad);border-color:rgba(229,72,77,.5)}
+.foetxt span{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:help;font-family:var(--display);font-weight:800;font-size:clamp(10px,3.2vw,12px);white-space:nowrap;padding:2px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
 .fasetxt{position:absolute;right:10px;bottom:34px;z-index:3;font-family:var(--display);font-weight:800;font-size:14px;white-space:nowrap;padding:3px 9px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .mlist{display:flex;flex-direction:column;gap:8px}
 .mcard{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
@@ -473,7 +476,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610060503-3357bbb';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610060508-e6ba1d9';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

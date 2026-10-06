@@ -149,10 +149,10 @@ const CFG = {
     // 1 vida (permadeath): al morir se puede revivir UNA vez por partida viendo un anuncio (con revHp de vida)
     revHp:0.5,
     // rasgos de los élites: cada uno saca 1-2 al azar (+1 con la maldición «rasgo»)
-    traits:{rapido:{name:'Rápido',spd:1.4}, regenera:{name:'Regenera',regen:0.03}, escudo:{name:'Escudo',shield:0.3}, espinas:{name:'Espinas',reflect:0.2},
-      furioso:{name:'Furioso',below:0.5,atk:1.5}, gigante:{name:'Gigante',hp:2,spd:0.75}},
+    traits:{rapido:{name:'Rápido',desc:'Ataca un 40 % más rápido',spd:1.4}, regenera:{name:'Regenera',desc:'Recupera el 3 % de su vida cada segundo',regen:0.03}, escudo:{name:'Escudo',desc:'Empieza con un escudo del 30 % de su vida',shield:0.3}, espinas:{name:'Espinas',desc:'Cada golpe que le das te devuelve el 20 % de uno de sus golpes',reflect:0.2},
+      furioso:{name:'Furioso',desc:'Bajo el 50 % de vida pega un 50 % más',below:0.5,atk:1.5}, gigante:{name:'Gigante',desc:'El doble de vida, pero más lento',hp:2,spd:0.75}},
     // jefes: la mecánica rota cada 10 pisos (invocador, enfurecido, escudo de fases)
-    bossMech:{order:['invocador','enfurecido','fases'], invocador:{every:10,n:1}, enfurecido:{below:0.5,atk:2,spd:1.5}, fases:{at:[0.66,0.33],inv:3,heal:0.1}},
+    bossMech:{order:['invocador','enfurecido','fases'], desc:{invocador:'Cada 10 s llama a un esbirro',enfurecido:'Bajo el 50 % de vida pega el doble y va más rápido',fases:'Al 66 % y al 33 % de vida se vuelve invulnerable 3 s y se cura un 10 %'}, invocador:{every:10,n:1}, enfurecido:{below:0.5,atk:2,spd:1.5}, fases:{at:[0.66,0.33],inv:3,heal:0.1}},
     // eventos ?: id → coste/efecto
     events:{fuente:{hp:0.2}, mercader:{cost:30}, trampa:{good:0.6,hp:0.25}, santuario:{cost:25,heal:0.4}},
     // maldiciones (altar maldito: eliges 1 de 3 legendarias y te llevas una maldición al azar; también con Pacto)
