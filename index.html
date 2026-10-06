@@ -36,6 +36,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .uname em{flex:none;font-style:normal;color:var(--muted);font-family:var(--body);font-size:11px}
 .res{flex:none}
+.top.slim{position:sticky;top:0;z-index:20;padding:6px 10px;margin:-6px -10px 6px;background:linear-gradient(180deg,var(--bg) 70%,transparent)}
+.top.slim .av,.top.slim .uname{display:none}
+.sttl{display:none}
+.top.slim .sttl{display:block;flex:1;min-width:0;font-size:16px;font-weight:800;letter-spacing:2.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:374px){.top.slim .sttl{font-size:13px;letter-spacing:1px}.top.slim .res span{padding:2px 7px 2px 4px}}
+.top.slim .res span{background:#0006;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 6px}
 .namebox{display:flex;flex-direction:column;gap:4px}
 #pNameIn,.nameinp{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;width:100%}
 .fase{font-family:var(--display);font-size:20px;letter-spacing:.5px}
@@ -124,7 +130,22 @@ canvas{display:block;width:100%;height:300px}
 .chest{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;background:var(--panel2)}
 .chest .cn{font-family:var(--display);font-size:17px}
 .mrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
-.mrow.done{opacity:.6}
+.mrow.done{opacity:.55}
+.mrow.ready{border-color:var(--good);background:linear-gradient(135deg,rgba(108,196,122,.14),var(--panel2))}
+.mrow .mbar{display:flex;align-items:center;gap:8px}
+.mrow .mbar .rbar{flex:1;height:8px;background:#0007;box-shadow:inset 0 1px 2px #0008}
+.mrow .mbar .rbar i{background:linear-gradient(90deg,#c98d2e,var(--gold))}
+.mrow.ready .mbar .rbar i{background:linear-gradient(90deg,#4f9e5c,var(--good))}
+.mrow .mbar span{font-size:11px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.mrow .mrw{display:flex;flex-wrap:wrap;gap:4px 6px;font-size:12px}
+.mrow .mrw .rw{background:#0004;border-radius:999px;padding:2px 7px 2px 4px;margin:0}
+.mrow .mrw .rw.xp{color:var(--tok);padding-left:7px}
+.mrow .mgo{min-width:64px}
+.mrow .mclaim{min-width:84px;animation:mglow 1.6s ease-in-out infinite}
+@keyframes mglow{50%{box-shadow:0 0 0 3px #e8b04a44,0 0 14px #e8b04a88}}
+.mcheck,.mlock{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:900}
+.mcheck{background:var(--good);color:#10231a}
+.mlock{background:#0004;font-size:13px;filter:grayscale(1);opacity:.7}
 .mrow .mi{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
 .calg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .cald{display:flex;flex-direction:column;gap:3px;padding:8px 6px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:11px;text-align:center;min-height:74px;justify-content:center}
@@ -143,6 +164,25 @@ canvas{display:block;width:100%;height:300px}
 .pc.lock{opacity:.6}
 .prow.ph .pc{background:none;border:0;font-weight:800;text-align:center}
 .chest.offer{border-color:var(--gold);background:linear-gradient(135deg,rgba(232,176,74,.16),var(--panel2))}
+/* Tienda en rejilla: tarjeta con brillo del color del producto, dibujo grande y botón de precio abajo */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.scard{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:12px 8px 10px;border-radius:14px;border:1px solid color-mix(in srgb,var(--tone) 45%,var(--line));
+  background:radial-gradient(90% 60% at 50% 30%,color-mix(in srgb,var(--tone) 26%,transparent),transparent 70%),linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:inset 0 1px 0 #ffffff10}
+.scard .ibtn{position:absolute;top:7px;right:7px;margin:0}
+.scard .sc-ic{height:58px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 8px color-mix(in srgb,var(--tone) 55%,transparent))}
+.scard .sc-ic .ic{width:50px;height:50px;vertical-align:0}
+.scard .sc-stack .ic{width:34px;height:34px;margin:0 -8px}
+.scard .sc-stack .ic:nth-child(2){transform:translateY(-8px)}
+.scard .sc-n{font-family:var(--display);font-size:15px;line-height:1.15;margin-top:4px}
+.scard .sc-s{font-size:11px;color:var(--muted);min-height:15px;line-height:1.3}
+.scard .sc-buy{width:100%;margin-top:auto;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px;font-size:14px}
+.scard .sc-buy .ic{width:15px;height:15px;vertical-align:0}
+.scard .sc-buy .ic circle:first-child{stroke:#6b4410;stroke-width:1.6}
+.scard .sc-s{margin-bottom:8px}
+.scard .pill{align-self:center;margin-top:8px}
+.scard .sc-tag{position:absolute;top:8px;left:8px;font-size:10px;font-weight:900;padding:2px 7px;border-radius:999px;background:var(--good);color:#10231a}
+.scard.deal{border-color:var(--good)}
+.chest.offer{box-shadow:0 0 0 1px #e8b04a55,0 6px 18px -6px #e8b04a66}
 .ibtn{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:11px;font-weight:800;font-family:var(--body);padding:0;vertical-align:2px;margin-left:4px}
 .ibtn:hover{color:var(--ink);border-color:var(--gold)}
 .chest .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
@@ -230,6 +270,18 @@ input[type=number]{width:64px}
 .btn.gold{background:linear-gradient(#f3c466,#d99a2e);box-shadow:0 2px 0 #8a5a14,inset 0 1px 0 rgba(255,255,255,.35)}
 .btn:active:not(:disabled),.mcard:active,.fchips button:active,.calbtn:active,.skb:active,.evcard:active{transform:translateY(1px) scale(.97)}
 .btn:active:not(:disabled){box-shadow:0 1px 0 rgba(0,0,0,.35)}
+/* pulido: la pantalla entra con un fundido, el botinito aparece uno a uno y los avisos laten */
+#tab.tabin{animation:tabin .22s ease-out}
+@keyframes tabin{from{opacity:0;transform:translateY(8px)}}
+.loot.reveal>div{animation:lootin .35s cubic-bezier(.2,1.4,.4,1) both}
+.loot.reveal>div:nth-child(2){animation-delay:.06s}.loot.reveal>div:nth-child(3){animation-delay:.12s}.loot.reveal>div:nth-child(4){animation-delay:.18s}
+.loot.reveal>div:nth-child(5){animation-delay:.24s}.loot.reveal>div:nth-child(n+6){animation-delay:.3s}
+@keyframes lootin{from{opacity:0;transform:scale(.85) translateY(6px)}}
+.nb{animation:nbpulse 2s ease-in-out infinite}
+@keyframes nbpulse{0%,70%,100%{transform:scale(1)}80%{transform:scale(1.25)}90%{transform:scale(.95)}}
+.nav button[aria-selected="true"] .ni{animation:navpop .3s ease-out}
+@keyframes navpop{40%{transform:translateY(-3px) scale(1.12)}}
+@media (prefers-reduced-motion:reduce){#tab.tabin,.loot.reveal>div,.nb,.nav button .ni,.mrow .mclaim{animation:none}}
 .btn.gold:active:not(:disabled){box-shadow:0 1px 0 #8a5a14}
 .cat{display:inline-flex;align-items:center;gap:8px}.cat .ico{color:var(--gold)}
 .fchips button{display:inline-flex;align-items:center;gap:5px}
@@ -433,9 +485,14 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .utabs small{display:block;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:0}
 .fdet summary{cursor:pointer;color:var(--muted);font-weight:800;font-size:13px;padding:2px 2px 6px}
 .itile .tl{left:3px;top:3px;bottom:auto;padding:0 4px;border-radius:5px;background:var(--rc);color:#0c0d12;text-shadow:none;font-size:10px}
-.itile .tf{left:auto;right:4px;top:auto;bottom:2px}
+.itile .tf{left:auto;right:4px;top:2px;bottom:auto}
+.itile .tf~.tu{right:17px}
 .ctile .ic{width:38px;height:38px}.isart .ic{width:32px;height:32px}   /* cofres en casillas */
 .itile.empty{border:2px dashed var(--line);background:rgba(255,255,255,.02)}
+.itile svg{margin-top:-8px}
+.itile .td{position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:10px;font-weight:900;color:var(--ink);text-shadow:0 1px 2px #000,0 0 4px #000}
+.itile.other svg{opacity:.4;filter:grayscale(.7)}
+.itile.other .td{color:var(--muted)}
 .isheet.fixed{position:fixed;left:16px;right:16px;max-width:488px;margin:0 auto;top:calc(58px + var(--safe-top));min-height:170px;z-index:6;background:linear-gradient(180deg,#262a3c,#1c1f2c);box-shadow:0 10px 24px rgba(0,0,0,.6);border-radius:14px;border:2px solid var(--rc)}   /* la ficha del arma tapa el héroe de arriba (arma equipada y grimorio) */
 .tgfs .isheet.fixed{top:calc(48px + var(--safe-top))}
 .isheet.fixed .isacts{margin-top:auto}   /* botones abajo del recuadro */
@@ -513,7 +570,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610061451-25a8c8f';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610061515-cc3cfd3';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

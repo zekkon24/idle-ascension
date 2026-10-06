@@ -76,6 +76,10 @@ const skTip=x=>`<b>${esc(x.name||'')}</b><br>${(SKI[x.id]||[0,esc(x.desc||'')])[
 // números de daño: suben sin parar; si llega otro golpe al mismo objetivo en menos de 0,3 s se suma al último número (no se amontonan)
 function pushFloat(f){ const last=fx.floats.filter(o=>(f.hero?o.hero:o.e===f.e)&&!o.crit===!f.crit&&o.v!=null&&f.v!=null).pop();
   if(last&&last.max-last.life<0.3){ last.v+=f.v; last.txt=(f.hero?'-':'')+fmt(last.v); return }
+  // cada número sale un poco desplazado al azar y, si hay otros recientes cerca, se coloca encima (no se pisan)
+  f.dx=(Math.random()-0.5)*18; f.vx=(Math.random()-0.5)*14;
+  const fxX=o=>o.hero?-1e3:(o.e&&o.e.x)||0, near=fx.floats.filter(o=>!o.hero===!f.hero&&o.max-o.life<0.35&&Math.abs(fxX(o)-fxX(f))<30).length;
+  f.lane=Math.min(3,near);
   f.max=f.life; fx.floats.push(f); if(fx.floats.length>40) fx.floats.shift() }
 
 /* ---------- Telegram: colores, vibración y botón atrás ---------- */
@@ -196,7 +200,7 @@ function chips(list,lockable,r){
 }
 function lootHTML(list){
   const sorted=[...list].sort((a,b)=>R.indexOf(b.r)-R.indexOf(a.r)||(a.cls===S.cls?-1:1));
-  return `<div class="loot">${sorted.map(x=>`<div><span style="color:var(--r${x.r})">${wName(x)}</span><span class="s">${x.autoEq?'equipada':''}${x.auto?' · desmontada (+'+x.auto+')':''}</span></div>`).join('')}</div>`;
+  return `<div class="loot reveal">${sorted.map(x=>`<div><span style="color:var(--r${x.r})">${wName(x)}</span><span class="s">${x.autoEq?'equipada':''}${x.auto?' · desmontada (+'+x.auto+')':''}</span></div>`).join('')}</div>`;
 }
 
 /* ---------- estructura ---------- */
@@ -208,7 +212,14 @@ const ICON={
   // cofres: madera (marrón), plata (gris) y modo (morado)
   wood:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#9a6a3e"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#9a6a3e" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#5c3b1e"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>',
   silver:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#b9c0cc"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#b9c0cc" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#6f7785"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>',
-  mode:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#9b6ad6"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#9b6ad6" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#5a3a86"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>'};
+  mode:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 7h12v7H2z" fill="#9b6ad6"/><path d="M2 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3z" fill="#9b6ad6" style="filter:brightness(1.25)"/><path d="M2 7h12v1.6H2z" fill="#5a3a86"/><rect x="7" y="7" width="2" height="3" rx=".5" fill="#ffd66b"/></svg>',
+  // tickets (Mazmorra naranja, Jefe rojo con calavera, PvP azul), esencia (gota morada) y emblema (escudo dorado con estrella)
+  ticket:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5h13v2.2a1.4 1.4 0 0 0 0 2.6v2.2h-13V9.3a1.4 1.4 0 0 0 0-2.6z" fill="#e8964a"/><path d="M10.5 4.5v7" stroke="#7a3f12" stroke-width="1" stroke-dasharray="1.2 1"/><path d="M4 7h4M4 9h3" stroke="#fff8" stroke-width="1.1"/></svg>',
+  bossTicket:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5h13v2.2a1.4 1.4 0 0 0 0 2.6v2.2h-13V9.3a1.4 1.4 0 0 0 0-2.6z" fill="#d9534f"/><circle cx="6" cy="7.6" r="2.2" fill="#fff"/><path d="M5 9.4h2v1.1H5z" fill="#fff"/><circle cx="5.2" cy="7.5" r=".55" fill="#d9534f"/><circle cx="6.8" cy="7.5" r=".55" fill="#d9534f"/><path d="M10.5 4.5v7" stroke="#6e1f1c" stroke-width="1" stroke-dasharray="1.2 1"/></svg>',
+  pvp:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 4.5h13v2.2a1.4 1.4 0 0 0 0 2.6v2.2h-13V9.3a1.4 1.4 0 0 0 0-2.6z" fill="#4f8fd9"/><path d="M3.5 6l4 4M7.5 6l-4 4" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/><path d="M10.5 4.5v7" stroke="#1f3f6e" stroke-width="1" stroke-dasharray="1.2 1"/></svg>',
+  ess:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5C10.5 5 12.5 7.3 12.5 10a4.5 4.5 0 0 1-9 0C3.5 7.3 5.5 5 8 1.5z" fill="#a46be0"/><path d="M6.4 9.6a1.8 1.8 0 0 0 1.8 2.2" stroke="#fff9" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>',
+  ev:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3l5.5 2v4.4c0 3.3-2.4 5.7-5.5 7-3.1-1.3-5.5-3.7-5.5-7V3.3z" fill="#e8b04a"/><path d="M8 4.3l1.1 2.2 2.4.3-1.8 1.6.5 2.4L8 9.6l-2.2 1.2.5-2.4-1.8-1.6 2.4-.3z" fill="#7a5414"/></svg>'
+};
 // iconos de la barra de abajo y de las categorías (trazo del color del texto)
 const IC=(d,sz=20)=>`<svg class="ico" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 // iconos rellenos de game-icons.net (CC BY 3.0)
@@ -233,7 +244,7 @@ const NAVL={up:'Inicio',inv:'Inventario',shop:'Tienda',ev:'Modos',mis:'Misiones'
 const navSet=(k,n)=>setHTML(document.querySelector(`[data-tab="${k}"]`),`<span class="ni">${IC(ICONS[k])}${n?`<sup class="nb">${n}</sup>`:''}</span><span class="nl">${NAVL[k]}</span>`);
 function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pantalla nueva
   $('#app').innerHTML=`
-  <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><div class="uname" id="uName"></div>
+  <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><div class="uname" id="uName"></div><b class="sttl" id="scrT"></b>
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
     <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
@@ -250,7 +261,8 @@ function updateHUD(){
   if(!S||!$('#rGold')) return;
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
-  { const tp=document.querySelector('.top'); if(tp) tp.hidden=!(tab==='up'&&!ev); }
+  // en Inicio: retrato, nombre y dinero; en las demás pantallas, solo el dinero en una barra fina fija arriba (como en los RPG de móvil); luchando, nada
+  { const tp=document.querySelector('.top'); if(tp){ tp.hidden=tab==='up'&&ev; tp.classList.toggle('slim',tab!=='up'); const t=$('#scrT'), nt=((tab==='ev'&&{campana:'Campaña',eventos:'Eventos',pvp:'PvP',torre:'Torre'}[modView])||NAVL[tab]||'').toUpperCase(); if(t&&t.textContent!==nt) t.textContent=nt; } }
    // el nivel solo cuenta farmeando: en eventos, Torre y PvP no se ve   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   $('#faseTxt').classList.add('top');   // debajo de tu barra de vida (los iconos de abajo a la derecha quedan libres)
@@ -309,6 +321,8 @@ function renderTab(){
   if(!S) return;
   document.querySelectorAll('.nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
   const el=$('#tab'); if(!el) return;
+  // al cambiar de pestaña, la pantalla nueva entra con un pequeño fundido hacia arriba
+  if(renderTab.last!==tab){ renderTab.last=tab; if(tab!=='up'&&!battery()){ el.classList.remove('tabin'); void el.offsetWidth; el.classList.add('tabin'); } }
   const bt=$('#battle'); if(bt) bt.hidden=tab!=='up'; $('#app').classList.toggle('home',tab==='up'); // el combate sigue funcionando por detrás
   if(tab==='up') el.innerHTML='';
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||G.inEvent();
@@ -389,7 +403,7 @@ function tabForja(){
       ${pt?`<button class="btn sm" data-act="ref" data-id="${it.id}" data-pay="token">O con token: ${fmt(pt.scrap)} chat. + ${pt.tokens} token</button>`:''}
       <div class="rlegend"><span>${LOCK_SVG(true)} fija un stat (cuesta más)</span><span><b>↑</b> sube solo ese stat</span></div>`;
   return `${scrHead('FORJA',forjaBack)}<section class="fgp">
-    <div class="fgframe" style="--rc:var(--r${it.r})">${BIGSWORD.replace('width="92" height="92"','width="120" height="120"')}
+    <div class="fgframe" style="--rc:var(--r${it.r})">${wIcon(it,120)}
       ${eq?'<span class="pill fgeq">Equipada</span>':own?`<button class="btn sm fgeq" data-act="equip" data-id="${it.id}">Equipar</button>`:''}</div>
     <div class="fgname">${wName(it)}</div>
     <div class="fgrar" style="--rc:var(--r${it.r})"><span>${CFG.rarName[it.r].toUpperCase()}</span><span class="fgst">${stars}</span></div>${legendLine(it)}
@@ -421,7 +435,7 @@ const sceneCache={};
 function sceneImg(zone,w,h){ const k=zone+'_'+w+'_'+h; if(!sceneCache[k]&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const g=cv.getContext('2d');
   ART.scene(g,w,h,Math.round(h*0.8),zone,0,0,0); sceneCache[k]=cv.toDataURL('image/jpeg',0.8) }catch(e){ sceneCache[k]='' } } return sceneCache[k]||'' }
 const zoneNow=()=>Math.floor(((Math.max(1,S.best)-1)%150)/30);
-const scrHead=(t,backV)=>`<div class="scrhd">${backV?`<button class="scrb" data-act="invview" data-v="${backV}" aria-label="Volver">‹</button>`:''}<b>${t}</b><span class="scrg">${ICON.gold}${fmtG(S.gold)}</span></div>`;
+const scrHead=(t,backV)=>`<div class="scrhd">${backV?`<button class="scrb" data-act="invview" data-v="${backV}" aria-label="Volver">‹</button>`:''}<b>${t}</b></div>`;
 // Inventario: el héroe con el mismo dibujo del combate (se pinta una vez y se guarda como imagen)
 const heroImgCache={};
 function heroImg(){ const c=CFG.classes[S.cls], k=[S.cls,S.evo,S.path].join();
@@ -433,7 +447,7 @@ function heroImg(){ const c=CFG.classes[S.cls], k=[S.cls,S.evo,S.path].join();
 if(window.ART) ART.onSprites(()=>{ for(const k in heroImgCache) delete heroImgCache[k]; avKey=null; if(!S) return; avatar(); const b=$('.ibart'); if(b) b.innerHTML=heroImg() });
 // Cabecera del inventario: el héroe grande sobre el escenario de su zona y sus huecos (arma y grimorio)
 function invBanner(){ const w=G.equipped(), bg=sceneImg(zoneNow(),390,190), gshown=G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1;
-  const ws=w?`<button class="ibslot" style="--rc:var(--r${w.r})" data-act="forge" data-id="${w.id}" data-from="main" aria-label="Arma: ${wName(w)}">${MINISWORD}<span class="ibl">Nv ${w.lvl}</span></button>`:`<button class="ibslot empty" data-act="invview" data-v="armas" aria-label="Sin arma">—</button>`;
+  const ws=w?`<button class="ibslot" style="--rc:var(--r${w.r})" data-act="forge" data-id="${w.id}" data-from="main" aria-label="Arma: ${wName(w)}">${wIcon(w)}<span class="ibl">Nv ${w.lvl}</span></button>`:`<button class="ibslot empty" data-act="invview" data-v="armas" aria-label="Sin arma">—</button>`;
   const gs=gshown?`<button class="ibslot" style="--rc:var(--rE)" data-act="grimOpen" aria-label="Grimorio">${((document.querySelector('#grimBtn svg')||{}).outerHTML||'📖').replace(/width="22" height="22"/,'width="30" height="30"')}${G.grimOwned()?`<span class="ibl">Nv ${G.grimLevel()}</span>`:''}</button>`:`<span class="ibslot empty" aria-label="Grimorio bloqueado">🔒</span>`;
   return `<section class="ibanner" style="background-image:linear-gradient(180deg,rgba(18,20,28,.1),rgba(18,20,28,.85)),url(${bg})">
     <div class="ibart">${heroImg()}</div>
@@ -528,13 +542,19 @@ function filtered(){
   }).sort((a,b)=>(b.id===S.equippedId)-(a.id===S.equippedId)||(a.cls===S.cls?0:1)-(b.cls===S.cls?0:1)||R.indexOf(b.r)-R.indexOf(a.r)||b.lvl-a.lvl);
 }
 // Inventario en cuadrícula: casilla con el color de rareza, nivel, ★ bloqueada y ▲ mejor que la equipada
-const MINISWORD=BIGSWORD.replace('width="92" height="92"','width="38" height="38"');
+// arma de cada clase (así se distinguen de un vistazo las de otras clases): espada, bastón, arco, daga y maza
+const WSVG={Guerrero:BIGSWORD.replace(/<svg[^>]*>|<\/svg>/g,''),
+  Mago:'<path d="M14 56L46 18" stroke="#8a5a34" stroke-width="5" stroke-linecap="round"/><path d="M12 58l5-5" stroke="var(--gold)" stroke-width="6" stroke-linecap="round"/><path d="M42 22l-4-4 6-6 6 6z" fill="var(--gold)"/><circle cx="50" cy="13" r="8" fill="#9b6ad6"/><circle cx="47" cy="10" r="3" fill="#fff" opacity=".7"/>',
+  Arquero:'<path d="M14 8c26 4 42 20 42 42" stroke="#8a5a34" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M14 8L56 50" stroke="#dfe4ee" stroke-width="1.6"/><path d="M8 56L44 20" stroke="#cfd4de" stroke-width="2.4"/><path d="M48 16l-9 1 8 8z" fill="#dfe4ee"/><path d="M8 56l2-8M8 56l8-2" stroke="var(--gold)" stroke-width="3" stroke-linecap="round"/>',
+  Asesino:'<path d="M52 8c-2 10-10 20-20 26l-4-4C34 20 42 12 52 8z" fill="#dfe4ee"/><path d="M52 8C44 16 38 24 32 32" stroke="#fff" stroke-width="1.6" opacity=".6"/><path d="M22 30l12 12-3 3-12-12z" fill="var(--gold)"/><path d="M24 40l-12 12" stroke="#3a2a40" stroke-width="5" stroke-linecap="round"/><circle cx="10" cy="54" r="3.5" fill="var(--gold)"/>',
+  Clerigo:'<path d="M12 56L36 32" stroke="#8a5a34" stroke-width="5" stroke-linecap="round"/><path d="M10 58l4-4" stroke="var(--gold)" stroke-width="6" stroke-linecap="round"/><circle cx="42" cy="22" r="13" fill="#cfd4de"/><path d="M42 4v6M42 34v6M24 22h6M54 22h6M29 9l4 4M55 35l-4-4M29 35l4-4M55 9l-4 4" stroke="#cfd4de" stroke-width="4" stroke-linecap="round"/><circle cx="38" cy="18" r="4" fill="#fff" opacity=".6"/><circle cx="42" cy="22" r="4" fill="var(--gold)"/>'};
+const wIcon=(it,sz=38)=>`<svg viewBox="0 0 64 64" width="${sz}" height="${sz}" aria-hidden="true">${WSVG[it&&it.cls]||WSVG.Guerrero}</svg>`;
 function itemTile(it){ const eq=it.id===S.equippedId, own=it.cls===S.cls, up=own&&!eq&&betterThanEquipped(it), sel=expandedId===it.id;
-  return `<button class="itile${sel?' sel':''}" style="--rc:var(--r${it.r})" data-act="expand" data-id="${it.id}" aria-pressed="${sel}" aria-label="${wName(it)} nivel ${it.lvl}">
-    ${MINISWORD}<span class="tl">Nv ${it.lvl}</span>${it.fav?'<span class="tf">★</span>':''}${up?'<span class="tu">▲</span>':''}</button>` }
+  return `<button class="itile${sel?' sel':''}${own?'':' other'}" style="--rc:var(--r${it.r})" data-act="expand" data-id="${it.id}" aria-pressed="${sel}" aria-label="${wName(it)} nivel ${it.lvl}${own?'':' (otra clase)'}">
+    ${wIcon(it)}<span class="tl">Nv ${it.lvl}</span>${it.fav?'<span class="tf">★</span>':''}${up?'<span class="tu">▲</span>':''}<span class="td">+${Math.round(G.weaponMain(it).d*100)}%</span></button>` }
 function itemSheet(it){ const m=G.weaponMain(it), own=it.cls===S.cls;
   return `<div class="isheet fixed" style="--rc:var(--r${it.r})">
-    <div class="ishd"><div class="isart">${MINISWORD}</div><div style="min-width:0;flex:1"><b class="isn">${wName(it)}</b> <span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r].toUpperCase()}</span>
+    <div class="ishd"><div class="isart">${wIcon(it)}</div><div style="min-width:0;flex:1"><b class="isn">${wName(it)}</b> <span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r].toUpperCase()}</span>
       <div class="s">Nv ${it.lvl} · Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div></div>
       <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear'}">★</button>
       <button class="isx" data-act="expand" data-id="${it.id}" aria-label="Cerrar">✕</button></div>
@@ -623,25 +643,32 @@ function offerModal(k){ const o=G.activeOffers().find(x=>x.k===k); if(!o) return
 function firstOfferRow(){ const F=CFG.stars.first; if(S.firstBuy) return '';
   return `<div class="chest offer"><div><div class="cn">Oferta de bienvenida</div><div class="s">Arma ${CFG.rarName[F.r]} de tu clase + ${F.tokens} tokens + ${F.silver} cofres de plata · solo una vez</div></div>
     <div class="acts">${payBtn('first',F.stars,'data-act="devFirst"')}</div></div>` }
-function shopRow(k){const it=SHOP[k];return `<div class="chest"><div><div class="cn">${it.name.replace(/ ([^ ]+)$/,' <span style="white-space:nowrap">$1')}${/ /.test(it.name)?'':'<span style="white-space:nowrap">'} <button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button></span></div>${k==='silver'?`<div class="s">${silverNote()}</div>`:''}</div>
-  <div class="acts">${k==='silver'||tokOpen()?`<button class="btn sm gold" data-act="buyAsk" data-k="${k}">${priceTxt(k)}</button>`:soon}</div></div>`}
+// Tienda en rejilla (como en los RPG de móvil): cada producto con su dibujo grande sobre un brillo de su color, nombre y botón de precio con la moneda
+const SHOPTONE={silver:'#b9c0cc',mode:'#9b6ad6',ticket:'#e8964a',bossTicket:'#d9534f',pvp:'#4f8fd9',ess:'#a46be0',ev:'#e8b04a'};
+const priceHTML=(k,n=1)=>k==='silver'?`${ICON.gold}${fmtG(G.silverCost(n))}`:`${ICON.tok}${fmt(G.shopPrice(k)*n)}`;
+function shopCard(k){ const it=SHOP[k];
+  return `<div class="scard" style="--tone:${SHOPTONE[k]||'var(--gold)'}"><button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button>
+    <div class="sc-ic">${ICON[k]||''}</div><div class="sc-n">${it.name}</div><div class="sc-s">${k==='silver'?silverNote():'&nbsp;'}</div>
+    ${k==='silver'||tokOpen()?`<button class="btn gold sc-buy" data-act="buyAsk" data-k="${k}">${priceHTML(k)}</button>`:soon}</div>` }
 function tabShop(){
   const today=G.dayKey();
   const head=`<div class="fchips" role="tablist">${[['cofres','Cofres'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
   let body='';
-  if(shopView==='cofres') body=offerRows()+shopRow('silver')+shopRow('mode')+shopRow('ticket')+shopRow('bossTicket')+shopRow('ess')+shopRow('ev');
+  if(shopView==='cofres') body=offerRows()+`<div class="sgrid">${['silver','mode','ticket','bossTicket','ess','ev'].map(shopCard).join('')}</div>`;
   const crypto=window.TonPay&&TonPay.on(CFG); if(!crypto) payCoin='stars';
   if(shopView==='tokens') body=`<div class="loot"><div><span>Tus tokens</span><b>${fmt(G.tokens())}</b></div></div>
     ${crypto?`<div class="ctrl" style="justify-content:space-between"><span class="s">Pagar con</span><div class="fchips">${[['stars','⭐ Stars'],['TON','TON'],['USDT','USDT']].map(([v,l])=>`<button data-act="payCoin" data-v="${v}" aria-pressed="${payCoin===v}">${l}</button>`).join('')}</div></div>`:''}
     ${payCoin==='stars'?firstOfferRow():''}
-    ${CFG.tokens.packs.map(n=>{ const bn=(CFG.tokens.bonus||{})[n]||0; return `<div class="chest${bn?' deal':''}"><div><div class="cn">${fmt(n+bn)} tokens${bn?` <span class="pill" style="color:var(--good);white-space:nowrap;vertical-align:3px">+${Math.round(bn/n*100)} %</span>`:''}</div>${bn?`<div class="s">${fmt(n)} + ${fmt(bn)} de regalo</div>`:''}</div><div class="acts">${payCoin==='stars'?payBtn('t'+n,n*CFG.stars.perToken,`data-act="tokBuy" data-k="${n}"`):`<button class="btn sm gold" data-act="cryptoBuy" data-k="t${n}">${usd(n)} en ${payCoin}</button>`}</div></div>` }).join('')}
+    <div class="sgrid">${CFG.tokens.packs.map((n,i)=>{ const bn=(CFG.tokens.bonus||{})[n]||0; return `<div class="scard${bn?' deal':''}" style="--tone:var(--tok)">${bn?`<span class="sc-tag">+${Math.round(bn/n*100)} %</span>`:''}
+      <div class="sc-ic sc-stack">${ICON.tok.repeat(Math.min(3,i+1))}</div><div class="sc-n">${fmt(n+bn)} tokens</div><div class="sc-s">${bn?`${fmt(n)} + ${fmt(bn)} de regalo`:'&nbsp;'}</div>
+      ${payCoin==='stars'?payBtn('t'+n,n*CFG.stars.perToken,`data-act="tokBuy" data-k="${n}"`).replace('btn sm gold','btn gold sc-buy'):`<button class="btn gold sc-buy" data-act="cryptoBuy" data-k="t${n}">${usd(n)} en ${payCoin}</button>`}</div>` }).join('')}</div>
     ${CFG.devTools?`<div class="ctrl"><button class="btn sm" data-act="wdAsk" ${S.won>=CFG.tokens.withdraw.min?'':'disabled'}>Retirar ganados (prueba)</button></div>`:''}
     <p class="hint">${payCoin==='stars'?'Se pagan con Telegram Stars ⭐.':`Se paga con tu cartera (Telegram Wallet, Tonkeeper…) en la red TON. El precio en ${payCoin==='TON'?'TON se fija al cambio del momento':'USDT es en dólares'}. Llega en 1-2 min.`}</p>
     ${crypto?'<div class="ctrl"><button class="btn sm" data-act="cryptoCheck">¿Pagaste y no llegó? Comprobar</button></div>':''}`;
   if(shopView==='subs') body=`
     <div class="chest"><div><div class="cn">Tarjeta mensual</div><div class="s">+${Math.round(CFG.cardGold*100)} % oro · 30 días${G.hasCard()?' · quedan '+(S.cardUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="card">${fmt(CFG.cardPrice)} tokens</button>`:soon}</div></div>
     <div class="chest"><div><div class="cn">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button>`:soon}</div></div>`;
-  return `<section class="panel"><h3>Tienda</h3>${head}${body}</section>`;
+  return `<section class="panel">${head}${body}</section>`;
 }
 // plata: límite al día (si lo hay) o precio que sube con cada compra del día
 const silverNote=()=>Number.isFinite(G.silverLeft())?`Quedan ${G.silverLeft()} hoy`:CFG.chests.silver.step?`+${Math.round(CFG.chests.silver.step*100)} % por cada compra hoy`:'Sin límite';
@@ -811,7 +838,7 @@ function tabEv(){
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
     const tw=G.towerState(), tr=tw.run, pv=G.pvpState(), cap=CFG.phaseCap, bg=(z,w,h)=>`background-image:linear-gradient(180deg,rgba(10,10,16,0) 35%,rgba(10,10,16,.8)),url(${sceneImg(z,w,h)})`;
     const modesTxt=CFG.modes.map((x,i)=>`<span class="${i===S.mode?'on':''}">${x.name.toUpperCase()}</span>`).join('');
-    return `<div class="scrhd"><b>MODOS</b><span class="scrg">${ICON.gold}${fmtG(S.gold)}</span></div><div class="mgrid2">
+    return `<div class="mgrid2">
       <button class="mcard2 wide" style="${bg(zoneNow(),360,150)}" data-act="modview" data-v="campana">
         <span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
         <span class="mp"><small>Progreso</small><b>Fase ${S.best} / ${cap}</b></span><span class="mbar"><i style="width:${S.best/cap*100}%"></i></span></button>
@@ -893,13 +920,19 @@ function misKeyNow(){ const P=G.passState(), badge=[G.missionsReady(),G.weeklyRe
   const v=misView==='dia'?[G.bonusState('day'),G.missions().map(m=>[m.prog,m.claimed])]:misView==='sem'?[G.bonusState('week'),G.weekMissions().map(m=>[m.prog,m.claimed])]
     :misView==='pass'?[P.lvl,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,P.xp]:[window.Telemetry&&Telemetry.refs];
   return misView+JSON.stringify([badge,v]) }
-const misRows=(L,act,M)=>L.map(m=>`<div class="mrow${m.claimed?' done':''}"><div class="mi"><b>${m.t}</b><div class="rbar"><i style="width:${m.prog/m.n*100}%;background:var(--${m.done?'good':'gold'})"></i></div><span class="s">${fmt(m.prog)}/${fmt(m.n)} · ${bundleHTML(m.rew||{})} ${m.xp||M.xp} XP del pase</span></div>
-      ${m.claimed?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="${act}" data-k="${m.k}" ${m.done?'':'disabled'}>Recoger</button>`}</div>`).join('');
+// misiones: barra con el progreso, premios como iconos y, a la derecha, «Recoger» (brilla) si está completa o «Ir» (te lleva) si no
+const MISGO={event:'eventos',pvp:'pvp',chests:'cofres',upgrade:'up',kills:'up'};
+const misBtn=(m,act)=>m.claimed?'<span class="mcheck" aria-label="Recogida">✓</span>':m.done?`<button class="btn sm gold mclaim" data-act="${act}" data-k="${m.k}">Recoger</button>`
+  :MISGO[m.k]?`<button class="btn sm mgo" data-act="misGo" data-k="${m.k}">Ir</button>`:'';
+const misRank=m=>m.claimed?2:m.done?0:1, misRows=(L,act,M)=>[...L].sort((a,b)=>misRank(a)-misRank(b)).map(m=>`<div class="mrow${m.claimed?' done':m.done?' ready':''}"><div class="mi"><b>${m.t}</b>
+      <div class="mbar"><div class="rbar"><i style="width:${Math.min(100,m.prog/m.n*100)}%"></i></div><span>${fmt(Math.min(m.prog,m.n))}/${fmt(m.n)}</span></div>
+      <div class="mrw">${bundleHTML(m.rew||{})}<span class="rw xp">+${m.xp||M.xp} XP pase</span></div></div>
+      ${misBtn(m,act)}</div>`).join('');
 function tabMis(){ const P=G.passState();
   const chips=`<div class="fchips">${[['dia','Diarias',G.missionsReady()],['sem','Semanal',G.weeklyReady()],['pass','Pase',G.passReady()],['soc','Socios',0]].map(([v,l,n])=>`<button data-act="misView" data-v="${v}" aria-pressed="${misView===v}">${l}${n?` <sup class="nb" style="position:static">${n}</sup>`:''}</button>`).join('')}</div>`;
   let body='';
-  const bonusRow=(kind,t)=>{ const st=G.bonusState(kind); return `<div class="mrow bonus${st.got?' done':''}"><div class="mi"><b>${t}</b><span class="s">${bundleHTML(st.b)}</span></div>
-      ${st.got?'<span class="rmax">✓</span>':`<button class="btn sm gold" data-act="misBonus" data-k="${kind}" ${st.can?'':'disabled'}>Recoger</button>`}</div>` };
+  const bonusRow=(kind,t)=>{ const st=G.bonusState(kind); return `<div class="mrow bonus${st.got?' done':st.can?' ready':''}"><div class="mi"><b>${t}</b><div class="mrw">${bundleHTML(st.b)}</div></div>
+      ${st.got?'<span class="mcheck" aria-label="Recogido">✓</span>':st.can?`<button class="btn sm gold mclaim" data-act="misBonus" data-k="${kind}">Recoger</button>`:'<span class="mlock" aria-label="Aún no">🔒</span>'}</div>` };
   if(misView==='dia') body=bonusRow('day','Bonus: completa todas las diarias')+misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
   if(misView==='sem') body=bonusRow('week','Bonus: completa todas las semanales')+misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
   if(misView==='pass'){ const L=CFG.pass.levels, rows=[]; for(let l=1;l<=L;l++){ const open=l<=P.lvl;
@@ -913,7 +946,7 @@ function tabMis(){ const P=G.passState();
       <div class="plist">${rows.join('')}</div>`; }
   if(misView==='soc'){ const R=CFG.referral, inv=inviteRow();
     body=`<p class="hint">Invita a tus amigos: tu amigo recibe ${R.giftSilver} cofre de plata y tú ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}.</p>${inv||'<p class="hint">Para invitar, abre el juego desde Telegram.</p>'}`; }
-  return `<section class="panel"><h3>Misiones</h3>${chips}<div id="misBox" class="mlist">${body}</div></section>` }
+  return `<section class="panel">${chips}<div id="misBox" class="mlist">${body}</div></section>` }
 const misBadge=()=>G.missionsReady()+G.weeklyReady()+G.passReady();
 // Ruleta diaria: tirada gratis + tirada con anuncio; resalta el premio que toca
 // pestañas de «Premios diarios» (Calendario · Ruleta), con aviso si hay algo por recoger
@@ -1055,7 +1088,7 @@ function spinDone(){
 /* ---------- Ajustes ---------- */
 function tabDev(){
   const on=battery();
-  return `<section class="panel"><h3>Ajustes</h3><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Menos efectos, gasta menos</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
+  return `<section class="panel"><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div><div class="row"><div><div class="t">Habilidades automáticas</div><div class="s">En la campaña</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.autoSkills===false?'':' on'}" data-act="autoSkills">${S.opt&&S.opt.autoSkills===false?'Desactivadas':'Activadas'}</button></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Menos efectos, gasta menos</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
   </section>
   <details class="panel fold"><summary><h3>Créditos</h3></summary><p class="hint">Iconos: <b>game-icons.net</b> (Lorc, Delapouite y colaboradores), licencia CC BY 3.0.</p></details>
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
@@ -1173,6 +1206,9 @@ const ACT={
       else if(!G.pvpSetRival({...j.rival,match:j.match})) return renderTab();
       go(); }) },
   syncRetry:()=>location.reload(),
+  misGo:(b,k)=>{ const v=MISGO[k]; if(!v) return; closeModal();
+    if(v==='up'){ tab='up' } else if(v==='cofres'){ tab='inv'; invView='cofres' } else { tab='ev'; modView=v; evView=null; if(v==='pvp') pvpLoad() }
+    renderTab(); window.scrollTo({top:0}) },
   modview:b=>{ modView=b.dataset.v||null; evView=null; if(modView==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}); },
   lgClaim:()=>{ const p=G.leagueClaim(); if(p){ toast(`+${fmt(p.tok)} tokens de la Liga`); renderTab(); } },
   evClaim:()=>{ const p=G.claimEvent(); if(p){ toast(p.rew?evRewPlain(p.rew):'Sin premio'); renderTab(); } },
@@ -1310,7 +1346,7 @@ function draw(dt){
   const zoneOf=f=>Math.floor(((f-1)%150)/30), modeOf=f=>Math.min(2,Math.floor((f-1)/150));
   const zone=!B?zoneOf(S.fase):B.kind==='pvp'?'arena':B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):B.event?zoneOf(B.groups||1):zoneOf(S.fase);
   const smode=!B||!B.event?S.mode:B.kind?0:modeOf(B.groups||1);
-  const gy=Math.min(H-30,Math.round(H*0.72)); fx.sc=sc; fx.gy=gy;
+  const gy=Math.min(H-30,Math.round(H*0.68)); fx.sc=sc; fx.gy=gy;
   ART.scene(g,W,H,gy,zone,battery()?0:fx.scroll||0,smode,battery()?0:performance.now()/1000);
   const hx=W*0.24, c=CFG.classes[S.cls], now=performance.now(), T=now/1000, anim=!battery();
   const prog=(at,ms)=>at&&anim?Math.max(0,Math.min(1,(now-at)/ms)):0, pulse=(at,ms)=>{ const k=prog(at,ms); return k>0&&k<1?k:0 };
@@ -1328,30 +1364,39 @@ function draw(dt){
   }
   // monstruos: tipo según la zona (campaña: la fase; Mazmorra: el grupo; Torre: el piso) y color según el modo
   const modeHue=m=>[0,190,300][Math.min(2,m||0)];
-  let q=0, idx=0;
+  let q=0, idx=0; const drawQ=[];
   for(const e of B.enemies){ if(B.kind==='pvp') break;
     const dieK=e.dead?(B.t-(e.deadAt||0))/0.45:0; if(e.dead&&(dieK>=1||e.x===undefined)) continue;
     if(!e._k){ const f=e.f||S.fase, zone=B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):zoneOf(f);
       const m=e.f?Math.floor((e.f-1)/150):B.kind?0:S.mode; e._k=ART.kindFor(zone,idx,{boss:B.boss&&!e.minion,elite:B.elite,mode:m}); e._hue=modeHue(m); }
     idx++;
     const p=Math.min(1,(B.t-e.spawn)/(e.walk||CFG.enemy.walk));
-    const big=B.boss&&!e.minion, r=big?(B.elite?26:21):13, y=gy, cx=contact+(r-13)*2.4;   // los esbirros del jefe, de tamaño normal y sin corona   // los grandes se paran más lejos (no tapan al héroe)
-    let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*26;q++}
-    e.x=x;
+    const big=B.boss&&!e.minion, cx=contact+((big?(B.elite?26:21):13)-13)*2.4;   // los esbirros del jefe, de tamaño normal y sin corona   // los grandes se paran más lejos (no tapan al héroe)
+    // en cola, en dos filas al tresbolillo: la de atrás un poco más arriba y más pequeña (da profundidad y no se tapan)
+    if(e._row==null) e._row=big?0:idx%2;
+    const r=(big?(B.elite?26:21):13)*(e._row?0.86:1), y=gy-e._row*3;
+    let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*24;q++}
+    e.x=x; drawQ.push(()=>{
     if(e.dead&&!e._burst){ e._burst=1; if(anim) ART.burst(x,gy-r,'#d9d2c0',8); }
     ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:big,elite:B.elite,t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK)});
     if(anim&&!e.dead) ART.status(g,x,gy,r,{frozen:e.frozen>B.t,burn:(e.burn&&e.burn.some(u=>u>B.t))||(e.dot>B.t&&e.dotKind==='fuego'),poison:e.poison&&e.poison.some(p=>p.until>B.t),mark:e.mark>B.t},T);
-    if(bars&&!e.immortal&&!e.dead&&B.event&&!B.kind){ const by=gy-r*3.7-6; g.fillStyle='#0009'; g.fillRect(x-18,by,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,by,36*Math.max(0,e.hp/e.max),4); }   // Mazmorra (sin fin): barra de cada uno
+    if(bars&&!e.immortal&&!e.dead&&B.event&&!B.kind){ const by=y-r*3.7-6; g.fillStyle='#0009'; g.fillRect(x-18,by,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,by,36*Math.max(0,e.hp/e.max),4); }   // Mazmorra (sin fin): barra de cada uno
+    }); drawQ[drawQ.length-1].row=e._row;
   }
+  drawQ.filter(d=>d.row).forEach(d=>d()); drawQ.filter(d=>!d.row).forEach(d=>d());   // primero la fila de atrás
   if(anim) ART.parts(g,dt);
   if(anim){ const foes=B.kind==='pvp'?[]:B.enemies.filter(e=>!e.dead&&e.x!=null).map(e=>({x:e.x}));
     ART.drawFx(g,{W,hx,rx:B.kind==='pvp'?B.enemies[0].x:null,gy,foes,now:now/1000,
       drawClone:(x,side)=>{ if(side==='rival'){ const e=B.enemies[0], rv=G.pvpState().rival||{}; ART.hero(g,x,gy,{cls:e.cls,color:(CFG.classes[e.cls]||c).color,evo:rv.evo,path:rv.path,flip:true,t:T}) } else ART.hero(g,x,gy,{cls:S.cls,color:ART.shade(c.color,0.5),evo:S.evo,path:S.path,ghost:true,t:T+0.5}) }}); }
   fx.floats=fx.floats.filter(f=>(f.life-=dt)>0);
-  g.textAlign='center'; g.font='800 13px "Nunito Sans", system-ui, sans-serif';
-  for(const f of fx.floats){ const y=(f.hero?gy-58:gy-52)-(0.9-f.life)*50; const x=f.hero?hx:(f.e&&f.e.x)||0;
-    g.globalAlpha=Math.min(1,f.life*2); g.fillStyle=f.hero?'#e2605a':(f.crit?'#e8b04a':'#ece7da');
-    g.fillText(f.txt+(f.crit?'!':''),x,y); }
+  // números de daño: saltan con un pequeño «pop» (empiezan grandes y se asientan), suben en arco y se desvanecen;
+  // con contorno oscuro para leerse sobre cualquier fondo; los críticos, más grandes y dorados
+  g.textAlign='center'; g.lineJoin='round';
+  for(const f of fx.floats){ const k=f.max-f.life, x=(f.hero?hx:(f.e&&f.e.x)||0)+(f.dx||0)+(f.vx||0)*k, y=(f.hero?gy-58:gy-52)-(f.lane||0)*11-k*38-Math.min(k,0.25)*24;
+    const pop=k<0.12?1+0.5*(1-k/0.12):1, sz=(f.crit?16:f.hero?11:10)*pop;
+    g.font=`900 ${sz.toFixed(1)}px "Nunito Sans", system-ui, sans-serif`;
+    g.globalAlpha=Math.min(1,f.life/0.3); g.lineWidth=f.crit?3:2.4; g.strokeStyle='#140f1c';
+    const t=f.txt+(f.crit?'!':''); g.strokeText(t,x,y); g.fillStyle=f.hero?'#ef6b62':(f.crit?'#ffc94a':'#f4efe2'); g.fillText(t,x,y); }
   g.globalAlpha=1; fx.flash=Math.max(0,fx.flash-dt);
   vsHud(B,h);
 }
