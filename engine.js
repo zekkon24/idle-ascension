@@ -632,7 +632,7 @@ function createGame(opts){
   const RNAME={C:'Común',R:'Rara',E:'Épica',L:'Legendaria'};
   const boonKey=b=>b.t==='fx'?'fx:'+b.id:b.t==='pas'?'pas:'+b.cls+':'+b.path:b.t==='leg'?'leg:'+b.cls:'sk:'+b.src+':'+b.cls;
   function boonInfo(b){ if(b.t==='fx'){ const d=CFG.tower.fx[b.id]; return {kind:(d.obj?'Objeto · ':'')+RNAME[d.r],name:d.name,desc:d.desc,r:d.r} }
-    if(b.t==='pas'){ const p=boonPas(b), x=CFG.tower.pasBonus[b.cls+':'+b.path]; return {kind:'Grimorio · Épica',name:p.name,desc:p.passive+(x?' · Torre: '+x.txt:''),r:'E'} }
+    if(b.t==='pas'){ const p=boonPas(b), x=CFG.tower.pasBonus[b.cls+':'+b.path]; return {kind:'Grimorio · Épica',name:p.name,desc:((CFG.tower.pasDesc||{})[b.cls+':'+b.path]||p.passive)+(x?' · Torre: '+x.txt:''),r:'E'} }
     if(b.t==='leg'){ const d={...CFG.weapon.legend[b.cls],...(CFG.tower.legTune[CFG.weapon.legend[b.cls].id]||{})}; return {kind:'Objeto · Legendaria',name:d.name,desc:d.desc,r:'L'} }
     const k={...CFG.skills[b.src][b.cls]}; Object.assign(k,CFG.tower.skillTune[k.id]||{}); const r=(CFG.tower.skillRar||{})[k.id]||'E'; return {kind:'Hechizo · '+RNAME[r],name:k.name,desc:k.desc,r} }
   function towerNodes(f){ const T=CFG.tower, Hd=T.hard; if(f%T.boss.every===0) return ['boss'];

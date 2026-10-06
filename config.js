@@ -157,7 +157,8 @@ const CFG = {
       combustion:{burnHit:0.8,desc:'8 s: tus golpes queman (80 % de su daño por segundo, 3 s)'}},
     skillRar:{armaduraHielo:'L'},   // hechizos que en la Torre son Legendarios (los demás, Épicos)
     legTune:{tajo:{mult:1.5,desc:'Tus golpes dan también al enemigo de detrás (150 %)'}, rafaga:{every:2,arrows:3,desc:'Cada 2.º golpe son 3 flechas'}, llamarada:{every:4,pct:1.4,desc:'Cada 4.º golpe quema a todos (140 % por s, 3 s)'}},
-    grimTune:{veneno:{pct:0.35}},   // Envenenador más suave en la Torre
+    grimTune:{veneno:{pct:0.35}},
+    pasDesc:{'Asesino:B':'Veneno: cada golpe envenena (35 % por s, 8 s), hasta 8 veces: brilla en peleas largas'},   // texto del grimorio en la Torre si cambia   // Envenenador más suave en la Torre
     pasBonus:{'Guerrero:A':{atk:0.3,txt:'+30 % de daño'}, 'Arquero:A':{spd:0.25,txt:'+25 % de velocidad'}, 'Asesino:A':{cr:0.1,txt:'+10 % de crítico'},
       'Guerrero:B':{hp:0.25,txt:'+25 % de vida'}, 'Arquero:B':{atk:0.3,txt:'+30 % de daño'}},
     maxFloor:100,   // Torre completada al ganar el piso 100
