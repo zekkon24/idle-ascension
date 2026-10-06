@@ -81,7 +81,8 @@ function createGame(opts){
   // combate de la Torre o duelo PvP que quedó a medias al cerrar la app: cuenta como derrota (así cerrar no sirve para no perder)
   let autoQuit=null;
   function quitFights(){ const out={}; const run=S.tower&&S.tower.run;
-    if(run&&run.fight){ run.fight=null; run.lives--; run.hp=1; out.tower={floor:run.floor,lives:run.lives}; }
+    if(run&&run.fight&&run.fight.rew){ run.fight=null; }   // cerró la app eligiendo la recompensa: el combate estaba ganado, la elección sigue en la Torre
+    else if(run&&run.fight){ run.fight=null; run.lives--; run.hp=1; out.tower={floor:run.floor,lives:run.lives}; }
     const P=S.pvp; if(P&&P.fight){ out.pvp=pvpLoss(P.fight); P.fight=null; P.rival=null; }
     return out.tower||out.pvp?out:null }
   function reset(){ S=null; B=null; HS=null; if(storage) try{storage.del(SAVE_KEY)}catch(e){} }
@@ -253,6 +254,7 @@ function createGame(opts){
   function stepCore(dt){
     if(!S||!B) return;
     if(B.over){ B.wait-=dt; if(B.wait<=0) startWave(); return }
+    if(B.rew&&!B.rewDone) return;   // Torre: el combate se queda parado mientras eliges la recompensa
     const h=heroStats(), P=stepP(), GS=grimSet(), FX=CFG.grimoire.fx, LS=legendSet(), TW=towerOn(), TC=CFG.tower.cards, TG=CFG.tower.grims;
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
@@ -424,7 +426,8 @@ function createGame(opts){
       if(towerTick(h,dt)){ endEvent(); return }   // rasgos de los élites y mecánicas de los jefes
       if(!tgH('barricada')&&BUF.shield>0) BUF.shield*=Math.exp(-CFG.tower.shieldDecay*dt);   // el escudo se gasta con el tiempo
       { const n=tcN('escudoReg'); if(n&&CT>=B.regAt){ B.regAt=CT+TC.escudoReg.every; addShield(TC.escudoReg.shield*n*h.hp); } }   // Escudo regenerable
-      if(B.enemies.every(e=>e.dead)){ if(B.endAt==null) B.endAt=B.t+(CFG.tower.endDelay||0); if(B.t>=B.endAt){ endEvent(); return } } }   // al matar a todos, una pausa antes de salir
+      if(B.enemies.every(e=>e.dead)){ if(B.endAt==null) B.endAt=B.t+(CFG.tower.endDelay||0);   // al matar a todos, una pausa antes de salir
+        if(B.t>=B.endAt){ if(towerRewardNow()) return; endEvent(); return } } }
     if(B.event){ if(B.enemies.length>40) B.enemies=B.enemies.filter(e=>!e.dead); return }
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
   }
@@ -758,15 +761,22 @@ function createGame(opts){
     if(tgH('vial')) B.hp=Math.min(H.hp,B.hp+G.vial.heal*H.hp);   // Vial de sangre
     if(tgH('ancla')) BUF.shield+=G.ancla.shield*H.hp;             // Ancla
     run.fight={k}; save(); emit('eventStart',B); emit('change') }
-  function towerEnd(won){ const T=CFG.tower, run=S.tower.run, k=B.node, H=heroStats(), frac=Math.max(0,B.hp/H.hp), fin=!!B.final, dmg=B.mD, bar=tgH('barricada');
+  // élite o jefe ganado: la recompensa se elige en la misma pelea (el combate espera hasta que eliges). Devuelve true si hay que esperar
+  function towerRewardNow(){ if(B.rewDone||B.final||(B.node!=='elite'&&B.node!=='boss')) return false; const run=S.tower.run;
+    if(!B.rew){ B.rew=true; run.pick=B.node==='boss'?towerOfferR(3,'L',['g']):towerOffer(3,'elite'); if(!run.pick.length){ run.pick=null; B.rewDone=true; return false }
+      run.fight.rew=true; save(); emit('towerPickNow',{k:B.node}); emit('change'); }
+    return true }
+  const towerRewardPending=()=>!!(B&&B.kind==='tower'&&B.rew&&!B.rewDone&&S.tower.run&&S.tower.run.pick);
+  function towerEnd(won){ const T=CFG.tower, run=S.tower.run, k=B.node, chosen=!!B.rewDone, H=heroStats(), frac=Math.max(0,B.hp/H.hp), fin=!!B.final, dmg=B.mD, bar=tgH('barricada');
     run.shield=bar?Math.min(BUF.shield||0,T.grims.barricada.cap*H.hp):0; BUF.shield=0; BUF.sang=0;   // Barricada: el escudo pasa al siguiente combate
     B=null; BUF.crits=0; statsDirty(); run.fight=null; let res;
     if(fin){ const TS=towerState(); run.finalDmg=(run.finalDmg||0)+dmg; if(run.finalDmg>(TS.bossDmg||0)) TS.bossDmg=run.finalDmg; }   // jefe final: el daño (sumando los intentos) va al ranking
     if(won){ run.hp=Math.min(1,frac+T.cards.aliento.heal*rCount(run,'c','aliento')); const so=Math.round((T.souls[k]||0)*(1+(rCount(run,'g','saco')?T.grims.saco.souls:0))); run.souls=(run.souls||0)+so;
       res={won:true,floor:run.floor,k,hp:run.hp,souls:so};
       if(k==='fight'){ res.pick=false; towerNext(); save(); emit('towerEnd',res); startWave(); emit('change'); return res }   // combate normal: solo almas (se avanza ANTES de avisar a la pantalla)
-      run.pick=k==='boss'?towerOfferR(3,'L',['g']):towerOffer(3,'elite'); res.pick=true;   // élite: 1 de 3 (cartas y grimorios, hasta Épica) · jefe: 1 de 3 grimorios legendarios
-      if(!run.pick.length){ run.pick=null; res.pick=false; towerNext(); } }
+      if(chosen){ res.pick=false; towerNext(); }   // ya elegida en la pelea
+      else { run.pick=k==='boss'?towerOfferR(3,'L',['g']):towerOffer(3,'elite'); res.pick=true;   // élite: 1 de 3 (cartas y grimorios, hasta Épica) · jefe: 1 de 3 grimorios legendarios
+        if(!run.pick.length){ run.pick=null; res.pick=false; towerNext(); } } }
     else if(run.rev>0){ run.rev--; run.hp=T.grims.lagarto.hp; res={won:false,floor:run.floor,lives:run.lives,crown:true,final:fin,dmg:run.finalDmg} }   // Cola de lagarto: revives una vez
     else { run.lives--; run.hp=0; res={won:false,floor:run.floor,lives:run.lives,canRevive:!run.adRev,final:fin,dmg:run.finalDmg} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
@@ -784,7 +794,8 @@ function createGame(opts){
     if(b.t==='g'&&b.id==='lagarto'&&run.rev>0) run.rev--; return b }
   // elegir 1 de las que se ofrecen (o seguir si no quedan); después, al siguiente piso
   function towerPick(i){ const run=S.tower&&S.tower.run; if(!run||!run.pick) return false; const b=run.pick[i]; if(b) towerGain(run,b);
-    run.pick=null; towerNext(); return true }
+    const inFight=towerRewardPending(); run.pick=null; if(inFight){ B.rewDone=true; endEvent(); return true }   // elegida en la pelea: ahora sí termina el combate
+    towerNext(); return true }
   // tienda: compra lo que quieras si tienes almas, y puedes quitar 1 cosa que tengas (no maldiciones); al salir, al siguiente piso
   const towerPrice=b=>CFG.tower.shop.price[b.t][boonRar(b)];
   const towerRemoveCost=()=>{ const run=S.tower&&S.tower.run, SH=CFG.tower.shop; return SH.remove+SH.removeUp*((run&&run.removes)||0) };
@@ -1233,7 +1244,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

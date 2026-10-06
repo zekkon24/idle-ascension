@@ -155,6 +155,10 @@ function gotShow(){ if(gotOn||!gotQ.length) return; gotOn=true; const b=gotQ.shi
   const done=()=>{ if(!el.parentNode) return; el.classList.add('out'); setTimeout(()=>{ el.remove(); gotOn=false; gotShow() },250) };
   el.addEventListener('click',done); document.body.appendChild(el); haptic('ok'); setTimeout(done,2600) }
 G.on('towerGot',b=>{ gotQ.push(b); gotShow() });
+// Torre: élite o jefe ganado → la recompensa se elige encima de la pelea (que espera). Si se cierra la ventana, vuelve a salir
+function towerPickModal(){ const run=G.towerState().run; if(!run||!run.pick) return;
+  showModal(`<h3>${G.B&&G.B.node==='boss'?'¡Jefe vencido!':'¡Élite vencido!'}</h3><p class="hint">Elige 1:</p><div class="mlist">${run.pick.map(boonCard).join('')}</div>`) }
+G.on('towerPickNow',()=>{ tab='up'; renderTab(); later(towerPickModal); haptic('ok') });
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${CFG.surprise.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${CFG.surprise.wander.dur} s`); }
   else if(k==='wanderWin'){ haptic('ok'); toast('¡Jefe errante vencido! '+bundleTxt(reward)); updateHUD(); } else if(k==='wanderFled') toast('El jefe errante huyó'); });
@@ -281,6 +285,7 @@ function updateHUD(){
   const bl=G.boostLeft(), bt=$('#boostTime'), bb=$('#boostBtn');
   if(bt){ bt.hidden=!bl||ev; if(bl) bt.textContent='×'+CFG.boosts.speed.mult+' '+mmss(bl); } if(bb) bb.classList.toggle('on',bl>0);
   if(boostModalOpen) updateBoostModal();
+  if(G.towerRewardPending()&&!modalOpen()) towerPickModal();   // la recompensa de la pelea no se puede saltar
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   // habilidades: solo las desbloqueadas; la recarga se ve con el reloj gris (sin números). En los eventos, botón Auto/Manual
   const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?!(S.opt&&S.opt.pvpAuto===false):G.towerOn()?!(S.opt&&S.opt.towerAuto===false):inEv&&!!(S.opt&&S.opt.evAuto), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false), key=L.map(x=>x.slot+x.id).join()+inEv+on;
