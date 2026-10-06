@@ -268,12 +268,15 @@ input[type=number]{width:64px}
 .wcell.hit{border-color:var(--gold);box-shadow:0 0 10px rgba(232,176,74,.55);background:rgba(232,176,74,.15)}
 .stk{color:var(--gold)}
 .tchips{display:flex;flex-wrap:wrap;gap:4px}
+.tmapbox{max-height:min(62vh,440px);overflow-y:auto;margin-top:2px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.15))}
 .tmapsvg{display:block;margin:0 auto;max-width:440px}
-.tml{stroke:#4a4f63;stroke-width:3;stroke-linecap:round}.tml.fu{stroke:#363a4a;stroke-width:2}.tml.on{stroke:var(--gold);stroke-width:4}
-.tmf{fill:var(--muted);font-size:11px;font-weight:800}
-.tmn circle{fill:color-mix(in srgb,var(--nc) 30%,#151821);stroke:var(--nc);stroke-width:2.5}.tmn .tmi{font-size:20px;fill:#fff}
+.tml{stroke:#454a5e;stroke-width:2.5;stroke-linecap:round}.tml.off{opacity:.25}.tml.path{stroke:var(--good);stroke-width:4;opacity:.8}.tml.on{stroke:var(--gold);stroke-width:4;stroke-dasharray:8 6;animation:tmd 1s linear infinite}
+@keyframes tmd{to{stroke-dashoffset:-14}}
+.tmf{fill:var(--muted);font-size:11px;font-weight:800}.tmf.cur{fill:var(--gold)}
+.tmn circle{fill:color-mix(in srgb,var(--nc) 30%,#151821);stroke:var(--nc);stroke-width:2.5}.tmn .tmi{font-size:19px;fill:#fff}
 .tmn .tmk{font-size:12px;font-weight:800;fill:var(--ink)}
-.tmn.fu{opacity:.7}.tmn.no{opacity:.22}.tmn.done circle{fill:color-mix(in srgb,var(--good) 25%,#151821);stroke:var(--good)}.tmn.done .tmi{fill:var(--good);font-weight:800}
+.tmn.fu{opacity:.75}.tmn.no{opacity:.25}.tmn.gone{opacity:.18}
+.tmn.done circle{fill:color-mix(in srgb,var(--good) 28%,#151821);stroke:var(--good)}.tmn.done .tmi{fill:var(--good);font-weight:800}
 .tmn.ok{cursor:pointer}.tmn.ok circle{stroke:var(--gold);stroke-width:3.5;filter:drop-shadow(0 0 8px rgba(232,176,74,.7));animation:tmp 1.6s ease-in-out infinite}
 @keyframes tmp{50%{stroke-width:6}}.tmn.ok:active circle{fill:#3a3020}
 .tfx{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto}.tfx div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--panel2);border-left:3px solid}
@@ -468,7 +471,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610051505-ecf5be1';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610060431-9a752cb';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

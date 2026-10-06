@@ -657,20 +657,22 @@ const NODE={fight:['⚔️','Combate','Enemigos normales · +'+CFG.tower.souls.f
 // mapa de la Torre (estilo Slay the Spire): abajo el piso de donde vienes (✓), encima el actual (los caminos que puedes
 // tomar brillan y llevan su nombre) y arriba los 3 siguientes. Cada tipo de casilla tiene su color.
 const NCOL={shop:'#2fb37a',fight:'#b0644f',elite:'#9b59d6',treasure:'#e8b04a',rest:'#f08a3c',event:'#4f95e6',altar:'#c0392b',boss:'#e5484d'};
-function towerMapSvg(run){ const map=G.towerMap(), past=(run.trail||[]).filter(t=>t.f===run.floor-1).slice(-1)[0], rows=(past?[{...past.row,past:past.i}]:[]).concat(map);
-  const W=320, rowH=84, H=rows.length*rowH+18, X=c=>[60,160,260][c], Y=r=>H-46-r*rowH, near=(a,b)=>Math.abs(a-b)<=1, cur=past?1:0;
+function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(t=>t.f<run.floor).sort((a,b)=>a.f-b.f);
+  // filas de abajo arriba: el camino ya recorrido, el piso actual y los siguientes
+  const rows=trail.map(t=>({f:t.f,n:t.row.n,c:t.row.c,pick:t.i,past:true})).concat(map.map((m,k)=>({f:run.floor+k,n:m.n,c:m.c,now:k===0})));
+  const W=320, rowH=80, H=rows.length*rowH+24, X=c=>[62,160,258][c], Y=r=>H-40-r*rowH, near=(a,b)=>Math.abs(a-b)<=1;
   const links=(A,B)=>{ const L=[]; A.c.forEach((ca,i)=>{ let t=B.c.map((cb,j)=>near(ca,cb)?j:-1).filter(j=>j>=0); if(!t.length) t=B.c.map((_,j)=>j); t.forEach(j=>L.push([i,j])) }); return L };
-  let lines='', nodes='';
-  rows.forEach((row,r)=>{ if(r===rows.length-1) return; const nx=rows[r+1];
-    for(const [a,b] of links(row,nx)){ if(row.past!=null&&a!==row.past) continue; const hot=row.past!=null&&G.towerCanGo(b);
-      lines+=`<line x1="${X(row.c[a])}" y1="${Y(r)-26}" x2="${X(nx.c[b])}" y2="${Y(r+1)+28}" class="tml${hot?' on':''}${r<cur?'':r===cur?' nx':' fu'}"/>`; } });
-  rows.forEach((row,r)=>{ const f=run.floor+r-cur;
-    nodes+=`<text x="4" y="${Y(r)+4}" class="tmf">${f}</text>`;
-    row.n.forEach((k,i)=>{ const x=X(row.c[i]), y=Y(r), N=NODE[k], col=NCOL[k]||'#888';
-      if(r<cur){ if(i!==row.past) return; nodes+=`<g class="tmn done"><circle cx="${x}" cy="${y}" r="20" style="--nc:${col}"/><text x="${x}" y="${y+6}" text-anchor="middle" class="tmi">✓</text></g>`; return }
-      const now=r===cur, ok=now&&G.towerCanGo(i), rr=k==='boss'?30:now?26:20;
-      nodes+=`<g class="tmn${now?(ok?' ok':' no'):' fu'}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}><circle cx="${x}" cy="${y}" r="${rr}" style="--nc:${col}"/><text x="${x}" y="${y+7}" text-anchor="middle" class="tmi">${N[0]}</text>${ok?`<text x="${x}" y="${y+rr+15}" text-anchor="middle" class="tmk">${N[1]}</text>`:''}</g>` }) });
-  return `<p class="hint" style="text-align:center;margin:6px 0 0">Elige tu camino</p><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%">${lines}${nodes}</svg>` }
+  let lines='', nodes=''; const nowR=rows.findIndex(r=>r.now);
+  for(let r=0;r<rows.length-1;r++){ const A=rows[r], Bn=rows[r+1];
+    for(const [a,b] of links(A,Bn)){
+      if(A.past&&Bn.past){ if(a===A.pick&&b===Bn.pick) lines+=`<line x1="${X(A.c[a])}" y1="${Y(r)}" x2="${X(Bn.c[b])}" y2="${Y(r+1)}" class="tml path"/>`; continue }   // camino recorrido
+      if(A.past){ if(a===A.pick&&G.towerCanGo(b)) lines+=`<line x1="${X(A.c[a])}" y1="${Y(r)}" x2="${X(Bn.c[b])}" y2="${Y(r+1)}" class="tml on"/>`; continue }   // de dónde vienes a dónde puedes ir
+      lines+=`<line x1="${X(A.c[a])}" y1="${Y(r)}" x2="${X(Bn.c[b])}" y2="${Y(r+1)}" class="tml${A.now&&!G.towerCanGo(a)?' off':''}"/>`; } }
+  rows.forEach((row,r)=>{ nodes+=`<text x="6" y="${Y(r)+4}" class="tmf${row.now?' cur':''}">${row.f}</text>`;
+    row.n.forEach((k,i)=>{ const x=X(row.c[i]), y=Y(r), N=NODE[k], col=NCOL[k]||'#888', ok=row.now&&G.towerCanGo(i), rr=k==='boss'?28:ok?25:19;
+      const cls=row.past?(i===row.pick?' done':' gone'):row.now?(ok?' ok':' no'):' fu';
+      nodes+=`<g class="tmn${cls}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}><circle cx="${x}" cy="${y}" r="${rr}" style="--nc:${col}"/><text x="${x}" y="${y+7}" text-anchor="middle" class="tmi">${row.past&&i===row.pick?'✓':N[0]}</text>${ok?`<text x="${x}" y="${y+rr+15}" text-anchor="middle" class="tmk">${N[1]}</text>`:''}</g>` }) });
+  return `<p class="hint" style="text-align:center;margin:6px 0 0">Elige tu camino${trail.length?' · desliza para ver tu ruta':''}</p><div class="tmapbox"><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%" data-now="${nowR}">${lines}${nodes}</svg></div>` }
 const TRAIT=k=>CFG.tower.traits[k].name, MECH={invocador:'Invocador',enfurecido:'Enfurecido',fases:'Escudo de fases'};
 // eventos ?: título, texto y botones [c, etiqueta, ¿se puede?]
 function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==null?1:run.hp, so=run.souls||0, cu=(run.curses||[]).length;
@@ -681,7 +683,10 @@ function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==nu
     altar:['Altar maldito','Recibes una carta Legendaria al azar y una maldición al azar.',[['si','Aceptar',true]]]}[id];
   return `<div class="misTop"><b>${V[0]}</b><p class="hint">${V[1]}</p><div class="ctrl">${V[2].map(([c,t,ok])=>`<button class="btn gold" data-act="towerEv" data-k="${c}" ${ok?'':'disabled'}>${t}</button>`).join('')}<button class="btn" data-act="towerEv" data-k="no">Irse</button></div></div>` }
 const RARC={C:'var(--rC)',R:'var(--rR)',E:'var(--rE)',L:'var(--rL)'};
-function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
+// cuántas copias tienes ya de esta carta (las mejoras y objetos se acumulan)
+const boonHave=b=>{ const run=G.towerState().run; return run?run.boons.filter(x=>JSON.stringify(x)===JSON.stringify(b)).length:0 };
+const haveTag=b=>{ const n=boonHave(b); return n?` <span class="pill" style="color:var(--good)">Tienes ${n} → ${n+1}</span>`:'' };
+function boonCard(b,i){ const f=G.boonInfo(b), c=RARC[f.r]; return `<button class="mcard bcard" data-act="towerPick" data-k="${i}" style="border-color:${c}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}${haveTag(b)}</b><span class="pill" style="color:${c}">${f.kind}${f.r==='L'&&!f.kind.includes('Legendaria')?' · legendaria':''}</span></div><span class="s">${f.desc}</span></button>` }
 function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower;
   let body='';
   if(!run) body=`<p class="hint">Roguelike: todos empiezan con el mismo héroe, tu personaje no cuenta. 1 vida.</p>
@@ -698,7 +703,7 @@ function tabTower(){ const T=G.towerState(), run=T.run, TC=CFG.tower;
 // tienda: 3 cartas de cualquier calidad, compras las que puedas pagar con almas
 function towerShopView(run){ const sh=run.shop;
   return `<p class="hint">Tienda · tienes <b>${run.souls||0}</b> almas</p><div class="mlist">${sh.items.map((b,i)=>{ const f=G.boonInfo(b), c=RARC[f.r], got=sh.bought.includes(i), pr=G.towerPrice(b);
-    return `<div class="mcard bcard" style="border-color:${c}${got?';opacity:.45':''}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}</b><span class="pill" style="color:${c}">${f.kind}</span></div><span class="s">${esc(f.desc)}</span>
+    return `<div class="mcard bcard" style="border-color:${c}${got?';opacity:.45':''}"><div class="ctrl" style="justify-content:space-between"><b style="color:${c}">${f.name}${got?'':haveTag(b)}</b><span class="pill" style="color:${c}">${f.kind}</span></div><span class="s">${esc(f.desc)}</span>
       <div class="ctrl" style="justify-content:flex-end">${got?'<span class="pill" style="color:var(--good)">Comprada</span>':`<button class="btn sm gold" data-act="towerBuy" data-k="${i}" ${(run.souls||0)>=pr?'':'disabled'}>${pr} almas</button>`}</div></div>` }).join('')}</div>
     <button class="btn" data-act="towerShopLeave">Salir de la tienda</button>` }
 // Efectos de la partida (ocultos en la pantalla): por calidad (Legendaria → Rara → Común) y las maldiciones al final
