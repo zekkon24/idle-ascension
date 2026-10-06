@@ -272,7 +272,8 @@ function updateHUD(){
   const db=$('#dailyBtn'); if(db){ db.hidden=ev; $('#dailyN').hidden=!(G.calState().can||G.wheelState().free); }   // premios diarios: calendario y ruleta
   const hpv=B?Math.max(0,B.hp):h.hp, xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);
   const shv=G.heroShield();   // escudo: barra azul encima de la vida (y +escudo en el número)
-  { const tot=Math.max(1,(hpv+shv)/h.hp); $('#hpBar').style.width=hpv/h.hp/tot*100+'%'; const sb=$('#shBar'); sb.style.left=hpv/h.hp/tot*100+'%'; sb.style.width=shv/h.hp/tot*100+'%'; $('#hpBar').parentNode.classList.toggle('shon',shv>=1); } $('#hpTxt').textContent=fmt(Math.ceil(hpv))+(shv>=1?' +'+fmt(Math.ceil(shv)):'');
+  $('#hpBar').style.width=hpv/h.hp*100+'%'; $('#shBar').style.width=Math.min(100,shv/h.hp*100)+'%';   // escudo: barra azul fina encima
+  $('#hpTxt').textContent=fmt(Math.ceil(hpv))+(shv>=1?' +'+fmt(Math.ceil(shv)):''); $('#hpTxt').textContent=fmt(Math.ceil(hpv))+(shv>=1?' +'+fmt(Math.ceil(shv)):'');
   $('#xpBar').style.width=xpp+'%'; $('#xpTxt').textContent=Math.floor(xpp)+' %';
   const hs=$('#hStats'); if(hs) hs.innerHTML=`<div class="sl">
       <span>Vida <b>${fmt(h.hp)}</b></span><span>Def <b>${fmt(h.df)}</b></span>${h.ls?`<span>Robo <b>${pct(h.ls)}</b></span>`:''}${h.ev?`<span>Evasión <b>${pct(h.ev)}</b></span>`:''}</div>
@@ -1344,30 +1345,49 @@ function draw(dt){
   // barras de vida: la tuya (con el escudo en azul) y la de los enemigos (todos juntos), iguales y a la misma altura
   if(bars){ const by=Math.max(16,gy-122), hp=Math.max(0,G.B.hp/h.hp), sh=Math.min(1,G.heroShield()/h.hp);
     // los iconos de la derecha (premios diarios y potenciadores) no deben tapar la barra de los enemigos: acaba antes de ellos
-    let x1=W-12; { const sb=document.querySelector('.sidebtns'); if(sb&&!sb.hidden){ const r=sb.getBoundingClientRect(), c=cv.getBoundingClientRect(), t=(r.top-c.top)/sc, b=(r.bottom-c.top)/sc;
-      if(r.width&&b>by-4&&t<by+16) x1=Math.min(x1,(r.left-c.left)/sc-6); } }
-    const bw=Math.max(60,Math.min(150,W*0.36,x1-(hx+70))), x0=Math.max(8,hx-bw/2);
-    hpBar(g,x0,by,bw,hp,['#7fdc8c','#3f9d55'],Math.ceil(hp*100)+' %',sh);
+    let x1=W-16; { const sb=document.querySelector('.sidebtns'); if(sb&&!sb.hidden){ const r=sb.getBoundingClientRect(), c=cv.getBoundingClientRect(), t=(r.top-c.top)/sc, b=(r.bottom-c.top)/sc;
+      if(r.width&&b>by-4&&t<by+16) x1=Math.min(x1,(r.left-c.left)/sc-14); } }
+    const bw=Math.max(60,Math.min(150,W*0.36,x1-(hx+70))), x0=Math.max(14,hx-bw/2);
+    if(HBT.B!==B){ HBT.B=B; HBT.hero={v:hp,hold:0}; HBT.foe={v:1,hold:0}; }   // estela de daño: empieza llena en cada combate
+    hpBar(g,x0,by,bw,hp,{side:'hero',col:['#8ee39a','#3c9a52'],txt:Math.ceil(hp*100)+' %',sh,tr:HBT.hero,dt,low:hp<0.25});
     const fb=B.kind==='pvp'?{p:Math.max(0,B.enemies[0].hp/B.enemies[0].max)}:!(B.event&&!B.kind)?foeBar(B):null;
-    if(fb) hpBar(g,x1-bw,by,bw,fb.p,['#f07a6e','#b8433a'],fb.inf?'∞':Math.ceil(fb.p*100)+' %',0); }
+    if(fb) hpBar(g,x1-bw,by,bw,fb.p,{side:'foe',col:['#f2847a','#b33d34'],txt:fb.inf?'∞':Math.ceil(fb.p*100)+' %',sh:0,tr:HBT.foe,dt}); }
 }
-// barra de vida bonita: fondo oscuro con borde, relleno con degradado y brillo, y el texto dentro.
-// Escudo: tramo azul justo después de la vida (si vida + escudo pasan del 100 %, se reparte la barra), borde azul brillante
-// y «+X %» en azul junto al texto.
-function hpBar(g,x,y,w,p,col,txt,sh){ const h=12, r=6, rr=(X,Y,W2,H2,R)=>{ g.beginPath(); g.moveTo(X+R,Y); g.arcTo(X+W2,Y,X+W2,Y+H2,R); g.arcTo(X+W2,Y+H2,X,Y+H2,R); g.arcTo(X,Y+H2,X,Y,R); g.arcTo(X,Y,X+W2,Y,R); g.closePath(); };
-  const S=sh>0.004, tot=Math.max(1,p+(S?sh:0)), pw=w*p/tot, sw=S?w*sh/tot:0;
-  g.save(); rr(x-1.5,y-1.5,w+3,h+3,r+1.5); g.fillStyle='rgba(8,8,14,.78)'; g.fill();
-  if(S){ g.shadowColor='#5fb2ff'; g.shadowBlur=6; g.strokeStyle='#7cc2ff'; g.lineWidth=1.5; } else { g.strokeStyle='rgba(236,231,218,.35)'; g.lineWidth=1; }
-  g.stroke(); g.shadowBlur=0;
-  rr(x,y,w,h,r); g.clip();
-  if(pw>0){ const gr=g.createLinearGradient(0,y,0,y+h); gr.addColorStop(0,col[0]); gr.addColorStop(1,col[1]); g.fillStyle=gr; g.fillRect(x,y,pw,h); }
-  if(sw>0){ const gs=g.createLinearGradient(0,y,0,y+h); gs.addColorStop(0,'#b6dcff'); gs.addColorStop(1,'#3a7fe0'); g.fillStyle=gs; g.fillRect(x+pw,y,sw,h);
-    g.fillStyle='rgba(255,255,255,.55)'; g.fillRect(x+pw,y,1.2,h); }   // separación vida | escudo
-  g.fillStyle='rgba(255,255,255,.18)'; g.fillRect(x,y,w,h*0.35);
-  g.restore(); g.font='800 9px "Nunito Sans", system-ui, sans-serif'; g.lineWidth=2.5; g.strokeStyle='rgba(0,0,0,.75)';
-  const st=S?' +'+Math.ceil(sh*100)+' %':'', tw=g.measureText(txt).width, sw2=st?g.measureText(st).width:0, tx=x+w/2-(tw+sw2)/2, ty=y+h-2.5;
-  g.textAlign='left'; g.strokeText(txt,tx,ty); g.fillStyle='#fff'; g.fillText(txt,tx,ty);
-  if(st){ g.strokeText(st,tx+tw,ty); g.fillStyle='#a9d6ff'; g.fillText(st,tx+tw,ty); } }
+// Barras de vida del combate (estilo placa de RPG para móvil: LoL, Overwatch, AFK Arena):
+// · insignia redonda en el extremo de fuera (corazón = tú, calavera = enemigos) con el marco dorado del juego
+// · carril oscuro hundido, relleno con degradado y brillo arriba, marcas cada 25 % para leerla de un vistazo
+// · estela de daño: lo que acabas de perder se queda en claro un momento y luego baja (se ve cuánto ha quitado el golpe)
+// · escudo: barra azul fina ENCIMA de la de vida (como Overwatch/Fortnite), con brillo; no se mezcla con la vida
+// · poca vida (menos del 25 %): el marco late en rojo
+const HBT={B:null,hero:{v:1,hold:0},foe:{v:1,hold:0}};
+function hpBar(g,x,y,w,p,o){ const h=10, r=5, R=9, hero=o.side==='hero', T=performance.now()/1000;
+  const rr=(X,Y,W2,H2,Rd)=>{ g.beginPath(); g.moveTo(X+Rd,Y); g.arcTo(X+W2,Y,X+W2,Y+H2,Rd); g.arcTo(X+W2,Y+H2,X,Y+H2,Rd); g.arcTo(X,Y+H2,X,Y,Rd); g.arcTo(X,Y,X+W2,Y,Rd); g.closePath(); };
+  // estela de daño
+  const tr=o.tr; if(p>=tr.v){ tr.v=p; tr.hold=0.35; } else if((tr.hold-=o.dt)<=0) tr.v=Math.max(p,tr.v-1.2*o.dt);
+  g.save();
+  // escudo: barra fina encima
+  if(o.sh>0.004){ const sy=y-8, sw=w*Math.min(1,o.sh); rr(x,sy,w,5,2.5); g.fillStyle='rgba(8,10,20,.75)'; g.fill();
+    g.save(); g.shadowColor='#62b6ff'; g.shadowBlur=7; rr(x,sy,Math.max(5,sw),5,2.5); const gs=g.createLinearGradient(0,sy,0,sy+5); gs.addColorStop(0,'#d4ecff'); gs.addColorStop(1,'#4a95f0'); g.fillStyle=gs; g.fill(); g.restore(); }
+  // marco y carril
+  const low=o.low?0.5+0.5*Math.sin(T*8):0;
+  rr(x-2,y-2,w+4,h+4,r+2); g.fillStyle='rgba(6,7,12,.85)'; g.fill(); g.lineWidth=1.2; g.strokeStyle=low?`rgba(229,72,77,${0.5+0.5*low})`:'rgba(232,176,74,.7)'; g.stroke();
+  rr(x,y,w,h,r); g.fillStyle='#1a1d29'; g.fill(); g.save(); g.clip();
+  if(tr.v>p){ g.fillStyle='rgba(255,236,190,.85)'; g.fillRect(x+w*p,y,w*(tr.v-p),h); }   // estela
+  if(p>0){ const gr=g.createLinearGradient(0,y,0,y+h); gr.addColorStop(0,o.col[0]); gr.addColorStop(1,o.col[1]); g.fillStyle=gr; g.fillRect(x,y,w*p,h);
+    g.fillStyle='rgba(255,255,255,.28)'; g.fillRect(x,y+1,w*p,h*0.3); }
+  g.fillStyle='rgba(0,0,0,.28)'; for(let i=1;i<4;i++) g.fillRect(Math.round(x+w*i/4),y+(i===2?0:h*0.5),1,i===2?h:h*0.5);   // marcas cada 25 % (la del 50 % entera)
+  g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(x,y+h-2,w,2);   // sombra de abajo (hundido)
+  g.restore();
+  // insignia
+  const cx=hero?x-2:x+w+2, cy=y+h/2; g.beginPath(); g.arc(cx,cy,R,0,Math.PI*2); const gb=g.createLinearGradient(0,cy-R,0,cy+R); gb.addColorStop(0,'#2b2f40'); gb.addColorStop(1,'#12141c'); g.fillStyle=gb; g.fill();
+  g.lineWidth=1.5; g.strokeStyle=low?`rgba(229,72,77,${0.5+0.5*low})`:'#e8b04a'; g.stroke();
+  g.fillStyle=hero?'#ff6b6b':'#ece7da';
+  if(hero){ g.beginPath(); g.moveTo(cx,cy+4.2); g.bezierCurveTo(cx-6.5,cy-0.5,cx-3.5,cy-6,cx,cy-2.6); g.bezierCurveTo(cx+3.5,cy-6,cx+6.5,cy-0.5,cx,cy+4.2); g.fill(); }
+  else { g.beginPath(); g.arc(cx,cy-1,4.4,0,Math.PI*2); g.fill(); g.fillRect(cx-2.6,cy+1.5,5.2,3); g.fillStyle='#12141c'; g.beginPath(); g.arc(cx-1.7,cy-1.2,1.2,0,Math.PI*2); g.arc(cx+1.7,cy-1.2,1.2,0,Math.PI*2); g.fill(); g.fillRect(cx-0.4,cy+2.2,0.8,2.3); }
+  // texto: % dentro, del lado contrario a la insignia
+  g.font='800 9px "Nunito Sans", system-ui, sans-serif'; g.textAlign=hero?'right':'left'; g.lineWidth=2.5; g.strokeStyle='rgba(0,0,0,.8)';
+  const tx=hero?x+w-4:x+4, ty=y+h-1.6; g.strokeText(o.txt,tx,ty); g.fillStyle='#fff'; g.fillText(o.txt,tx,ty);
+  g.restore() }
 
 /* ---------- bucle ---------- */
 let last=performance.now(), hudT=0, drawT=0, offT=0;
