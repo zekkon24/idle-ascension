@@ -32,9 +32,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 :root{--safe-top:calc(var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px))}   /* hueco de los botones de Telegram en pantalla completa */
 .app{max-width:520px;margin:0 auto;padding-inline:16px;padding-block:calc(10px + var(--safe-top)) 90px;display:flex;flex-direction:column;gap:10px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-inline:-10px}   /* la cabecera va casi pegada al borde (6 px) */
-.lvring{--p:0;flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--rR,#4f95e6) calc(var(--p)*1%),#4a4f5e 0);transition:background .3s}
-.lvring b{width:26px;height:26px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
-.lvring.cap{background:conic-gradient(var(--gold) 100%,#4a4f5e 0)}
 .uname{font-family:var(--display);font-weight:800;font-size:14px;flex:1;min-width:0;display:flex;flex-direction:column;gap:0;white-space:nowrap;line-height:1.15}
 .uname .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .uname em{flex:none;font-style:normal;color:var(--muted);font-family:var(--body);font-size:11px}
@@ -60,8 +57,6 @@ canvas{display:block;width:100%;height:300px}
 .app.home{padding-top:calc(24px + var(--safe-top))}
 .tgfs .app,.tgfs .app.home{padding-top:var(--safe-top)}
 .app.home .battle{padding-bottom:58px}
-.stage .tag{position:absolute;left:10px;top:8px;font-family:var(--display);font-size:13px;padding:2px 8px;border-radius:6px;background:rgba(0,0,0,.45)}
-.stage .tag.boss{background:var(--bad);color:#fff}
 .hero{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
 .hero .name{font-family:var(--display);font-size:16px;grid-column:1 / -1;display:flex;align-items:baseline;min-width:0;white-space:nowrap}
 .hero .name .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -300,9 +295,8 @@ input[type=number]{width:64px}
 .skmode{font-size:10px;font-weight:800;color:var(--muted);background:rgba(0,0,0,.45);padding:2px 6px;border-radius:6px;margin-bottom:2px}
 button.skmode{border:1px solid var(--line);cursor:pointer;padding:4px 8px}
 button.skmode.on{color:var(--gold);border-color:var(--gold)}
-.fasetxt.top{top:38px;bottom:auto;left:10px;right:auto;font-size:12px;padding:2px 8px}
-.fasetxt.top.t0{top:8px}
-.foetxt{position:absolute;top:8px;right:10px;z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:3px}   /* Torre: rasgos del élite o mecánica del jefe (uno por línea) */
+.fasetxt.top{top:48px;bottom:auto;left:10px;right:auto;font-size:12px;padding:2px 8px}
+.foetxt{position:absolute;top:48px;right:10px;z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:3px}   /* Torre: rasgos del élite o mecánica del jefe (uno por línea) */
 .foetxt.cur{top:auto;right:auto;left:50%;transform:translateX(-50%);bottom:78px;flex-direction:row;flex-wrap:wrap;justify-content:center;max-width:70%}   /* maldiciones: abajo en el centro */
 .foetxt.cur span{color:var(--bad);border-color:rgba(229,72,77,.5)}
 .foetxt span{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:help;font-family:var(--display);font-weight:800;font-size:clamp(10px,3.2vw,12px);white-space:nowrap;padding:2px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--line)}
@@ -326,7 +320,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .banner:hover{background:linear-gradient(90deg,rgba(232,176,74,.32),rgba(232,176,74,.1))}
 .calbtn{position:absolute;right:10px;top:8px;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;padding:0}
 .better{color:var(--good);font-size:12px}
-.sidebtns{position:absolute;right:10px;top:8px;z-index:4;display:flex;flex-direction:column;gap:8px}
+.sidebtns{position:absolute;right:10px;top:48px;z-index:4;display:flex;flex-direction:column;gap:8px}
 .sidebtns .calbtn{position:relative;right:auto;top:auto}
 .calbtn.grimcorner{top:auto;right:10px;bottom:66px;z-index:4}   /* grimorio: esquina de abajo a la derecha, encima de la fase */
 .calbtn.on{border-color:var(--gold);background:rgba(232,176,74,.25);box-shadow:0 0 10px rgba(232,176,74,.5)}
@@ -352,7 +346,6 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .evhead b{font-size:18px}
 .pvphead div{align-items:center;justify-content:center}.pvphead .divic{margin:0 auto}
 .pvprank div{align-items:center}.pvprank .rh{background:none!important;color:var(--muted);font-size:11px;text-transform:uppercase;padding-bottom:0}.divic{display:block;flex:none}
-.stage .tag.ev{background:var(--rE);color:#fff}
 .misTop{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
 .bar.big{height:12px;border-radius:7px}
 @media (max-width:340px){.nav button{font-size:10px}}
@@ -463,6 +456,33 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .mbadge{position:absolute;top:10px;left:10px;padding:2px 8px;border-radius:6px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;letter-spacing:1px}
 .mbadge.g{background:rgba(0,0,0,.6);color:var(--gold);border:1px solid var(--gold)}
 .mico{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(10,11,16,.75);border:1px solid var(--line);color:var(--ink)}
+
+/* HUD del combate (estilo juego de lucha): tu vida a la izquierda, la de los enemigos a la derecha, emblema en el centro */
+.vshud{position:absolute;left:6px;right:6px;top:6px;z-index:5;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;pointer-events:none}
+.vsw{position:relative;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+.vsb{position:relative;height:18px;background:linear-gradient(180deg,#f3cf7a,#a8741f);overflow:hidden}
+.vsw.me .vsb{clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,0 100%);border-radius:9px 0 0 9px}
+.vsw.foe .vsb{clip-path:polygon(0 0,100% 0,100% 100%,10px 100%);border-radius:0 9px 9px 0}
+.vsb::before{content:"";position:absolute;inset:2px;background:#151823;clip-path:inherit;border-radius:inherit}
+.vsb i{position:absolute;top:2px;bottom:2px;width:0}
+.vsw.me .vsb i{left:2px;max-width:calc(100% - 4px)}.vsw.foe .vsb i{right:2px;max-width:calc(100% - 4px)}
+.vsb .tr{background:#ffe7b0;transition:width .5s ease-in .3s}
+.vsb .fl{transition:width .12s ease-out}
+.vsw.me .fl{background:linear-gradient(180deg,#a5f0ae 0%,#4cb865 45%,#2d7d41 100%)}
+.vsw.foe .fl{background:linear-gradient(180deg,#ffa197 0%,#df4f45 45%,#93261f 100%)}
+.vsb .fl::after{content:"";position:absolute;left:0;right:0;top:1px;height:35%;background:rgba(255,255,255,.3);border-radius:4px}
+.vsb b{position:absolute;top:0;bottom:0;display:flex;align-items:center;font-family:var(--display);font-weight:800;font-size:11px;color:#fff;text-shadow:0 1px 0 #000,0 0 3px #000;z-index:1;font-variant-numeric:tabular-nums}
+.vsw.me .vsb b{left:9px}.vsw.foe .vsb b{right:9px}
+.vssh{position:absolute;left:4px;top:21px;height:4px;width:0;max-width:calc(100% - 14px);border-radius:2px;background:linear-gradient(180deg,#d4ecff,#4a95f0);box-shadow:0 0 6px #62b6ff;transition:width .15s}
+.vsw.me.low .vsb{animation:vslow .7s ease-in-out infinite alternate}
+@keyframes vslow{from{background:linear-gradient(180deg,#f3cf7a,#a8741f)}to{background:linear-gradient(180deg,#ff7b72,#b3241c)}}
+.vsc{position:relative;z-index:2;width:46px;height:46px;margin:-6px -6px -14px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 35%,#343a52,#11131c 70%);border:2px solid #e8b04a;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 3px 8px rgba(0,0,0,.7)}
+.vsc small{font-family:var(--display);font-weight:800;font-size:7px;letter-spacing:.06em;color:#e8b04a;line-height:1}
+.vsc b{font-family:var(--display);font-weight:800;font-size:15px;color:#fff;line-height:1.05;font-variant-numeric:tabular-nums;text-shadow:0 1px 0 #000}
+.vsc.boss{border-color:#ff5a52;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(229,72,77,.8)}.vsc.boss small{color:#ff8a82}
+.vsc.elite{border-color:#b77cff;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(155,89,214,.85)}.vsc.elite small{color:#cfa6ff}
+.vsc.pvp small{color:#7cc2ff}
 </style>
 
 <div class="app" id="app"></div>
@@ -486,7 +506,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610061201-2561202';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610061208-0e4e032';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

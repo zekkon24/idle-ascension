@@ -229,14 +229,14 @@ const NAVL={up:'Inicio',inv:'Inventario',shop:'Tienda',ev:'Modos',mis:'Misiones'
 const navSet=(k,n)=>setHTML(document.querySelector(`[data-tab="${k}"]`),`<span class="ni">${IC(ICONS[k])}${n?`<sup class="nb">${n}</sup>`:''}</span><span class="nl">${NAVL[k]}</span>`);
 function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pantalla nueva
   $('#app').innerHTML=`
-  <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><span class="lvring" id="lvRing" role="img"><b id="lvNum"></b></span><div class="uname" id="uName"></div>
+  <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><div class="uname" id="uName"></div>
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
     <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
   <div id="battle" class="battle">
   <div class="hero"><div id="evoSlot"></div>
     </div>
-  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="tag" id="tag"></div><span class="fasetxt" id="faseTxt"></span><span class="foetxt" id="foeTxt" hidden></span><span class="foetxt cur" id="curseTxt" hidden></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 512 512" width="22" height="22" fill="currentColor"><path fill="currentColor" d="M149.518 78.38c-6.55.117-12.45 1.736-17.35 4.91c-7.465 4.84-11.765 12.904-13.063 21.34c-2.595 16.874 4.747 36.355 19.862 52.31C154.08 172.893 177.643 185 208 185h2.438l-9.118-18.234c-22.194-1.554-38.46-10.777-49.287-22.205c-11.885-12.545-16.543-28.064-15.138-37.19c.702-4.564 2.402-7.25 5.062-8.974s7.113-2.875 14.756-1.326c13.078 2.65 34.233 13.948 62.205 39.284L220.27 135h23.408c-35.31-34.8-62.215-51.278-83.39-55.57a52 52 0 0 0-7.925-1.006q-1.441-.068-2.845-.043zm212.964 0q-1.404-.023-2.845.044c-2.562.12-5.21.455-7.924 1.006c-21.176 4.292-48.082 20.77-83.39 55.57h23.406l1.352 1.354c27.972-25.336 49.127-36.633 62.205-39.284c7.643-1.55 12.096-.398 14.756 1.326s4.36 4.41 5.062 8.973c1.405 9.126-3.253 24.645-15.138 37.19c-10.827 11.43-27.093 20.652-49.287 22.206L301.562 185H304c30.357 0 53.92-12.106 69.033-28.06c15.115-15.955 22.457-35.436 19.862-52.31c-1.298-8.436-5.598-16.5-13.063-21.34c-4.9-3.174-10.8-4.793-17.35-4.91M227.73 153l-8.78 8.777L229.564 183h52.875l10.61-21.223l-8.777-8.777h-56.54zM73 201v46h142v-46zm160 0v270h46V201zm64 0v46h142v-46zm-192 64v206h110V265zm192 0v206h110V265z"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 512 512" width="22" height="22" fill="currentColor"><path fill="currentColor" d="M20.72 19.34v39.72L151.6 132.9l94.9-45.12L151 19.34zm196.98.1L313 76.78C226.5 118 135.1 161.4 57.53 198.3l161.57 86.1l59.6-39.2l-39.4-34.9c82.3-40.6 168.3-83.5 241.8-119.93l-93.6-70.93zM361.9 170.5l-76.5 37.9l44.9 25.3c-54.2 35.6-111.8 73.6-160.6 105.7l325.2 154.8L307.5 347c57.6-32.3 117.5-65.9 168.8-94.6zm13.2 160.1l-33.9 18.9l139.3 74.3c-35.1-31.1-70.3-62.2-105.4-93.2"/></svg></button></div><button class="calbtn grimcorner" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 512 512" width="22" height="22" fill="currentColor"><path fill="currentColor" d="M319.61 20.654c13.145 33.114 13.144 33.115-5.46 63.5c33.114-13.145 33.116-13.146 63.5 5.457c-13.145-33.114-13.146-33.113 5.457-63.498c-33.114 13.146-33.113 13.145-63.498-5.459zM113.024 38.021c-11.808 21.04-11.808 21.04-35.724 24.217c21.04 11.809 21.04 11.808 24.217 35.725c11.808-21.04 11.808-21.04 35.724-24.217c-21.04-11.808-21.04-11.808-24.217-35.725m76.55 56.184c-.952 50.588-.95 50.588-41.991 80.18c50.587.95 50.588.95 80.18 41.99c.95-50.588.95-50.588 41.99-80.18c-50.588-.95-50.588-.95-80.18-41.99zm191.177 55.885c-.046 24.127-.048 24.125-19.377 38.564c24.127.047 24.127.046 38.566 19.375c.047-24.126.046-24.125 19.375-38.564c-24.126-.047-24.125-.046-38.564-19.375m-184.086 83.88a96 96 0 0 0-3.492.134c-18.591 1.064-41.868 8.416-77.445 22.556L76.012 433.582c78.487-20.734 132.97-21.909 170.99-4.615V247.71c-18.076-8.813-31.79-13.399-46.707-13.737a91 91 0 0 0-3.629-.002zm122.686 11.42a209 209 0 0 0-8.514.098c-12.81.417-27.638 2.215-45.84 4.522v177.135c43.565-7.825 106.85-4.2 171.244 7.566l-39.78-177.197c-35.904-8.37-56.589-11.91-77.11-12.123zm2.289 16.95c18.889.204 36.852 2.768 53.707 5.02l4.437 16.523c-23.78-3.75-65.966-4.906-92.467-.98l-.636-17.805c11.959-2.154 23.625-2.88 34.959-2.758m-250.483 4.658L60.54 313.002h24.094l10.326-46.004H71.158zm345.881 0l39.742 177.031l2.239 9.973l22.591-.152l-40.855-186.852zm-78.857 57.82c16.993.026 33.67.791 49.146 2.223l3.524 17.174c-32.645-3.08-72.58-2.889-102.995 0l-.709-17.174c16.733-1.533 34.04-2.248 51.034-2.223m-281.793 6.18l-6.924 30.004h24.394l6.735-30.004H56.389zm274.418 27.244c4.656.021 9.487.085 14.716.203l2.555 17.498c-19.97-.471-47.115.56-59.728 1.05l-.7-17.985c16.803-.493 29.189-.828 43.157-.766m41.476.447c8.268.042 16.697.334 24.121.069l2.58 17.74c-8.653-.312-24.87-.83-32.064-.502l-2.807-17.234a257 257 0 0 1 8.17-.073m-326.97 20.309l-17.985 77.928l25.035-.17l17.455-77.758H45.313zm303.164 11.848c19.608-.01 38.66.774 56.449 2.572l2.996 20.787c-34.305-4.244-85.755-7.697-119.1-3.244l-.14-17.922c20.02-1.379 40.186-2.183 59.795-2.193m-166.606 44.05c-30.112.09-67.916 6.25-115.408 19.76l-7.22 2.053l187.759-1.27v-6.347c-16.236-9.206-37.42-14.278-65.13-14.196zm134.41 6.174c-19.63.067-37.112 1.439-51.283 4.182v10.064l177.594-1.203c-44.322-8.634-89.137-13.17-126.31-13.043zM26 475v18h460v-18z"/></svg><i class="lootn" id="grimN" hidden>!</i></button><span class="boosttime" id="boostTime" hidden></span></div>
+  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="vshud" id="vsHud" hidden><div class="vsw me"><div class="vsb"><i class="tr"></i><i class="fl"></i><b></b></div><i class="vssh"></i></div><div class="vsc" id="vsC"><small></small><b></b></div><div class="vsw foe"><div class="vsb"><i class="tr"></i><i class="fl"></i><b></b></div></div></div><span class="fasetxt" id="faseTxt"></span><span class="foetxt" id="foeTxt" hidden></span><span class="foetxt cur" id="curseTxt" hidden></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 512 512" width="22" height="22" fill="currentColor"><path fill="currentColor" d="M149.518 78.38c-6.55.117-12.45 1.736-17.35 4.91c-7.465 4.84-11.765 12.904-13.063 21.34c-2.595 16.874 4.747 36.355 19.862 52.31C154.08 172.893 177.643 185 208 185h2.438l-9.118-18.234c-22.194-1.554-38.46-10.777-49.287-22.205c-11.885-12.545-16.543-28.064-15.138-37.19c.702-4.564 2.402-7.25 5.062-8.974s7.113-2.875 14.756-1.326c13.078 2.65 34.233 13.948 62.205 39.284L220.27 135h23.408c-35.31-34.8-62.215-51.278-83.39-55.57a52 52 0 0 0-7.925-1.006q-1.441-.068-2.845-.043zm212.964 0q-1.404-.023-2.845.044c-2.562.12-5.21.455-7.924 1.006c-21.176 4.292-48.082 20.77-83.39 55.57h23.406l1.352 1.354c27.972-25.336 49.127-36.633 62.205-39.284c7.643-1.55 12.096-.398 14.756 1.326s4.36 4.41 5.062 8.973c1.405 9.126-3.253 24.645-15.138 37.19c-10.827 11.43-27.093 20.652-49.287 22.206L301.562 185H304c30.357 0 53.92-12.106 69.033-28.06c15.115-15.955 22.457-35.436 19.862-52.31c-1.298-8.436-5.598-16.5-13.063-21.34c-4.9-3.174-10.8-4.793-17.35-4.91M227.73 153l-8.78 8.777L229.564 183h52.875l10.61-21.223l-8.777-8.777h-56.54zM73 201v46h142v-46zm160 0v270h46V201zm64 0v46h142v-46zm-192 64v206h110V265zm192 0v206h110V265z"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 512 512" width="22" height="22" fill="currentColor"><path fill="currentColor" d="M20.72 19.34v39.72L151.6 132.9l94.9-45.12L151 19.34zm196.98.1L313 76.78C226.5 118 135.1 161.4 57.53 198.3l161.57 86.1l59.6-39.2l-39.4-34.9c82.3-40.6 168.3-83.5 241.8-119.93l-93.6-70.93zM361.9 170.5l-76.5 37.9l44.9 25.3c-54.2 35.6-111.8 73.6-160.6 105.7l325.2 154.8L307.5 347c57.6-32.3 117.5-65.9 168.8-94.6zm13.2 160.1l-33.9 18.9l139.3 74.3c-35.1-31.1-70.3-62.2-105.4-93.2"/></svg></button></div><button class="calbtn grimcorner" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 512 512" width="22" height="22" fill="currentColor"><path fill="currentColor" d="M319.61 20.654c13.145 33.114 13.144 33.115-5.46 63.5c33.114-13.145 33.116-13.146 63.5 5.457c-13.145-33.114-13.146-33.113 5.457-63.498c-33.114 13.146-33.113 13.145-63.498-5.459zM113.024 38.021c-11.808 21.04-11.808 21.04-35.724 24.217c21.04 11.809 21.04 11.808 24.217 35.725c11.808-21.04 11.808-21.04 35.724-24.217c-21.04-11.808-21.04-11.808-24.217-35.725m76.55 56.184c-.952 50.588-.95 50.588-41.991 80.18c50.587.95 50.588.95 80.18 41.99c.95-50.588.95-50.588 41.99-80.18c-50.588-.95-50.588-.95-80.18-41.99zm191.177 55.885c-.046 24.127-.048 24.125-19.377 38.564c24.127.047 24.127.046 38.566 19.375c.047-24.126.046-24.125 19.375-38.564c-24.126-.047-24.125-.046-38.564-19.375m-184.086 83.88a96 96 0 0 0-3.492.134c-18.591 1.064-41.868 8.416-77.445 22.556L76.012 433.582c78.487-20.734 132.97-21.909 170.99-4.615V247.71c-18.076-8.813-31.79-13.399-46.707-13.737a91 91 0 0 0-3.629-.002zm122.686 11.42a209 209 0 0 0-8.514.098c-12.81.417-27.638 2.215-45.84 4.522v177.135c43.565-7.825 106.85-4.2 171.244 7.566l-39.78-177.197c-35.904-8.37-56.589-11.91-77.11-12.123zm2.289 16.95c18.889.204 36.852 2.768 53.707 5.02l4.437 16.523c-23.78-3.75-65.966-4.906-92.467-.98l-.636-17.805c11.959-2.154 23.625-2.88 34.959-2.758m-250.483 4.658L60.54 313.002h24.094l10.326-46.004H71.158zm345.881 0l39.742 177.031l2.239 9.973l22.591-.152l-40.855-186.852zm-78.857 57.82c16.993.026 33.67.791 49.146 2.223l3.524 17.174c-32.645-3.08-72.58-2.889-102.995 0l-.709-17.174c16.733-1.533 34.04-2.248 51.034-2.223m-281.793 6.18l-6.924 30.004h24.394l6.735-30.004H56.389zm274.418 27.244c4.656.021 9.487.085 14.716.203l2.555 17.498c-19.97-.471-47.115.56-59.728 1.05l-.7-17.985c16.803-.493 29.189-.828 43.157-.766m41.476.447c8.268.042 16.697.334 24.121.069l2.58 17.74c-8.653-.312-24.87-.83-32.064-.502l-2.807-17.234a257 257 0 0 1 8.17-.073m-326.97 20.309l-17.985 77.928l25.035-.17l17.455-77.758H45.313zm303.164 11.848c19.608-.01 38.66.774 56.449 2.572l2.996 20.787c-34.305-4.244-85.755-7.697-119.1-3.244l-.14-17.922c20.02-1.379 40.186-2.183 59.795-2.193m-166.606 44.05c-30.112.09-67.916 6.25-115.408 19.76l-7.22 2.053l187.759-1.27v-6.347c-16.236-9.206-37.42-14.278-65.13-14.196zm134.41 6.174c-19.63.067-37.112 1.439-51.283 4.182v10.064l177.594-1.203c-44.322-8.634-89.137-13.17-126.31-13.043zM26 475v18h460v-18z"/></svg><i class="lootn" id="grimN" hidden>!</i></button><span class="boosttime" id="boostTime" hidden></span></div>
   </div>
   <div id="tab"></div>`;
   for(const k in NAVL) navSet(k,0);
@@ -249,19 +249,24 @@ function updateHUD(){
   { const tp=document.querySelector('.top'); if(tp) tp.hidden=!(tab==='up'&&!ev); }
    // el nivel solo cuenta farmeando: en eventos, Torre y PvP no se ve   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
-  $('#faseTxt').classList.toggle('top',ev); $('#faseTxt').classList.toggle('t0',ev&&!!B&&B.kind==='tower');   // Torre: sin etiqueta arriba, el piso sube a su sitio
+  $('#faseTxt').classList.toggle('top',ev);
   { const ft=$('#foeTxt'), tw=ev&&B&&B.kind==='tower', TT=CFG.tower, txt=!tw?'':(B.mech?[['👑 '+MECH[B.mech],TT.bossMech.desc[B.mech]]]:B.node==='elite'?[...new Set(B.enemies.flatMap(e=>e.traits||[]))].map(k=>[TRAIT(k),TT.traits[k].desc]):[]).map(([t,d])=>`<span data-tip="${esc(t)}|${esc(d)}">${t}</span>`).join('');
     if(ft){ ft.hidden=!txt; if(txt) setHTML(ft,txt); } }
   { const ct=$('#curseTxt'), run=ev&&B&&B.kind==='tower'?G.towerState().run:null, cs=run?(run.curses||[]):[], C=CFG.tower.curses;   // maldiciones: abajo en el centro
     if(ct){ ct.hidden=!cs.length; const h=cs.map(c=>`<span data-tip="☠ ${esc(C[c].name)}|${esc(C[c].desc)}">☠ ${C[c].name}</span>`).join(''); if(ct.dataset.h!==h){ ct.dataset.h=h; ct.innerHTML=h; } } }   // Torre: rasgos del élite o mecánica del jefe, arriba a la derecha
-  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?(B.final?`Piso ${G.towerState().run.floor} · Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:`Piso ${G.towerState().run.floor} · ♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
-    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:`Fase ${S.fase}${G.streak().mul>1?` · <span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:''}`);
+  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:`♥ ${G.towerState().run.lives} · quedan ${B.enemies.filter(e=>!e.dead).length}`):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
+    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:G.streak().mul>1?`<span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:'');   // campaña: la fase ya va en el emblema de arriba
+  { const f=$('#faseTxt'); f.hidden=!f.innerHTML; }
   setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span>`);   // solo el nombre: la clase ya se ve en el retrato
   avatar();   // nombre y, debajo, la clase
 
   $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'':B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
-  tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
+  // emblema del centro (entre las dos barras): dónde estás y si es jefe o élite
+  { const sp=!ev&&G.surpriseState(), run=ev&&B&&B.kind==='tower'?G.towerState().run:null;
+    const [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',run.floor,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
+      :B.kind==='boss'?['SEMANAL','JEFE','boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',S.fase,B.elite?'elite':'boss']
+      :sp?[sp.k==='horde'?'HORDA':'ERRANTE',Math.ceil(sp.left)+'s','boss']:['FASE',S.fase,''];
+    const c=$('#vsC'); if(c){ c.className='vsc'+(cl?' '+cl:''); c.firstChild.textContent=lb; c.lastChild.textContent=mn; } }
   const fab=$('#upFab'); if(fab){ fab.hidden=tab!=='up'||ev; if(!fab.hidden) setHTML(fab,upStrip()); }
   // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
   const gb=$('#grimBtn'); if(gb){ const shown=!ev&&(G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk();
@@ -269,9 +274,7 @@ function updateHUD(){
   const es=$('#evoSlot'); if(es){ const soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(); setHTML(es,soon&&!ev?'<span class="pill">Evolución: próximamente</span>':''); }
   const sbs=document.querySelector('.sidebtns'); if(sbs) sbs.hidden=ev;   // en los eventos no se ven los iconos del combate
   const db=$('#dailyBtn'); if(db){ db.hidden=ev; $('#dailyN').hidden=!(G.calState().can||G.wheelState().free); }   // premios diarios: calendario y ruleta
-  const xpp=Math.min(100,S.xp/G.xpReq(S.lvl)*100);   // tu vida ya no va arriba: solo en la barra del combate, encima del héroe
-  // nivel: círculo con borde gris que se va llenando con la experiencia (lleno en dorado si estás en el tope)
-  { const r=$('#lvRing'), cap=S.lvl>=G.lvlCap(), p=cap?100:xpp; if(r){ r.style.setProperty('--p',p); r.classList.toggle('cap',cap); r.setAttribute('aria-label',`Nivel ${S.lvl}${cap?' (máximo)':''} · ${Math.floor(xpp)} % de experiencia`); $('#lvNum').textContent=S.lvl; } }
+
   const hs=$('#hStats'); if(hs) hs.innerHTML=`<div class="sl">
       <span>Vida <b>${fmt(h.hp)}</b></span><span>Def <b>${fmt(h.df)}</b></span>${h.ls?`<span>Robo <b>${pct(h.ls)}</b></span>`:''}${h.ev?`<span>Evasión <b>${pct(h.ev)}</b></span>`:''}</div>
     <div class="sl"><span>Daño <b>${fmt(h.atk)}</b></span><span>Vel <b>${h.spd.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}/s</b></span><span>Crít <b>${pct(h.cr)}</b></span><span>D. crít <b>+${Math.round(h.cd*100)} %</b></span>${h.bd?`<span>Jefes <b>+${pct(h.bd)}</b></span>`:''}</div>`;
@@ -1339,52 +1342,19 @@ function draw(dt){
     g.globalAlpha=Math.min(1,f.life*2); g.fillStyle=f.hero?'#e2605a':(f.crit?'#e8b04a':'#ece7da');
     g.fillText(f.txt+(f.crit?'!':''),x,y); }
   g.globalAlpha=1; fx.flash=Math.max(0,fx.flash-dt);
-  // barras de vida: la tuya (con el escudo en azul) y la de los enemigos (todos juntos), iguales y a la misma altura
-  if(bars){ const by=Math.max(16,gy-122), hp=Math.max(0,G.B.hp/h.hp), sh=Math.min(1,G.heroShield()/h.hp);
-    // los iconos de la derecha (premios diarios y potenciadores) no deben tapar la barra de los enemigos: acaba antes de ellos
-    let x1=W-16; { const sb=document.querySelector('.sidebtns'); if(sb&&!sb.hidden){ const r=sb.getBoundingClientRect(), c=cv.getBoundingClientRect(), t=(r.top-c.top)/sc, b=(r.bottom-c.top)/sc;
-      if(r.width&&b>by-4&&t<by+16) x1=Math.min(x1,(r.left-c.left)/sc-14); } }
-    const bw=Math.max(60,Math.min(150,W*0.36,x1-(hx+70))), x0=Math.max(14,hx-bw/2);
-    if(HBT.B!==B){ HBT.B=B; HBT.hero={v:hp,hold:0}; HBT.foe={v:1,hold:0}; }   // estela de daño: empieza llena en cada combate
-    hpBar(g,x0,by,bw,hp,{side:'hero',col:['#8ee39a','#3c9a52'],txt:Math.ceil(hp*100)+' %',sh,tr:HBT.hero,dt,low:hp<0.25});
-    const fb=B.kind==='pvp'?{p:Math.max(0,B.enemies[0].hp/B.enemies[0].max)}:!(B.event&&!B.kind)?foeBar(B):null;
-    if(fb) hpBar(g,x1-bw,by,bw,fb.p,{side:'foe',col:['#f2847a','#b33d34'],txt:fb.inf?'∞':Math.ceil(fb.p*100)+' %',sh:0,tr:HBT.foe,dt}); }
+  vsHud(B,h);
 }
-// Barras de vida del combate (estilo placa de RPG para móvil: LoL, Overwatch, AFK Arena):
-// · insignia redonda en el extremo de fuera (corazón = tú, calavera = enemigos) con el marco dorado del juego
-// · carril oscuro hundido, relleno con degradado y brillo arriba, marcas cada 25 % para leerla de un vistazo
-// · estela de daño: lo que acabas de perder se queda en claro un momento y luego baja (se ve cuánto ha quitado el golpe)
-// · escudo: barra azul fina ENCIMA de la de vida (como Overwatch/Fortnite), con brillo; no se mezcla con la vida
-// · poca vida (menos del 25 %): el marco late en rojo
-const HBT={B:null,hero:{v:1,hold:0},foe:{v:1,hold:0}};
-function hpBar(g,x,y,w,p,o){ const h=10, r=5, R=9, hero=o.side==='hero', T=performance.now()/1000;
-  const rr=(X,Y,W2,H2,Rd)=>{ g.beginPath(); g.moveTo(X+Rd,Y); g.arcTo(X+W2,Y,X+W2,Y+H2,Rd); g.arcTo(X+W2,Y+H2,X,Y+H2,Rd); g.arcTo(X,Y+H2,X,Y,Rd); g.arcTo(X,Y,X+W2,Y,Rd); g.closePath(); };
-  // estela de daño
-  const tr=o.tr; if(p>=tr.v){ tr.v=p; tr.hold=0.35; } else if((tr.hold-=o.dt)<=0) tr.v=Math.max(p,tr.v-1.2*o.dt);
-  g.save();
-  // escudo: barra fina encima
-  if(o.sh>0.004){ const sy=y-8, sw=w*Math.min(1,o.sh); rr(x,sy,w,5,2.5); g.fillStyle='rgba(8,10,20,.75)'; g.fill();
-    g.save(); g.shadowColor='#62b6ff'; g.shadowBlur=7; rr(x,sy,Math.max(5,sw),5,2.5); const gs=g.createLinearGradient(0,sy,0,sy+5); gs.addColorStop(0,'#d4ecff'); gs.addColorStop(1,'#4a95f0'); g.fillStyle=gs; g.fill(); g.restore(); }
-  // marco y carril
-  const low=o.low?0.5+0.5*Math.sin(T*8):0;
-  rr(x-2,y-2,w+4,h+4,r+2); g.fillStyle='rgba(6,7,12,.85)'; g.fill(); g.lineWidth=1.2; g.strokeStyle=low?`rgba(229,72,77,${0.5+0.5*low})`:'rgba(232,176,74,.7)'; g.stroke();
-  rr(x,y,w,h,r); g.fillStyle='#1a1d29'; g.fill(); g.save(); g.clip();
-  if(tr.v>p){ g.fillStyle='rgba(255,236,190,.85)'; g.fillRect(x+w*p,y,w*(tr.v-p),h); }   // estela
-  if(p>0){ const gr=g.createLinearGradient(0,y,0,y+h); gr.addColorStop(0,o.col[0]); gr.addColorStop(1,o.col[1]); g.fillStyle=gr; g.fillRect(x,y,w*p,h);
-    g.fillStyle='rgba(255,255,255,.28)'; g.fillRect(x,y+1,w*p,h*0.3); }
-  g.fillStyle='rgba(0,0,0,.28)'; for(let i=1;i<4;i++) g.fillRect(Math.round(x+w*i/4),y+(i===2?0:h*0.5),1,i===2?h:h*0.5);   // marcas cada 25 % (la del 50 % entera)
-  g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(x,y+h-2,w,2);   // sombra de abajo (hundido)
-  g.restore();
-  // insignia
-  const cx=hero?x-2:x+w+2, cy=y+h/2; g.beginPath(); g.arc(cx,cy,R,0,Math.PI*2); const gb=g.createLinearGradient(0,cy-R,0,cy+R); gb.addColorStop(0,'#2b2f40'); gb.addColorStop(1,'#12141c'); g.fillStyle=gb; g.fill();
-  g.lineWidth=1.5; g.strokeStyle=low?`rgba(229,72,77,${0.5+0.5*low})`:'#e8b04a'; g.stroke();
-  g.fillStyle=hero?'#ff6b6b':'#ece7da';
-  if(hero){ g.beginPath(); g.moveTo(cx,cy+4.2); g.bezierCurveTo(cx-6.5,cy-0.5,cx-3.5,cy-6,cx,cy-2.6); g.bezierCurveTo(cx+3.5,cy-6,cx+6.5,cy-0.5,cx,cy+4.2); g.fill(); }
-  else { g.beginPath(); g.arc(cx,cy-1,4.4,0,Math.PI*2); g.fill(); g.fillRect(cx-2.6,cy+1.5,5.2,3); g.fillStyle='#12141c'; g.beginPath(); g.arc(cx-1.7,cy-1.2,1.2,0,Math.PI*2); g.arc(cx+1.7,cy-1.2,1.2,0,Math.PI*2); g.fill(); g.fillRect(cx-0.4,cy+2.2,0.8,2.3); }
-  // texto: % dentro, del lado contrario a la insignia
-  g.font='800 9px "Nunito Sans", system-ui, sans-serif'; g.textAlign=hero?'right':'left'; g.lineWidth=2.5; g.strokeStyle='rgba(0,0,0,.8)';
-  const tx=hero?x+w-4:x+4, ty=y+h-1.6; g.strokeText(o.txt,tx,ty); g.fillStyle='#fff'; g.fillText(o.txt,tx,ty);
-  g.restore() }
+// Barras de vida (HUD de juego de lucha: Street Fighter, Tekken, Marvel Snap): pegadas arriba del combate, la tuya a la
+// izquierda y la de los enemigos (todos juntos) a la derecha, en espejo, con el emblema del centro entre las dos.
+// Se vacían hacia el centro; lo que acabas de perder queda en claro un momento (estela) y luego baja.
+// El escudo es una barra azul fina justo debajo de la tuya. Con menos del 25 % de vida tu barra late en rojo.
+function vsHud(B,h){ const el=$('#vsHud'); if(!el) return; el.hidden=!B; if(!B) return;
+  const set=(w,p,txt)=>{ const fl=w.querySelector('.fl'), tr=w.querySelector('.tr'), pc=Math.max(0,Math.min(100,p*100))+'%'; fl.style.width=pc; tr.style.width=pc; w.querySelector('b').textContent=txt; };
+  const hp=Math.max(0,B.hp/h.hp), me=el.querySelector('.me'), foe=el.querySelector('.foe');
+  set(me,hp,Math.ceil(hp*100)+' %'); me.classList.toggle('low',hp<0.25);
+  me.querySelector('.vssh').style.width=Math.min(100,G.heroShield()/h.hp*100)+'%';
+  const fb=B.kind==='pvp'?{p:Math.max(0,B.enemies[0].hp/B.enemies[0].max)}:!(B.event&&!B.kind)?foeBar(B):null;
+  foe.style.visibility=fb?'visible':'hidden'; if(fb) set(foe,fb.p,fb.inf?'∞':Math.ceil(fb.p*100)+' %'); }
 
 /* ---------- bucle ---------- */
 let last=performance.now(), hudT=0, drawT=0, offT=0;
