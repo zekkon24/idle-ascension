@@ -6,12 +6,14 @@ const CFG = {
   // de daño con dmgTaken, el Clérigo se regenera con regen) y en su habilidad. La pasiva llega con el camino de la 1.ª evolución.
   classes: {
     Guerrero:{hp:250.6,ghp:2.105,   // +30 % de vida (tanque)
-     atk:19.35,gatk:0.26,df:12.35,gdf:0.1049,spd:0.72,cr:0,cd:1.0,ev:0,ranged:false,color:'#d9774a',dmgTaken:0.95, role:'Tanque · cuerpo a cuerpo'},
+     atk:22,gatk:0.40,df:12.35,gdf:0.1049,spd:0.82,   // más daño y velocidad: fase 100 en ~175 h (antes ~216; Mago ~150) y farmea como las demás
+    cr:0,cd:1.0,ev:0,ranged:false,color:'#d9774a',dmgTaken:0.95, role:'Tanque · cuerpo a cuerpo'},
     Mago:{hp:138.82,ghp:1.0977,atk:20.959,gatk:0.3051,df:4.12,gdf:0.035,spd:0.84,cr:0,cd:1.0,ev:0,ranged:true,color:'#8f7cf0', role:'Daño · a distancia'},
     Arquero:{hp:131.06,ghp:1.1558,atk:24,gatk:0.09,df:5.15,gdf:0.0437,spd:1.365,cr:0.05,cd:1.0,ev:0.05,ranged:true,color:'#5fb86a', role:'Daño · a distancia'},
     Asesino:{hp:142.29,ghp:0.9114,atk:20.13,gatk:0.18,df:4.12,gdf:0.035,spd:1.0,cr:0.10,cd:1.5,ev:0.15,ranged:false,color:'#c95a8a', role:'Daño · cuerpo a cuerpo'},
-    Clerigo:{hp:228.46,ghp:1.4863,atk:14.6,gatk:0.3015,df:12.35,gdf:0.105,   // +50 % de defensa (tanque)
-     spd:0.8,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo'},
+    Clerigo:{hp:228.46,ghp:1.4863,atk:18,gatk:0.44,   // más daño y velocidad: fase 100 en ~190 h (antes ~250) y farmea como las demás
+    df:12.35,gdf:0.105,   // +50 % de defensa (tanque)
+     spd:0.88,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo'},
   },
   enemy:{hp:45,hpG:1.0358,atk:6,atkG:1.026,earlyTo:50,hpG0:1.035,atkG0:1.024, // hasta la fase 50 crecen con hpG0/atkG0
          hpBands:[[101,1.051,1.036]], // de la fase 101 a la 150 los enemigos crecen más: la fase 150 llega hacia el día 13
@@ -176,25 +178,25 @@ const CFG = {
     rarity:{elite:{C:50,R:33,E:17}, chest:{C:50,R:33,E:17}, shop:{C:50,R:33,E:15,L:2}, trap:{C:50,R:33,E:17}},
     shop:{cards:4, grims:2, price:{c:{C:20,R:35,E:60}, g:{C:40,R:70,E:100,L:150}}, remove:30, removeUp:15},
     cards:{
-      fuerza:{r:'C',fam:'f',type:'stat',name:'Fuerza',desc:'+15 % de daño',atk:0.15},
+      fuerza:{r:'C',fam:'f',type:'stat',name:'Fuerza',desc:'+18 % de daño',atk:0.18},
       rapidez:{r:'C',fam:'f',type:'stat',name:'Rapidez',desc:'+15 % de velocidad de ataque',spd:0.15},
-      precision:{r:'C',fam:'f',type:'stat',name:'Precisión',desc:'+10 % de crítico y +40 % de daño crítico',cr:0.10,cd:0.40},
+      precision:{r:'C',fam:'f',type:'stat',name:'Precisión',desc:'+12 % de crítico y +45 % de daño crítico',cr:0.12,cd:0.45},
       aguante:{r:'C',fam:'e',type:'stat',name:'Aguante',desc:'+15 % de vida máxima',hp:0.15},
       armadura:{r:'C',fam:'e',type:'stat',name:'Armadura',desc:'+30 % de defensa',df:0.30},
       puas:{r:'C',fam:'e',type:'stat',name:'Púas',desc:'Devuelves el 25 % del daño que recibes',reflect:0.25},
       vampiro:{r:'C',fam:'s',type:'stat',name:'Vampiro',desc:'5 % de robo de vida',ls:0.05},
       regen:{r:'C',fam:'s',type:'stat',name:'Regeneración',desc:'Recuperas el 0,5 % de tu vida por segundo',regen:0.005},
-      tGolpe:{r:'C',fam:'f',type:'skill',name:'Golpe fuerte',desc:'Golpe del 200 % (cada 8 s)',cd:8,mult:2},
+      tGolpe:{r:'C',fam:'f',type:'skill',name:'Golpe fuerte',desc:'Golpe del 220 % (cada 8 s)',cd:8,mult:2.2},
       tMuro:{r:'C',fam:'e',type:'skill',name:'Muro',desc:'Escudo del 15 % de tu vida (cada 15 s)',cd:15,shield:0.15},
       tSangria:{r:'C',fam:'s',type:'skill',name:'Sangría',desc:'Pierdes el 10 % de tu vida: tus 3 próximos golpes hacen +100 % (cada 12 s)',cd:12,cost:0.10,hits:3,mult:1},
       aliento:{r:'C',fam:'s',type:'fx',name:'Segundo aliento',desc:'Al ganar un combate te curas el 15 %',heal:0.15},
-      doble:{r:'R',fam:'f',type:'stat',name:'Golpe doble',desc:'25 % de probabilidad de golpear dos veces',dbl:0.25},
+      doble:{r:'R',fam:'f',type:'stat',name:'Golpe doble',desc:'30 % de probabilidad de golpear dos veces',dbl:0.3},
       talisman:{r:'R',fam:'e',type:'stat',name:'Talismán',desc:'Recibes un 20 % menos de daño',taken:0.20},
       sanguijuela:{r:'R',fam:'s',type:'stat',name:'Sanguijuela',desc:'+10 % de robo de vida',ls:0.10},
-      tTorbellino:{r:'R',fam:'f',type:'skill',name:'Torbellino',desc:'120 % a todos los enemigos (cada 12 s)',cd:12,mult:1.2},
+      tTorbellino:{r:'R',fam:'f',type:'skill',name:'Torbellino',desc:'130 % a todos los enemigos (cada 12 s)',cd:12,mult:1.3},
       tBaluarte:{r:'R',fam:'e',type:'skill',name:'Baluarte',desc:'8 s con +50 % de defensa y devuelves el 100 % del daño (cada 30 s)',cd:30,dur:8,df:1.5,reflect:1},
       tSed:{r:'R',fam:'s',type:'skill',name:'Sed de sangre',desc:'Pierdes el 20 % de tu vida: escudo de la mitad y +30 % de robo de vida 10 s (cada 28 s)',cd:28,cost:0.2,shield:0.5,ls:0.3,dur:10},
-      ejecutor:{r:'R',fam:'f',type:'fx',name:'Ejecutor',desc:'+70 % de daño a los enemigos por debajo del 50 % de vida',below:0.5,mult:0.7},
+      ejecutor:{r:'R',fam:'f',type:'fx',name:'Ejecutor',desc:'+80 % de daño a los enemigos por debajo del 50 % de vida',below:0.5,mult:0.8},
       escudoReg:{r:'R',fam:'e',type:'fx',name:'Escudo regenerable',desc:'Cada 10 s ganas un escudo del 10 % de tu vida',every:10,shield:0.10},
       titan:{r:'E',fam:'',type:'stat',name:'Titán',desc:'+20 % de daño y +20 % de vida',atk:0.2,hp:0.2},
       tLluvia:{r:'E',fam:'f',type:'skill',name:'Lluvia de golpes',desc:'5 golpes rápidos del 100 % que pueden ser críticos (cada 15 s)',cd:15,hits:5},
@@ -205,21 +207,21 @@ const CFG = {
       furiaCiega:{r:'C',fam:'f',type:'pas',name:'Furia ciega',desc:'Tu velocidad de ataque extra también sube tu daño crítico (lo mismo en %)'},
       corazaPuas:{r:'C',fam:'e',type:'pas',name:'Coraza de púas',desc:'Púas y Baluarte también devuelven el daño que para tu escudo'},
       sangreHirviente:{r:'C',fam:'s',type:'pas',name:'Sangre hirviente',desc:'Lo que curas con robo de vida estando a tope se convierte en escudo'},
-      primerGolpe:{r:'C',fam:'f',type:'fx',name:'Primer golpe',desc:'El primer golpe de cada combate hace +300 %',mult:3},
+      primerGolpe:{r:'C',fam:'f',type:'fx',name:'Primer golpe',desc:'El primer golpe de cada combate hace +350 %',mult:3.5},
       ancla:{r:'C',fam:'e',type:'fx',name:'Ancla',desc:'Empiezas cada combate con un escudo del 20 % de tu vida',shield:0.2},
       vial:{r:'C',fam:'s',type:'fx',name:'Vial de sangre',desc:'Al empezar cada combate te curas el 5 %',heal:0.05},
       fresa:{r:'C',fam:'s',type:'stat',name:'Fresa',desc:'+10 % de vida máxima',hp:0.10},
       saco:{r:'C',fam:'',type:'stat',name:'Saco de almas',desc:'+50 % de almas',souls:0.5},
-      demonio:{r:'R',fam:'f',type:'pas',name:'Forma demoníaca',desc:'+1,5 % de daño por cada segundo de combate',per:0.015},
+      demonio:{r:'R',fam:'f',type:'pas',name:'Forma demoníaca',desc:'+1,8 % de daño por cada segundo de combate',per:0.018},
       juggernaut:{r:'R',fam:'e',type:'pas',name:'Juggernaut',desc:'Cada vez que ganas escudo, golpe del 100 % a un enemigo al azar',mult:1},
       furiaSangre:{r:'R',fam:'s',type:'pas',name:'Furia sangrienta',desc:'+1 % de daño por cada 1 % de vida que te falta',per:1},
-      shuriken:{r:'R',fam:'f',type:'fx',name:'Shuriken',desc:'Cada 3 golpes, +3 % de daño hasta el final del combate (sin tope)',every:3,atk:0.03},
+      shuriken:{r:'R',fam:'f',type:'fx',name:'Shuriken',desc:'Cada 3 golpes, +3,5 % de daño hasta el final del combate (sin tope)',every:3,atk:0.035},
       arcilla:{r:'R',fam:'e',type:'fx',name:'Arcilla viva',desc:'Al perder vida, ganas un escudo del 50 % de lo que has perdido',pct:0.5},
       mango:{r:'R',fam:'s',type:'stat',name:'Mango',desc:'+15 % de vida máxima',hp:0.15},
       barricada:{r:'E',fam:'e',type:'pas',name:'Barricada',desc:'Tu escudo ya no se gasta con el tiempo y pasa al siguiente combate (hasta el 50 % de tu vida)',cap:0.5},
       segador:{r:'E',fam:'s',type:'pas',name:'Segador',desc:'Tus habilidades y efectos también curan con tu robo de vida (las espinas no), y +8 % de robo de vida',ls:0.08},
       lagarto:{r:'E',fam:'',type:'fx',name:'Cola de lagarto',desc:'Si caes, revives una vez con el 50 % de vida',hp:0.5},
-      halcon:{r:'E',fam:'f',type:'stat',name:'Ojo de halcón',desc:'+15 % de crítico y +50 % de daño crítico',cr:0.15,cd:0.5},
+      halcon:{r:'E',fam:'f',type:'stat',name:'Ojo de halcón',desc:'+18 % de crítico y +55 % de daño crítico',cr:0.18,cd:0.55},
       tormenta:{r:'L',fam:'f',type:'pas',name:'Tormenta de acero',desc:'Cada crítico lanza 2 golpes extra (100 %) a otros enemigos',n:2},
       coloso:{r:'L',fam:'e',type:'pas',name:'Coloso',desc:'Cada golpe suma el 25 % de tu escudo actual como daño',pct:0.25},
       corazon:{r:'L',fam:'s',type:'pas',name:'Corazón de sangre',desc:'Cada vez que pierdes vida, +1 % de daño hasta el final del combate (sin tope)',per:0.01},
@@ -240,7 +242,7 @@ const CFG = {
   // quedan a medio camino de 1000. leagues: insignia según los puntos ([desde, nombre, color])
   pvp:{free:3, pack:3, packCost:100, recent:5, maxT:90,
     rewards:[{to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},{to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
-    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:31, cls:{Guerrero:1.77,Mago:0.75,Arquero:1.12,Asesino:1.04,Clerigo:0.65}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:31, cls:{Guerrero:1.2,Mago:0.75,Arquero:1.12,Asesino:1.04,Clerigo:0.38}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
   streak:{per:10, pct:0.01, max:0.25},
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)

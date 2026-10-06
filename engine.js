@@ -279,6 +279,7 @@ function createGame(opts){
     const loseHp=x=>{ const l=Math.max(0,Math.min(B.hp-1,x)); B.hp-=l; onLoss(l); return l };
     if(h.regen){ const lit=P&&P.lightMult&&B.t<(B.lightUntil||0); heal(h.regen*(lit?P.lightMult:1)*h.hp*dt,true); }
     const kill=e=>{ if(e.dead) return; if(e.inf){ e.hp=e.max; return } if(B.kind==='tower'&&towerGuard(e)) return; e.dead=true; e.deadAt=B.t;
+      if(TW&&!e.inf){ const ne=tcN('ejecutor'); if(ne&&TC.ejecutor.killHeal) heal(TC.ejecutor.killHeal*ne*h.hp); }   // Ejecutor: al matar, te curas un poco
       if(TW&&tgH('explosion')&&!e.inf){ const x=e.max*TG.explosion.pct; for(const o of B.enemies){ if(o.dead||o===e||o.arrive>B.t+0.5) continue; zap(o,x,{burst:true}); } }   // Torre: Explosión
       if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
       if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return }
@@ -441,7 +442,8 @@ function createGame(opts){
   // DPS medido: en oleadas normales (sin jefe ni evento) se compara el daño real (golpes, quemaduras, aura…) con el de la
   // fórmula. La proporción (media móvil) se usa en el cálculo sin conexión y sustituye a la aproximación evoDps.
   function measureWave(){ if(!B||B.boss||B.event||!(B.mB>0)) return; const M=S.dpsM=S.dpsM||{d:0,b:0}, k=0.98;
-    M.d=M.d*k+B.mD; M.b=M.b*k+B.mB; }
+    M.d=M.d*k+B.mD; M.b=M.b*k+B.mB;
+    if(!hordeOn()&&!B.enemies.some(e=>e.wander)){ const tf=waveTimeF(S.fase,S.wave,heroStats()); if(tf>0){ const T=S.wtS=S.wtS||{r:0,f:0}; T.r=T.r*0.97+B.t; T.f=T.f*0.97+tf; S.wtM=Math.min(3,T.r/T.f); } } }   // lo que tardan de verdad / lo que dice la fórmula (sumando oleadas)
   const dpsK=h=>{ const M=S.dpsM; return M&&M.b>=CFG.offlineMinMeasure*heroStats().atk?Math.max(0.5,Math.min(3,M.d/M.b)):evoDps(h) };
   function waveClear(){ measureWave(); if(!B.event) addXp(xpAt(S.fase)*(CFG.econ.waveXp||0)*heroStats().xpMult);   // experiencia por oleada ganada
     if(S.wave<10){S.wave++;endWave(CFG.delays.wave);return} faseClear() }
@@ -1111,13 +1113,15 @@ function createGame(opts){
 
   /* ---------- sin conexión ---------- */
   // Ganancia por segundo farmeando una fase, calculada solo con fórmulas (la usará también el servidor).
+  // tiempo de una oleada según la fórmula (sin la pausa entre oleadas)
+  function waveTimeF(f,w,h){ const per=perWave(f), grp=groupAt(f), sp=eSpd(f), e=enemyStats(f,w,false);
+    // golpes para matar a cada uno (con el extra medido: quemaduras, área…) + lo que se pierde de media al rematar (0,6 golpes)
+    const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*dpsK(h), K=Math.max(1,e.hp/hit+0.6)/h.spd, W=CFG.enemy.walk/sp*(h.ranged?1:(CFG.enemy.dash||1));
+    // a distancia se dispara mientras se acercan; cuerpo a cuerpo cada enemigo sale cuando el anterior llega y hay que esperarlo (menos si salen varios a la vez)
+    return h.ranged?per*K:W+K+(per-1)*Math.max(W/grp,K) }
   function farmRate(f){
-    const h=computeStats(), per=perWave(f), grp=groupAt(f), sp=eSpd(f);
-    let t=0; for(let w=1;w<=10;w++){ const e=enemyStats(f,w,false);
-      // golpes para matar a cada uno (con el extra medido: quemaduras, área…) + lo que se pierde de media al rematar (0,6 golpes)
-      const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*dpsK(h), K=Math.max(1,e.hp/hit+0.6)/h.spd, W=CFG.enemy.walk/sp*(h.ranged?1:(CFG.enemy.dash||1));
-      // a distancia se dispara mientras se acercan; cuerpo a cuerpo cada enemigo sale cuando el anterior llega y hay que esperarlo (menos si salen varios a la vez)
-      t+=(h.ranged?per*K:W+K+(per-1)*Math.max(W/grp,K)) + CFG.delays.wave; }
+    const h=computeStats(), slow=Math.max(1,S.wtM||1);   // si las oleadas de verdad tardan más que la fórmula (wtM medido), el cálculo se ajusta: nunca da más que jugando
+    let t=0; for(let w=1;w<=10;w++) t+=waveTimeF(f,w,h)*slow+CFG.delays.wave;
     return {g:goldAt(f)*3*10*(hasCard()?1+CFG.cardGold:1)/t, x:xpAt(f)*(3+(CFG.econ.waveXp||0))*10*h.xpMult/t};
   }
   // Farmeo sin conexión: hasta offlineCapH horas (offlineVipH con VIP). Si se llenó el tope, queda un extra
