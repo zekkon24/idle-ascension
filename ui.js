@@ -250,7 +250,7 @@ function updateHUD(){
   { const tp=document.querySelector('.top'); if(tp) tp.hidden=!(tab==='up'&&!ev); }
   { const xr=$('#xpRow'); if(xr) xr.hidden=ev; }   // el nivel solo cuenta farmeando: en eventos, Torre y PvP no se ve   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
-  $('#faseTxt').classList.toggle('top',ev);
+  $('#faseTxt').classList.toggle('top',ev); $('#faseTxt').classList.toggle('t0',ev&&!!B&&B.kind==='tower');   // Torre: sin etiqueta arriba, el piso sube a su sitio
   { const ft=$('#foeTxt'), tw=ev&&B&&B.kind==='tower', TT=CFG.tower, txt=!tw?'':(B.mech?[['👑 '+MECH[B.mech],TT.bossMech.desc[B.mech]]]:B.node==='elite'?[...new Set(B.enemies.flatMap(e=>e.traits||[]))].map(k=>[TRAIT(k),TT.traits[k].desc]):[]).map(([t,d])=>`<span data-tip="${esc(t)}|${esc(d)}">${t}</span>`).join('');
     if(ft){ ft.hidden=!txt; if(txt) setHTML(ft,txt); } }
   { const ct=$('#curseTxt'), run=ev&&B&&B.kind==='tower'?G.towerState().run:null, cs=run?(run.curses||[]):[], C=CFG.tower.curses;   // maldiciones: abajo en el centro
@@ -261,7 +261,7 @@ function updateHUD(){
   avatar();   // nombre y, debajo, la clase
   setHTML($('#xpLbl'),`Nv ${S.lvl}${S.lvl>=G.lvlCap()?' máx.':''}`);
   $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
-  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'TORRE · PISO '+G.towerState().run.floor:B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
+  const sp=!ev&&G.surpriseState(), tag=$('#tag'), tt=ev?(B.kind==='pvp'?'PVP · '+String((B.enemies[0]||{}).name||'').toUpperCase():B.kind==='tower'?'':B.kind==='boss'?'JEFE SEMANAL':'MAZMORRA'):B&&B.boss?(B.elite?'JEFE DE ÉLITE':'JEFE'):sp?(sp.k==='horde'?`¡HORDA! ${Math.ceil(sp.left)} s · oro ×${CFG.surprise.horde.gold}`:`JEFE ERRANTE ${Math.ceil(sp.left)} s`):''; // (sin "Avanzando"/"Farmeando")
   tag.textContent=tt; tag.hidden=!tt; tag.className='tag'+(ev?' ev':B&&B.boss?' boss':sp?' boss':'');
   const fab=$('#upFab'); if(fab){ fab.hidden=tab!=='up'||ev; if(!fab.hidden) setHTML(fab,upStrip()); }
   // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
@@ -1313,7 +1313,7 @@ function draw(dt){
     ART.hero(g,x,gy,{cls:e.cls,color:rc.color,evo:rv.evo||0,path:rv.path,flip:true,walk:p<1&&anim?T:0,atk:pulse(fx.ratkAt,260),hit:fx.rflash>0?fx.rflash/0.12:0,t:anim?T+1.3:0}); fx.rflash=Math.max(0,(fx.rflash||0)-dt);
     const nm=n=>{ n=String(n||''); return n.length>10?n.slice(0,9)+'…':n };   // nombres cortos: no se pisan
     g.textAlign='center'; g.font='700 9px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#ece7da'; g.fillText(nm(e.name),x,gy-92); g.fillText(nm(S.name),hx,gy-92);
-    if(bars){ g.fillStyle='#0009'; g.fillRect(x-20,gy-84,40,5); g.fillStyle='#e2605a'; g.fillRect(x-20,gy-84,40*Math.max(0,e.hp/e.max),5); } }
+  }
   // monstruos: tipo según la zona (campaña: la fase; Mazmorra: el grupo; Torre: el piso) y color según el modo
   const modeHue=m=>[0,190,300][Math.min(2,m||0)];
   let q=0, idx=0;
@@ -1331,10 +1331,6 @@ function draw(dt){
     if(anim&&!e.dead) ART.status(g,x,gy,r,{frozen:e.frozen>B.t,burn:(e.burn&&e.burn.some(u=>u>B.t))||(e.dot>B.t&&e.dotKind==='fuego'),poison:e.poison&&e.poison.some(p=>p.until>B.t),mark:e.mark>B.t},T);
     if(bars&&!e.immortal&&!e.dead&&B.event&&!B.kind){ const by=gy-r*3.7-6; g.fillStyle='#0009'; g.fillRect(x-18,by,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,by,36*Math.max(0,e.hp/e.max),4); }   // Mazmorra (sin fin): barra de cada uno
   }
-  // una sola barra con la vida de todos los enemigos del combate (campaña, Torre, Jefe semanal): baja según el % que queda
-  if(bars&&!(B.event&&!B.kind)){ const fb=foeBar(B); if(fb){ const x0=contact+6, x1=W-14, by=Math.max(14,gy-118), w=x1-x0;
-    g.fillStyle='#000a'; g.fillRect(x0-1,by-1,w+2,9); g.fillStyle='#e2605a'; g.fillRect(x0,by,w*fb.p,7);
-    g.textAlign='right'; g.font='800 10px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#ece7da'; g.fillText(fb.inf?'∞':Math.ceil(fb.p*100)+' %',x1,by-3); } }
   if(anim) ART.parts(g,dt);
   if(anim){ const foes=B.kind==='pvp'?[]:B.enemies.filter(e=>!e.dead&&e.x!=null).map(e=>({x:e.x}));
     ART.drawFx(g,{W,hx,rx:B.kind==='pvp'?B.enemies[0].x:null,gy,foes,now:now/1000,
@@ -1345,8 +1341,20 @@ function draw(dt){
     g.globalAlpha=Math.min(1,f.life*2); g.fillStyle=f.hero?'#e2605a':(f.crit?'#e8b04a':'#ece7da');
     g.fillText(f.txt+(f.crit?'!':''),x,y); }
   g.globalAlpha=1; fx.flash=Math.max(0,fx.flash-dt);
-  if(bars){ g.fillStyle='#0009'; g.fillRect(hx-20,gy-84,40,5); g.fillStyle='#6cc47a'; g.fillRect(hx-20,gy-84,40*Math.max(0,G.B.hp/h.hp),5); }
+  // barras de vida: la tuya (con el escudo en azul) y la de los enemigos (todos juntos), iguales y a la misma altura
+  if(bars){ const bw=Math.min(150,W*0.36), by=Math.max(16,gy-122), hp=Math.max(0,G.B.hp/h.hp), sh=Math.min(1,G.heroShield()/h.hp);
+    hpBar(g,Math.max(8,hx-bw/2),by,bw,hp,['#7fdc8c','#3f9d55'],fmt(Math.ceil(Math.max(0,G.B.hp))),sh);
+    const fb=B.kind==='pvp'?{p:Math.max(0,B.enemies[0].hp/B.enemies[0].max)}:!(B.event&&!B.kind)?foeBar(B):null;
+    if(fb) hpBar(g,W-12-bw,by,bw,fb.p,['#f07a6e','#b8433a'],fb.inf?'∞':Math.ceil(fb.p*100)+' %',0); }
 }
+// barra de vida bonita: fondo oscuro con borde, relleno con degradado y brillo, escudo en azul encima y el texto dentro
+function hpBar(g,x,y,w,p,col,txt,sh){ const h=12, r=6, rr=(X,Y,W2,H2,R)=>{ g.beginPath(); g.moveTo(X+R,Y); g.arcTo(X+W2,Y,X+W2,Y+H2,R); g.arcTo(X+W2,Y+H2,X,Y+H2,R); g.arcTo(X,Y+H2,X,Y,R); g.arcTo(X,Y,X+W2,Y,R); g.closePath(); };
+  g.save(); rr(x-1.5,y-1.5,w+3,h+3,r+1.5); g.fillStyle='rgba(8,8,14,.78)'; g.fill(); g.strokeStyle='rgba(236,231,218,.35)'; g.lineWidth=1; g.stroke();
+  rr(x,y,w,h,r); g.clip();
+  if(p>0){ const gr=g.createLinearGradient(0,y,0,y+h); gr.addColorStop(0,col[0]); gr.addColorStop(1,col[1]); g.fillStyle=gr; g.fillRect(x,y,w*p,h); }
+  if(sh>0){ const gs=g.createLinearGradient(0,y,0,y+h); gs.addColorStop(0,'#8cc8ff'); gs.addColorStop(1,'#3d7fd6'); g.fillStyle=gs; g.globalAlpha=0.9; g.fillRect(x,y,w*sh,h*0.42); g.globalAlpha=1; }
+  g.fillStyle='rgba(255,255,255,.18)'; g.fillRect(x,y,w,h*0.35);
+  g.restore(); g.textAlign='center'; g.font='800 9px "Nunito Sans", system-ui, sans-serif'; g.fillStyle='#fff'; g.strokeStyle='rgba(0,0,0,.7)'; g.lineWidth=2.5; g.strokeText(txt,x+w/2,y+h-2.5); g.fillText(txt,x+w/2,y+h-2.5); }
 
 /* ---------- bucle ---------- */
 let last=performance.now(), hudT=0, drawT=0, offT=0;
