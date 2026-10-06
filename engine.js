@@ -1219,6 +1219,11 @@ function createGame(opts){
     get S(){return S}, get B(){return B}, CFG, R, CLASSES, on, save, load, reset, packed, newGame, setName, validName, cleanName, startWave, dayKey, rand,
     // fórmulas
     heroShield:()=>B?(BUF.shield||0)+(BUF.gshield||0):0,   // escudo del héroe ahora (para la barra azul)
+    // efectos activos sobre el héroe ahora (para los iconos bajo su barra): {k, left} en segundos (null = mientras dure)
+    heroBuffs:()=>{ if(!B) return []; const o=[]; for(const b of BUF.list) if(b.until>CT){ const k=b.reflect||b.df?'baluarte':b.atk1?'atk1':b.atk?'atk':b.spd?'spd':b.ls?'ls':b.taken?'taken':null; if(k&&!o.some(x=>x.k===k)) o.push({k,left:b.until-CT}); }
+      if(BUF.sang>0) o.push({k:'sang',n:BUF.sang}); if(CT<(BUF.combust||0)) o.push({k:'combust',left:BUF.combust-CT}); if(BUF.clone&&CT<BUF.clone.until) o.push({k:'clone',left:BUF.clone.until-CT});
+      if(BUF.aura&&CT<BUF.aura.until) o.push({k:'aura',left:BUF.aura.until-CT}); if(CT<(BUF.iceArmor||0)) o.push({k:'ice',left:BUF.iceArmor-CT}); if(BUF.cloud&&CT<BUF.cloud.until) o.push({k:'cloud',left:BUF.cloud.until-CT});
+      return o },
     hasCard, hasVip, equipped, weaponMain, heroStats, dpsK, computeStats, statsDirty, enemyStats, xpReq, upCost, upgradeGain, farmRate,
     // combate
     step, setAuto, goFase,
