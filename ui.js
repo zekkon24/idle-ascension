@@ -689,7 +689,7 @@ const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), 
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 /* ---------- Torre (roguelike) ---------- */
-const NODE={fight:['⚔️','Combate','Enemigos normales · +'+CFG.tower.souls.fight+' almas'],elite:['💀','Élite','Con rasgos · eliges 1 de 3 (hasta Épica)'],treasure:['🎁','Cofre','Sin luchar · 1 grimorio al azar'],rest:['🔥','Hoguera','Antes del jefe: te curas del todo'],boss:['👑','Jefe','Eliges 1 de 3 grimorios legendarios'],shop:['🛒','Tienda','Cartas y grimorios por almas'],event:['❓','Evento','Algo inesperado'],altar:['🕯️','Altar maldito','1 grimorio legendario y 1 maldición']};
+const NODE={fight:['⚔️','Combate','Enemigos normales · +'+CFG.tower.souls.fight+' almas'],elite:['💀','Élite','Con rasgos · eliges 1 de 3 (hasta Épica)'],treasure:['🎁','Cofre','Sin luchar · 1 grimorio al azar'],rest:['🔥','Hoguera','Antes del jefe: te curas del todo'],boss:['👑','Jefe','Eliges 1 de 3 grimorios legendarios'],shop:['🛒','Tienda','Cartas y grimorios por almas'],event:['❓','?','Evento, combate, tienda o cofre'],altar:['🕯️','Altar maldito','1 grimorio legendario y 1 maldición']};
 // mapa de la Torre (estilo Slay the Spire): abajo el piso de donde vienes (✓), encima el actual (los caminos que puedes
 // tomar brillan y llevan su nombre) y arriba los 3 siguientes. Cada tipo de casilla tiene su color.
 const NCOL={shop:'#2fb37a',fight:'#b0644f',elite:'#9b59d6',treasure:'#e8b04a',rest:'#f08a3c',event:'#4f95e6',altar:'#c0392b',boss:'#e5484d'};

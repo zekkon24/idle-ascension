@@ -134,13 +134,15 @@ const CFG = {
   // Base de los enemigos = (los de tu fase récord)^w × (los «a tu medida»)^(1−w): con w bajo, tus estadísticas pesan poco.
   // «A tu medida»: tardas tKill s en matar a uno normal y cada golpe suyo te quita hitPct de tu vida (en el piso 1).
   // Crecimiento por tramos: curve=[[desde piso, ×vida por piso, ×ataque por piso], …] (suave hasta el 50, duro hasta el 100, muy duro después).
-  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.008, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
+  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.0107, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
     elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:1.2,atk:1.6},
     // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
     // todo sube de golpe (×jump)
     hard:{eliteFrom:40, eliteEvery:10, eliteUp:1.25, jumpEvery:25, jump:1.15},
-    nodes:{fight:62,elite:16,treasure:5,event:7,shop:6,altar:4}, // peso de cada casilla en las rutas (la hoguera solo sale antes del jefe)
-    route:{mergeAt:5, mergeFrom:15, merge:0.08},   // desde el piso 15, las 2 rutas se juntan en un élite: el piso 5 de cada 10 y un 8 % de los demás
+    // Mapa (reglas de Slay the Spire con 2 rutas, por tramos de 10 pisos): % de cada casilla libre (combate el resto), 3 primeros pisos
+    // del tramo sin élite ni hoguera (calm), cofres en el piso treasureAt, élites obligatorios desde mergeFrom (piso mergeAt y un merge % de los demás)
+    // unk: la casilla «?» es combate / tienda / cofre con [base, +si no sale]; si no, evento (como en StS)
+    route:{pct:{fight:53,event:22,rest:12,elite:13,shop:5}, calm:3, treasureAt:6, mergeAt:5, mergeFrom:15, merge:0.08, unk:{m:[0.10,0.10],s:[0.03,0.03],t:[0.02,0.02]}},
     // Torre = roguelike puro: tu personaje NO cuenta (ni nivel, arma, mejoras, evolución ni grimorio). Todos empiezan con este
     // héroe único y solo se hacen fuertes con las mejoras de la partida. Los enemigos tampoco dependen de tu cuenta.
     hero:{hp:1000,atk:100,df:20,spd:1,cr:0.05,cd:0.5}, foeDf:10,
@@ -160,7 +162,7 @@ const CFG = {
     // jefes: la mecánica rota cada 10 pisos (invocador, enfurecido, escudo de fases)
     bossMech:{order:['invocador','enfurecido','fases'], desc:{invocador:'Cada 10 s llama a un esbirro',enfurecido:'Bajo el 50 % de vida pega el doble y va más rápido',fases:'Al 66 % y al 33 % de vida se vuelve invulnerable 3 s y se cura un 10 %',final:'Vida infinita: aguanta todo lo que puedas. Cada 10 s pega un 20 % más. Tu daño va al ranking'}, invocador:{every:10,n:1}, enfurecido:{below:0.5,atk:2,spd:1.5}, fases:{at:[0.66,0.33],inv:3,heal:0.1}},
     // eventos ?: id → coste/efecto
-    events:{fuente:{hp:0.2}, mercader:{cost:30}, trampa:{good:0.6,hp:0.25}, santuario:{cost:25,heal:0.4}},
+    events:{fuente:{hp:0.2}, mercader:{cost:30}, trampa:{good:0.6,hp:0.25}, santuario:{cost:25,heal:0.4}, altar:{}},   // los eventos de la casilla «?» (el altar maldito ahora sale aquí)
     // maldiciones (altar maldito: recibes 1 grimorio legendario al azar y una maldición al azar)
     curses:{vida:{name:'Enemigos más fuertes',desc:'Los enemigos tienen +20 % de vida',hp:0.2}, fragil:{name:'Frágil',desc:'−15 % de vida máxima',hp:-0.15},
       rasgo:{name:'Élites temibles',desc:'Los élites traen un rasgo más'}},
