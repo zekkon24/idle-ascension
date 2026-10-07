@@ -97,6 +97,9 @@ canvas{display:block;width:100%;height:300px}
 .s{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
 .row .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 .nav{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+/* brillo morado suave: halo en el combate y los paneles, y una línea de luz en el borde de la barra de abajo */
+.stage,.panel{box-shadow:0 0 12px rgba(150,80,255,.16)}
+.nav::before{content:"";position:absolute;left:0;right:0;top:-1px;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(190,140,255,.85) 50%,transparent);box-shadow:0 0 8px 1px rgba(150,80,255,.45)}
 .nav div{display:flex;gap:2px;max-width:520px;width:100%}
 .nav button{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;background:none;border:0;padding:10px 2px;border-radius:10px;font-size:12px;font-weight:800;color:var(--muted)}
 .nav button[aria-selected="true"]{background:var(--panel2);color:var(--gold)}
@@ -494,6 +497,28 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .itile .tl b{font-weight:900;margin-right:3px;padding-right:3px;border-right:1px solid #0c0d1255}
 .ctile .ic{width:38px;height:38px}.isart .ic{width:32px;height:32px}   /* cofres en casillas */
 .itile.empty{border:2px dashed var(--line);background:rgba(255,255,255,.02)}
+/* Mercader (sorpresa de la campaña): carta para comprar sobre el combate */
+.moffer{position:absolute;left:50%;transform:translateX(-50%);top:84px;z-index:6;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;border:1px solid #4f8fd9;background:rgba(18,20,28,.92);box-shadow:0 6px 18px #0009,0 0 14px #4f8fd955;white-space:nowrap;animation:lootin .3s both}
+.moffer .mo-ic{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;border:2px solid var(--rc);background:radial-gradient(circle,color-mix(in srgb,var(--rc) 30%,transparent),transparent 70%)}
+.moffer div{display:flex;flex-direction:column}.moffer small{font-size:9px;font-weight:900;letter-spacing:1.2px;color:#8fc0f5}.moffer b{font-size:14px}
+.moffer .btn{display:flex;align-items:center;gap:4px}.moffer .btn .ic{width:14px;height:14px}
+/* Mazmorra: modificador del día y progreso al siguiente cofre */
+.affx{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;border:1px solid #b066e866;background:linear-gradient(135deg,#b066e826,var(--panel2))}
+.affx .affi{font-size:28px;filter:drop-shadow(0 2px 6px #0008)}
+.affx div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.affx small{font-size:10px;font-weight:900;letter-spacing:1.2px;color:#d6b8ff}
+.affx b{font-size:16px}.affx span{font-size:12px;color:var(--muted);line-height:1.35}
+.affx.boss{border-color:#e2605a66;background:linear-gradient(135deg,#e2605a22,var(--panel2))}.affx.boss small{color:#f2a19b}
+.affx .weak{color:var(--ink)!important;margin-top:2px}.affx .weak b{font-size:12px;color:var(--gold)}
+.evms{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800}
+.evms .rbar{flex:1;height:8px;background:#0007}.evms .rbar i{background:linear-gradient(90deg,#c98d2e,var(--gold))}
+.evms .ic{width:16px;height:16px;vertical-align:-3px}
+/* Forja: ascender y pagar copias con material */
+.fgms{display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fgm{display:inline-flex;align-items:center;gap:3px;font-weight:800;font-variant-numeric:tabular-nums}
+.fgm .ic{width:16px;height:16px}
+.fgalt{width:100%;margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;font-size:12.5px}
+.fgcta.asc:not(:disabled){background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 75%,#fff),var(--rc));color:#12141c;box-shadow:0 0 18px color-mix(in srgb,var(--rc) 55%,transparent)}
 .itile svg{margin-top:-8px}
 .itile .td{position:absolute;left:0;right:0;bottom:3px;text-align:center;font-size:10px;font-weight:900;color:var(--ink);text-shadow:0 1px 2px #000,0 0 4px #000}
 .itile.other svg{opacity:.4;filter:grayscale(.7)}
@@ -575,7 +600,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610061647-1f31c3a';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610071525-986f4a3';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

@@ -48,6 +48,11 @@ const CFG = {
     lvlPct:0.25,maxLvl:5, // nv5 = ×2 del base: una nv5 supera un poco a la siguiente rareza nv1; nivel N -> N+1 cuesta N armas iguales + chatarra
     scrapLvl:{C:0,U:10,R:30,E:60,L:120,M:240},
     scrapDis:{C:2,U:5,R:15,E:40,L:100,M:250},
+    // Ascender: arma al nivel máximo + otra igual (misma clase y rareza) también al máximo → rareza siguiente al nivel 2 (sus stats se reescalan
+    // a la nueva rareza y gana los huecos que le falten). mats: [Esencia, Esencia de pesadilla, Esencia infernal]. M (Mítica) es el tope.
+    // copias que faltan para subir de nivel (Rara o mejor): cada una se puede pagar con material [Esencia, Esencia de pesadilla, Esencia infernal]
+    copyMat:{R:[0,8],E:[0,20],L:[0,50,4],M:[0,120,10]}, copyScrap:{R:400,E:2000,L:6000,M:15000}, // + chatarra por cada copia pagada con material
+    ascend:{lvl:2, C:{scrap:50}, U:{scrap:300,mats:[2]}, R:{scrap:4000,mats:[0,10]}, E:{scrap:12000,mats:[0,30]}, L:{scrap:30000,mats:[0,60,10]}},
     // efecto de las armas Legendarias (y Míticas) de cada clase. SIN BALANCEAR.
     legend:{
       Guerrero:{id:'tajo', name:'Tajo partido', mult:0.5, desc:'Sus golpes dan también al enemigo de detrás (50 %)'},
@@ -127,7 +132,17 @@ const CFG = {
     pass:{stars:250}},
   // Sorpresas en la campaña (cada every±jitter s de combate; no en jefes ni eventos): Horda (dur s, enemigos ×count, oro ×gold)
   // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
-  surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,hp:1.5,atk:1.5,reward:{silver:1}}},
+  surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,hp:1.5,atk:1.5,reward:{silver:1}},
+    // probabilidad de cada sorpresa (sobre el total)
+    weights:{horde:30,wander:30,mimic:15,thief:15,merchant:10},
+    mimic:{dur:12,hp:0.6,atk:0.8,reward:{wood:2,gold:10}},          // Mímico: si lo matas antes de 12 s, botín; si no, se escapa
+    thief:{dur:8,hp:0.35,steal:3,reward:{gold:5}},                   // Duende ladrón: no pega; si no lo matas en 8 s te roba el oro de 3 min; si lo matas suelta 5 min
+    merchant:{dur:30,items:[{r:'R',price:30},{r:'E',price:120}]}},    // Mercader: 30 s; arma de tu clase (por modo) por el oro de 'price' minutos de farmeo
+  // Eventos de fin de semana (sábado y domingo UTC, rotan cada fin de semana)
+  weekend:{days:[5,6], list:[
+    {id:'oro',name:'Fin de semana dorado',desc:'Oro ×2 en la campaña',gold:2},
+    {id:'cofres',name:'Lluvia de cofres',desc:'Jefes errantes 3 veces más a menudo (cofre de plata si los vences)',every:0.33,only:'wander'},
+    {id:'invasion',name:'Invasión',desc:'Hordas cada ~3 min (con oro ×2 como siempre)',every:0.3,only:'horde'}]},
   // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
   bossPhase:{at:0.5, rage:1.3, summon:[2,3]},
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
@@ -326,6 +341,17 @@ const CFG = {
     rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.84, // prob. de que un rival haga un 2º y un 3er intento; rivalBase ajusta la curva para que el jugador medio quede hacia el puesto 50
                           // rivales simulados: jugador medio de tus mismos días × dispersión
     curve:[[1,1],[2,10],[3,55],[5,141],[7,212],[10,261],[13,292],[15,310],[17,317],[20,333],[25,374],[30,404]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
+    // modificador del día (rota cada día, igual para todos): cambia las reglas con algo a cambio. score: cuánto mueve las muertes
+    // (medido con simulación); los rivales simulados se multiplican por lo mismo para que el ranking siga siendo justo
+    affixes:[
+      {id:'furia',name:'Furia',desc:'Los monstruos llegan y pegan más rápido, pero tienen −25 % de vida',walk:0.7,spd:1.3,hp:0.75,score:1.05},
+      {id:'enjambre',name:'Enjambre',desc:'+2 monstruos por grupo, cada uno con −40 % de vida y −30 % de daño',group:2,hp:0.6,atk:0.7,score:1.05},
+      {id:'certero',name:'Golpe certero',desc:'+20 % de crítico, pero los monstruos tienen +15 % de vida',cr:0.2,hp:1.15,score:0.96},
+      {id:'sinCura',name:'Sin curación',desc:'No te curas de ninguna forma, pero los monstruos pegan −35 %',noHeal:true,atk:0.65,score:1.04},
+      {id:'gigantes',name:'Gigantes',desc:'Grupos con 1 monstruo menos, con +40 % de vida y −20 % de daño',group:-1,hp:1.4,atk:0.8,score:0.74},
+      {id:'vampiros',name:'Sangre',desc:'+10 % de robo de vida, pero los monstruos pegan +30 %',ls:0.1,atk:1.3,score:1.01},
+    ],
+    milestones:{every:50,ch:'wood',big:200,bigCh:'silver'}, // premio personal: cada 50 muertes del día 1 cofre de madera; cada 200, además 1 de plata
     rewards:[                                     // premio según tu puesto del día (se cobra al día siguiente)
       {to:1,em:5,ch:'mode',n:1},{to:3,em:4,ch:'mode',n:1},{to:10,em:3,ch:'silver',n:2},
       {to:25,em:2,ch:'silver',n:1},{to:50,em:1,ch:'wood',n:2},{to:100,em:1,ch:'wood',n:1}],
@@ -333,6 +359,15 @@ const CFG = {
   wboss:{ // Jefe semanal: 1 min contra un jefe inmortal; ranking semanal por daño (se suman los intentos); 1 entrada gratis a la semana, las demás con Ticket Jefe
     dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
     ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
+    // jefe de la semana (rota cada semana, igual para todos): cada uno con su mecánica y contra qué es débil.
+    // score: cuánto mueve el daño (medido con simulación); los rivales simulados se multiplican por lo mismo
+    bosses:[
+      {id:'enjambre',name:'Señor del Enjambre',desc:'Cada 8 s invoca 2 esbirros que también pegan (su daño también cuenta)',weak:'Guerrero (golpes en área)',summon:{every:8,n:2,hp:0.6,atk:0.4},score:0.99},
+      {id:'coloso',name:'Coloso de Hierro',desc:'Recibe −60 % de daño, pero cada 15 s se le rompe la armadura 5 s y recibe el doble',weak:'golpes fuertes cuando se le rompe la armadura',armor:{block:0.4,hit:2,every:15,open:5},score:1},
+      {id:'bestia',name:'Bestia Furiosa',desc:'Pega cada vez más rápido (hasta ×2,5 al final)',weak:'Guerrero y Clérigo (aguante)',frenzy:2.5,score:0.88},
+      {id:'liche',name:'Liche Maldito',desc:'Le haces +15 % de críticos y +100 % de daño crítico',weak:'Asesino y Arquero (críticos)',cr:0.15,cd:1,score:1.28},
+      {id:'dragon',name:'Dragón de Ceniza',desc:'Te quema: pierdes el 2 % de tu vida por segundo',weak:'Guerrero y Clérigo (vida y curación)',burn:0.02,score:0.84},
+    ],
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
     curve:[[1,2200],[2,6000],[3,13600],[5,32400],[7,70300],[10,127200],[13,191000],[15,288500],[17,458500],[20,958600],[25,1959000],[30,3131500],[35,4433500],[40,5820900],[45,7041000]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
@@ -359,7 +394,7 @@ const CFG = {
           // locked: modo bloqueado ("Próximamente"): no se puede entrar aunque se cumplan los requisitos
           // enemigos: empiezan en los de la fase 150 del modo anterior × hpStart/atkStart y crecen hpG/atkG por fase · off: oro, experiencia y cofres continúan desde la fase off · gold: multiplicador de oro · mat: material propio (uso por definir)
     {name:'Normal',off:0,gold:1,mat:'Esencia'},
-    {name:'Pesadilla',locked:true,off:149,gold:1.5,mat:'Esencia de pesadilla',hpStart:2.2,atkStart:1.6,hpG:1.019,atkG:1.013,upPer:0.5,
+    {name:'Pesadilla',off:149,gold:1.5,mat:'Esencia de pesadilla',hpStart:2.2,atkStart:1.6,hpG:1.022,atkG:1.015,upPer:0.5, // abierta: simulado, se entra el día 12-19 y se acaba el 23-43
       walls:{50:{hp:2.5,atk:1.95},100:{hp:2.3,atk:1.8},150:{hp:2.1,atk:1.7}}},
     {name:'Infierno',locked:true,off:298,gold:2.25,mat:'Esencia infernal',hpStart:2.2,atkStart:1.6,hpG:1.019,atkG:1.013,upPer:0.5,
       walls:{50:{hp:2.5,atk:1.95},100:{hp:2.3,atk:1.8},150:{hp:2.1,atk:1.7}}},
