@@ -683,26 +683,27 @@ function createGame(opts){
   const TYPEN={stat:'Estadística',skill:'Habilidad',fx:'Efecto',pas:'Pasiva'}, FAMN={f:'Fuerza y Crítico',e:'Escudo y Espinas',s:'Sangre'};
   function boonInfo(b){ const d=boonDef(b); if(!d) return {kind:'',name:'?',desc:'',r:'C'};
     return {kind:(b.t==='g'?'Grimorio':'Carta')+' · '+TYPEN[d.type]+' · '+RNAME[d.r],name:d.name,desc:d.desc,r:d.r,fam:d.fam,famName:FAMN[d.fam]||'',type:d.type,grim:b.t==='g'} }
-  // Mapa en 2 rutas (izquierda y derecha) con las reglas de Slay the Spire, por tramos de 10 pisos (como un acto):
-  //  · fijos: piso 1 del tramo, combates; piso 6, cofres; piso 9, hoguera (para las dos rutas); piso 10, jefe
+  // Mapa en 3 caminos (route.lanes) con las reglas de Slay the Spire, por tramos de 10 pisos (como un acto):
+  //  · cada camino sigue recto; en los pisos de cruce (route.fork: 3, 6 y 9 del tramo) se puede pasar al camino de al lado
+  //  · fijos: piso 1 del tramo, combates; piso 6, cofres; piso 9, hoguera (para todos); piso 10, jefe
   //  · el resto sale de una «bolsa» con los % de StS (route.pct: combate 53, ? 22, hoguera 12, élite 8 ×1,6, tienda 5)
   //  · sin élites ni hogueras en los 3 primeros pisos del tramo, ni hoguera en el piso 8 (justo antes de la del jefe)
   //  · en la misma ruta no se repiten seguidos élite, tienda, hoguera ni cofre; tras un cruce, las dos rutas son distintas
   //  · desde el piso 15, a veces las rutas se juntan en un élite obligatorio y justo antes hay tienda en una y hoguera en la otra
   const towerMerge=f=>{ const T=CFG.tower, R=T.route, run=S.tower&&S.tower.run, sd=(run&&run.seed)||0, m=f%T.boss.every; if(f<R.mergeFrom||m===0||m===T.boss.every-1||m===R.treasureAt||m===1) return false;
     if(m===R.mergeAt) return true; const x=Math.sin(f*12.9898+sd*78.233)*43758.5453; return x-Math.floor(x)<R.merge };   // fijo para cada partida (se puede ver por adelantado)
-  function towerTramo(t){ const T=CFG.tower, R=T.route, E=T.boss.every, rows=[];
+  function towerTramo(t){ const T=CFG.tower, R=T.route, E=T.boss.every, rows=[], N=R.lanes||2, shuf=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a };
     for(let m=1;m<=E;m++){ const f=t*E+m;
-      rows.push(m===E?['boss']:m===E-1?['rest']:towerMerge(f)?['elite']:towerMerge(f+1)?(rand()<0.5?['shop','rest']:['rest','shop']):m===1?['fight','fight']:m===R.treasureAt?['treasure','treasure']:null); }
+      rows.push(m===E?['boss']:m===E-1?['rest']:towerMerge(f)?['elite']:towerMerge(f+1)?shuf(['shop','rest','event'].slice(0,N)):m===1?Array(N).fill('fight'):m===R.treasureAt?Array(N).fill('treasure'):null); }
     // bolsa con los % de StS para las casillas libres
-    const free=rows.reduce((a,r)=>a+(r?0:2),0), bag=[], P=R.pct;
+    const free=rows.reduce((a,r)=>a+(r?0:N),0), bag=[], P=R.pct;
     for(const k in P){ if(k==='fight') continue; const n=Math.round(free*P[k]/100); for(let i=0;i<n;i++) bag.push(k); }
     while(bag.length<free) bag.push('fight');
     for(let i=bag.length-1;i>0;i--){ const j=Math.floor(rand()*(i+1)); [bag[i],bag[j]]=[bag[j],bag[i]]; }
     const NOREP=new Set(['elite','shop','rest','treasure']);
     for(let m=1;m<=E;m++){ if(rows[m-1]) continue; const prev=m>1?rows[m-2]:null, out=[];
-      for(const side of [0,1]){ const par=prev?(prev.length===1?prev[0]:prev[side]):null;
-        const ok=k=>!((k==='elite'||k==='rest')&&m<=R.calm)&&!(k==='rest'&&m===E-2)&&!(NOREP.has(k)&&k===par)&&!(side===1&&prev&&prev.length===1&&k===out[0]);
+      for(let side=0;side<N;side++){ const par=prev?(prev.length===1?prev[0]:prev[side]):null;
+        const ok=k=>!((k==='elite'||k==='rest')&&m<=R.calm)&&!(k==='rest'&&m===E-2)&&!(NOREP.has(k)&&k===par)&&!(prev&&prev.length===1&&out.includes(k));
         const i=bag.findIndex(ok); out.push(i>=0?bag.splice(i,1)[0]:'fight'); }
       rows[m-1]=out; }
     return rows }
@@ -714,7 +715,10 @@ function createGame(opts){
     return T }
   // run.hp: fracción de vida que te queda en la partida (no se cura entre combates; al perder una vida vuelves con la vida llena)
   // mapa estilo Slay the Spire: cada piso tiene caminos en 3 columnas (0-2); desde una columna solo puedes ir a la misma o a las vecinas
-  function towerRow(f){ const n=towerNodes(f), c=n.length>=2?[0,2]:[1]; return {n,c} }   // 2 rutas: columna 0 (izquierda) y 2 (derecha); el cruce, en el centro
+  function towerRow(f){ const n=towerNodes(f), c=n.length>=3?[0,1,2]:n.length===2?[0,2]:[1]; return {n,c} }   // 3 caminos en las columnas 0-2 (partidas antiguas: 2, en la 0 y la 2); una casilla sola, en el centro
+  // caminos de la fila A (piso f) a la B (piso f+1): con 3 caminos, recto salvo en los pisos de cruce (vecinos); si no, vecinos (y si no hay, todos)
+  function towerLinks(A,B,f){ const fk=CFG.tower.route.fork||1, E=CFG.tower.boss.every, fork=!(A.c.length===3&&B.c.length===3)||(f%E)%fk===0, L=[];
+    A.c.forEach((ca,i)=>{ let t=B.c.map((cb,j)=>(fork?Math.abs(ca-cb)<=1:ca===cb)?j:-1).filter(j=>j>=0); if(!t.length) t=B.c.map((_,j)=>j); t.forEach(j=>L.push([i,j])) }); return L }
   function towerStart(){ if(inEvent()||!modeOpen('tower')) return false; const T=towerState(), L=CFG.tower.look||1, map=[];
     T.run={seed:Math.floor(rand()*1e6),floor:1,lives:CFG.tower.lives,hp:1,boons:[],map,from:null,pick:null,souls:0,curses:[],ev:null,unk:null}; for(let i=0;i<L;i++) map.push(towerRow(1+i));
     T.run.nodes=map[0].n; save(); emit('change'); return true }
@@ -722,9 +726,9 @@ function createGame(opts){
   function towerMap(){ const run=S.tower&&S.tower.run; if(!run) return []; if(!run.map||!run.map[0]||!run.map[0].n) run.map=[{n:run.nodes,c:run.nodes.map((_,i)=>run.nodes.length===1?1:i)}];
     if(run.map[0].n!==run.nodes&&JSON.stringify(run.map[0].n)===JSON.stringify(run.nodes)) run.nodes=run.map[0].n;   // al cargar la partida (JSON) se vuelve a enlazar
     return run.map }
-  // ¿se puede ir al camino i del piso actual? (vecino de la columna de la que vienes; si ninguno lo es, todos)
+  // ¿se puede ir al camino i del piso actual? (unido a la casilla de la que vienes, según towerLinks)
   function towerCanGo(i){ const run=S.tower&&S.tower.run; if(!run) return false; const m=towerMap()[0]; if(!m||m.n!==run.nodes||run.from==null) return true;
-    const ok=m.c.map(c=>Math.abs(c-run.from)<=1); return ok.some(x=>x)?!!ok[i]:true }
+    const p=(run.trail||[]).find(t=>t.f===run.floor-1); if(!p) return true; return towerLinks(p.row,m,p.f).some(([a,b])=>a===p.i&&b===i) }
   function towerAbandon(){ const T=towerState(); if(inEvent()) return false; T.run=null; save(); emit('change'); return true }
   // elegir camino: combate (normal/élite/jefe), cofre (1 grimorio al azar), tienda, evento, altar u hoguera
   function towerGo(i){ const T=towerState(), run=T.run; if(!run||run.pick||run.shop||run.ev||inEvent()||run.lives<=0) return false; const k=run.nodes[i]; if(!k||!towerCanGo(i)) return false;
@@ -1354,7 +1358,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerLinks, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

@@ -765,7 +765,7 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
   // filas de abajo arriba: el camino ya recorrido, el piso actual y los siguientes
   const rows=trail.map(t=>({f:t.f,n:t.row.n,c:t.row.c,pick:t.i,past:true})).concat(map.map((m,k)=>({f:run.floor+k,n:m.n,c:m.c,now:k===0})));
   const W=320, rowH=80, H=rows.length*rowH+24, X=c=>[62,160,258][c], Y=r=>H-40-r*rowH, near=(a,b)=>Math.abs(a-b)<=1;
-  const links=(A,B)=>{ const L=[]; A.c.forEach((ca,i)=>{ let t=B.c.map((cb,j)=>near(ca,cb)?j:-1).filter(j=>j>=0); if(!t.length) t=B.c.map((_,j)=>j); t.forEach(j=>L.push([i,j])) }); return L };
+  const links=(A,B)=>G.towerLinks(A,B,A.f);   // recto, o al camino de al lado en los pisos de cruce
   let lines='', nodes=''; const nowR=rows.findIndex(r=>r.now);
   for(let r=0;r<rows.length-1;r++){ const A=rows[r], Bn=rows[r+1];
     for(const [a,b] of links(A,Bn)){

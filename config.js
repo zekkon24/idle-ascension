@@ -153,7 +153,8 @@ const CFG = {
     // Mapa (reglas de Slay the Spire con 2 rutas, por tramos de 10 pisos): % de cada casilla libre (combate el resto), 3 primeros pisos
     // del tramo sin élite ni hoguera (calm), cofres en el piso treasureAt, élites obligatorios desde mergeFrom (piso mergeAt y un merge % de los demás)
     // unk: la casilla «?» es combate / tienda / cofre con [base, +si no sale]; si no, evento (como en StS)
-    route:{pct:{fight:53,event:22,rest:12,elite:13,shop:5}, calm:3, treasureAt:6, mergeAt:5, mergeFrom:15, merge:0.08, unk:{m:[0.10,0.10],s:[0.03,0.03],t:[0.02,0.02]}},
+    route:{lanes:3, fork:3, // 3 caminos; cada 3 pisos del tramo (3, 6 y 9) hay cruce: puedes pasar al camino de al lado
+      pct:{fight:53,event:22,rest:12,elite:13,shop:5}, calm:3, treasureAt:6, mergeAt:5, mergeFrom:15, merge:0.08, unk:{m:[0.10,0.10],s:[0.03,0.03],t:[0.02,0.02]}},
     // Torre = roguelike puro: tu personaje NO cuenta (ni nivel, arma, mejoras, evolución ni grimorio). Todos empiezan con este
     // héroe único y solo se hacen fuertes con las mejoras de la partida. Los enemigos tampoco dependen de tu cuenta.
     hero:{hp:1000,atk:100,df:20,spd:1,cr:0.05,cd:0.5}, foeDf:10,
