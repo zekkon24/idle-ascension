@@ -1453,9 +1453,8 @@ function vsHud(B,h){ const el=$('#vsHud'); if(!el) return; el.hidden=!B; if(!B) 
   // iconos: lo tuyo (efectos de habilidades y maldiciones de la Torre) y lo de los enemigos (rasgos, mecánica del jefe, fases)
   const run=B.kind==='tower'?G.towerState().run:null, TT=CFG.tower;
   const lives=run?Array(Math.max(0,run.lives||0)).fill(['life']):[];   // Torre: tus vidas, como corazones
-  const WK=!B.event&&G.weekendNow(); if(WK&&!ST_ICO['wk_'+WK.id]) ST_ICO['wk_'+WK.id]=[{oro:'💰',cofres:'🎁',invasion:'⚔️'}[WK.id]||'🎉','Fin de semana: '+WK.name,WK.desc];
   const AF=B.event&&!B.kind&&B.aff; if(AF&&!ST_ICO['a_'+AF.id]) ST_ICO['a_'+AF.id]=[AFFICO[AF.id]||'✦','Modificador del día: '+AF.name,AF.desc];
-  const mine=(AF?[['a_'+AF.id]]:WK?[['wk_'+WK.id]]:[]).concat(lives,G.heroBuffs().map(x=>[x.k,x.left!=null?` · ${Math.ceil(x.left)} s`:x.n?` · quedan ${x.n}`:'']),run?(run.curses||[]).map(c=>['c_'+c]):[]);
+  const mine=(AF?[['a_'+AF.id]]:[]).concat(lives,G.heroBuffs().map(x=>[x.k,x.left!=null?` · ${Math.ceil(x.left)} s`:x.n?` · quedan ${x.n}`:'']),run?(run.curses||[]).map(c=>['c_'+c]):[]);
   const foes=[]; if(run){ if(B.mech) foes.push(['m_'+B.mech]); if(B.node==='elite') for(const t of new Set(B.enemies.flatMap(e=>e.traits||[]))) foes.push(['t_'+t]); }
   for(const e of B.enemies) if(!e.dead&&e.phase&&!foes.some(f=>f[0]==='p_'+e.phase)) foes.push(['p_'+e.phase]);
   if(B.kind==='boss'&&B.wb){ const J=B.wb, k='w_'+J.id; if(!ST_ICO[k]) ST_ICO[k]=[WBICO[J.id]||'👑',J.name,J.desc+' · Débil contra: '+J.weak,1]; foes.push([k,J.armor&&B.enemies[0]&&B.enemies[0].broken?' · ¡armadura rota!':'']); }

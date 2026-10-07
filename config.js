@@ -137,11 +137,6 @@ const CFG = {
     // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
     weights:{horde:35,wander:35,mimic:30},
     mimic:{dur:12,hp:0.6,atk:0.8,reward:{wood:2,gold:10}}},          // Mímico: si lo matas antes de 12 s, botín; si no, se escapa
-  // Eventos de fin de semana (sábado y domingo UTC, rotan cada fin de semana)
-  weekend:{days:[5,6], list:[
-    {id:'oro',name:'Fin de semana dorado',desc:'Oro ×2 en la campaña',gold:2},
-    {id:'cofres',name:'Lluvia de cofres',desc:'Jefes errantes 3 veces más a menudo (cofre de plata si los vences)',every:0.33,only:'wander'},
-    {id:'invasion',name:'Invasión',desc:'Hordas cada ~3 min (con oro ×2 como siempre)',every:0.3,only:'horde'}]},
   // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
   bossPhase:{at:0.5, rage:1.3, summon:[2,3]},
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
