@@ -388,8 +388,9 @@ const CFG = {
   // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first' (+'elite' en ★★★
   // de los jefes de élite 50/100/150); repetir: 'repeat' (oro de X min y chatarra del jefe ×N)
   hall:{dur:60, tries:3, stars:[{hp:1,atk:1},{hp:3,atk:1.6},{hp:8,atk:2.5}],
-    first:[{wood:2},{silver:2,ev:2},{silver:3,ev:3,ess:1}], elite:{mode:1},
-    repeat:[{gold:10,scrap:1},{gold:20,scrap:2},{gold:30,scrap:3}]},
+    every:50, // solo los jefes de élite (fases 50, 100 y 150 de cada modo); entran al vencerlos en la campaña
+    first:[{silver:2,ev:2},{silver:3,ev:3,ess:1},{mode:1,ev:5,ess:2}],
+    repeat:[{gold:30,scrap:2},{gold:45,scrap:3},{gold:60,scrap:4}]},
   // Desbloqueo de modos: fase récord (en Normal; desde Pesadilla, todo abierto) o días de juego (desde que empezó la partida).
   // POR AHORA TODO ABIERTO (unlock vacío). Antes de lanzar: unlock = unlockPlan.
   unlock:{}, unlockPlan:{lab:{fase:10}, pvp:{fase:50}, tower:{fase:50}, boss:{day:7}},

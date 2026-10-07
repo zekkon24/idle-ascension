@@ -376,7 +376,7 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
   if(hallMode==null) hallMode=Math.min(S.mode,CFG.modes.length-1);
   const M=CFG.modes[hallMode], mine=L.filter(b=>b.m===hallMode), cur=hallMode===S.mode, next=hallMode===S.mode+1;
   const chips=`<div class="fchips">${CFG.modes.map((x,m)=>`<button data-act="hallMode" data-v="${m}" aria-pressed="${m===hallMode}" ${x.locked?'disabled':''}>${x.locked?'🔒 ':''}${x.name}</button>`).join('')}</div>`;
-  const status=M.locked?'<p class="hint">Próximamente.</p>':cur?`<p class="hint">Fase actual ${S.best}/${CFG.phaseCap} · cada jefe que vences entra aquí</p>`:hallMode<S.mode?'<p class="hint">Completado</p>'
+  const status=M.locked?'<p class="hint">Próximamente.</p>':cur?`<p class="hint">Fase actual ${S.best}/${CFG.phaseCap} · ${mine.some(b=>b.beaten)?'cada jefe de élite que vences entra aquí':`vence al jefe de élite de la fase ${H.every} para abrir la sala`}</p>`:hallMode<S.mode?'<p class="hint">Completado</p>'
     :next&&G.canAdvanceMode()?`<button class="btn gold" data-act="modeGo">Ir a ${M.name}</button>`:`<p class="hint">Vence la fase ${CFG.phaseCap} de ${CFG.modes[hallMode-1].name} y evoluciona para entrar.</p>`;
   const tiles=mine.map(b=>`<button class="htile${b.beaten?'':' lock'}${b.elite?' elite':''}${hallSel===b.id?' sel':''}" data-act="hallSel" data-id="${b.id}" ${b.beaten?'':'disabled'}>
       ${b.beaten?`<img src="${bossPic(b.m,b.f)}" alt="">`:'<span class="hlk">🔒</span>'}<span class="hf">${b.elite?'👑 ':''}${b.f}</span><span class="hst">${starsHTML(b.stars)}</span></button>`).join('');
@@ -387,7 +387,7 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
       <div class="hsbs">${sb}</div>
       <div class="loot"><div><span>${first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(rw)}${rw.scrap?` ${ICON.scrap}${fmt(rw.scrap)}`:''}</b></div></div>
       <button class="btn gold" data-act="hallGo" data-id="${sel.id}" data-v="${st}" ${left&&!G.inEvent()?'':'disabled'}>Luchar ${'★'.repeat(st)} · ${left}/${H.tries} intentos</button></div>`; }
-  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
+  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes de élite</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
     ${chips}${status}${sheet}<div class="hgrid">${tiles}</div>
     <p class="hint">${H.dur} s para vencerlo · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
 function modeRows(){

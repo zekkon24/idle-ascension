@@ -889,8 +889,8 @@ function createGame(opts){
   function hallState(){ const d=dayKey(); S.hall=S.hall&&S.hall.clr?S.hall:{d,used:0,clr:{}}; if(S.hall.d!==d){ S.hall.d=d; S.hall.used=0; } return S.hall }
   const hallTriesLeft=()=>Math.max(0,CFG.hall.tries-hallState().used);
   function hallBosses(){ const out=[], C=hallState().clr; for(let m=0;m<MODES().length;m++){ if(MODES()[m].locked) break;
-      for(let f=10;f<=CAP();f+=10){ const beaten=S.mode>m||(S.mode===m&&S.best>=f); out.push({id:hallId(m,f),m,f,elite:f%50===0,beaten,stars:C[hallId(m,f)]||0}) } } return out }
-  function hallReward(b,star,first){ const H=CFG.hall; if(first){ const r={...H.first[star-1]}; if(star===3&&b.elite) for(const k in H.elite) r[k]=(r[k]||0)+H.elite[k]; return r }
+      for(let f=CFG.hall.every;f<=CAP();f+=CFG.hall.every){ const beaten=S.mode>m||(S.mode===m&&S.best>=f); out.push({id:hallId(m,f),m,f,elite:f%50===0,beaten,stars:C[hallId(m,f)]||0}) } } return out }
+  function hallReward(b,star,first){ const H=CFG.hall; if(first) return {...H.first[star-1]};
     const R=H.repeat[star-1], c=CFG.econ.bossScrap; return {gold:R.gold,scrap:Math.round((c.base+Math.floor(b.f/10)*c.per10)*(b.m+1)*R.scrap)} }
   function hallStart(id,star){ const b=hallBosses().find(x=>x.id===id); if(!S||inEvent()||!b||!b.beaten||!(star>=1&&star<=3)||star>b.stars+1||!hallTriesLeft()) return false;
     hallState().used++; const h=heroStats(), M=CFG.hall.stars[star-1], e=enemyStats(b.f,10,true,b.m), W=CFG.event.walk;
