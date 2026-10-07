@@ -853,13 +853,13 @@ function tabEv(){
       <button class="mcard2 wide" style="${bg(zoneNow(),360,150)}" data-act="modview" data-v="campana">
         <span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
         <span class="mp"><small>Progreso</small><b>Fase ${S.best} / ${cap}</b></span><span class="mbar"><i style="width:${S.best/cap*100}%"></i></span></button>
-      ${!G.modeOpen('lab')&&!G.modeOpen('boss')?`<button class="mcard2 locked" style="${bg(4,180,170)}" data-act="lockInfo" data-k="lab">${lockBadge('lab')}<b class="mt">Eventos</b><span class="ms">Mazmorra diaria<br>Jefe semanal</span><span class="mf">${reqTxt('lab')}</span></button>`:`<button class="mcard2" style="${bg(4,180,170)}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
-        <b class="mt">Eventos</b><span class="ms">Mazmorra diaria<br>Jefe semanal</span><span class="mf">${G.modeOpen('boss')?`⏱ Jefe: ${dhm(G.weekLeft())}`:'Jefe: '+reqTxt('boss').split(' · ')[0]}</span></button>`}
+      ${!G.modeOpen('lab')&&!G.modeOpen('boss')?`<button class="mcard2 locked" style="${bg(4,180,170)}" data-act="lockInfo" data-k="lab">${lockBadge('lab')}<b class="mt">Eventos</b><span class="mf">${reqTxt('lab')}</span></button>`:`<button class="mcard2" style="${bg(4,180,170)}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
+        <b class="mt">Eventos</b><span class="mf">${G.modeOpen('boss')?`⏱ Jefe: ${dhm(G.weekLeft())}`:'Jefe: '+reqTxt('boss').split(' · ')[0]}</span></button>`}
       ${G.modeOpen('pvp')?`<button class="mcard2" style="${bg('arena',180,170)}" data-act="modview" data-v="pvp"><span class="mbadge g">${G.pvpFreeLeft()} GRATIS</span>
-        <b class="mt">PvP</b><span class="ms">Duelos por puntos</span><span class="mf">🛡 ${fmt(pv.rating)} puntos</span></button>`
-        :`<button class="mcard2 locked" style="${bg('arena',180,170)}" data-act="lockInfo" data-k="pvp">${lockBadge('pvp')}<b class="mt">PvP</b><span class="ms">Duelos por puntos</span><span class="mf">${reqTxt('pvp')}</span></button>`}
+        <b class="mt">PvP</b><span class="mf">🛡 ${fmt(pv.rating)} puntos</span></button>`
+        :`<button class="mcard2 locked" style="${bg('arena',180,170)}" data-act="lockInfo" data-k="pvp">${lockBadge('pvp')}<b class="mt">PvP</b><span class="mf">${reqTxt('pvp')}</span></button>`}
       ${G.modeOpen('tower')?`<button class="mcard2 wide low" style="${bg(3,360,110)}" data-act="modview" data-v="torre"><span class="mico">${GIC(GI.torre,40)}</span>
-        <span><b class="mt">Torre</b><span class="ms">${tr?`Piso ${tr.floor} · ♥ ${tr.lives}`:`Roguelike · récord piso ${tw.best}`}</span></span></button>`
+        <span><b class="mt">Torre</b><span class="mf">${tr?`Piso ${tr.floor} · ♥ ${tr.lives}`:`Récord: piso ${tw.best}`}</span></span></button>`
         :`<button class="mcard2 wide low locked" style="${bg(3,360,110)}" data-act="lockInfo" data-k="tower"><span class="mico">${GIC(GI.torre,40)}</span><span><b class="mt">Torre</b><span class="ms">${reqTxt('tower')}</span></span>${lockBadge('tower')}</button>`}
     </div>` }
   if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div></section>`;

@@ -543,6 +543,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .mcard2 .mt{font-size:24px;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 8px #000}
 .mcard2 .ms{font-size:12px;color:#cfcad0;display:block;line-height:1.35}
 .mcard2 .mf{font-size:12px;font-weight:800;color:var(--gold)}
+.mcard2.low .mf{display:block;margin-top:2px}
 .mcard2 .mm{display:flex;gap:10px;font-size:10px;font-weight:800;letter-spacing:1px;color:var(--muted)}.mcard2 .mm .on{color:var(--good)}
 .mcard2 .mp{position:absolute;right:12px;top:12px;text-align:right;display:flex;flex-direction:column}.mcard2 .mp small{font-size:11px;color:var(--muted)}.mcard2 .mp b{font-size:16px}
 .mcard2 .mbar{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(0,0,0,.5)}.mcard2 .mbar i{display:block;height:100%;background:var(--gold)}
@@ -605,7 +606,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610071552-dd2959f';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610071557-2fbffae';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
