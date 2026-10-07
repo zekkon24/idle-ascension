@@ -205,14 +205,14 @@ function createGame(opts){
   // estado para la pantalla: nombre, recarga y si está lista. Las bloqueadas dicen cómo se consiguen.
   function skills(){ return SLOTS_().map(k=>{ const d=skillDef(k); return d?{slot:k,id:d.id,name:d.name,desc:d.desc,cd:d.cd,left:Math.max(0,(CD[k]||0)-CT),ready:CT>=(CD[k]||0)}
     :{slot:k,locked:true,name:S.evo>=1?'Por decidir':'Evolución',desc:S.evo>=1?'Habilidad de este camino: aún por decidir':'Se desbloquea al evolucionar'} }) }
-  function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'};
+  function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'}; if(B.kind==='pvp') return {ok:false,why:'auto'};
     if(CT<(CD[k]||0)) return {ok:false,why:'cd',left:CD[k]-CT};
     if(CT<GCD) return {ok:false,why:'gap',left:GCD-CT};   // aún no ha pasado la espera desde la anterior
     GCD=CT+(CFG.skillGap||0); CD[k]=CT+d.cd; (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
   // en los eventos se usan a mano, salvo que el jugador ponga «Auto» (opt.evAuto); en la campaña, solas (opt.autoSkills)
-  // en PvP, solas salvo que el jugador ponga «Manual» (opt.pvpAuto=false); el fantasma siempre en automático
+  // en PvP, siempre solas (los dos)
   // en la Torre, solas salvo que el jugador ponga «Manual» (opt.towerAuto=false)
-  const autoOpt=()=>B&&B.kind==='pvp'?!(S.opt&&S.opt.pvpAuto===false):B&&B.kind==='tower'?!(S.opt&&S.opt.towerAuto===false):B&&B.event?!!(S.opt&&S.opt.evAuto):!(S.opt&&S.opt.autoSkills===false);
+  const autoOpt=()=>B&&B.kind==='pvp'?true:B&&B.kind==='tower'?!(S.opt&&S.opt.towerAuto===false):B&&B.event?!!(S.opt&&S.opt.evAuto):!(S.opt&&S.opt.autoSkills===false);
   const skillsAuto=autoOpt;
   const manualSkills=()=>!!(B&&B.event&&!autoOpt());
 
@@ -438,7 +438,9 @@ function createGame(opts){
       { const n=tcN('escudoReg'); if(n&&CT>=B.regAt){ B.regAt=CT+TC.escudoReg.every; addShield(TC.escudoReg.shield*n*h.hp); } }   // Escudo regenerable
       if(B.enemies.every(e=>e.dead)){ if(B.endAt==null) B.endAt=B.t+(CFG.tower.endDelay||0);   // al matar a todos, una pausa antes de salir
         if(B.t>=B.endAt){ if(towerRewardNow()) return; endEvent(); return } } }
-    if(B.kind==='hall'&&(B.t>=CFG.hall.dur||B.enemies.every(e=>e.dead))){ endEvent(); return }   // Sala de jefes: gana al matarlo; a los 60 s, pierde
+    if(B.kind==='hall'){ if(B.enemies.every(e=>e.dead)){ endEvent(); return }   // Sala de jefes: gana al matarlo; sin tiempo límite
+      const R=CFG.hall.rage, n=B.t>=R.from?1+Math.floor((B.t-R.from)/R.every):0;   // furia: cada 10 s desde el 60, más rápido y más fuerte
+      if(n>(B.rage||0)){ for(const e of B.enemies) if(!e.dead){ const k=n-(B.rage||0); e.spd=(e.spd||1)*Math.pow(R.spd,k); e.atk*=Math.pow(R.atk,k); } B.rage=n; emit('bossPhase',{k:'rage'}); } }
     if(B.event){ if(B.enemies.length>40) B.enemies=B.enemies.filter(e=>!e.dead); return }
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
   }
@@ -642,8 +644,10 @@ function createGame(opts){
     const gs=g.duelEnter({...a,name:S.name,cls:S.cls},M), ms=duelEnter({...b,name:r.name,cls:r.cls},M); GH=g;
     Object.assign(B.enemies[0],{hp:gs.hp,max:gs.hp}); Object.assign(g.B.enemies[0],{hp:ms.hp,max:ms.hp});
     save(); emit('eventStart',B); emit('change'); return true }
+  // el duelo se acelera: a los rt segundos reales el juego va a ×(1 + speedUp·rt); B.rt cuenta el tiempo real (límite maxT)
+  const duelSpeed=()=>1+(CFG.pvp.speedUp||0)*((B&&B.rt)||0);
   function duelStep(dt){ const V=CFG.pvp;
-    while(dt>1e-9&&B&&B.kind==='pvp'&&GH){ const s=Math.min(dt,0.05); dt-=s;
+    while(dt>1e-9&&B&&B.kind==='pvp'&&GH){ const sp=duelSpeed(), r=Math.min(dt,0.05/sp), s=r*sp; dt-=r; B.rt=(B.rt||0)+r;
       const gb=GH.B, me=B.enemies[0], them=gb.enemies[0], m0=me.hp, t0=them.hp;
       stepCore(s); GH.step(s);
       const out=Math.max(0,m0-me.hp), back=Math.max(0,t0-them.hp), gh=GH.heroStats(), h=heroStats();
@@ -651,17 +655,17 @@ function createGame(opts){
       if(out>0) gb.inc.push({d:out*cp(S.cls),a:h.atk}); if(back>0) B.inc.push({d:back*cp(GH.S.cls),a:gh.atk});   // se aplica en el siguiente paso, con sus defensas
       if(me.frozen>B.t) gb.stun=Math.max(gb.stun||0,me.frozen); if(them.frozen>gb.t) B.stun=Math.max(B.stun||0,them.frozen);   // congelar = no puede atacar
       Object.assign(me,{hp:gb.hp,max:gh.hp,df:gh.df,dead:false}); Object.assign(them,{hp:B.hp,max:h.hp,df:h.df,dead:false});
-      if(B.hp<=0||gb.hp<=0||B.t>=V.maxT){ pvpFightEnd(); return } } }
+      if(B.hp<=0||gb.hp<=0||B.rt>=V.maxT){ pvpFightEnd(); return } } }
   function pvpFightEnd(){ const P=S.pvp, r=P.rival, h=heroStats(), gh=GH?GH.heroStats():null, gb=GH?GH.B:null;
-    const me=B.hp/h.hp, them=gb?gb.hp/gh.hp:1, win=B.hp>0&&(!gb||gb.hp<=0||me>=them), t=B.t;
+    const me=B.hp/h.hp, them=gb?gb.hp/gh.hp:1, win=B.hp>0&&(!gb||gb.hp<=0), draw=B.hp>0&&!win, t=B.rt||0;   // solo se gana por K.O.; si nadie cae, empate
     B=null; GH=null; BUF.list=[]; BUF.shield=0; BUF.gshield=0; statsDirty(); P.fight=null;
-    const res={...pvpResult(r,win),me:Math.max(0,me),them:Math.max(0,them),t};
+    const res={...pvpResult(r,win,draw),me:Math.max(0,me),them:Math.max(0,them),t};
     P.rival=null; misBump('pvp',1); save(); emit('pvpEnd',res); startWave(); emit('change'); return res }
   // puntos Elo e historial de un duelo terminado
-  function pvpResult(r,win){ const P=S.pvp, k=pvpK(P.games), d=Math.round(k*((win?1:0)-pvpExp(P.rating,r.rating)));
+  function pvpResult(r,win,draw){ const P=S.pvp, k=pvpK(P.games), d=Math.round(k*((draw?0.5:win?1:0)-pvpExp(P.rating,r.rating)));   // empate: medio punto (Elo)
     P.rating=Math.max(0,P.rating+d); P.games++; if(win) P.wins++;
-    P.hist.unshift({name:r.name,cls:r.cls,bot:r.bot,win,d,rating:r.rating}); P.hist=P.hist.slice(0,10);
-    return {win,d,rating:P.rating,rival:{name:r.name,cls:r.cls,bot:r.bot,id:r.id,match:r.match}} }
+    P.hist.unshift({name:r.name,cls:r.cls,bot:r.bot,win,draw:!!draw,d,rating:r.rating}); P.hist=P.hist.slice(0,10);
+    return {win,draw:!!draw,d,rating:P.rating,rival:{name:r.name,cls:r.cls,bot:r.bot,id:r.id,match:r.match}} }
   const pvpLoss=r=>({...pvpResult(r,false),quit:true});
   /* ---------- Torre (roguelike) ---------- */
   // Cartas y grimorios que pueden salir: las habilidades (hasta maxSkills) y los grimorios, solo 1 de cada
@@ -1347,7 +1351,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

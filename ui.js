@@ -170,8 +170,8 @@ G.on('surprise',({k,reward})=>{ const C=CFG.surprise;
   else if(/Win$/.test(k)){ haptic('ok'); toast({wanderWin:'¡Jefe errante vencido! ',mimicWin:'¡Mímico abierto! '}[k]+bundleTxt(reward)); updateHUD(); }
   else if(k==='wanderFled') toast('El jefe errante huyó'); });
 G.on('pvpEnd',r=>{ tab='ev'; modView='pvp'; evView=null; haptic(r.win?'ok':'medium');
-  if(r.rival.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpResult',{match:r.rival.match,win:r.win}).then(j=>{ if(j&&j.ok){ G.pvpSync(j); if(PVI) Object.assign(PVI.me,{rating:j.rating,games:j.games,wins:j.wins,rank:j.rank,left:j.left}); pvpLoad(); } });
-  renderTab(); later(()=>showModal(`<h3>${r.win?'¡Victoria!':'Derrota'}</h3><p class="hint">Contra ${esc(r.rival.name)} (${clName(r.rival.cls)}) · tú ${Math.round(r.me*100)} % de vida, rival ${Math.round(r.them*100)} %.<br>${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.rating)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
+  if(r.rival.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpResult',{match:r.rival.match,win:r.win,draw:r.draw}).then(j=>{ if(j&&j.ok){ G.pvpSync(j); if(PVI) Object.assign(PVI.me,{rating:j.rating,games:j.games,wins:j.wins,rank:j.rank,left:j.left}); pvpLoad(); } });
+  renderTab(); later(()=>showModal(`<h3>${r.win?'¡Victoria!':r.draw?'Empate':'Derrota'}</h3><p class="hint">Contra ${esc(r.rival.name)} (${clName(r.rival.cls)})${r.draw?' · nadie cayó en 30 s':''} · tú ${Math.round(r.me*100)} % de vida, rival ${Math.round(r.them*100)} %.<br>${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.rating)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
 function skillFx(ev,side,eng){ if(battery()) return;
   if(ev.k==='skill'){ const d=eng.skillDef(ev.slot)||{}, id=ev.id;
     ART.addFx('name',{side,text:ev.name});
@@ -190,7 +190,7 @@ G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
     gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
 G.on('hallEnd',r=>{ tab='ev'; modView='campana'; renderTab(); haptic(r.won?'ok':'medium');
-  later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">Jefe de la fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · '+(r.t>=CFG.hall.dur?'se acabó el tiempo':'te ha derrotado')}</p>
+  later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">Jefe de la fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · te ha derrotado'}</p>
     ${r.rw?`<div class="loot"><div><span>${r.first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(r.rw)}${r.rw.scrap?` ${ICON.scrap}${fmt(r.rw.scrap)}`:''}</b></div></div>`:''}
     <p class="hint">Intentos hoy: ${G.hallTriesLeft()}/${CFG.hall.tries}</p><button class="btn gold" data-act="close">Continuar</button>`)) });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
@@ -275,7 +275,7 @@ function updateHUD(){
    // el nivel solo cuenta farmeando: en eventos, Torre y PvP no se ve   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   $('#faseTxt').classList.add('top');   // debajo de tu barra de vida (los iconos de abajo a la derecha quedan libres)
-  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-B.t))} s`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:''):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
+  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-(B.rt||0)))} s · ×${G.duelSpeed().toLocaleString('es-ES',{maximumFractionDigits:1})}`:ev&&B.kind==='hall'?`⏱ ${mmss(B.t*1000)}${B.rage?` · 🔥 Furia ${B.rage}`:''}`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:''):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-B.t)*1000)} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:G.streak().mul>1?`<span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:'');   // campaña: la fase ya va en el emblema de arriba
   { const f=$('#faseTxt'); f.hidden=!f.innerHTML; }
   setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span>`);   // solo el nombre: la clase ya se ve en el retrato
@@ -309,7 +309,7 @@ function updateHUD(){
   if(G.towerRewardPending()&&!modalOpen()) towerPickModal();   // la recompensa de la pelea no se puede saltar
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   // habilidades: solo las desbloqueadas; la recarga se ve con el reloj gris (sin números). En los eventos, botón Auto/Manual
-  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?!(S.opt&&S.opt.pvpAuto===false):G.towerOn()?!(S.opt&&S.opt.towerAuto===false):inEv&&!!(S.opt&&S.opt.evAuto), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false), key=L.map(x=>x.slot+x.id).join()+inEv+on;
+  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?true:G.towerOn()?!(S.opt&&S.opt.towerAuto===false):inEv&&!!(S.opt&&S.opt.evAuto), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false), key=L.map(x=>x.slot+x.id).join()+inEv+on;
     // al final de las habilidades, un círculo AUTO/MAN (se lanzan solas o a mano)
     if(sb.dataset.k!==key){ sb.dataset.k=key; sb.classList.toggle('many',L.length>4); sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}">${skIcon(x.id)}<i class="skcd"></i></button>`).join('')
       +(L.length?`<button class="skmode${on?' on':''}" data-act="skAuto" aria-pressed="${on}" aria-label="Habilidades ${on?'automáticas':'a mano'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg><small>${on?'AUTO':'MAN'}</small></button>`:''); }
@@ -389,7 +389,7 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
       <button class="btn gold" data-act="hallGo" data-id="${sel.id}" data-v="${st}" ${left&&!G.inEvent()?'':'disabled'}>Luchar ${'★'.repeat(st)} · ${left}/${H.tries} intentos</button></div>`; }
   return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes de élite</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
     ${chips}${status}${sheet}<div class="hgrid">${tiles}</div>
-    <p class="hint">${H.dur} s para vencerlo · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
+    <p class="hint">Sin tiempo límite: desde el minuto 1, el jefe se enfurece cada 10 s · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
 function modeRows(){
   const CAP=CFG.phaseCap; return CFG.modes.map((M,m)=>{
     const cur=m===S.mode, done=m<S.mode, next=m===S.mode+1, tier=CFG.evo.tiers[m-1];
@@ -860,7 +860,7 @@ function tabPvp(){ const P=G.pvpState(), on=pvpOnline(), L=G.pvpLeague(P.rating)
   const row=(pos,x)=>`<div class="${x.me?'me':''}"><span>${divIcon(x.rating,20)}</span><span>${pos}. ${esc(x.name)}</span><b>${fmt(x.rating)}</b></div>`;
   const top=on?(PVI?`<div class="rank pvprank"><div class="rh"><span>Rango</span><span>Nombre</span><b>Puntos</b></div>${PVI.top.map((x,i)=>row(i+1,x)).join('')||'<div><span></span><span>Aún nadie</span><b></b></div>'}${PVI.top.length&&!PVI.top.some(x=>x.me)&&PVI.me.rank?'<div class="gap">…</div>'+row(PVI.me.rank,{name:S.name||'Tú',rating:P.rating,me:1}):''}</div>`:'<p class="hint">Cargando…</p>'):'<p class="hint">Ranking solo en Telegram.</p>';
   const defs=on&&PVI&&PVI.log.length?PVI.log.map(x=>`<div><span style="color:${x.won?'var(--bad)':'var(--good)'}">${x.won?'✗':'✓'}</span><span>🛡 ${esc(x.name)}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join(''):'';
-  const hist=P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':'var(--bad)'}">${x.win?'V':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('');
+  const hist=P.hist.map(x=>`<div><span style="color:${x.win?'var(--good)':x.draw?'var(--muted)':'var(--bad)'}">${x.win?'V':x.draw?'E':'D'}</span><span>${esc(x.name)}${x.bot?' (bot)':''}</span><b>${x.d>0?'+':''}${x.d}</b></div>`).join('');
   return `<section class="panel"><h3>PvP</h3>${head}${riv}<h3>Ranking</h3>${top}</section>
   ${hist||defs?`<details class="panel fold"><summary><h3>Historial</h3></summary><div class="rank">${hist}${defs}</div></details>`:''}
   <details class="panel fold"><summary><h3>Premios de la semana</h3></summary>${rewTable(CFG.pvp.rewards)}<p class="hint">Cierra en ${dhm(G.weekLeft())}.</p>
@@ -1189,9 +1189,9 @@ const ACT={
   nameSave:()=>{ const n=($('#nameIn')||{}).value; if(!G.setName(n)) return toast('Escribe tu nombre (3-16 letras)'); closeModal(); toast('Nombre guardado'); updateHUD(); if(tab==='dev') renderTab(); },
   upBuy:(b,k)=>{ if(upHeld){ upHeld=false; return } if(!G.buyUpgrade(k)) toast('No tienes oro suficiente'); updateHUD() },
   skill:(b,k)=>{ const x=G.skills().find(s=>s.slot===k); if(!x) return; if(x.locked) return toast(`${x.name}: ${(SKI[x.id]||[0,x.desc])[1]}`);
-    const r=G.useSkill(k); if(r.ok){ haptic('medium'); toast(x.name) } else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate') },
+    const r=G.useSkill(k); if(r.ok){ haptic('medium'); toast(x.name) } else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate'); else if(r.why==='auto') toast('En PvP las habilidades son automáticas') },
   // botón Auto/Manual del combate: en los eventos cambia opt.evAuto; en la campaña, opt.autoSkills
-  skAuto:()=>{ if(G.pvpOn()){ G.setOpt('pvpAuto',S.opt&&S.opt.pvpAuto===false); toast(S.opt.pvpAuto?'Habilidades automáticas en PvP':'Habilidades a mano en PvP'); }
+  skAuto:()=>{ if(G.pvpOn()){ toast('En PvP las habilidades son siempre automáticas'); }
     else if(G.towerOn()){ G.setOpt('towerAuto',S.opt&&S.opt.towerAuto===false); toast(S.opt.towerAuto?'Habilidades automáticas en la Torre':'Habilidades a mano en la Torre'); }
     else if(G.inEvent()){ G.setOpt('evAuto',!(S.opt&&S.opt.evAuto)); toast(S.opt.evAuto?'Habilidades automáticas en el evento':'Habilidades a mano en el evento'); }
     else { G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); } updateHUD(); if(tab==='dev') renderTab() },

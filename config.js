@@ -249,7 +249,7 @@ const CFG = {
   // free: duelos gratis al día; después 1 ticket PvP por duelo (paquete de 'pack' tickets por 'packCost' tokens = 1 $)
   // rewards: premio del ranking semanal según tu puesto (igual que el Jefe semanal); lo reparte el servidor el lunes y los puntos
   // quedan a medio camino de 1000. leagues: insignia según los puntos ([desde, nombre, color])
-  pvp:{free:3, pack:3, packCost:100, recent:5, maxT:90,
+  pvp:{free:3, pack:3, packCost:100, recent:5, maxT:30, speedUp:0.1, // duelo de 30 s (reales) que se acelera: a los t s va a ×(1 + 0,1·t); solo se gana por K.O., si nadie cae es empate; habilidades siempre automáticas
     rewards:[{to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},{to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
     leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:31, cls:{Guerrero:1.2,Mago:0.75,Arquero:1.12,Asesino:1.04,Clerigo:0.38}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
@@ -387,7 +387,8 @@ const CFG = {
   // Sala de jefes: cada jefe de campaña vencido (cada 10 fases, por modo) se puede volver a luchar. 3 intentos al día (se gastan al empezar).
   // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first' (+'elite' en ★★★
   // de los jefes de élite 50/100/150); repetir: 'repeat' (oro de X min y chatarra del jefe ×N)
-  hall:{dur:60, tries:3, stars:[{hp:1,atk:1},{hp:3,atk:1.6},{hp:8,atk:2.5}],
+  // Sala de jefes: sin tiempo límite; desde el segundo 60 el jefe se enfurece cada 10 s (×1,2 velocidad, ×1,1 ataque)
+  hall:{rage:{from:60,every:10,spd:1.2,atk:1.1}, tries:3, stars:[{hp:1,atk:1},{hp:3,atk:1.6},{hp:8,atk:2.5}],
     every:50, // solo los jefes de élite (fases 50, 100 y 150 de cada modo); entran al vencerlos en la campaña
     first:[{silver:2,ev:2},{silver:3,ev:3,ess:1},{mode:1,ev:5,ess:2}],
     repeat:[{gold:30,scrap:2},{gold:45,scrap:3},{gold:60,scrap:4}]},
