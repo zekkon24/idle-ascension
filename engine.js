@@ -574,7 +574,7 @@ function createGame(opts){
   // Entrada gratis: 1 al día (evFree guarda el día en que se usó). Las demás, con ticket (se compra con tokens).
   const evFreeLeft=()=>S.evFree!==dayKey()?1:0;
   function startEvent(){
-    if(!S||inEvent()||(S.tickets<1&&!evFreeLeft())||evPaused()) return false;
+    if(!S||inEvent()||!modeOpen('lab')||(S.tickets<1&&!evFreeLeft())||evPaused()) return false;
     if(evPending()) claimEvent();                         // cobra antes el premio de un día anterior
     if(evFreeLeft()) S.evFree=dayKey(); else S.tickets--; const h=heroStats();
     S.evRun={day:dayKey(),kills:0};                       // el intento se guarda: si se cierra la app, cuenta lo que llevaba
@@ -633,7 +633,7 @@ function createGame(opts){
   function duelEnter(o,hpM){ for(const k of skillSlots()) CD[k]=CT; BUF.list=[]; for(const k of Object.keys(BUF)) if(k!=='list') delete BUF[k];   // los dos empiezan igual: habilidades listas y sin efectos
     B={event:true,kind:'pvp',hpM,t:0,boss:false,count:0,spawned:0,kills:0,enemies:[pvpDouble(o,o.name,o.cls)],hp:0,th:null,over:false,wait:0,mD:0,mB:0,inc:[]};
     statsDirty(); B.hp=heroStats().hp; return heroStats() }
-  function pvpFight(){ const P=pvpState(), r=P.rival; if(!r||inEvent()||!pvpCanFight()) return false;
+  function pvpFight(){ const P=pvpState(), r=P.rival; if(!r||inEvent()||!modeOpen('pvp')||!pvpCanFight()) return false;
     const g=ghostOf(r.save); if(!g) return false; if(pvpFreeLeft()>0) P.used++; else S.pvpTickets--;
     P.fight={name:r.name,cls:r.cls,bot:r.bot,rating:r.rating,id:r.id,match:r.match};   // si se cierra la app a mitad, cuenta como derrota
     const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.hpMul?CFG.pvp.hpMul:CFG.pvp.ttk*(dps(a,b)+dps(b,a))/(a.hp+b.hp);   // vida en PvP: × hpMul (igual para los dos)
@@ -706,7 +706,7 @@ function createGame(opts){
   // run.hp: fracción de vida que te queda en la partida (no se cura entre combates; al perder una vida vuelves con la vida llena)
   // mapa estilo Slay the Spire: cada piso tiene caminos en 3 columnas (0-2); desde una columna solo puedes ir a la misma o a las vecinas
   function towerRow(f){ const n=towerNodes(f), c=n.length>=2?[0,2]:[1]; return {n,c} }   // 2 rutas: columna 0 (izquierda) y 2 (derecha); el cruce, en el centro
-  function towerStart(){ if(inEvent()) return false; const T=towerState(), L=CFG.tower.look||1, map=[];
+  function towerStart(){ if(inEvent()||!modeOpen('tower')) return false; const T=towerState(), L=CFG.tower.look||1, map=[];
     T.run={seed:Math.floor(rand()*1e6),floor:1,lives:CFG.tower.lives,hp:1,boons:[],map,from:null,pick:null,souls:0,curses:[],ev:null,unk:null}; for(let i=0;i<L;i++) map.push(towerRow(1+i));
     T.run.nodes=map[0].n; save(); emit('change'); return true }
   // mapa: los pisos que se ven (el primero es el actual), cada uno {n: tipos, c: columnas}
@@ -904,7 +904,7 @@ function createGame(opts){
   // Entrada gratis: 1 a la semana (wbFree guarda la semana en que se usó). Las demás, con Ticket Jefe.
   const wbFreeLeft=()=>S.wbFree!==weekKey()?1:0;
   function wbStart(){
-    if(!S||inEvent()||(S.bossTickets<1&&!wbFreeLeft())||evPaused()) return false;
+    if(!S||inEvent()||!modeOpen('boss')||(S.bossTickets<1&&!wbFreeLeft())||evPaused()) return false;
     if(wbPending()) wbClaim();
     if(wbFreeLeft()) S.wbFree=weekKey(); else S.bossTickets--; const h=heroStats(), s=wbStats(1), V=CFG.event;
     S.wbRun={week:weekKey(),dmg:0};
@@ -1244,7 +1244,7 @@ function createGame(opts){
   function misBump(k,n){ if(!S) return; const D=daily(); D.p[k]=(D.p[k]||0)+n; const W=weekly(); W.p[k]=(W.p[k]||0)+n }
   // misiones de la semana (lunes a domingo): mismo sistema que las diarias
   function weekly(){ const w=weekKey(); if(!S.weekly||S.weekly.w!==w) S.weekly={w,k0:S.kills||0,p:{},c:{}}; return S.weekly }
-  function weekMissions(){ const W=weekly(), L=(CFG.missions.weekly||{}).list||[]; return L.map(m=>{ const v=m.k==='kills'?(S.kills||0)-W.k0:(W.p[m.k]||0);
+  function weekMissions(){ const W=weekly(), L=(CFG.missions.weekly||{}).list||[]; return L.filter(misOpen).map(m=>{ const v=m.k==='kills'?(S.kills||0)-W.k0:(W.p[m.k]||0);
     return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!W.c[m.k]} }) }
   function claimWeekly(k){ const m=weekMissions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions.weekly;
     const xp=m.xp||M.xp; weekly().c[k]=true; giveBundle(m.rew||{}); passAddXp(xp); track('weekly',{k}); save(); emit('change'); return {...(m.rew||{}),xp} }
@@ -1258,7 +1258,17 @@ function createGame(opts){
     giveBundle(L[i].b); track('wheel',{i,ad:!!viaAd}); save(); emit('change'); return {i,b:L[i].b} }
   const weeklyReady=()=>weekMissions().filter(m=>m.done&&!m.claimed).length+(bonusState('week').can?1:0);
   function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1) }
-  function missions(){ const D=daily(); return CFG.missions.list.map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
+  // Desbloqueo de modos (Mazmorra, Jefe semanal, PvP, Torre): por fase récord o por días de juego
+  const daysPlayed=()=>dayKey()-(S.startDay==null?dayKey():S.startDay)+1;
+  function modeReq(k){ const U=(CFG.unlock||{})[k]; if(!U||!S) return null; if(U.fase&&!(S.mode>0)&&S.best<U.fase) return {fase:U.fase}; if(U.day&&daysPlayed()<U.day) return {day:U.day,left:U.day-daysPlayed()}; return null }
+  const modeOpen=k=>!modeReq(k);
+  // modos que se acaban de abrir (para el aviso); la 1.ª vez en una partida antigua se apuntan sin aviso
+  function unlockNew(){ if(!S) return []; const K=Object.keys(CFG.unlock||{}), open=K.filter(modeOpen);
+    if(!Array.isArray(S.unl)){ S.unl=S.startDay!=null&&daysPlayed()>1?open:[]; if(S.unl.length) return [] }
+    const nw=open.filter(k=>!S.unl.includes(k)); if(nw.length){ S.unl.push(...nw); save(); } return nw }
+  // misiones de modos aún cerrados: no salen (así se puede completar «todas las diarias»)
+  const misOpen=m=>m.k==='pvp'?modeOpen('pvp'):m.k==='event'?modeOpen('lab')||modeOpen('boss'):true;
+  function missions(){ const D=daily(); return CFG.missions.list.filter(misOpen).map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
     return {...m,prog:Math.min(m.n,v),done:v>=m.n,claimed:!!D.c[m.k]} }) }
   function claimMission(k){ const m=missions().find(x=>x.k===k); if(!m||!m.done||m.claimed) return null; const M=CFG.missions;
     daily().c[k]=true; if(missions().every(x=>x.claimed)){ const W=weekly(); W.p.alldays=(W.p.alldays||0)+1; } giveBundle(m.rew||{}); passAddXp(m.xp||M.xp); track('mission',{k}); save(); emit('change'); return {...(m.rew||{}),xp:m.xp||M.xp} }
@@ -1317,7 +1327,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

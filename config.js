@@ -384,6 +384,8 @@ const CFG = {
   server:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track', every:10, saveEvery:120}, // saveEvery: subir la partida cada 2 min (lleva los eventos) // base de datos: dirección de la función "track" de Supabase (vacía = no se envía nada); envía como mucho cada 10 s
   devTools:false, // herramientas de prueba (velocidad, +oro, avanzar día…): poner a false al publicar en Telegram
   phaseCap:150, // cada modo tiene 150 fases; tras vencer la 150 y evolucionar se pasa al siguiente modo
+  // Desbloqueo de modos: fase récord (en Normal; desde Pesadilla, todo abierto) o días de juego (desde que empezó la partida)
+  unlock:{lab:{fase:10}, pvp:{fase:50}, tower:{fase:50}, boss:{day:7}},
   modes:[ // upPer: mejoras de Vida/Defensa que gana de media el jugador por fase en ese modo (números pequeños: baja el ataque enemigo; estimado, recalibrar al desbloquear)
           // locked: modo bloqueado ("Próximamente"): no se puede entrar aunque se cumplan los requisitos
           // enemigos: empiezan en los de la fase 150 del modo anterior × hpStart/atkStart y crecen hpG/atkG por fase · off: oro, experiencia y cofres continúan desde la fase off · gold: multiplicador de oro · mat: material propio (uso por definir)

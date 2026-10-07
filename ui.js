@@ -263,6 +263,7 @@ function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pan
 }
 function updateHUD(){
   if(!S||!$('#rGold')) return;
+  unlockCheck();
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
   // en Inicio: retrato, nombre y dinero; en las demás pantallas, solo el dinero en una barra fina fija arriba (como en los RPG de móvil); luchando, nada
@@ -314,7 +315,7 @@ function updateHUD(){
   { const n=misBadge(); navSet('mis',n); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
-  navSet('ev',((G.evPaused()?0:G.evFreeLeft()+G.wbFreeLeft())+G.pvpFreeLeft()+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
+  navSet('ev',((G.evPaused()?0:(G.modeOpen('lab')?G.evFreeLeft():0)+(G.modeOpen('boss')?G.wbFreeLeft():0))+(G.modeOpen('pvp')?G.pvpFreeLeft():0)+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
   navSet('inv',nc>99?'99+':nc);
 }
 // entrada suave de la pantalla nueva (al cambiar de pestaña o de sección)
@@ -841,7 +842,7 @@ function tabEv(){
   if(evView==='league') return tabLeague();
   const paused=G.evPaused(), lp=G.evPending(), bp=G.wbPending();
   const lb=G.evToday(), lpos=lb?G.evRank(G.evShownDay(),lb):null, bd=G.wbWeekDmg(), bpos=bd?G.wbRank(G.wbShownWeek(),bd):null;
-  const card=(k,title,sub,tk,line,pend)=>`<button class="evcard" data-act="evOpen" data-k="${k}"><span class="evt">${title}${pend?' <sup class="nb">!</sup>':''}</span><span class="s">${sub}</span>
+  const card=(k,title,sub,tk,line,pend)=>!G.modeOpen(k)?`<button class="evcard locked" data-act="lockInfo" data-k="${k}"><span class="evt">🔒 ${title}</span><span class="s">${sub}</span><span class="evl"><span>${reqTxt(k)}</span></span></button>`:`<button class="evcard" data-act="evOpen" data-k="${k}"><span class="evt">${title}${pend?' <sup class="nb">!</sup>':''}</span><span class="s">${sub}</span>
     <span class="evl"><span>${tk}</span><span>${line}</span></span></button>`;
   // Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Jefe semanal; la Liga está oculta) y PvP (próximamente)
   const back=`<button class="back" data-act="modview" data-v="">← Modos</button>`;
@@ -852,12 +853,14 @@ function tabEv(){
       <button class="mcard2 wide" style="${bg(zoneNow(),360,150)}" data-act="modview" data-v="campana">
         <span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
         <span class="mp"><small>Progreso</small><b>Fase ${S.best} / ${cap}</b></span><span class="mbar"><i style="width:${S.best/cap*100}%"></i></span></button>
-      <button class="mcard2" style="${bg(4,180,170)}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
-        <b class="mt">Eventos</b><span class="ms">Mazmorra diaria<br>Jefe semanal</span><span class="mf">⏱ Jefe: ${dhm(G.weekLeft())}</span></button>
-      <button class="mcard2" style="${bg('arena',180,170)}" data-act="modview" data-v="pvp"><span class="mbadge g">${G.pvpFreeLeft()} GRATIS</span>
-        <b class="mt">PvP</b><span class="ms">Duelos por puntos</span><span class="mf">🛡 ${fmt(pv.rating)} puntos</span></button>
-      <button class="mcard2 wide low" style="${bg(3,360,110)}" data-act="modview" data-v="torre"><span class="mico">${GIC(GI.torre,40)}</span>
-        <span><b class="mt">Torre</b><span class="ms">${tr?`Piso ${tr.floor} · ♥ ${tr.lives}`:`Roguelike · récord piso ${tw.best}`}</span></span></button>
+      ${!G.modeOpen('lab')&&!G.modeOpen('boss')?`<button class="mcard2 locked" style="${bg(4,180,170)}" data-act="lockInfo" data-k="lab">${lockBadge('lab')}<b class="mt">Eventos</b><span class="ms">Mazmorra diaria<br>Jefe semanal</span><span class="mf">${reqTxt('lab')}</span></button>`:`<button class="mcard2" style="${bg(4,180,170)}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
+        <b class="mt">Eventos</b><span class="ms">Mazmorra diaria<br>Jefe semanal</span><span class="mf">${G.modeOpen('boss')?`⏱ Jefe: ${dhm(G.weekLeft())}`:'Jefe: '+reqTxt('boss').split(' · ')[0]}</span></button>`}
+      ${G.modeOpen('pvp')?`<button class="mcard2" style="${bg('arena',180,170)}" data-act="modview" data-v="pvp"><span class="mbadge g">${G.pvpFreeLeft()} GRATIS</span>
+        <b class="mt">PvP</b><span class="ms">Duelos por puntos</span><span class="mf">🛡 ${fmt(pv.rating)} puntos</span></button>`
+        :`<button class="mcard2 locked" style="${bg('arena',180,170)}" data-act="lockInfo" data-k="pvp">${lockBadge('pvp')}<b class="mt">PvP</b><span class="ms">Duelos por puntos</span><span class="mf">${reqTxt('pvp')}</span></button>`}
+      ${G.modeOpen('tower')?`<button class="mcard2 wide low" style="${bg(3,360,110)}" data-act="modview" data-v="torre"><span class="mico">${GIC(GI.torre,40)}</span>
+        <span><b class="mt">Torre</b><span class="ms">${tr?`Piso ${tr.floor} · ♥ ${tr.lives}`:`Roguelike · récord piso ${tw.best}`}</span></span></button>`
+        :`<button class="mcard2 wide low locked" style="${bg(3,360,110)}" data-act="lockInfo" data-k="tower"><span class="mico">${GIC(GI.torre,40)}</span><span><b class="mt">Torre</b><span class="ms">${reqTxt('tower')}</span></span>${lockBadge('tower')}</button>`}
     </div>` }
   if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div></section>`;
   if(modView==='torre') return back+tabTower();
@@ -1230,6 +1233,8 @@ const ACT={
   equip:(b,k,id)=>{if(G.equip(id))renderTab()},
   fav:(b,k,id)=>{const f=G.toggleFav(id);if(f===null)return;toast(f?'Arma bloqueada: no se desmonta ni se usa para forjar':'Arma desbloqueada');if(tab==='inv'&&invView==='armas')renderList();else renderTab()},
   lvlMat:(b,k,id)=>{ const it=G.findItem(id), r=G.levelUp(id,true); if(r.ok) toast(wName(it)+' sube a nivel '+r.lvl); else toast(r.why==='scrap'?'Te falta chatarra':'Te falta material'); renderTab() },
+  lockInfo:(b,k)=>{ const u=UNL[k]; if(u) toast(`🔒 ${u[0]}: se desbloquea en ${reqTxt(k)}`) },
+  unlGo:(b,k)=>{ closeModal(); tab='ev'; modView=k==='pvp'?'pvp':k==='tower'?'torre':'eventos'; evView=k==='lab'||k==='boss'?k:null; if(k==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}) },
   ascAsk:(b,k,id)=>{ const it=G.findItem(id), a=it&&G.ascendInfo(id); if(!a||!a.can) return;
     showModal(`<h3>¿Ascender ${esc(wName(it))}?</h3><p class="hint">Pasa a <b style="color:var(--r${a.next})">${CFG.rarName[a.next]}</b> al nivel ${CFG.weapon.ascend.lvl}. Se gasta otra ${CFG.rarName[it.r]} nv ${CFG.weapon.maxLvl} (${esc(wName(a.partner))}) y el material.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="ascYes" data-id="${id}">Ascender</button></div>`) },
   ascYes:(b,k,id)=>{ closeModal(); const it=G.findItem(id), r=G.ascend(id); if(r.ok){ toast(`¡${wName(it)} asciende a ${CFG.rarName[r.r]}!`); haptic('ok'); } renderTab() },
@@ -1424,6 +1429,15 @@ function draw(dt){
 // Se vacían hacia el centro; lo que acabas de perder queda en claro un momento (estela) y luego baja.
 // El escudo es una barra azul fina justo debajo de la tuya. Con menos del 25 % de vida tu barra late en rojo.
 const WBICO={enjambre:'🪲',coloso:'🛡️',bestia:'🐗',liche:'💀',dragon:'🐉'};   // jefes de la semana
+// Desbloqueo de modos: nombre, qué es y qué falta («Fase 10 · vas por la 4», «Día 7 · faltan 3 días»)
+const UNL={lab:['Mazmorra','Aguanta oleadas sin fin: ranking diario y cofres por muertes','lab'],boss:['Jefe semanal','Un jefe distinto cada semana: ranking por daño','boss'],
+  pvp:['PvP','Duelos contra la partida de otros jugadores','pvp'],tower:['Torre','Roguelike: sube pisos eligiendo cartas y grimorios','torre']};
+const reqTxt=k=>{ const r=G.modeReq(k); return !r?'':r.fase?`Fase ${r.fase} · vas por la ${S.best}`:`Día ${r.day} de juego · falta${r.left>1?'n':''} ${r.left} día${r.left>1?'s':''}` };
+const lockBadge=k=>`<span class="mlock2">🔒 ${G.modeReq(k).fase?'FASE '+G.modeReq(k).fase:'DÍA '+G.modeReq(k).day}</span>`;
+function unlockCheck(){ if(G.inEvent()||modalOpen()) return; const nw=G.unlockNew().filter(k=>UNL[k]); if(!nw.length) return; haptic('ok');   // si se abren varios a la vez, un solo aviso
+  const k=nw[0], u=UNL[k], many=nw.length>1;
+  later(()=>showModal(`<div class="unl"><span class="unl-i">🔓</span><small>¡NUEVO${many?'S MODOS DESBLOQUEADOS':' MODO DESBLOQUEADO'}!</small><h3>${nw.map(x=>UNL[x][0]).join(' · ')}</h3><p class="hint">${many?nw.map(x=>`<b>${UNL[x][0]}</b>: ${UNL[x][1]}`).join('<br>'):u[1]}</p></div>
+    <div class="ctrl"><button class="btn" data-act="close">Luego</button><button class="btn gold" style="flex:1" data-act="unlGo" data-k="${k}">Ir a ${u[0]}</button></div>`)) }
 const AFFICO={furia:'😤',enjambre:'🐜',certero:'🎯',sinCura:'🚫',gigantes:'🗿',vampiros:'🩸'};   // modificadores del día de la Mazmorra
 const VST={B:null,me:{cur:1,from:0,at:0},foe:{cur:1,from:0,at:0}};
 // iconos de estado bajo las barras: [icono, nombre, qué hace, ¿malo?]

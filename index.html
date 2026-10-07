@@ -497,6 +497,16 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .itile .tl b{font-weight:900;margin-right:3px;padding-right:3px;border-right:1px solid #0c0d1255}
 .ctile .ic{width:38px;height:38px}.isart .ic{width:32px;height:32px}   /* cofres en casillas */
 .itile.empty{border:2px dashed var(--line);background:rgba(255,255,255,.02)}
+/* modos bloqueados (se abren por fase o por días de juego) y aviso de desbloqueo */
+.mcard2.locked{filter:grayscale(.75) brightness(.7)}
+.mcard2.locked .mf{color:var(--muted)}
+.mlock2{position:absolute;top:10px;left:10px;padding:3px 9px;border-radius:999px;background:#000b;border:1px solid var(--line);font-size:10px;font-weight:900;letter-spacing:1px;color:var(--ink);filter:none}
+.mcard2.wide.low .mlock2{left:auto;right:12px;top:50%;transform:translateY(-50%)}
+.evcard.locked{opacity:.6}
+.unl{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:6px 0 4px}
+.unl-i{font-size:42px;animation:navpop .5s ease-out}
+.unl small{font-size:11px;font-weight:900;letter-spacing:1.5px;color:var(--gold)}
+.unl h3{margin:0;font-size:24px}
 /* Mazmorra: modificador del día y progreso al siguiente cofre */
 .affx{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;border:1px solid #b066e866;background:linear-gradient(135deg,#b066e826,var(--panel2))}
 .affx .affi{font-size:28px;filter:drop-shadow(0 2px 6px #0008)}
@@ -595,7 +605,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610071531-ae5d9d8';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610071552-dd2959f';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
