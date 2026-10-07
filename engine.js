@@ -152,12 +152,12 @@ function createGame(opts){
   function modeCurve(m,f){ if(!m) return normalCurve(f); const M=MODES()[m], b=modeCurve(m-1,CAP());
     const k=CFG.upgrades.hp.ref?Math.pow(CFG.upgrades.hp.mult/CFG.upgrades.hp.ref,(M.upPer||0)*(f-1)):1;   // números pequeños (ver atkShrink)
     return {hp:b.hp*M.hpStart*Math.pow(M.hpG,f-1), atk:b.atk*M.atkStart*Math.pow(M.atkG,f-1)*k, df:b.df*Math.pow(CFG.enemy.dfG,f-1)} }
-  function enemyStats(f,w,boss){
-    const E=CFG.enemy, mc=modeCurve(S?S.mode||0:0,f);
+  function enemyStats(f,w,boss,mode){
+    const md=mode==null?(S?S.mode||0:0):mode, E=CFG.enemy, mc=modeCurve(md,f);
     let hp=mc.hp*(1+E.waveHp*(w-1)), atk=mc.atk, df=mc.df;
     // Jefes: su vida se mide en "oleadas" (la vida de toda la oleada de su fase) y su ataque en enemigos (×1 = un enemigo normal)
     if(!boss&&WV()){ const V=WV(); hp*=perOld(f)/perWave(f)*(V.hpMul||1); atk*=Math.pow(V.atkG||1,groupAt(f)-1); }
-    if(boss){ const per=perOld(f), M=modeCfg();
+    if(boss){ const per=perOld(f), M=MODES()[md]||modeCfg();
       const m=f%50===0?(M.off?((M.walls&&M.walls[f])||{hp:E.eliteHp,atk:E.eliteAtk}):eliteMult(f)):bossBand(f); hp*=per*m.hp; atk*=m.atk; }
     return {hp,atk,df};
   }
@@ -438,6 +438,7 @@ function createGame(opts){
       { const n=tcN('escudoReg'); if(n&&CT>=B.regAt){ B.regAt=CT+TC.escudoReg.every; addShield(TC.escudoReg.shield*n*h.hp); } }   // Escudo regenerable
       if(B.enemies.every(e=>e.dead)){ if(B.endAt==null) B.endAt=B.t+(CFG.tower.endDelay||0);   // al matar a todos, una pausa antes de salir
         if(B.t>=B.endAt){ if(towerRewardNow()) return; endEvent(); return } } }
+    if(B.kind==='hall'&&(B.t>=CFG.hall.dur||B.enemies.every(e=>e.dead))){ endEvent(); return }   // Sala de jefes: gana al matarlo; a los 60 s, pierde
     if(B.event){ if(B.enemies.length>40) B.enemies=B.enemies.filter(e=>!e.dead); return }
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
   }
@@ -594,6 +595,7 @@ function createGame(opts){
   function endEvent(){
     if(!B||!B.event) return null;
     if(B.kind==='tower') return towerEnd(B.hp>0);
+    if(B.kind==='hall') return hallEnd();
     if(B.kind==='pvp') return pvpFightEnd();
     const res=B.kind==='boss'?wbFinish(B.dmg,B.hp<=0):finishRun(B.kills,B.hp<=0);
     B=null; misBump('event',1); save(); emit('eventEnd',res); startWave(); emit('change'); return res;
@@ -880,6 +882,24 @@ function createGame(opts){
     if(r){ S.evm+=r.em||0; if(r.ch) addChest(r.ch,r.n||1); }
     emit('change'); return p; }
   const evToday=()=>{ const d=evShownDay(); return S.evLog&&S.evLog.day===d?S.evLog.best:0 };
+
+  /* ---------- Sala de jefes ---------- */
+  // Cada jefe de campaña vencido (fases 10, 20… 150 de cada modo) entra en la sala. 3 intentos al día para todos. 3 estrellas por jefe.
+  const hallId=(m,f)=>m*1000+f;
+  function hallState(){ const d=dayKey(); S.hall=S.hall&&S.hall.clr?S.hall:{d,used:0,clr:{}}; if(S.hall.d!==d){ S.hall.d=d; S.hall.used=0; } return S.hall }
+  const hallTriesLeft=()=>Math.max(0,CFG.hall.tries-hallState().used);
+  function hallBosses(){ const out=[], C=hallState().clr; for(let m=0;m<MODES().length;m++){ if(MODES()[m].locked) break;
+      for(let f=10;f<=CAP();f+=10){ const beaten=S.mode>m||(S.mode===m&&S.best>=f); out.push({id:hallId(m,f),m,f,elite:f%50===0,beaten,stars:C[hallId(m,f)]||0}) } } return out }
+  function hallReward(b,star,first){ const H=CFG.hall; if(first){ const r={...H.first[star-1]}; if(star===3&&b.elite) for(const k in H.elite) r[k]=(r[k]||0)+H.elite[k]; return r }
+    const R=H.repeat[star-1], c=CFG.econ.bossScrap; return {gold:R.gold,scrap:Math.round((c.base+Math.floor(b.f/10)*c.per10)*(b.m+1)*R.scrap)} }
+  function hallStart(id,star){ const b=hallBosses().find(x=>x.id===id); if(!S||inEvent()||!b||!b.beaten||!(star>=1&&star<=3)||star>b.stars+1||!hallTriesLeft()) return false;
+    hallState().used++; const h=heroStats(), M=CFG.hall.stars[star-1], e=enemyStats(b.f,10,true,b.m), W=CFG.event.walk;
+    B={event:true,kind:'hall',t:0,boss:true,elite:b.elite,count:1,spawned:1,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,groups:b.f,hall:{id,m:b.m,f:b.f,star}};
+    B.enemies.push({hp:e.hp*M.hp,max:e.hp*M.hp,atk:e.atk*M.atk,df:e.df,spawn:0,walk:W,arrive:W,next:W,first:true,dead:false,f:b.f,spd:1});
+    track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
+  function hallEnd(){ const X=B.hall, won=B.hp>0&&B.enemies.every(e=>e.dead), C=hallState().clr, b={...X,elite:X.f%50===0}, first=won&&X.star>(C[X.id]||0);
+    let rw=null; if(won){ rw=hallReward(b,X.star,first); if(first) C[X.id]=X.star; if(rw.scrap) S.scrap+=rw.scrap; giveBundle(rw); }
+    const res={kind:'hall',won,first,star:X.star,f:X.f,m:X.m,rw,t:B.t}; B=null; save(); emit('hallEnd',res); startWave(); emit('change'); return res }
 
   /* ---------- jefe semanal ---------- */
   // Pelea de 1 minuto contra un jefe inmortal que pega cada vez más fuerte (golpea como el jefe de la fase n, y n sube de 1
@@ -1327,7 +1347,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

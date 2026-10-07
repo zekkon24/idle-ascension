@@ -384,6 +384,12 @@ const CFG = {
   server:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track', every:10, saveEvery:120}, // saveEvery: subir la partida cada 2 min (lleva los eventos) // base de datos: dirección de la función "track" de Supabase (vacía = no se envía nada); envía como mucho cada 10 s
   devTools:false, // herramientas de prueba (velocidad, +oro, avanzar día…): poner a false al publicar en Telegram
   phaseCap:150, // cada modo tiene 150 fases; tras vencer la 150 y evolucionar se pasa al siguiente modo
+  // Sala de jefes: cada jefe de campaña vencido (cada 10 fases, por modo) se puede volver a luchar. 3 intentos al día (se gastan al empezar).
+  // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first' (+'elite' en ★★★
+  // de los jefes de élite 50/100/150); repetir: 'repeat' (oro de X min y chatarra del jefe ×N)
+  hall:{dur:60, tries:3, stars:[{hp:1,atk:1},{hp:3,atk:1.6},{hp:8,atk:2.5}],
+    first:[{wood:2},{silver:2,ev:2},{silver:3,ev:3,ess:1}], elite:{mode:1},
+    repeat:[{gold:10,scrap:1},{gold:20,scrap:2},{gold:30,scrap:3}]},
   // Desbloqueo de modos: fase récord (en Normal; desde Pesadilla, todo abierto) o días de juego (desde que empezó la partida).
   // POR AHORA TODO ABIERTO (unlock vacío). Antes de lanzar: unlock = unlockPlan.
   unlock:{}, unlockPlan:{lab:{fase:10}, pvp:{fase:50}, tower:{fase:50}, boss:{day:7}},

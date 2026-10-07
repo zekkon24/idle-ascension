@@ -189,6 +189,10 @@ G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
     gh.on('fx',ev=>skillFx(ev,'rival',gh));
     gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
+G.on('hallEnd',r=>{ tab='ev'; modView='campana'; renderTab(); haptic(r.won?'ok':'medium');
+  later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">Jefe de la fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · '+(r.t>=CFG.hall.dur?'se acabó el tiempo':'te ha derrotado')}</p>
+    ${r.rw?`<div class="loot"><div><span>${r.first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(r.rw)}${r.rw.scrap?` ${ICON.scrap}${fmt(r.rw.scrap)}`:''}</b></div></div>`:''}
+    <p class="hint">Intentos hoy: ${G.hallTriesLeft()}/${CFG.hall.tries}</p><button class="btn gold" data-act="close">Continuar</button>`)) });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
   showModal(`<h3>${boss?'Jefe semanal':'Mazmorra'}</h3>
     <div class="evhead"><div><span class="s">${boss?'Daño':'Muertes'}</span><b>${boss?fmt(r.dmg):r.kills}</b></div><div><span class="s">Puesto</span><b>${r.pos}</b></div><div><span class="s">${boss?'Total semana':'Total hoy'}</span><b>${boss?fmt(r.best):r.best}</b></div></div>
@@ -282,7 +286,7 @@ function updateHUD(){
   { const sp=!ev&&G.surpriseState(), run=ev&&B&&B.kind==='tower'?G.towerState().run:null;
     // jefe: calavera morada · jefe de élite: calavera roja · élite (Torre): ÉLITE en naranja · horda: HORDA en rojo · errante: naranja · PvP: VS en azul
     const SK='\u0000skull', [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',SK,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
-      :B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',SK,B.elite?'eboss':'boss']
+      :B.kind==='hall'?['★'.repeat(B.hall.star),SK,B.elite?'eboss':'boss']:B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',SK,B.elite?'eboss':'boss']
       :sp?[Math.ceil(sp.left)+' s',{horde:'HORDA',wander:'ERRANTE',mimic:'MÍMICO'}[sp.k]||'¡!',sp.k==='horde'?'horde':'wander']:['FASE',S.fase,''];
     const c=$('#vsC'), k=lb+'|'+mn+'|'+cl; if(c&&c.dataset.k!==k){ c.dataset.k=k; c.className='vsc'+(cl?' '+cl:'')+(mn===SK?' sk':'')+(String(mn).length>3?' long':'');
       c.innerHTML=`<small>${esc(lb)}</small>`+(mn===SK?`<svg viewBox="0 0 24 24" width="22" height="22" aria-label="Jefe"><path fill="currentColor" d="M12 2C6.9 2 3 5.6 3 10.3c0 2.9 1.5 5.2 3.8 6.6V20a1 1 0 0 0 1 1h1.6v-2h1.4v2h2.4v-2h1.4v2h1.6a1 1 0 0 0 1-1v-3.1c2.3-1.4 3.8-3.7 3.8-6.6C21 5.6 17.1 2 12 2Zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2Zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2ZM12 13.3l1.2 2.2h-2.4l1.2-2.2Z"/></svg>`:`<b>${esc(String(mn))}</b>`); } }
@@ -361,6 +365,31 @@ function upStrip(){ const st=G.heroStats();
 // Modos: Normal, Pesadilla, Infierno. Muestra dónde estás, qué da cada uno y qué hace falta para pasar al siguiente.
 function nameModal(){ showModal(`<h3>Tu nombre</h3><input id="nameIn" class="nameinp" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(S.name||'')}">
   <p class="hint">No se podrá cambiar.</p><div class="ctrl"><button class="btn gold" data-act="nameSave">Guardar</button></div>`); const i=$('#nameIn'); if(i) i.focus() }
+// Campaña · Sala de jefes: cada jefe de campaña vencido se puede volver a luchar (3 intentos al día, ★/★★/★★★)
+let hallMode=null, hallSel=null, hallStar=1;
+const bossPicCache={};
+function bossPic(m,f){ const k=m+'_'+f; if(bossPicCache[k]===undefined&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=120; cv.height=120; const g=cv.getContext('2d');
+    g.scale(1.6,1.6); ART.monster(g,37,66,{kind:ART.kindFor(Math.floor((f-1)/30),0,{boss:true,elite:f%50===0,mode:m}),r:f%50===0?24:20,hue:[0,190,300][m]||0,boss:true,elite:f%50===0,t:0});
+    bossPicCache[k]=cv.toDataURL() }catch(e){ bossPicCache[k]='' } } return bossPicCache[k]||'' }
+const starsHTML=(n,size)=>[1,2,3].map(i=>`<i class="${i<=n?'on':''}"${size?` style="font-size:${size}px"`:''}>★</i>`).join('');
+function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
+  if(hallMode==null) hallMode=Math.min(S.mode,CFG.modes.length-1);
+  const M=CFG.modes[hallMode], mine=L.filter(b=>b.m===hallMode), cur=hallMode===S.mode, next=hallMode===S.mode+1;
+  const chips=`<div class="fchips">${CFG.modes.map((x,m)=>`<button data-act="hallMode" data-v="${m}" aria-pressed="${m===hallMode}" ${x.locked?'disabled':''}>${x.locked?'🔒 ':''}${x.name}</button>`).join('')}</div>`;
+  const status=M.locked?'<p class="hint">Próximamente.</p>':cur?`<p class="hint">Fase actual ${S.best}/${CFG.phaseCap} · cada jefe que vences entra aquí</p>`:hallMode<S.mode?'<p class="hint">Completado</p>'
+    :next&&G.canAdvanceMode()?`<button class="btn gold" data-act="modeGo">Ir a ${M.name}</button>`:`<p class="hint">Vence la fase ${CFG.phaseCap} de ${CFG.modes[hallMode-1].name} y evoluciona para entrar.</p>`;
+  const tiles=mine.map(b=>`<button class="htile${b.beaten?'':' lock'}${b.elite?' elite':''}${hallSel===b.id?' sel':''}" data-act="hallSel" data-id="${b.id}" ${b.beaten?'':'disabled'}>
+      ${b.beaten?`<img src="${bossPic(b.m,b.f)}" alt="">`:'<span class="hlk">🔒</span>'}<span class="hf">${b.elite?'👑 ':''}${b.f}</span><span class="hst">${starsHTML(b.stars)}</span></button>`).join('');
+  const sel=mine.find(b=>b.id===hallSel&&b.beaten); let sheet='';
+  if(sel){ const st=Math.min(hallStar,sel.stars+1), first=st>sel.stars, rw=G.hallReward(sel,st,first);
+    const sb=[1,2,3].map(i=>`<button class="hsb${i===st?' on':''}${i<=sel.stars?' done':''}" data-act="hallStar" data-v="${i}" ${i>sel.stars+1?'disabled':''}>${'★'.repeat(i)}${i<=sel.stars?' ✓':''}</button>`).join('');
+    sheet=`<div class="hsheet"><div class="ctrl" style="justify-content:space-between"><b>Jefe de la fase ${sel.f}${sel.elite?' · Élite':''}</b><span class="hst big">${starsHTML(sel.stars)}</span></div>
+      <div class="hsbs">${sb}</div>
+      <div class="loot"><div><span>${first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(rw)}${rw.scrap?` ${ICON.scrap}${fmt(rw.scrap)}`:''}</b></div></div>
+      <button class="btn gold" data-act="hallGo" data-id="${sel.id}" data-v="${st}" ${left&&!G.inEvent()?'':'disabled'}>Luchar ${'★'.repeat(st)} · ${left}/${H.tries} intentos</button></div>`; }
+  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
+    ${chips}${status}${sheet}<div class="hgrid">${tiles}</div>
+    <p class="hint">${H.dur} s para vencerlo · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
 function modeRows(){
   const CAP=CFG.phaseCap; return CFG.modes.map((M,m)=>{
     const cur=m===S.mode, done=m<S.mode, next=m===S.mode+1, tier=CFG.evo.tiers[m-1];
@@ -851,7 +880,7 @@ function tabEv(){
     const modesTxt=CFG.modes.map((x,i)=>`<span class="${i===S.mode?'on':''}">${x.name.toUpperCase()}</span>`).join('');
     return `<div class="mgrid2">
       <button class="mcard2 wide" style="${bg(zoneNow(),360,150)}" data-act="modview" data-v="campana">
-        <span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
+        <span class="mbadge g">${G.hallTriesLeft()} INTENTOS</span><span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
         <span class="mp"><small>Progreso</small><b>Fase ${S.best} / ${cap}</b></span><span class="mbar"><i style="width:${S.best/cap*100}%"></i></span></button>
       ${!G.modeOpen('lab')&&!G.modeOpen('boss')?`<button class="mcard2 locked" style="${bg(4,180,170)}" data-act="lockInfo" data-k="lab">${lockBadge('lab')}<b class="mt">Eventos</b><span class="mf">${reqTxt('lab')}</span></button>`:`<button class="mcard2" style="${bg(4,180,170)}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
         <b class="mt">Eventos</b><span class="mf">${G.modeOpen('boss')?`⏱ Jefe: ${dhm(G.weekLeft())}`:'Jefe: '+reqTxt('boss').split(' · ')[0]}</span></button>`}
@@ -862,7 +891,7 @@ function tabEv(){
         <span><b class="mt">Torre</b><span class="mf">${tr?`Piso ${tr.floor} · ♥ ${tr.lives}`:`Récord: piso ${tw.best}`}</span></span></button>`
         :`<button class="mcard2 wide low locked" style="${bg(3,360,110)}" data-act="lockInfo" data-k="tower"><span class="mico">${GIC(GI.torre,40)}</span><span><b class="mt">Torre</b><span class="ms">${reqTxt('tower')}</span></span>${lockBadge('tower')}</button>`}
     </div>` }
-  if(modView==='campana') return `${back}<section class="panel"><h3>Campaña</h3><div class="mlist">${modeRows()}</div></section>`;
+  if(modView==='campana') return back+tabHall();
   if(modView==='torre') return back+tabTower();
   if(modView==='pvp') return back+tabPvp();
   return `${back}<section class="panel"><h3>Eventos</h3>
@@ -1235,6 +1264,10 @@ const ACT={
   lvlMat:(b,k,id)=>{ const it=G.findItem(id), r=G.levelUp(id,true); if(r.ok) toast(wName(it)+' sube a nivel '+r.lvl); else toast(r.why==='scrap'?'Te falta chatarra':'Te falta material'); renderTab() },
   lockInfo:(b,k)=>{ const u=UNL[k]; if(u) toast(`🔒 ${u[0]}: se desbloquea en ${reqTxt(k)}`) },
   unlGo:(b,k)=>{ closeModal(); tab='ev'; modView=k==='pvp'?'pvp':k==='tower'?'torre':'eventos'; evView=k==='lab'||k==='boss'?k:null; if(k==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}) },
+  hallMode:b=>{ hallMode=+b.dataset.v; hallSel=null; renderTab() },
+  hallSel:(b,k,id)=>{ hallSel=hallSel===id?null:id; const x=G.hallBosses().find(q=>q.id===id); hallStar=x?Math.min(3,x.stars+1):1; renderTab() },
+  hallStar:b=>{ hallStar=+b.dataset.v; renderTab() },
+  hallGo:(b,k,id)=>{ if(G.hallStart(id,+b.dataset.v)){ tab='up'; renderTab(); } else toast(G.hallTriesLeft()?'No se puede luchar ahora':'Sin intentos hoy: vuelve mañana') },
   ascAsk:(b,k,id)=>{ const it=G.findItem(id), a=it&&G.ascendInfo(id); if(!a||!a.can) return;
     showModal(`<h3>¿Ascender ${esc(wName(it))}?</h3><p class="hint">Pasa a <b style="color:var(--r${a.next})">${CFG.rarName[a.next]}</b> al nivel ${CFG.weapon.ascend.lvl}. Se gasta otra ${CFG.rarName[it.r]} nv ${CFG.weapon.maxLvl} (${esc(wName(a.partner))}) y el material.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="ascYes" data-id="${id}">Ascender</button></div>`) },
   ascYes:(b,k,id)=>{ closeModal(); const it=G.findItem(id), r=G.ascend(id); if(r.ok){ toast(`¡${wName(it)} asciende a ${CFG.rarName[r.r]}!`); haptic('ok'); } renderTab() },
