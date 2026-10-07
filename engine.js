@@ -223,8 +223,6 @@ function createGame(opts){
   const hordeOn=()=>SUR.kind==='horde'&&CT<SUR.until;
   // Evento de fin de semana (sábado y domingo UTC; rota cada fin de semana)
   const weekendNow=()=>{ const W=CFG.weekend; if(!W||!W.list.length) return null; const dow=(dayKey()+3)%7; if(!W.days.includes(dow)) return null; return W.list[weekKey()%W.list.length] };
-  // oro de 'min' minutos farmeando tu récord
-  const goldMin=min=>Math.max(20,farmRate(Math.max(1,S.best)).g*60*min);
   function pickSurprise(){ const C=CFG.surprise, WK=weekendNow(); if(WK&&WK.only) return WK.only;
     const w=C.weights||{horde:1,wander:1}, keys=Object.keys(w).filter(k=>C[k]), tot=keys.reduce((a,k)=>a+w[k],0); let r=rand()*tot;
     for(const k of keys){ if((r-=w[k])<0) return k } return keys[0] }
@@ -232,24 +230,16 @@ function createGame(opts){
     const WK=weekendNow(), every=C.every*(WK&&WK.every||1), jit=C.jitter*(WK&&WK.every||1);
     if(SUR.next===null) SUR.next=CT+every+(rand()*2-1)*jit;
     if(SUR.kind&&CT>=SUR.until){ const k=SUR.kind; SUR.kind=null;
-      if(k==='wander'||k==='mimic'||k==='thief'){ const w=B.enemies.find(e=>e.wander&&!e.dead); if(w){ w.dead=true; w.fled=true; }
-        if(k==='thief'){ const g=Math.min(S.gold,goldMin(C.thief.steal)); S.gold-=g; emit('surprise',{k:'thiefFled',gold:g}); }   // (también si se cambió de oleada: se escapó)
-        else if(w) emit('surprise',{k:k+'Fled'}); }
-      else if(k==='merchant'){ SUR.offer=null; emit('surprise',{k:'merchantEnd'}); }
+      if(k==='wander'||k==='mimic'){ const w=B.enemies.find(e=>e.wander&&!e.dead); if(w){ w.dead=true; w.fled=true; emit('surprise',{k:k+'Fled'}); } }
       else emit('surprise',{k:'hordeEnd'}); }
     if(SUR.kind||B.boss||CT<SUR.next) return;
     SUR.next=CT+every+(rand()*2-1)*jit;
     const k=pickSurprise();
     if(k==='horde'){ SUR.kind='horde'; SUR.until=CT+C.horde.dur; emit('surprise',{k:'horde',dur:C.horde.dur}); return }
-    if(k==='merchant'){ const M=C.merchant, it=M.items[Math.min(S.mode||0,M.items.length-1)]; SUR.kind='merchant'; SUR.until=CT+M.dur;
-      SUR.offer={r:it.r,price:Math.round(goldMin(it.price))}; emit('surprise',{k:'merchant',dur:M.dur,offer:SUR.offer}); return }
     const W=C[k], e=enemyStats(S.fase,S.wave,false), hp=e.hp*perWave(S.fase)*W.hp;
-    B.enemies.push({hp,max:hp,atk:k==='thief'?0:e.atk*(W.atk||1),df:e.df,spawn:B.t,walk:walkT()*(k==='thief'?0.5:1),arrive:B.t+walkT()*(k==='thief'?0.5:1),next:B.t+walkT(),first:false,dead:false,wander:true,sk:k,spd:1});
+    B.enemies.push({hp,max:hp,atk:e.atk*(W.atk||1),df:e.df,spawn:B.t,walk:walkT(),arrive:B.t+walkT(),next:B.t+walkT(),first:false,dead:false,wander:true,sk:k,spd:1});
     SUR.kind=k; SUR.until=CT+W.dur; emit('surprise',{k,dur:W.dur}); }
-  // Mercader: compra el arma que ofrece (mientras está)
-  function buyMerchant(){ const o=SUR.kind==='merchant'&&CT<SUR.until?SUR.offer:null; if(!o) return {ok:false,why:'gone'}; if(S.gold<o.price) return {ok:false,why:'gold'};
-    if(invFree()<1) return {ok:false,why:'inv'}; S.gold-=o.price; const it=newItem(S.cls,o.r); SUR.offer=null; SUR.kind=null; track('merchant',{r:o.r,gold:o.price}); save(); emit('surprise',{k:'merchantBuy',item:it}); emit('change'); return {ok:true,item:it} }
-  const surpriseState=()=>SUR.kind&&CT<SUR.until?{k:SUR.kind,left:SUR.until-CT,offer:SUR.offer||null}:null;
+  const surpriseState=()=>SUR.kind&&CT<SUR.until?{k:SUR.kind,left:SUR.until-CT}:null;
   function startWave(){
     if(B&&B.event) return; // el evento en curso no se interrumpe
     // jefe: al empujar una fase múltiplo de 10; y el de la fase 150 se puede repetir (farmear) una vez vencido
@@ -357,7 +347,7 @@ function createGame(opts){
         if((sk.id==='tSed'||sk.id==='tSangria')&&B.hp<0.35*h.hp) continue;
         CD[k]=CT+sk.cd; GCD=CT+(CFG.skillGap||0); (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
     if(B.cast&&B.cast.length){ const list=B.cast; B.cast=[];
-      const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>((b.sk==='thief'||b.sk==='mimic')-(a.sk==='thief'||a.sk==='mimic'))||a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*tMul(e);
+      const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>((b.sk==='mimic')-(a.sk==='mimic'))||a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*tMul(e);
       const hurt=(e,d,k)=>{ zap(e,d,{skill:k}); return e.dead };
       for(const k of (TW&&tgH('eco')?list.flatMap(k=>k[0]==='t'?[k,k]:[k]):list)){ const sk=skillDef(k); if(!sk) continue;   // Eco: las habilidades de la Torre se lanzan dos veces
         switch(sk.id){
@@ -402,7 +392,7 @@ function createGame(opts){
       while(B.t>=B.th){
         const cand=B.enemies.filter(canHit);
         if(!cand.length){B.th=null;break}
-        const pri=e=>e.sk==='thief'||e.sk==='mimic'?1:0;   // sorpresas con tiempo (duende, mímico): van primero
+        const pri=e=>e.sk==='mimic'?1:0;   // el mímico (con tiempo) va primero
         const tg=cand.reduce((a,b)=>pri(b)!==pri(a)?(pri(b)>pri(a)?b:a):a.arrive<=b.arrive?a:b);
         B.mB+=dmgF(h.atk,tg.df)*(B.boss?1+h.bd:1)*(1+h.cr*h.cd);   // lo que diría la fórmula por ataque (para medir el DPS real)
         hitOnce(tg);
@@ -1329,7 +1319,7 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, weekendNow, buyMerchant, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, weekendNow, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,

@@ -134,10 +134,9 @@ const CFG = {
   // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
   surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,hp:1.5,atk:1.5,reward:{silver:1}},
     // probabilidad de cada sorpresa (sobre el total)
-    weights:{horde:30,wander:30,mimic:15,thief:15,merchant:10},
-    mimic:{dur:12,hp:0.6,atk:0.8,reward:{wood:2,gold:10}},          // Mímico: si lo matas antes de 12 s, botín; si no, se escapa
-    thief:{dur:8,hp:0.35,steal:3,reward:{gold:5}},                   // Duende ladrón: no pega; si no lo matas en 8 s te roba el oro de 3 min; si lo matas suelta 5 min
-    merchant:{dur:30,items:[{r:'R',price:30},{r:'E',price:120}]}},    // Mercader: 30 s; arma de tu clase (por modo) por el oro de 'price' minutos de farmeo
+    // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
+    weights:{horde:35,wander:35,mimic:30},
+    mimic:{dur:12,hp:0.6,atk:0.8,reward:{wood:2,gold:10}}},          // Mímico: si lo matas antes de 12 s, botín; si no, se escapa
   // Eventos de fin de semana (sábado y domingo UTC, rotan cada fin de semana)
   weekend:{days:[5,6], list:[
     {id:'oro',name:'Fin de semana dorado',desc:'Oro ×2 en la campaña',gold:2},
