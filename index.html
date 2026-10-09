@@ -580,7 +580,9 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 /* brillo más fuerte cuanto más peligroso: jefe (--es 1) > élite (.7) > horda y evento (.5) */
 @keyframes encglow{0%,100%{box-shadow:0 0 calc(var(--es)*5px) 0 var(--eg),0 0 0 1px var(--ec)}50%{box-shadow:0 0 calc(var(--es)*11px) calc(var(--es)*1px) var(--eg),0 0 0 1px var(--ec)}}
 .enc{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:6;font-family:inherit}
-.stage[class*="enc-"] .enc{box-shadow:inset 0 0 calc(var(--es)*34px) calc(var(--es)*4px) var(--eg)}
+/* el mismo brillo por dentro del combate, latiendo a la vez que el de fuera */
+.stage[class*="enc-"] .enc{animation:encglowin 2.2s ease-in-out infinite}
+@keyframes encglowin{0%,100%{box-shadow:inset 0 0 calc(var(--es)*8px) 0 var(--eg)}50%{box-shadow:inset 0 0 calc(var(--es)*16px) calc(var(--es)*2px) var(--eg)}}
 .encban{position:absolute;left:-4%;right:-4%;top:22%;transform:skewY(-4deg);padding:9px 0 11px;text-align:center;background:linear-gradient(90deg,transparent,var(--ebd) 14%,var(--ebd) 86%,transparent);
   border-top:2px solid var(--ec);border-bottom:2px solid var(--ec);box-shadow:0 0 30px var(--eg);animation:encin 1.9s ease forwards}
 @keyframes encin{0%{opacity:0;transform:skewY(-4deg) scaleX(.2)}12%{opacity:1;transform:skewY(-4deg) scaleX(1.04)}18%{transform:skewY(-4deg) scaleX(1)}82%{opacity:1}100%{opacity:0;transform:skewY(-4deg) translateY(-10px)}}
@@ -597,7 +599,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .encnotch{position:absolute;left:50%;top:-3px;width:3px;height:28px;background:#fff;box-shadow:0 0 6px #fff;border-radius:2px;pointer-events:none}
 .encnotch small{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;color:#ffb3b5;letter-spacing:.06em;font-style:normal}
 .stage.encshake{animation:encshake .45s ease,encglow 2.2s ease-in-out infinite}@keyframes encshake{0%,100%{translate:0 0}20%{translate:-5px 2px}40%{translate:5px -2px}60%{translate:-3px 1px}80%{translate:3px 0}}
-@media (prefers-reduced-motion:reduce){.stage[class*="enc-"],.stage.encshake{animation:none;box-shadow:0 0 calc(var(--es)*8px) 0 var(--eg)}.encban{animation-duration:2.4s}}
+@media (prefers-reduced-motion:reduce){.stage[class*="enc-"] .enc{animation:none;box-shadow:inset 0 0 calc(var(--es)*10px) 0 var(--eg)}.stage[class*="enc-"],.stage.encshake{animation:none;box-shadow:0 0 calc(var(--es)*8px) 0 var(--eg)}.encban{animation-duration:2.4s}}
 .vshud{position:absolute;left:6px;right:6px;top:6px;z-index:5;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;pointer-events:none}   /* start: los iconos de debajo no mueven las barras */
 .vsw{position:relative;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
 .vsv{display:block;width:100%;height:22px;overflow:visible}
@@ -652,7 +654,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610092119-4857e3e';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610092122-2aa87a9';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
