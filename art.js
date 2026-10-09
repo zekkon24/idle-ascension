@@ -187,10 +187,10 @@ function monster(g,x,y,o){
     g.fillStyle='#ffd23e'; g.fillRect(-5,-35,2.5,2); g.fillRect(-0.5,-35,2.5,2);
     g.save(); g.translate(-7,-20); g.rotate(-0.4-(atk?Math.sin(atk*Math.PI)*1.1:0)); g.strokeStyle='#444'; g.lineWidth=2; g.beginPath(); g.moveTo(0,0); g.lineTo(0,-20); g.stroke();
       g.strokeStyle=STEEL; g.beginPath(); g.moveTo(-4,-20); g.lineTo(-4,-26); g.moveTo(0,-20); g.lineTo(0,-27); g.moveTo(4,-20); g.lineTo(4,-26); g.stroke(); g.restore(); }   // tridente
-  // jefes: corona (élite: morada y más grande)
+  // corona: JEFE (o.elite) roja · élite (jefe de cada 10 fases) morada
   if(o.boss){ if(sp) g.translate((sp.hx-sp.ax)*sp.W,k==='bat'?7-sp.H:5-sp.H);   // sprite: corona sobre la cabeza
     const top=sp?0:k==='orc'?-54:k==='bat'?-36:k==='slime'?-22:k==='golem'?-44:k==='skeleton'?-40:k==='demon'?-47:-37;
-    g.fillStyle=o.elite?'#c86bff':'#e8b04a'; g.beginPath(); g.moveTo(-8,top); g.lineTo(-6,top-8); g.lineTo(-2,top-3); g.lineTo(0,top-9); g.lineTo(2,top-3); g.lineTo(6,top-8); g.lineTo(8,top); g.closePath(); g.fill(); }
+    g.fillStyle=o.elite?'#e5484d':'#c86bff'; g.beginPath(); g.moveTo(-8,top); g.lineTo(-6,top-8); g.lineTo(-2,top-3); g.lineTo(0,top-9); g.lineTo(2,top-3); g.lineTo(6,top-8); g.lineTo(8,top); g.closePath(); g.fill(); }
   if(hit&&!sp){ g.globalAlpha=hit*0.3; g.fillStyle='#fff'; g.beginPath(); g.ellipse(0,-16,12,14,0,0,TAU); g.fill(); g.globalAlpha=1; }
   g.restore();
 }

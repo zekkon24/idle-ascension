@@ -16,11 +16,12 @@ const CFG = {
      spd:0.88,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo'},
   },
   enemy:{hp:45,hpG:1.0358,atk:6,atkG:1.026,earlyTo:50,hpG0:1.035,atkG0:1.024, // hasta la fase 50 crecen con hpG0/atkG0
-         hpBands:[[101,1.051,1.036]], // de la fase 101 a la 150 los enemigos crecen más: la fase 150 llega hacia el día 13
-         walls:{50:{hp:5.74,atk:2.71},100:{hp:2.5,atk:1.95},150:{hp:1.7,atk:1.55}}, // jefes de élite de Normal con valores propios (misma escala que eliteHp/eliteAtk)
+         hpBands:[[101,1.048,1.036]], // de la fase 101 a la 150 los enemigos crecen más (simulado: la fase 150 de Normal llega hacia el día 10-11)
+         walls:{50:{hp:5.74,atk:2.71},100:{hp:2.5,atk:1.95},150:{hp:1.7,atk:1.55}}, // (antiguo: sin uso mientras exista enemy.jefe)
+         jefe:{hp:2,atk:2},   // JEFE (fases 50, 100 y 150 de cada modo) = el doble de vida y de daño que el élite de su tramo
          df:3,dfG:1.0119,waveHp:0.0145,
          bossHp:1.5,bossAtk:1.5,   // (respaldo: bossBands manda) jefe cada 10 fases: vida en oleadas (1 = toda la oleada de su fase), ataque en enemigos (1 = un enemigo)
-         bossBands:[[1,1.5,1.5],[51,2.0,1.7],[101,1.7,1.6],[151,1.6,1.55]], // [desde fase, vida, ataque]: los jefes normales frenan unas horas en cada tramo
+         bossBands:[[1,1.6,1.4],[51,1.25,1.2],[101,1.0,1.0],[151,1.0,1.0]], // ÉLITE (cada 10 fases) y errante: [desde fase, vida en oleadas, ataque en enemigos]; un poco más que una oleada + mecánica a mitad de vida
          eliteHp:3,eliteAtk:2,     // (respaldo: walls manda) jefe de élite cada 50 fases (mismas unidades)
          extraEvery:50,spd:0.8,walk:2.0,dash:0.05, // dash: Embestida de los de cuerpo a cuerpo (esperan el 5 % del camino)
          // Oleadas progresivas: n0 enemigos (+1 cada nEvery fases, máx. nMax); salen g0 a la vez (+1 cada gEvery fases, máx. gMax),
@@ -132,23 +133,24 @@ const CFG = {
     pass:{stars:250}},
   // Sorpresas en la campaña (cada every±jitter s de combate; no en jefes ni eventos): Horda (dur s, enemigos ×count, oro ×gold)
   // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
-  surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,hp:1.5,atk:1.5,reward:{silver:1}},
+  surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,reward:{silver:1}},
     // probabilidad de cada sorpresa (sobre el total)
     // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
     weights:{horde:50,wander:50}},
   // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
-  bossPhase:{at:0.5, rage:1.3, summon:[2,3]},
+  bossPhase:{at:0.5, rage:1.3, summon:[2,3], jefeBoth:true},   // a mitad de vida: élite y errante, enfurecerse O llamar ayuda; el JEFE, las dos
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
   // × hp0·hpG^(piso−1) de vida y × atk0·atkG^(piso−1) de ataque. Premios la 1.ª vez que llegas a cada piso.
   // Base de los enemigos = (los de tu fase récord)^w × (los «a tu medida»)^(1−w): con w bajo, tus estadísticas pesan poco.
   // «A tu medida»: tardas tKill s en matar a uno normal y cada golpe suyo te quita hitPct de tu vida (en el piso 1).
   // Crecimiento por tramos: curve=[[desde piso, ×vida por piso, ×ataque por piso], …] (suave hasta el 50, duro hasta el 100, muy duro después).
-  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.0107, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:1, atk0:1, count0:4, countEvery:5, countMax:10, group:3,
-    elite:{n:3,hp:3,atk:1.5}, boss:{every:10,hp:1.2,atk:1.6},
+  tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.0107, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:0.75, atk0:0.8, count0:4, countEvery:5, countMax:10, group:3,
+    // Élite: 3 enemigos con, entre todos, elite.hp × la vida de un combate normal; JEFE: el doble que el élite (vida y daño) + mecánica
+    elite:{n:3,hp:1.3,atk:1.2}, boss:{every:10,hp:2.6,atk:2.4},
     // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
     // todo sube de golpe (×jump)
-    hard:{eliteFrom:40, eliteEvery:10, eliteUp:1.25, jumpEvery:25, jump:1.15},
+    hard:{eliteFrom:40, eliteEvery:10, eliteUp:1.25, bossUp:1.25, jumpEvery:25, jump:1.15},
     // Mapa (reglas de Slay the Spire con 2 rutas, por tramos de 10 pisos): % de cada casilla libre (combate el resto), 3 primeros pisos
     // del tramo sin élite ni hoguera (calm), cofres en el piso treasureAt, élites obligatorios desde mergeFrom (piso mergeAt y un merge % de los demás)
     // unk: la casilla «?» es combate / tienda / cofre con [base, +si no sale]; si no, evento (como en StS)

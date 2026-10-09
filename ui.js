@@ -137,7 +137,7 @@ G.on('mode',({name})=>{ showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves 
 G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase));
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{});
-G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡El jefe se enfurece!':'¡El jefe llama refuerzos!'); });
+G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡Se enfurece!':k==='both'?'¡Se enfurece y llama refuerzos!':'¡Llama refuerzos!'); });
 G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; towerTab='run'; renderTab();
   if(r.won&&!r.pick){ toast(`Piso ${r.floor} superado · +${r.souls} almas`); return }   // combate normal: sin mejora, solo almas
   if(r.won){ toast(`Piso ${r.floor} superado${r.souls?` · +${r.souls} almas`:''}`); return }   // la recompensa se elige directamente en la pantalla de la Torre
@@ -166,8 +166,8 @@ G.on('towerPickNow',()=>{ tab='up'; renderTab(); later(towerPickModal); haptic('
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ const C=CFG.surprise;
   if(k==='horde'||k==='wander') haptic('medium');   // el cartel y la barra del combate ya lo cuentan (encHUD)
-  else if(/Win$/.test(k)){ haptic('ok'); toast({wanderWin:'¡Jefe errante vencido! '}[k]+bundleTxt(reward)); updateHUD(); }
-  else if(k==='wanderFled') toast('El jefe errante huyó'); });
+  else if(/Win$/.test(k)){ haptic('ok'); toast({wanderWin:'¡Errante vencido! '}[k]+bundleTxt(reward)); updateHUD(); }
+  else if(k==='wanderFled') toast('El errante huyó'); });
 G.on('pvpEnd',r=>{ tab='ev'; modView='pvp'; evView=null; haptic(r.win?'ok':'medium');
   if(r.rival.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpResult',{match:r.rival.match,win:r.win,draw:r.draw}).then(j=>{ if(j&&j.ok){ G.pvpSync(j); if(PVI) Object.assign(PVI.me,{rating:j.rating,games:j.games,wins:j.wins,rank:j.rank,left:j.left}); pvpLoad(); } });
   renderTab(); later(()=>showModal(`<h3>${r.win?'¡Victoria!':r.draw?'Empate':'Derrota'}</h3><p class="hint">Contra ${esc(r.rival.name)} (${clName(r.rival.cls)})${r.draw?' · nadie cayó en 30 s':''} · tú ${Math.round(r.me*100)} % de vida, rival ${Math.round(r.them*100)} %.<br>${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.rating)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
@@ -189,7 +189,7 @@ G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
     gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
 G.on('hallEnd',r=>{ tab='ev'; modView='campana'; renderTab(); haptic(r.won?'ok':'medium');
-  later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">Jefe de la fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · te ha derrotado'}</p>
+  later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">JEFE de la fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · te ha derrotado'}</p>
     ${r.rw?`<div class="loot"><div><span>${r.first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(r.rw)}${r.rw.scrap?` ${ICON.scrap}${fmt(r.rw.scrap)}`:''}</b></div></div>`:''}
     <p class="hint">Intentos hoy: ${G.hallTriesLeft()}/${CFG.hall.tries}</p><button class="btn gold" data-act="close">Continuar</button>`)) });
 function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
@@ -264,7 +264,8 @@ function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pan
   for(const k in NAVL) navSet(k,0);
   $('#nav').hidden=false; { const st=document.querySelector('[data-tab="shop"]'); if(st) st.hidden=!CFG.shopTab; } if(tab==='shop'&&!CFG.shopTab) tab='up'; renderTab();
 }
-/* ---------- combates especiales: jefe (rojo), élite (morado), horda (naranja), evento (azul) ----------
+/* ---------- combates especiales (de menos a más fuerte): horda (naranja) · errante (azul) y élite (morado) · JEFE (rojo) ----------
+   Élite = jefe de cada 10 fases de la campaña y élite de la Torre; JEFE = fases 50/100/150, jefe de la Torre, Sala de jefes y Jefe semanal.
    Al empezar sale un cartel ~1,8 s; mientras dura, el combate tiene un borde de color que brilla y una etiqueta con el nombre.
    Igual en la campaña, la Sala de jefes, el Jefe semanal y la Torre. */
 const KNAME={slimeKing:'Rey Limo',hobgoblin:'Hobgoblin',shaman:'Chamán goblin',orcWarlord:'Caudillo orco',skelKnight:'Caballero esqueleto',lichKing:'Rey no muerto',
@@ -278,15 +279,15 @@ function encInfo(B,ev){ if(!B) return null; const fmtN=n=>n.toLocaleString('es-E
     if(B.node==='elite'){ const n=encName(z,true,0), T=CFG.tower.traits, tr=[...new Set(B.enemies.flatMap(e=>e.traits||[]))];
       return {k:'elite',s:'✦ ÉLITE ✦',b:n,chips:tr.map(t=>(T[t]||{}).name||t),tag:`💀 ${n} · Piso ${run.floor}`} }
     return null }
-  if(B.kind==='hall'){ const H=B.hall, n=encName(encZone(H.f),true,H.m); return {k:'elite',s:'✦ ÉLITE '+'★'.repeat(H.star)+' ✦',b:n,i:`Fase ${H.f} · ${CFG.modes[H.m].name} · desde el minuto 1 se enfurece`,tag:`💀 ${n} · ${'★'.repeat(H.star)}`} }
+  if(B.kind==='hall'){ const H=B.hall, n=encName(encZone(H.f),true,H.m); return {k:'boss',s:'⚠ JEFE '+'★'.repeat(H.star)+' ⚠',b:n,i:`Fase ${H.f} · ${CFG.modes[H.m].name} · desde el minuto 1 se enfurece`,tag:`👑 ${n} · ${'★'.repeat(H.star)}`} }
   if(B.kind==='boss'){ const W=B.wb||{}; return {k:'boss',s:'⚠ JEFE SEMANAL ⚠',b:W.name||'Jefe semanal',i:W.desc||'',tag:`👑 ${W.name||'Jefe semanal'}`} }
   if(ev) return null;   // Mazmorra y PvP: sin cartel
   if(B.boss){ const n=encName(encZone(S.fase),B.elite,S.mode);
-    return B.elite?{k:'elite',s:'✦ ÉLITE ✦',b:n,i:`Fase ${fmtN(S.fase)} · jefe de élite: mucho más duro`,tag:`💀 ${n} · Fase ${fmtN(S.fase)}`,notch:true}
-      :{k:'boss',s:'⚠ JEFE ⚠',b:n,i:`Fase ${fmtN(S.fase)} · a mitad de vida se enfurece o llama ayuda`,tag:`👑 ${n} · Fase ${fmtN(S.fase)}`,notch:true} }
+    return B.elite?{k:'boss',s:'⚠ JEFE ⚠',b:n,i:`Fase ${fmtN(S.fase)} · a mitad de vida se enfurece y llama ayuda`,tag:`👑 ${n} · Fase ${fmtN(S.fase)}`,notch:true}
+      :{k:'elite',s:'✦ ÉLITE ✦',b:n,i:`Fase ${fmtN(S.fase)} · a mitad de vida se enfurece o llama ayuda`,tag:`💀 ${n} · Fase ${fmtN(S.fase)}`,notch:true} }
   const sp=G.surpriseState(), C=CFG.surprise; if(!sp) return null;
   if(sp.k==='horde') return {k:'horde',horde:sp};
-  if(sp.k==='wander') return {k:'event',s:'❓ EVENTO ❓',b:'¡JEFE ERRANTE!',i:`Si cae en ${C.wander.dur} s: 🎁 ${bundleTxt(C.wander.reward)}`,ring:sp};
+  if(sp.k==='wander') return {k:'event',s:'❓ EVENTO ❓',b:'¡ERRANTE!',i:`Si cae en ${C.wander.dur} s: 🎁 ${bundleTxt(C.wander.reward)}`,ring:sp};
   return null }
 let encB=null, encSp=null;
 function encHUD(B,ev){ const st=$('.stage'), box=$('#enc'); if(!st||!box) return;
@@ -326,9 +327,9 @@ function updateHUD(){
   $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   // emblema del centro (entre las dos barras): dónde estás y si es jefe o élite
   { const sp=!ev&&G.surpriseState(), run=ev&&B&&B.kind==='tower'?G.towerState().run:null;
-    // mismos colores que el borde del combate: jefe rojo · élite (y jefe de élite) morado · horda naranja · errante azul · PvP: VS en azul
+    // mismos colores que el borde del combate: JEFE rojo · élite morado · horda naranja · errante azul · PvP: VS en azul
     const SK='\u0000skull', [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',SK,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
-      :B.kind==='hall'?['★'.repeat(B.hall.star),SK,B.elite?'eboss':'boss']:B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',SK,B.elite?'eboss':'boss']
+      :B.kind==='hall'?['★'.repeat(B.hall.star),SK,'boss']:B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'JEFE':'ÉLITE',SK,B.elite?'boss':'elite']
       :sp?[Math.ceil(sp.left)+' s',{horde:'HORDA',wander:'ERRANTE'}[sp.k]||'¡!',sp.k==='horde'?'horde':'wander']:['FASE',S.fase,''];
     const c=$('#vsC'), k=lb+'|'+mn+'|'+cl; if(c&&c.dataset.k!==k){ c.dataset.k=k; c.className='vsc'+(cl?' '+cl:'')+(mn===SK?' sk':'')+(String(mn).length>3?' long':'');
       c.innerHTML=`<small>${esc(lb)}</small>`+(mn===SK?`<svg viewBox="0 0 24 24" width="22" height="22" aria-label="Jefe"><path fill="currentColor" d="M12 2C6.9 2 3 5.6 3 10.3c0 2.9 1.5 5.2 3.8 6.6V20a1 1 0 0 0 1 1h1.6v-2h1.4v2h2.4v-2h1.4v2h1.6a1 1 0 0 0 1-1v-3.1c2.3-1.4 3.8-3.7 3.8-6.6C21 5.6 17.1 2 12 2Zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2Zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2ZM12 13.3l1.2 2.2h-2.4l1.2-2.2Z"/></svg>`:`<b>${esc(String(mn))}</b>`); } }
@@ -420,18 +421,18 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
   if(hallMode==null) hallMode=Math.min(S.mode,CFG.modes.length-1);
   const M=CFG.modes[hallMode], mine=L.filter(b=>b.m===hallMode), cur=hallMode===S.mode, next=hallMode===S.mode+1;
   const chips=`<div class="fchips">${CFG.modes.map((x,m)=>`<button data-act="hallMode" data-v="${m}" aria-pressed="${m===hallMode}" ${x.locked?'disabled':''}>${x.locked?'🔒 ':''}${x.name}</button>`).join('')}</div>`;
-  const status=M.locked?'<p class="hint">Próximamente.</p>':cur?`<p class="hint">Fase actual ${S.best}/${CFG.phaseCap} · ${mine.some(b=>b.beaten)?'cada jefe de élite que vences entra aquí':`vence al jefe de élite de la fase ${H.every} para abrir la sala`}</p>`:hallMode<S.mode?'<p class="hint">Completado</p>'
+  const status=M.locked?'<p class="hint">Próximamente.</p>':cur?`<p class="hint">Fase actual ${S.best}/${CFG.phaseCap} · ${mine.some(b=>b.beaten)?'cada JEFE que vences entra aquí':`vence al JEFE de la fase ${H.every} para abrir la sala`}</p>`:hallMode<S.mode?'<p class="hint">Completado</p>'
     :next&&G.canAdvanceMode()?`<button class="btn gold" data-act="modeGo">Ir a ${M.name}</button>`:`<p class="hint">Vence la fase ${CFG.phaseCap} de ${CFG.modes[hallMode-1].name} y evoluciona para entrar.</p>`;
   const tiles=mine.map(b=>`<button class="htile${b.beaten?'':' lock'}${b.elite?' elite':''}${hallSel===b.id?' sel':''}" data-act="hallSel" data-id="${b.id}" ${b.beaten?'':'disabled'}>
       ${b.beaten?`<img src="${bossPic(b.m,b.f)}" alt="">`:'<span class="hlk">🔒</span>'}<span class="hf">${b.elite?'👑 ':''}${b.f}</span><span class="hst">${starsHTML(b.stars)}</span></button>`).join('');
   const sel=mine.find(b=>b.id===hallSel&&b.beaten); let sheet='';
   if(sel){ const st=Math.min(hallStar,sel.stars+1), first=st>sel.stars, rw=G.hallReward(sel,st,first);
     const sb=[1,2,3].map(i=>`<button class="hsb${i===st?' on':''}${i<=sel.stars?' done':''}" data-act="hallStar" data-v="${i}" ${i>sel.stars+1?'disabled':''}>${'★'.repeat(i)}${i<=sel.stars?' ✓':''}</button>`).join('');
-    sheet=`<div class="hsheet"><div class="ctrl" style="justify-content:space-between"><b>Jefe de la fase ${sel.f}${sel.elite?' · Élite':''}</b><span class="hst big">${starsHTML(sel.stars)}</span></div>
+    sheet=`<div class="hsheet"><div class="ctrl" style="justify-content:space-between"><b>JEFE de la fase ${sel.f}</b><span class="hst big">${starsHTML(sel.stars)}</span></div>
       <div class="hsbs">${sb}</div>
       <div class="loot"><div><span>${first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(rw)}${rw.scrap?` ${ICON.scrap}${fmt(rw.scrap)}`:''}</b></div></div>
       <button class="btn gold" data-act="hallGo" data-id="${sel.id}" data-v="${st}" ${left&&!G.inEvent()?'':'disabled'}>Luchar ${'★'.repeat(st)} · ${left}/${H.tries} intentos</button></div>`; }
-  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes de élite</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
+  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
     ${chips}${status}${sheet}<div class="hgrid">${tiles}</div>
     <p class="hint">Sin tiempo límite: desde el minuto 1, el jefe se enfurece cada 10 s · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
 function modeRows(){
@@ -1507,7 +1508,7 @@ function draw(dt){
     let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*24;q++}
     e.x=x; drawQ.push(()=>{
     if(e.dead&&!e._burst){ e._burst=1; if(anim) ART.burst(x,gy-r,'#d9d2c0',8); }
-    ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:big,elite:B.elite,t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK)});
+    ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:big,elite:!!(B.elite||B.node==='boss'),t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK)});
     if(anim&&!e.dead) ART.status(g,x,gy,r,{frozen:e.frozen>B.t,burn:(e.burn&&e.burn.some(u=>u>B.t))||(e.dot>B.t&&e.dotKind==='fuego'),poison:e.poison&&e.poison.some(p=>p.until>B.t),mark:e.mark>B.t},T);
     if(bars&&!e.immortal&&!e.dead&&B.event&&!B.kind){ const by=y-r*3.7-6; g.fillStyle='#0009'; g.fillRect(x-18,by,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,by,36*Math.max(0,e.hp/e.max),4); }   // Mazmorra (sin fin): barra de cada uno
     }); drawQ[drawQ.length-1].row=e._row;

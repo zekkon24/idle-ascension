@@ -158,7 +158,7 @@ function createGame(opts){
     // Jefes: su vida se mide en "oleadas" (la vida de toda la oleada de su fase) y su ataque en enemigos (×1 = un enemigo normal)
     if(!boss&&WV()){ const V=WV(); hp*=perOld(f)/perWave(f)*(V.hpMul||1); atk*=Math.pow(V.atkG||1,groupAt(f)-1); }
     if(boss){ const per=perOld(f), M=MODES()[md]||modeCfg();
-      const m=f%50===0?(M.off?((M.walls&&M.walls[f])||{hp:E.eliteHp,atk:E.eliteAtk}):eliteMult(f)):bossBand(f); hp*=per*m.hp; atk*=m.atk; }
+      const bb=bossBand(f), J=E.jefe, m=f%50!==0?bb:J?{hp:bb.hp*J.hp,atk:bb.atk*J.atk}:(M.off?((M.walls&&M.walls[f])||{hp:E.eliteHp,atk:E.eliteAtk}):eliteMult(f)); hp*=per*m.hp; atk*=m.atk; }   // JEFE = el élite de su tramo × enemy.jefe
     return {hp,atk,df};
   }
   // jefe de élite: su valor propio (walls) o, si no tiene, el del último élite definido por debajo (p. ej. la 250 usa la 200)
@@ -234,7 +234,7 @@ function createGame(opts){
     SUR.next=CT+every+(rand()*2-1)*jit;
     const k=pickSurprise();
     if(k==='horde'){ SUR.kind='horde'; SUR.until=CT+C.horde.dur; emit('surprise',{k:'horde',dur:C.horde.dur}); return }
-    const W=C[k], e=enemyStats(S.fase,S.wave,false), hp=e.hp*perWave(S.fase)*W.hp;
+    const W=C[k], e=enemyStats(S.fase%50===0?S.fase-1:S.fase,S.wave,true), hp=e.hp*(W.hp||1);   // errante = un élite de su fase
     B.enemies.push({hp,max:hp,atk:e.atk*(W.atk||1),df:e.df,spawn:B.t,walk:walkT(),arrive:B.t+walkT(),next:B.t+walkT(),first:false,dead:false,wander:true,sk:k,spd:1});
     SUR.kind=k; SUR.until=CT+W.dur; emit('surprise',{k,dur:W.dur}); }
   const surpriseState=()=>SUR.kind&&CT<SUR.until?{k:SUR.kind,left:SUR.until-CT}:null;
@@ -402,11 +402,11 @@ function createGame(opts){
         B.th+=1/(h.spd*buffMul('spd'));
       }
     } else if(B.event||(B.th!==null&&B.th<=B.t)) B.th=null;   // en campaña, sin objetivo, el siguiente golpe respeta la cadencia (cuerpo a cuerpo: no es instantáneo al llegar)
-    // jefes con fases: al bajar de la mitad de vida se enfurecen o invocan ayudantes (al azar)
-    if(B.boss&&!B.event&&CFG.bossPhase) for(const e of B.enemies){ if(e.dead||e.minion||e.phase||e.hp>CFG.bossPhase.at*e.max) continue;
-      const P=CFG.bossPhase; e.phase=rand()<0.5?'rage':'summon';
-      if(e.phase==='rage'){ e.atk*=P.rage; e.spd=(e.spd||1)*P.rage; }
-      else { const n=P.summon[0]+Math.floor(rand()*(P.summon[1]-P.summon[0]+1)), m=enemyStats(S.fase,1,false), W=walkT();
+    // a mitad de vida: el élite (y el errante) se enfurece o invoca ayudantes (al azar); el JEFE (fases 50/100/150) hace las dos cosas
+    if(!B.event&&CFG.bossPhase&&(B.boss||SUR.kind==='wander')) for(const e of B.enemies){ if(e.dead||e.minion||e.phase||!(B.boss||e.wander)||e.hp>CFG.bossPhase.at*e.max) continue;
+      const P=CFG.bossPhase, both=B.elite&&P.jefeBoth; e.phase=both?'both':rand()<0.5?'rage':'summon';
+      if(e.phase!=='summon'){ e.atk*=P.rage; e.spd=(e.spd||1)*P.rage; }
+      if(e.phase!=='rage'){ const n=P.summon[0]+Math.floor(rand()*(P.summon[1]-P.summon[0]+1)), m=enemyStats(S.fase,1,false), W=walkT();
         for(let i=0;i<n;i++) B.enemies.push({hp:m.hp,max:m.hp,atk:m.atk,df:m.df,spawn:B.t,walk:W+i*0.3,arrive:B.t+W+i*0.3,next:B.t+W+i*0.3,first:false,dead:false,minion:true,spd:eSpd(S.fase)}); }
       emit('bossPhase',{k:e.phase}); }
     // recibir un golpe: dfn da el daño tras tu defensa (se calcula después de la esquiva, como siempre)
@@ -796,22 +796,23 @@ function createGame(opts){
   function towerFoe(){ const T=CFG.tower, H=T.hero, df=T.foeDf, hit=dmgF(H.atk,df)*(1+H.cr*H.cd)*H.spd, want=T.hitPct*H.hp, d=H.df;
     return {hp:hit*T.tKill, atk:(want+Math.sqrt(want*want+4*want*d))/2, df} }
   function towerFight(k){ const T=CFG.tower, run=S.tower.run, f=run.floor, c=towerFoe();
-    const Hd=T.hard||{}, jump=Hd.jumpEvery?Math.pow(Hd.jump,Math.floor(f/Hd.jumpEvery)):1, eUp=k==='elite'&&Hd.eliteFrom&&f>=Hd.eliteFrom?Math.pow(Hd.eliteUp,1+Math.floor((f-Hd.eliteFrom)/Hd.eliteEvery)):1;
+    const Hd=T.hard||{}, jump=Hd.jumpEvery?Math.pow(Hd.jump,Math.floor(f/Hd.jumpEvery)):1, eUp=(k==='elite'||(k==='boss'&&Hd.bossUp))&&Hd.eliteFrom&&f>=Hd.eliteFrom?Math.pow(k==='boss'?Hd.bossUp:Hd.eliteUp,1+Math.floor((f-Hd.eliteFrom)/Hd.eliteEvery)):1;
     const cv=towerCurve(f), hm=T.hp0*cv.hp*jump*eUp*(1+T.curses.vida.hp*(run.curses||[]).filter(x=>x==='vida').length), am=T.atk0*cv.atk*jump*Math.sqrt(eUp), h=heroStats();   // saltos: cada 25 pisos y élites reforzados (hard)
     B={event:true,kind:'tower',node:k,t:0,boss:k==='boss',count:0,spawned:0,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
+    const nF=Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery));   // enemigos de un combate normal de este piso
     const add=(n,hpM,atkM,boss)=>{ for(let i=0;i<n;i++){ const at=CFG.enemy.walk*0.6+Math.floor(i/T.group)*1.2+(i%T.group)*0.35, hp=c.hp*hm*hpM;
       B.enemies.push({hp,max:hp,atk:c.atk*am*atkM,df:c.df,spawn:B.t,walk:at,arrive:at,next:at,first:false,dead:false,spd:boss?1:1+Math.min(0.3,f*0.01)}); } };
     B.minion={hp:c.hp*hm/(eUp||1),atk:c.atk*am/Math.sqrt(eUp||1),df:c.df,spd:1+Math.min(0.3,f*0.01)};   // esbirros del jefe invocador (como un enemigo normal del piso)
     if(k==='boss'&&f>=T.maxFloor){ add(1,1,T.boss.atk*T.final.atk,true); const e=B.enemies[0]; e.inf=true; e.hp=e.max=1e30; e.hpSeen=e.hp; B.final=true; B.mech='final'; }   // jefe final: vida infinita
-    else if(k==='boss'){ add(1,T.boss.hp*Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery)),T.boss.atk,true); const e=B.enemies[0], O=T.bossMech.order;
+    else if(k==='boss'){ add(1,T.boss.hp*nF,T.boss.atk,true); const e=B.enemies[0], O=T.bossMech.order;
       e.mech=O[(Math.max(1,Math.floor(f/T.boss.every))-1)%O.length]; if(e.mech==='fases') e.phases=T.bossMech.fases.at.slice(); B.mech=e.mech; }
-    else if(k==='elite'){ add(T.elite.n,T.elite.hp,T.elite.atk); const TR=T.traits, K=Object.keys(TR), extra=(run.curses||[]).filter(x=>x==='rasgo').length;
+    else if(k==='elite'){ add(T.elite.n,T.elite.hp*nF/T.elite.n,T.elite.atk); const TR=T.traits, K=Object.keys(TR), extra=(run.curses||[]).filter(x=>x==='rasgo').length;   // vida total del grupo = elite.hp × la de un combate normal
       for(const e of B.enemies){ const n=Math.min(K.length,1+(rand()<0.5?1:0)+extra), pool=K.slice(); e.traits=[];
         for(let i=0;i<n;i++){ const t=pool.splice(Math.floor(rand()*pool.length),1)[0]; e.traits.push(t);
           if(t==='rapido') e.spd*=TR.rapido.spd; if(t==='gigante'){ e.hp*=TR.gigante.hp; e.max=e.hp; e.spd*=TR.gigante.spd; }
           if(t==='regenera') e.regen=TR.regenera.regen; if(t==='espinas') e.thorns=TR.espinas.reflect; if(t==='furioso') e.fur=true; }
         if(e.traits.includes('escudo')) e.sh=TR.escudo.shield*e.max; e.hpSeen=e.hp; } }
-    else add(Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery)),1,1);
+    else add(nF,1,1);
     statsDirty(); HS=null; const H=heroStats(), G=T.grims; B.hp=H.hp*Math.max(0.01,run.hp==null?1:run.hp);
     BUF.shield=run.shield||0; run.shield=0; BUF.sang=0; B.regAt=CT+T.cards.escudoReg.every;   // Barricada: el escudo que traías
     if(tgH('vial')) B.hp=Math.min(H.hp,B.hp+G.vial.heal*H.hp);   // Vial de sangre
