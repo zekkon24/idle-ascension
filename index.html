@@ -574,10 +574,10 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 
 /* HUD del combate (estilo juego de lucha): tu vida a la izquierda, la de los enemigos a la derecha, emblema en el centro */
 /* combates especiales: borde de color que brilla, cartel de entrada, etiqueta, barra de horda, reloj y marca de furia */
-.stage.enc-boss{--es:1;--ec:#e5484d;--eg:rgba(229,72,77,.6);--ebd:rgba(70,10,14,.92)}.stage.enc-elite{--es:.7;--ec:#a86be0;--eg:rgba(168,107,224,.45);--ebd:rgba(38,16,60,.92)}
-.stage.enc-horde{--es:.5;--ec:#f08a3c;--eg:rgba(240,138,60,.35);--ebd:rgba(70,30,6,.92)}.stage.enc-event{--es:.5;--ec:#4f95e6;--eg:rgba(79,149,230,.35);--ebd:rgba(10,30,62,.92)}
+.stage.enc-boss{--es:.8;--ec:#e5484d;--eg:rgba(229,72,77,.5);--ebd:rgba(70,10,14,.92)}.stage.enc-elite{--es:.8;--ec:#a86be0;--eg:rgba(168,107,224,.5);--ebd:rgba(38,16,60,.92)}
+.stage.enc-horde{--es:.8;--ec:#f08a3c;--eg:rgba(240,138,60,.5);--ebd:rgba(70,30,6,.92)}.stage.enc-event{--es:.8;--ec:#4f95e6;--eg:rgba(79,149,230,.5);--ebd:rgba(10,30,62,.92)}
 .stage[class*="enc-"]{border-color:var(--ec);animation:encglow 2.2s ease-in-out infinite}
-/* brillo más fuerte cuanto más peligroso: jefe (--es 1) > élite (.7) > horda y evento (.5) */
+/* el mismo brillo para los cuatro tipos (solo cambia el color) */
 @keyframes encglow{0%,100%{box-shadow:0 0 calc(var(--es)*5px) 0 var(--eg),0 0 0 1px var(--ec)}50%{box-shadow:0 0 calc(var(--es)*11px) calc(var(--es)*1px) var(--eg),0 0 0 1px var(--ec)}}
 .enc{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:6;font-family:inherit}
 /* el mismo brillo por dentro del combate, latiendo a la vez que el de fuera */
@@ -617,10 +617,10 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .vsc b{font-family:var(--display);font-weight:900;font-size:16px;color:#fff;line-height:1.05;font-variant-numeric:tabular-nums;text-shadow:0 1px 0 #000}
 .vsc.long b{font-size:10px;letter-spacing:.02em}.vsc svg{display:block;filter:drop-shadow(0 1px 1px #000)}
 /* mismos colores que el borde del combate: jefe rojo, élite morado, horda naranja, evento azul */
-.vsc.boss{border-color:#e5484d;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 10px rgba(229,72,77,.9);color:#ff7a7d}.vsc.boss small{color:#ff9a9d}
-.vsc.eboss,.vsc.elite{border-color:#a86be0;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 7px rgba(168,107,224,.75);color:#c98cff}.vsc.eboss small,.vsc.elite small{color:#d6a8ff}
-.vsc.horde{border-color:#f08a3c;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 5px rgba(240,138,60,.65);}.vsc.horde small{color:#ffb56a}
-.vsc.wander{border-color:#4f95e6;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 5px rgba(79,149,230,.65);}.vsc.wander small{color:#9cc6ff}
+.vsc.boss{border-color:#e5484d;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 7px rgba(229,72,77,.8);color:#ff7a7d}.vsc.boss small{color:#ff9a9d}
+.vsc.eboss,.vsc.elite{border-color:#a86be0;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 7px rgba(168,107,224,.8);color:#c98cff}.vsc.eboss small,.vsc.elite small{color:#d6a8ff}
+.vsc.horde{border-color:#f08a3c;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 7px rgba(240,138,60,.8);}.vsc.horde small{color:#ffb56a}
+.vsc.wander{border-color:#4f95e6;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 7px rgba(79,149,230,.8);}.vsc.wander small{color:#9cc6ff}
 .vsc.pvp small{color:#7cc2ff}
 .vsst{display:flex;gap:4px;margin-top:9px;pointer-events:auto;flex-wrap:wrap}.vsw.foe .vsst{justify-content:flex-end}
 .sti{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;line-height:1;cursor:help;
@@ -654,7 +654,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610092122-2aa87a9';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610092124-9f6c95f';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
