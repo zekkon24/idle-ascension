@@ -326,17 +326,25 @@ input[type=number]{width:64px}
 .wcell.hit{border-color:var(--gold);box-shadow:0 0 10px rgba(232,176,74,.55);background:rgba(232,176,74,.15)}
 .stk{color:var(--gold)}
 .tchips{display:flex;flex-wrap:wrap;gap:4px}
-.tmapbox{max-height:min(62vh,440px);overflow-y:auto;margin-top:2px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.15))}
+.tmapbox{max-height:min(62vh,460px);overflow-y:auto;margin-top:4px;border-radius:16px;border:1px solid #2f2a40;box-shadow:inset 0 0 40px rgba(0,0,0,.8);background:#0b0a14}
 .tmapsvg{display:block;margin:0 auto;max-width:440px}
-.tml{stroke:#454a5e;stroke-width:2.5;stroke-linecap:round}.tml.off{opacity:.25}.tml.path{stroke:var(--good);stroke-width:4;opacity:.8}.tml.on{stroke:var(--gold);stroke-width:4;stroke-dasharray:8 6;animation:tmd 1s linear infinite}
-@keyframes tmd{to{stroke-dashoffset:-14}}
-.tmf{fill:var(--muted);font-size:11px;font-weight:800}.tmf.cur{fill:var(--gold)}
-.tmn circle{fill:color-mix(in srgb,var(--nc) 30%,#151821);stroke:var(--nc);stroke-width:2.5}.tmn .tmi{font-size:19px;fill:#fff}
-.tmn .tmk{font-size:12px;font-weight:800;fill:var(--ink)}
-.tmn.fu{opacity:.75}.tmn.no{opacity:.25}.tmn.gone{opacity:.18}
-.tmn.done circle{fill:color-mix(in srgb,var(--good) 28%,#151821);stroke:var(--good)}.tmn.done .tmi{fill:var(--good);font-weight:800}
-.tmn.ok{cursor:pointer}.tmn.ok circle{stroke:var(--gold);stroke-width:3.5;filter:drop-shadow(0 0 8px rgba(232,176,74,.7));animation:tmp 1.6s ease-in-out infinite}
-@keyframes tmp{50%{stroke-width:6}}.tmn.ok:active circle{fill:#3a3020}
+.tml{fill:none;stroke:#6b6488;stroke-width:3;stroke-linecap:round;stroke-dasharray:1 7;opacity:.75}.tml.off{opacity:.22}
+.tml.path{stroke:#f3c869;stroke-width:4;stroke-dasharray:none;opacity:1}.tml.on{stroke:var(--gold);stroke-width:4;stroke-dasharray:2 8;opacity:1;animation:tmd .8s linear infinite}
+@keyframes tmd{to{stroke-dashoffset:-10}}
+.tmf{fill:#9a9fb3;font-size:11px;font-weight:900}.tmf.cur{fill:#1b1406}
+.tmx{font-size:10px;font-weight:900;fill:var(--gold);letter-spacing:1px;opacity:.85}
+.tmn .tmi{fill:#fff}.tmn .tmc{font-size:22px;font-weight:900;fill:#f3c869}
+.tmn .tmk{font-size:10px;font-weight:900;fill:#ffd98a;letter-spacing:.8px}.tmn .tmk.b{fill:#ff9a9d}
+.tmn.no{opacity:.3}.tmn.gone{opacity:.22}
+.tmn.ok{cursor:pointer}.tmn .tmr{fill:none;stroke:var(--gold);stroke-width:2;stroke-dasharray:4 4;transform-box:fill-box;transform-origin:center;animation:tmrot 6s linear infinite}
+@keyframes tmrot{to{transform:rotate(360deg)}}.tmn.ok:active{opacity:.8}
+.tme{opacity:.5;animation:tmem 6s ease-in-out infinite}@keyframes tmem{0%,100%{opacity:.15;transform:translateY(0)}50%{opacity:.7;transform:translateY(-8px)}}
+.ttramo{display:flex;align-items:center;gap:4px;margin:10px 2px 6px}.ttramo span{font-size:11px;font-weight:900;color:var(--gold);letter-spacing:.06em;margin-right:4px;white-space:nowrap}
+.ttramo i{flex:1;height:8px;border-radius:4px;background:#2a2e42}.ttramo i.d{background:linear-gradient(90deg,#c9932f,#e8b04a)}.ttramo i.c{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.ttramo b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;background:radial-gradient(circle,#5a1a20,#2a0d10);border:2px solid #e5484d;box-shadow:0 0 10px rgba(229,72,77,.6)}.ttramo b.c{box-shadow:0 0 16px #e5484d}
+.tleg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}.tleg span{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);background:var(--panel2,#1f2333);border-radius:20px;padding:3px 8px 3px 4px}
+.tleg i{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;border:2px solid}
+@media (prefers-reduced-motion:reduce){.tml.on,.tmn .tmr,.tme{animation:none}}
 .tfx{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto}.tfx div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--panel2);border-left:3px solid}
 .tmap{display:flex;gap:6px;margin-top:8px}.tmap div{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}.tmap i{font-style:normal;font-size:16px;margin:0 2px}   /* próximos pisos */
 .bcard{text-align:left}
@@ -619,7 +627,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610072018-287af97';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610092058-4592157';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
