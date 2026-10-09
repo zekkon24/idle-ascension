@@ -326,7 +326,7 @@ function updateHUD(){
   $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
   // emblema del centro (entre las dos barras): dónde estás y si es jefe o élite
   { const sp=!ev&&G.surpriseState(), run=ev&&B&&B.kind==='tower'?G.towerState().run:null;
-    // jefe: calavera morada · jefe de élite: calavera roja · élite (Torre): ÉLITE en naranja · horda: HORDA en rojo · errante: naranja · PvP: VS en azul
+    // mismos colores que el borde del combate: jefe rojo · élite (y jefe de élite) morado · horda naranja · errante azul · PvP: VS en azul
     const SK='\u0000skull', [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',SK,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
       :B.kind==='hall'?['★'.repeat(B.hall.star),SK,B.elite?'eboss':'boss']:B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',SK,B.elite?'eboss':'boss']
       :sp?[Math.ceil(sp.left)+' s',{horde:'HORDA',wander:'ERRANTE'}[sp.k]||'¡!',sp.k==='horde'?'horde':'wander']:['FASE',S.fase,''];

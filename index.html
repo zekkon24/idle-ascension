@@ -612,12 +612,12 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
   background:radial-gradient(circle at 50% 35%,#343a52,#11131c 70%);border:2px solid #e8b04a;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 3px 8px rgba(0,0,0,.7)}
 .vsc small{font-family:var(--display);font-weight:800;font-size:8px;letter-spacing:.06em;color:#e8b04a;line-height:1}
 .vsc b{font-family:var(--display);font-weight:900;font-size:16px;color:#fff;line-height:1.05;font-variant-numeric:tabular-nums;text-shadow:0 1px 0 #000}
-.vsc.boss{border-color:var(--rE);box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(176,102,232,.9);color:#c98cff}.vsc.boss small{color:#d6a8ff}
-.vsc.eboss{border-color:var(--bad);box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(226,96,90,.9);color:#ff7a72}.vsc.eboss small{color:#ff9a93}
-.vsc.horde{border-color:var(--bad);box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(226,96,90,.9)}.vsc.horde small{color:#ff9a93}
-.vsc.wander{border-color:var(--rL);box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(242,145,47,.85)}.vsc.wander small{color:#ffb56a}
 .vsc.long b{font-size:10px;letter-spacing:.02em}.vsc svg{display:block;filter:drop-shadow(0 1px 1px #000)}
-.vsc.elite{border-color:var(--rL);box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(242,145,47,.85)}.vsc.elite small{color:#ffb56a}
+/* mismos colores que el borde del combate: jefe rojo, élite morado, horda naranja, evento azul */
+.vsc.boss{border-color:#e5484d;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(229,72,77,.85),0 0 22px rgba(229,72,77,.85);color:#ff7a7d}.vsc.boss small{color:#ff9a9d}
+.vsc.eboss,.vsc.elite{border-color:#a86be0;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(168,107,224,.85),0 0 22px rgba(168,107,224,.85);color:#c98cff}.vsc.eboss small,.vsc.elite small{color:#d6a8ff}
+.vsc.horde{border-color:#f08a3c;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(240,138,60,.85),0 0 22px rgba(240,138,60,.85);}.vsc.horde small{color:#ffb56a}
+.vsc.wander{border-color:#4f95e6;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 12px rgba(79,149,230,.85),0 0 22px rgba(79,149,230,.85);}.vsc.wander small{color:#9cc6ff}
 .vsc.pvp small{color:#7cc2ff}
 .vsst{display:flex;gap:4px;margin-top:9px;pointer-events:auto;flex-wrap:wrap}.vsw.foe .vsst{justify-content:flex-end}
 .sti{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;line-height:1;cursor:help;
@@ -651,7 +651,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610092111-22b8cb0';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610092113-abc61ee';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
