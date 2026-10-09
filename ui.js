@@ -166,8 +166,7 @@ G.on('towerPickNow',()=>{ tab='up'; renderTab(); later(towerPickModal); haptic('
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
 G.on('surprise',({k,reward})=>{ const C=CFG.surprise;
   if(k==='horde'){ haptic('medium'); toast(`¡Horda! 30 s con oro ×${C.horde.gold}`); } else if(k==='wander'){ haptic('medium'); toast(`¡Jefe errante! Véncelo en ${C.wander.dur} s`); }
-  else if(k==='mimic'){ haptic('medium'); toast(`¡Un cofre se mueve! Un mímico (${C.mimic.dur} s)`); } else if(k==='mimicFled') toast('El mímico se escapó');
-  else if(/Win$/.test(k)){ haptic('ok'); toast({wanderWin:'¡Jefe errante vencido! ',mimicWin:'¡Mímico abierto! '}[k]+bundleTxt(reward)); updateHUD(); }
+  else if(/Win$/.test(k)){ haptic('ok'); toast({wanderWin:'¡Jefe errante vencido! '}[k]+bundleTxt(reward)); updateHUD(); }
   else if(k==='wanderFled') toast('El jefe errante huyó'); });
 G.on('pvpEnd',r=>{ tab='ev'; modView='pvp'; evView=null; haptic(r.win?'ok':'medium');
   if(r.rival.match&&pvpOnline()) Telemetry.pvp(CFG,'pvpResult',{match:r.rival.match,win:r.win,draw:r.draw}).then(j=>{ if(j&&j.ok){ G.pvpSync(j); if(PVI) Object.assign(PVI.me,{rating:j.rating,games:j.games,wins:j.wins,rank:j.rank,left:j.left}); pvpLoad(); } });
@@ -287,7 +286,7 @@ function updateHUD(){
     // jefe: calavera morada · jefe de élite: calavera roja · élite (Torre): ÉLITE en naranja · horda: HORDA en rojo · errante: naranja · PvP: VS en azul
     const SK='\u0000skull', [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',SK,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
       :B.kind==='hall'?['★'.repeat(B.hall.star),SK,B.elite?'eboss':'boss']:B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'ÉLITE':'JEFE',SK,B.elite?'eboss':'boss']
-      :sp?[Math.ceil(sp.left)+' s',{horde:'HORDA',wander:'ERRANTE',mimic:'MÍMICO'}[sp.k]||'¡!',sp.k==='horde'?'horde':'wander']:['FASE',S.fase,''];
+      :sp?[Math.ceil(sp.left)+' s',{horde:'HORDA',wander:'ERRANTE'}[sp.k]||'¡!',sp.k==='horde'?'horde':'wander']:['FASE',S.fase,''];
     const c=$('#vsC'), k=lb+'|'+mn+'|'+cl; if(c&&c.dataset.k!==k){ c.dataset.k=k; c.className='vsc'+(cl?' '+cl:'')+(mn===SK?' sk':'')+(String(mn).length>3?' long':'');
       c.innerHTML=`<small>${esc(lb)}</small>`+(mn===SK?`<svg viewBox="0 0 24 24" width="22" height="22" aria-label="Jefe"><path fill="currentColor" d="M12 2C6.9 2 3 5.6 3 10.3c0 2.9 1.5 5.2 3.8 6.6V20a1 1 0 0 0 1 1h1.6v-2h1.4v2h2.4v-2h1.4v2h1.6a1 1 0 0 0 1-1v-3.1c2.3-1.4 3.8-3.7 3.8-6.6C21 5.6 17.1 2 12 2Zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2Zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2ZM12 13.3l1.2 2.2h-2.4l1.2-2.2Z"/></svg>`:`<b>${esc(String(mn))}</b>`); } }
   const fab=$('#upFab'); if(fab){ fab.hidden=tab!=='up'||ev; if(!fab.hidden) setHTML(fab,upStrip()); }
@@ -1451,11 +1450,10 @@ function draw(dt){
   // monstruos: tipo según la zona (campaña: la fase; Mazmorra: el grupo; Torre: el piso) y color según el modo
   const modeHue=m=>[0,190,300][Math.min(2,m||0)];
   let q=0, idx=0; const drawQ=[];
-  const SKP=e=>e.sk==='mimic'?1:0;   // el mímico: delante de la cola (es a quien pega el héroe)
-  for(const e of B.enemies.slice().sort((a,b)=>SKP(b)-SKP(a))){ if(B.kind==='pvp') break;
+  for(const e of B.enemies){ if(B.kind==='pvp') break;
     const dieK=e.dead?(B.t-(e.deadAt||0))/0.45:0; if(e.dead&&(dieK>=1||e.x===undefined)) continue;
     if(!e._k){ const f=e.f||S.fase, zone=B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):zoneOf(f);
-      const m=e.f?Math.floor((e.f-1)/150):B.kind?0:S.mode; e._k=ART.kindFor(zone,idx,{boss:B.boss&&!e.minion,elite:B.elite,mode:m}); e._hue=e.sk==='mimic'?50:modeHue(m); }   // sorpresas: el mímico, de otro color
+      const m=e.f?Math.floor((e.f-1)/150):B.kind?0:S.mode; e._k=ART.kindFor(zone,idx,{boss:B.boss&&!e.minion,elite:B.elite,mode:m}); e._hue=modeHue(m); }   // color del modo
     idx++;
     const p=Math.min(1,(B.t-e.spawn)/(e.walk||CFG.enemy.walk));
     const big=B.boss&&!e.minion, cx=contact+((big?(B.elite?26:21):13)-13)*2.4;   // los esbirros del jefe, de tamaño normal y sin corona   // los grandes se paran más lejos (no tapan al héroe)

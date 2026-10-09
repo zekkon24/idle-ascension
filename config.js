@@ -135,8 +135,7 @@ const CFG = {
   surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,hp:1.5,atk:1.5,reward:{silver:1}},
     // probabilidad de cada sorpresa (sobre el total)
     // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
-    weights:{horde:35,wander:35,mimic:30},
-    mimic:{dur:12,hp:0.6,atk:0.8,reward:{wood:2,gold:10}}},          // Mímico: si lo matas antes de 12 s, botín; si no, se escapa
+    weights:{horde:50,wander:50}},
   // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
   bossPhase:{at:0.5, rage:1.3, summon:[2,3]},
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.

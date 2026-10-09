@@ -228,7 +228,7 @@ function createGame(opts){
     const every=C.every, jit=C.jitter;
     if(SUR.next===null) SUR.next=CT+every+(rand()*2-1)*jit;
     if(SUR.kind&&CT>=SUR.until){ const k=SUR.kind; SUR.kind=null;
-      if(k==='wander'||k==='mimic'){ const w=B.enemies.find(e=>e.wander&&!e.dead); if(w){ w.dead=true; w.fled=true; emit('surprise',{k:k+'Fled'}); } }
+      if(k==='wander'){ const w=B.enemies.find(e=>e.wander&&!e.dead); if(w){ w.dead=true; w.fled=true; emit('surprise',{k:k+'Fled'}); } }
       else emit('surprise',{k:'hordeEnd'}); }
     if(SUR.kind||B.boss||CT<SUR.next) return;
     SUR.next=CT+every+(rand()*2-1)*jit;
@@ -348,7 +348,7 @@ function createGame(opts){
         if((sk.id==='tSed'||sk.id==='tSangria')&&B.hp<0.35*h.hp) continue;
         CD[k]=CT+sk.cd; GCD=CT+(CFG.skillGap||0); (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
     if(B.cast&&B.cast.length){ const list=B.cast; B.cast=[];
-      const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>((b.sk==='mimic')-(a.sk==='mimic'))||a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*tMul(e);
+      const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*tMul(e);
       const hurt=(e,d,k)=>{ zap(e,d,{skill:k}); return e.dead };
       for(const k of (TW&&tgH('eco')?list.flatMap(k=>k[0]==='t'?[k,k]:[k]):list)){ const sk=skillDef(k); if(!sk) continue;   // Eco: las habilidades de la Torre se lanzan dos veces
         switch(sk.id){
@@ -393,8 +393,7 @@ function createGame(opts){
       while(B.t>=B.th){
         const cand=B.enemies.filter(canHit);
         if(!cand.length){B.th=null;break}
-        const pri=e=>e.sk==='mimic'?1:0;   // el mímico (con tiempo) va primero
-        const tg=cand.reduce((a,b)=>pri(b)!==pri(a)?(pri(b)>pri(a)?b:a):a.arrive<=b.arrive?a:b);
+        const tg=cand.reduce((a,b)=>a.arrive<=b.arrive?a:b);
         B.mB+=dmgF(h.atk,tg.df)*(B.boss?1+h.bd:1)*(1+h.cr*h.cd);   // lo que diría la fórmula por ataque (para medir el DPS real)
         hitOnce(tg);
         if(TW&&h.dbl) for(let c=h.dbl;c>0;c--) if(rand()<c){ const t2=tg.dead?B.enemies.filter(canHit)[0]:tg; if(t2) hitOnce(t2,true); }   // Torre · Golpe doble (más del 100 %: golpes seguros)
