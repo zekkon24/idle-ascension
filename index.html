@@ -236,7 +236,7 @@ input[type=number]{width:64px}
 .modal h3{margin:0;font-family:var(--display);font-size:20px;font-weight:600}
 .loot{display:flex;flex-direction:column;gap:6px}
 .loot div{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:var(--panel2);font-size:13px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(52px + max(env(safe-area-inset-top,0px),var(--safe-top)));pointer-events:none;background:var(--panel2);border:1px solid var(--gold);padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;z-index:20;max-width:90%;text-align:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(128px + max(env(safe-area-inset-top,0px),var(--safe-top)));pointer-events:none;background:var(--panel2);border:1px solid var(--gold);padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;z-index:20;max-width:90%;text-align:center}
 /* ruleta */
 .rl{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#0b0d13;height:110px}
 .rl::before,.rl::after{content:"";position:absolute;top:0;bottom:0;width:40px;z-index:2;pointer-events:none}
@@ -394,7 +394,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .calbtn.on{border-color:var(--gold);background:rgba(232,176,74,.25);box-shadow:0 0 10px rgba(232,176,74,.5)}
 .lootn{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;font-style:normal;line-height:16px;text-align:center}
 .boostbtn.on{border-color:var(--gold);background:rgba(232,176,74,.18)}
-.boosttime{position:absolute;right:56px;top:62px;font-size:12px;font-weight:800;color:var(--gold);background:rgba(0,0,0,.55);padding:2px 7px;border-radius:6px;font-variant-numeric:tabular-nums}
+.boosttime{position:absolute;left:50%;top:-15px;transform:translateX(-50%);white-space:nowrap;pointer-events:none;font-size:10px;font-weight:900;color:#1b1406;background:var(--gold);padding:1px 6px;border-radius:8px;font-variant-numeric:tabular-nums;box-shadow:0 1px 3px rgba(0,0,0,.6)}   /* ×2 y lo que queda, encima del botón de la poción */
 .adbox{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 0}
 .adbox .bar{width:100%}
 .rank{display:flex;flex-direction:column;gap:2px}
@@ -592,14 +592,10 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .encban b{display:block;font-size:clamp(18px,6.4vw,25px);font-weight:900;letter-spacing:.04em;color:#fff;text-transform:uppercase;text-shadow:0 2px 0 #000,0 0 18px var(--eg);padding:0 8%}
 .encban i{display:block;font-style:normal;font-size:12px;font-weight:800;color:#e9e2d0;margin-top:2px;padding:0 10%}
 .encchips{display:flex;gap:6px;justify-content:center;margin-top:6px;flex-wrap:wrap}.encchips span{font-size:11px;font-weight:900;padding:3px 8px;border-radius:12px;background:rgba(0,0,0,.55);border:1px solid var(--ec);color:#fff}
-.enctag{position:absolute;left:50%;top:50px;transform:translateX(-50%);white-space:nowrap;padding:4px 11px;border-radius:14px;background:rgba(10,8,16,.8);border:1.5px solid var(--ec);font-size:12px;font-weight:900;color:#fff;box-shadow:0 0 12px var(--eg)}
-.enchb{position:absolute;left:50%;top:50px;transform:translateX(-50%);width:72%;padding:6px 10px;border-radius:12px;background:rgba(10,8,16,.82);border:1.5px solid var(--ec);text-align:center;box-shadow:0 0 14px var(--eg)}
+.enchb{position:absolute;left:50%;top:66px;transform:translateX(-50%);width:72%;padding:6px 10px;border-radius:12px;background:rgba(10,8,16,.82);border:1.5px solid var(--ec);text-align:center;box-shadow:0 0 14px var(--eg)}
 .enchb b{font-size:13px;font-weight:900;color:#fff;letter-spacing:.06em}.encpg{height:8px;border-radius:4px;background:#2a2533;margin-top:5px;overflow:hidden}.encpg i{display:block;height:100%;background:linear-gradient(90deg,var(--ec),#ffd08a);transition:width .25s linear}
 .enchb small{display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#e9e2d0;margin-top:4px}
-.encring{position:absolute;right:12px;top:50px;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--ec) 0 var(--p),rgba(255,255,255,.12) 0);box-shadow:0 0 14px var(--eg)}
-.encring b{width:43px;height:43px;border-radius:50%;background:#0d0b16;display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px}
 .encnotch{position:absolute;left:50%;top:-3px;width:3px;height:28px;background:#fff;box-shadow:0 0 6px #fff;border-radius:2px;pointer-events:none}
-.encnotch small{position:absolute;top:30px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;color:#ffb3b5;letter-spacing:.06em;font-style:normal}
 .stage.encshake{animation:encshake .45s ease,encglow 2.2s ease-in-out infinite}@keyframes encshake{0%,100%{translate:0 0}20%{translate:-5px 2px}40%{translate:5px -2px}60%{translate:-3px 1px}80%{translate:3px 0}}
 @media (prefers-reduced-motion:reduce){.stage[class*="enc-"] .enc{animation:none;box-shadow:inset 0 0 calc(var(--es)*10px) 0 var(--eg)}.stage[class*="enc-"],.stage.encshake{animation:none;box-shadow:0 0 calc(var(--es)*8px) 0 var(--eg)}.encban{animation-duration:2.4s}}
 .vshud{position:absolute;left:6px;right:6px;top:6px;z-index:5;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;pointer-events:none}   /* start: los iconos de debajo no mueven las barras */
@@ -617,7 +613,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
   background:radial-gradient(circle at 50% 35%,#343a52,#11131c 70%);border:2px solid #e8b04a;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 3px 8px rgba(0,0,0,.7)}
 .vsc small{font-family:var(--display);font-weight:800;font-size:8px;letter-spacing:.06em;color:#e8b04a;line-height:1}
 .vsc b{font-family:var(--display);font-weight:900;font-size:16px;color:#fff;line-height:1.05;font-variant-numeric:tabular-nums;text-shadow:0 1px 0 #000}
-.vsc.long b{font-size:10px;letter-spacing:.02em}.vsc svg{display:block;filter:drop-shadow(0 1px 1px #000)}
+.vsc.long b{font-size:10px;letter-spacing:.02em}.vsc.ll small{font-size:6.5px;letter-spacing:0}.vsc svg{display:block;filter:drop-shadow(0 1px 1px #000)}
 /* mismos colores que el borde del combate: jefe rojo, élite morado, horda naranja, evento azul */
 .vsc.boss{border-color:#e5484d;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 7px rgba(229,72,77,.8);color:#ff7a7d}.vsc.boss small{color:#ff9a9d}
 .vsc.eboss,.vsc.elite{border-color:#a86be0;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 0 7px rgba(168,107,224,.8);color:#c98cff}.vsc.eboss small,.vsc.elite small{color:#d6a8ff}
@@ -656,7 +652,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610101249-51f7030';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610101310-f354298';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

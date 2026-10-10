@@ -231,8 +231,12 @@ function drawFx(g,c){
       g.beginPath(); g.arc(x,gy-20,16+k*6,-1.2-k*0.6,1+k*0.3); g.stroke(); }
     else if(f.type==='crit'){ g.globalAlpha=1-k; g.strokeStyle='#ffd35a'; g.lineWidth=3; glow(g,'#ffd35a',12); g.beginPath(); g.arc(to,gy-22,6+k*26,0,TAU); g.stroke();
       for(let i=0;i<6;i++){ const a=i*TAU/6+k; g.beginPath(); g.moveTo(to+Math.cos(a)*(8+k*14),gy-22+Math.sin(a)*(8+k*14)); g.lineTo(to+Math.cos(a)*(14+k*24),gy-22+Math.sin(a)*(14+k*24)); g.stroke() } }
-    else if(f.type==='name'){ g.globalAlpha=Math.min(1,(1-k)*3); g.font='800 11px "Nunito Sans", system-ui, sans-serif'; g.textAlign='center'; g.fillStyle='#ffd35a'; glow(g,'#000',4);
-      const w=g.measureText(f.text).width, x=Math.max(w/2+4,Math.min((c.W||1e4)-w/2-4,me));   // dentro del escenario
+    else if(f.type==='name'){ g.globalAlpha=Math.min(1,(1-k)*3); g.textAlign='center'; g.fillStyle='#ffd35a'; glow(g,'#000',4);
+      // dentro del escenario; en PvP cada nombre se queda en su mitad (no se pisan) y encoge si no cabe
+      const Wd=c.W||1e4, duel=c.rx!=null, lo=duel&&f.side==='rival'?Wd/2+4:4, hi=duel&&f.side!=='rival'?Wd/2-4:Wd-4;
+      let fs=11; g.font='800 11px "Nunito Sans", system-ui, sans-serif'; let w=g.measureText(f.text).width;
+      if(w>hi-lo){ fs=Math.max(7,fs*(hi-lo)/w); g.font=`800 ${fs.toFixed(1)}px "Nunito Sans", system-ui, sans-serif`; w=g.measureText(f.text).width; }
+      const x=Math.max(lo+w/2,Math.min(hi-w/2,me));
       g.fillText(f.text,x,gy-100-k*12-(f.row||0)*16); }   // si salen varias a la vez, una encima de otra
     // ----- habilidades -----
     else if(f.type==='muro'||f.type==='baluarte'){ const col=f.type==='muro'?'#7fb6ff':'#b9b2a4';
