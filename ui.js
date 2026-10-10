@@ -173,7 +173,6 @@ G.on('pvpEnd',r=>{ tab='ev'; modView='pvp'; evView=null; haptic(r.win?'ok':'medi
   renderTab(); later(()=>showModal(`<h3>${r.win?'¡Victoria!':r.draw?'Empate':'Derrota'}</h3><p class="hint">Contra ${esc(r.rival.name)} (${clName(r.rival.cls)})${r.draw?' · nadie cayó en 30 s':''} · tú ${Math.round(r.me*100)} % de vida, rival ${Math.round(r.them*100)} %.<br>${r.d>0?'+':''}${r.d} puntos (ahora ${fmt(r.rating)}).</p><button class="btn gold" data-act="close">Vale</button>`)); });
 function skillFx(ev,side,eng){ if(battery()) return;
   if(ev.k==='skill'){ const d=eng.skillDef(ev.slot)||{}, id=ev.id;
-    ART.addFx('name',{side,text:ev.name});
     if(['rapido','sed','sacrificio','combustion','clon','juicio','baluarte'].includes(id)) ART.addFx(id,{side,dur:d.dur||1});
     else ART.addFx(id,{side});
     if(id==='armaduraHielo') ART.addFx('iceArmor',{side,dur:d.dur||8});
@@ -1266,7 +1265,7 @@ const ACT={
   nameSave:()=>{ const n=($('#nameIn')||{}).value; if(!G.setName(n)) return toast('Escribe tu nombre (3-16 letras)'); closeModal(); toast('Nombre guardado'); updateHUD(); if(tab==='dev') renderTab(); },
   upBuy:(b,k)=>{ if(upHeld){ upHeld=false; return } if(!G.buyUpgrade(k)) toast('No tienes oro suficiente'); updateHUD() },
   skill:(b,k)=>{ const x=G.skills().find(s=>s.slot===k); if(!x) return; if(x.locked) return toast(`${x.name}: ${(SKI[x.id]||[0,x.desc])[1]}`);
-    const r=G.useSkill(k); if(r.ok){ haptic('medium'); toast(x.name) } else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate'); else if(r.why==='auto') toast('Aquí las habilidades son automáticas') },
+    const r=G.useSkill(k); if(r.ok) haptic('medium'); else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate'); else if(r.why==='auto') toast('Aquí las habilidades son automáticas') },
   // botón Auto/Manual del combate: en los eventos cambia opt.evAuto; en la campaña, opt.autoSkills
   skAuto:()=>{ if(G.autoOnly()){ toast('Aquí las habilidades son siempre automáticas'); }
     else if(G.inEvent()){ G.setOpt('evAuto',!(S.opt&&S.opt.evAuto)); toast(S.opt.evAuto?'Habilidades automáticas en el evento':'Habilidades a mano en el evento'); }
