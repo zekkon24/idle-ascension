@@ -811,7 +811,7 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
   const boss=rows.some(r=>r.n[0]==='boss'), W=340, rowH=92, H=rows.length*rowH+40+(boss?16:0);
   const jit=(f,c,k)=>{ const x=Math.sin(f*91.7+c*13.3+k)*43758.5; return (x-Math.floor(x))*2-1 };   // pequeño desorden fijo: aire de mapa dibujado
   const rowY=r=>H-52-r*rowH, X=(c,f)=>[70,170,270][c]+jit(f,c,1)*10, Y=(r,f,c)=>rowY(r)+jit(f,c,2)*6;
-  const P=(r,i)=>{ const R=rows[r]; return [X(R.c[i],R.f),Y(r,R.f,R.c[i])] };
+  const P=(r,i)=>{ const R=rows[r]; return R.n.length===1?[W/2,rowY(r)]:[X(R.c[i],R.f),Y(r,R.f,R.c[i])] };   // una casilla sola (jefe, hoguera, élite obligatorio): en el centro exacto
   const curve=(a,b)=>{ const [x1,y1]=a,[x2,y2]=b,my=(y1+y2)/2; return `M${x1} ${y1}C${x1} ${my} ${x2} ${my} ${x2} ${y2}` };
   const nowR=rows.findIndex(r=>r.now), cur=rows[nowR], okI=cur?cur.n.map((_,i)=>G.towerCanGo(i)):[];
   let s=`<defs><pattern id="tmBrick" width="40" height="22" patternUnits="userSpaceOnUse"><path d="M0 11H40M20 0V11M0 11V22M40 11V22" stroke="rgba(255,255,255,.035)" stroke-width="1.2"/></pattern>
