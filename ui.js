@@ -817,6 +817,9 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
   const P=(r,i)=>{ const R=rows[r]; return R.n.length===1?[W/2,rowY(r)]:[X(R.c[i],R.f),Y(r,R.f,R.c[i])] };   // una casilla sola (jefe, hoguera, élite obligatorio): en el centro exacto
   const curve=(a,b)=>{ const [x1,y1]=a,[x2,y2]=b,my=(y1+y2)/2; return `M${x1} ${y1}C${x1} ${my} ${x2} ${my} ${x2} ${y2}` };
   const nowR=rows.findIndex(r=>r.now), cur=rows[nowR], okI=cur?cur.n.map((_,i)=>G.towerCanGo(i)):[];
+  // casillas a las que aún puedes llegar (desde las que puedes elegir ahora, siguiendo los caminos): el resto se apaga
+  const reach=rows.map(()=>new Set()); if(cur){ okI.forEach((v,i)=>{ if(v) reach[nowR].add(i) });
+    for(let r=nowR;r<rows.length-1;r++) for(const [a,b] of G.towerLinks(rows[r],rows[r+1],rows[r].f)) if(reach[r].has(a)) reach[r+1].add(b); }
   let s=`<defs><pattern id="tmBrick" width="40" height="22" patternUnits="userSpaceOnUse"><path d="M0 11H40M20 0V11M0 11V22M40 11V22" stroke="rgba(255,255,255,.035)" stroke-width="1.2"/></pattern>
     <radialGradient id="tmBg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#2a2340"/><stop offset=".6" stop-color="#171427"/><stop offset="1" stop-color="#0b0a14"/></radialGradient>
     <radialGradient id="tmFog" cx="50%" cy="0%" r="70%"><stop offset="0" stop-color="rgba(229,72,77,.28)"/><stop offset="1" stop-color="rgba(229,72,77,0)"/></radialGradient>
@@ -834,11 +837,11 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
     for(const [a,b] of G.towerLinks(A,Bn,A.f)){ const d=curve(P(r,a),P(r+1,b));
       if(A.past&&Bn.past){ if(a===A.pick&&b===Bn.pick) s+=`<path d="${d}" stroke="#e8b04a" stroke-width="10" opacity=".18" fill="none" filter="url(#tmSoft)"/><path d="${d}" class="tml path"/>`; continue }
       if(A.past){ if(a===A.pick&&okI[b]) s+=`<path d="${d}" class="tml on" filter="url(#tmGlow)"/>`; continue }
-      s+=`<path d="${d}" class="tml${A.now&&!okI[a]?' off':''}"/>`; } }
+      s+=`<path d="${d}" class="tml${reach[r].has(a)&&reach[r+1].has(b)?'':' off'}"/>`; } }
   // casillas: medallón con anillo del color del tipo (el icono va aparte: se puede cambiar sin tocar el marco)
   let nodes='';
   rows.forEach((R,r)=>R.n.forEach((k,i)=>{ const [x,y]=P(r,i), col=NCOL[k]||'#888', N=NODE[k]||['?',k], B=k==='boss', ok=!!(R.now&&okI[i]), done=R.past&&i===R.pick;
-    const rr=B?38:ok?27:23, cls=R.past?(done?' done':' gone'):R.now?(ok?' ok':' no'):' fu';
+    const rr=B?38:ok?27:23, cls=R.past?(done?' done':' gone'):R.now?(ok?' ok':' no'):reach[r].has(i)?' fu':' no';
     let g=`<g class="tmn${cls}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}>`;
     if(B) g+=`<circle cx="${x}" cy="${y}" r="66" fill="#e5484d" opacity=".25" filter="url(#tmSoft)"/>`;
     if(ok) g+=`<circle cx="${x}" cy="${y}" r="${rr+16}" fill="transparent"/><circle cx="${x}" cy="${y}" r="${rr+11}" fill="${col}" opacity=".25" filter="url(#tmSoft)"/><circle class="tmr" cx="${x}" cy="${y}" r="${rr+7}"/>`;
