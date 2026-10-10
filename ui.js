@@ -808,7 +808,7 @@ const NCOL={shop:'#2fb37a',fight:'#c8735a',elite:'#a86be0',treasure:'#e8b04a',re
 function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(t=>t.f<run.floor).sort((a,b)=>a.f-b.f), E=CFG.tower.boss.every, FK=CFG.tower.route.fork||1;
   // filas de abajo arriba: el camino ya recorrido, el piso actual y los siguientes
   const rows=trail.map(t=>({f:t.f,n:t.row.n,c:t.row.c,pick:t.i,past:true})).concat(map.map((m,k)=>({f:run.floor+k,n:m.n,c:m.c,now:k===0})));
-  const boss=rows.some(r=>r.n[0]==='boss'), W=340, rowH=92, H=rows.length*rowH+40+(boss?40:0);
+  const boss=rows.some(r=>r.n[0]==='boss'), W=340, rowH=92, H=rows.length*rowH+40+(boss?16:0);
   const jit=(f,c,k)=>{ const x=Math.sin(f*91.7+c*13.3+k)*43758.5; return (x-Math.floor(x))*2-1 };   // pequeño desorden fijo: aire de mapa dibujado
   const rowY=r=>H-52-r*rowH, X=(c,f)=>[70,170,270][c]+jit(f,c,1)*10, Y=(r,f,c)=>rowY(r)+jit(f,c,2)*6;
   const P=(r,i)=>{ const R=rows[r]; return [X(R.c[i],R.f),Y(r,R.f,R.c[i])] };
@@ -825,8 +825,7 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
   for(let i=0;i<24;i++){ const x=20+Math.abs(jit(i,3,5))*300, y=Math.abs(jit(i,7,9))*H; s+=`<circle class="tme" style="animation-delay:-${(Math.abs(jit(i,4,4))*6).toFixed(1)}s" cx="${x}" cy="${y}" r="${(.8+Math.abs(jit(i,1,4))*1.6).toFixed(1)}" fill="${i%3?'#e8b04a':'#ff7a45'}"/>` }   // ascuas
   // franja de cruce (entre un piso de cruce y el siguiente) y placa con el número de piso
   rows.forEach((R,r)=>{ const y=rowY(r), N=rows[r+1];
-    if(N&&R.n.length===3&&N.n.length===3&&(R.f%E)%FK===0) s+=`<rect x="18" y="${y-rowH/2-20}" width="${W-36}" height="40" rx="10" fill="rgba(232,176,74,.05)" stroke="rgba(232,176,74,.2)" stroke-dasharray="3 5"/><text x="${W-26}" y="${y-rowH/2+4}" text-anchor="end" class="tmx">⤧ CRUCE</text>`;
-    s+=`<rect x="2" y="${y-11}" width="26" height="22" rx="6" fill="${R.now?'#e8b04a':'#22203a'}" stroke="${R.now?'#ffd98a':'#3a3656'}"/><text x="15" y="${y+4}" text-anchor="middle" class="tmf${R.now?' cur':''}">${R.f}</text>` });
+    if(N&&R.n.length===3&&N.n.length===3&&(R.f%E)%FK===0) s+=`<rect x="18" y="${y-rowH/2-20}" width="${W-36}" height="40" rx="10" fill="rgba(232,176,74,.05)" stroke="rgba(232,176,74,.2)" stroke-dasharray="3 5"/>`; });
   // caminos curvos: recorrido (dorado), los que puedes tomar ahora (dorados y animados) y los de delante (punteados)
   for(let r=0;r<rows.length-1;r++){ const A=rows[r], Bn=rows[r+1];
     for(const [a,b] of G.towerLinks(A,Bn,A.f)){ const d=curve(P(r,a),P(r+1,b));
@@ -838,19 +837,16 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
   rows.forEach((R,r)=>R.n.forEach((k,i)=>{ const [x,y]=P(r,i), col=NCOL[k]||'#888', N=NODE[k]||['?',k], B=k==='boss', ok=!!(R.now&&okI[i]), done=R.past&&i===R.pick;
     const rr=B?38:ok?27:23, cls=R.past?(done?' done':' gone'):R.now?(ok?' ok':' no'):' fu';
     let g=`<g class="tmn${cls}"${ok?` data-act="towerGo" data-k="${i}" role="button" aria-label="${N[1]}"`:''}>`;
-    if(B) g+=`<circle cx="${x}" cy="${y}" r="66" fill="#e5484d" opacity=".25" filter="url(#tmSoft)"/>`+[-1,1].map(d=>`<path d="M${x+d*30} ${y-24}Q${x+d*62} ${y-30} ${x+d*58} ${y-66}Q${x+d*48} ${y-40} ${x+d*20} ${y-34}Z" fill="#5a1418" stroke="#e5484d" stroke-width="2" stroke-linejoin="round"/>`).join('');
+    if(B) g+=`<circle cx="${x}" cy="${y}" r="66" fill="#e5484d" opacity=".25" filter="url(#tmSoft)"/>`;
     if(ok) g+=`<circle cx="${x}" cy="${y}" r="${rr+16}" fill="transparent"/><circle cx="${x}" cy="${y}" r="${rr+11}" fill="${col}" opacity=".25" filter="url(#tmSoft)"/><circle class="tmr" cx="${x}" cy="${y}" r="${rr+7}"/>`;
     g+=`<circle cx="${x}" cy="${y+3}" r="${rr+3}" fill="#000" opacity=".5"/><circle cx="${x}" cy="${y}" r="${rr+3}" fill="${done?'#7a5a1c':col}"/>`
       +`<circle cx="${x}" cy="${y}" r="${rr+3}" fill="none" stroke="${ok?'#ffe2a0':'rgba(255,255,255,.25)'}" stroke-width="${ok?2.5:1}"/>`
       +`<circle cx="${x}" cy="${y}" r="${rr-3}" fill="url(#tmDisk)" stroke="rgba(0,0,0,.6)" stroke-width="2"/><ellipse cx="${x-rr*.25}" cy="${y-rr*.45}" rx="${rr*.45}" ry="${rr*.18}" fill="#fff" opacity=".08"/>`
       +(done?`<text x="${x}" y="${y+8}" text-anchor="middle" class="tmc">✓</text>`:`<text x="${x}" y="${y+(B?10:7)}" text-anchor="middle" class="tmi" style="font-size:${B?30:ok?21:18}px">${N[0]}</text>`);
-    if(ok||(B&&!R.past)){ const lbl=B?`JEFE · PISO ${R.f}`:N[1].toUpperCase(), w=lbl.length*7+16, ly=B?y-rr-48:y+rr+8;
-      g+=`<rect x="${x-w/2}" y="${ly}" width="${w}" height="18" rx="9" fill="#120f1d" stroke="${B?'#e5484d':'#e8b04a'}" stroke-width="1.5"/><text x="${x}" y="${ly+13}" text-anchor="middle" class="tmk${B?' b':''}">${lbl}</text>` }
     nodes+=g+'</g>' }));
   // franja del tramo: 9 pisos y el jefe al final
-  const m=(run.floor-1)%E, strip=`<div class="ttramo"><span>TRAMO ${Math.floor((run.floor-1)/E)+1}</span>${Array.from({length:E-1},(_,i)=>`<i class="${i<m?'d':i===m?'c':''}"></i>`).join('')}<b class="${m===E-1?'c':''}">👑</b></div>`;
-  const leg=['fight','elite','event','rest','shop','treasure'].map(k=>`<span><i style="border-color:${NCOL[k]};background:${NCOL[k]}33">${NODE[k][0]}</i>${NODE[k][1]==='?'?'Evento':NODE[k][1]}</span>`).join('');
-  return `${strip}<div class="tmapbox"><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%" data-now="${nowR}">${s}${nodes}</svg></div><p class="hint" style="text-align:center;margin:6px 0 0">Toca un camino brillante${trail.length?' · desliza para ver tu ruta':''}</p><div class="tleg">${leg}</div>` }
+  const m=(run.floor-1)%E, strip=`<div class="ttramo">${Array.from({length:E-1},(_,i)=>`<i class="${i<m?'d':i===m?'c':''}"></i>`).join('')}<b class="${m===E-1?'c':''}">👑</b></div>`;
+  return `${strip}<div class="tmapbox"><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%" data-now="${nowR}">${s}${nodes}</svg></div>` }
 const MECH={invocador:'Invocador',enfurecido:'Enfurecido',fases:'Escudo de fases',final:'Jefe final'};
 // eventos ?: título, texto y botones [c, etiqueta, ¿se puede?]
 function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==null?1:run.hp, so=run.souls||0, cu=(run.curses||[]).length;
