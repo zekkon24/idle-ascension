@@ -808,7 +808,10 @@ const NCOL={shop:'#2fb37a',fight:'#c8735a',elite:'#a86be0',treasure:'#e8b04a',re
 function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(t=>t.f<run.floor).sort((a,b)=>a.f-b.f), E=CFG.tower.boss.every, FK=CFG.tower.route.fork||1;
   // filas de abajo arriba: el camino ya recorrido, el piso actual y los siguientes
   const rows=trail.map(t=>({f:t.f,n:t.row.n,c:t.row.c,pick:t.i,past:true})).concat(map.map((m,k)=>({f:run.floor+k,n:m.n,c:m.c,now:k===0})));
-  const boss=rows.some(r=>r.n[0]==='boss'), W=340, rowH=92, H=rows.length*rowH+40+(boss?16:0);
+  const boss=rows.some(r=>r.n[0]==='boss'), W=340, top=40+(boss?16:0);
+  // a pantalla completa el mapa llena el alto libre: si sobra sitio, los pisos se separan más (hasta 150)
+  const fillH=typeof innerHeight==='number'?Math.round(Math.max(320,innerHeight-252)/Math.min(innerWidth||390,520)*W):0;
+  const rowH=Math.max(92,Math.min(150,(fillH-top)/rows.length)), H=Math.max(rows.length*rowH+top,fillH);
   const jit=(f,c,k)=>{ const x=Math.sin(f*91.7+c*13.3+k)*43758.5; return (x-Math.floor(x))*2-1 };   // pequeño desorden fijo: aire de mapa dibujado
   const rowY=r=>H-52-r*rowH, X=(c,f)=>[70,170,270][c]+jit(f,c,1)*10, Y=(r,f,c)=>rowY(r)+jit(f,c,2)*6;
   const P=(r,i)=>{ const R=rows[r]; return R.n.length===1?[W/2,rowY(r)]:[X(R.c[i],R.f),Y(r,R.f,R.c[i])] };   // una casilla sola (jefe, hoguera, élite obligatorio): en el centro exacto
@@ -887,8 +890,8 @@ function tabTower(){ const T=G.towerState(), run=T.run;
   else body=towerMapSvg(run);
   const nfx=run?run.boons.length+(run.curses||[]).length:0;
   const tabs=`<div class="fchips twtabs"><button data-act="towerTab" data-k="run" aria-pressed="${towerTab==='run'}">Partida</button><button data-act="towerTab" data-k="rank" aria-pressed="${towerTab==='rank'}">Ranking</button></div>`;
-  return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Torre</h3>${run?`<button class="btn sm" data-act="towerFx">Efectos${nfx?` · ${nfx}`:''}</button>`:''}</div>${run?'':tabs}
-    ${run?`<div class="evhead"><div><span class="s">Piso</span><b>${run.floor}</b></div><div><span class="s">Almas</span><b>${run.souls||0}</b></div><div><span class="s">Salud</span><b>${Math.round((run.hp==null?1:run.hp)*100)} %</b></div></div>`:''}
+  return `<section class="panel tfull">${run?'':tabs}
+    ${run?`<div class="evhead tfhead"><div><span class="s">Piso</span><b>${run.floor}</b></div><div><span class="s">Almas</span><b>${run.souls||0}</b></div><div><span class="s">Salud</span><b>${Math.round((run.hp==null?1:run.hp)*100)} %</b></div><button class="tfxb" data-act="towerFx"><span class="s">Efectos</span><b>${nfx}</b></button></div>`:''}
     ${body}</section>` }
 // tienda: 4 cartas y 2 grimorios (compras los que puedas pagar con almas) y quitar 1 cosa que tengas
 function towerShopView(run){ const sh=run.shop, so=run.souls||0, rc=G.towerRemoveCost();
@@ -963,7 +966,7 @@ function tabEv(){
         :`<button class="mcard2 wide low locked" style="${bg(3,360,110)}" data-act="lockInfo" data-k="tower"><span class="mico">${GIC(GI.torre,40)}</span><span><b class="mt">Torre</b><span class="ms">${reqTxt('tower')}</span></span>${lockBadge('tower')}</button>`}
     </div>` }
   if(modView==='campana') return back+tabHall();
-  if(modView==='torre') return back+tabTower();
+  if(modView==='torre') return tabTower();   // Torre a pantalla completa: se sale con la barra de abajo
   if(modView==='pvp') return back+tabPvp();
   return `${back}<section class="panel"><h3>Eventos</h3>
     ${card('lab','Mazmorra','Ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+S.tickets}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
