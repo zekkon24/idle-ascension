@@ -296,7 +296,7 @@ function encHUD(B,ev){ const st=$('.stage'), box=$('#enc'); if(!st||!box) return
   if(!E){ if(box.innerHTML) box.innerHTML=''; return }
   if(fresh&&E.b){ const ban=document.createElement('div'); ban.className='encban';
     ban.innerHTML=`<small>${esc(E.s)}</small><b>${esc(E.b)}</b>${E.i?`<i>${esc(E.i)}</i>`:''}${E.chips&&E.chips.length?`<div class="encchips">${E.chips.map(c=>`<span>${esc(c)}</span>`).join('')}</div>`:''}`;
-    box.querySelectorAll('.encban').forEach(x=>x.remove()); box.appendChild(ban); setTimeout(()=>ban.remove(),1900);
+    box.querySelectorAll('.encban').forEach(x=>x.remove()); box.appendChild(ban); setTimeout(()=>ban.remove(),1900); encBanUntil=performance.now()+1900;
     if(E.k==='boss'){ st.classList.remove('encshake'); void st.offsetWidth; st.classList.add('encshake'); setTimeout(()=>st.classList.remove('encshake'),500); haptic('medium'); } }
   // lo que se queda: la barra de la horda y la marca de furia en la barra del élite o JEFE
   const boss=B&&B.enemies?B.enemies.find(e=>!e.minion&&!e.dead):null, notch=E.notch&&boss&&!boss.phase;
@@ -1276,8 +1276,14 @@ const modalQ=[];
 const modalOpen=()=>!!$('#modal').innerHTML;
 function later(fn){ if(modalOpen()) modalQ.push(fn); else fn() }
 function drainQ(){ if(!modalOpen()&&modalQ.length) modalQ.shift()() }
-let toastT=null;
-function toast(t){let el=$('.toast');if(!el){el=document.createElement('div');el.className='toast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=t;clearTimeout(toastT);toastT=setTimeout(()=>el.remove(),1800)}
+let toastT=null, encBanUntil=0; const toastQ=[];
+// avisos en cola: uno cada vez (1,8 s) y nunca mientras está el cartel de un élite o JEFE
+function toast(t){ const now=performance.now();
+  if(now<encBanUntil||$('.toast')){ if(!toastQ.includes(t)&&toastQ.length<4) toastQ.push(t); if(!toastT) toastT=setTimeout(toastNext,Math.max(120,encBanUntil-now)); return }
+  toastShow(t) }
+function toastShow(t){ const el=document.createElement('div'); el.className='toast'; el.setAttribute('role','status'); el.textContent=t; document.body.appendChild(el);
+  clearTimeout(toastT); toastT=setTimeout(()=>{ el.remove(); toastNext() },1800) }
+function toastNext(){ toastT=null; if(!toastQ.length) return; const now=performance.now(); if(now<encBanUntil){ toastT=setTimeout(toastNext,encBanUntil-now+60); return } toastShow(toastQ.shift()) }
 
 /* ---------- toques ---------- */
 const ACT={

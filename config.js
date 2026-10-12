@@ -133,6 +133,8 @@ const CFG = {
     pass:{stars:250}},
   // Sorpresas en la campaña (cada every±jitter s de combate; no en jefes ni eventos): Horda (dur s, enemigos ×count, oro ×gold)
   // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
+  // Entrada de los combates: élite y JEFE (y los de la Torre) esperan a que se vaya el cartel; los combates normales de la Torre, un respiro
+  encounter:{intro:2, towerIntro:0.9},
   surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,reward:{silver:1}},
     // probabilidad de cada sorpresa (sobre el total)
     // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
@@ -163,7 +165,7 @@ const CFG = {
     // Se enfurece: su ataque sube ×rage cada 'every' s.
     maxFloor:100, final:{atk:1.6, every:10, rage:1.2},
     enrage:{after:60, every:5, mult:1.15},
-    speed:0.8, endDelay:1,   // los combates de la Torre van al 80 % de velocidad y, al matar a todos, se espera 1 s antes de salir (élite y jefe: hasta elegir la recompensa)   // en cualquier combate de más de 60 s, los enemigos pegan un 15 % más cada 5 s
+    speed:0.8, endDelay:1.6,   // los combates de la Torre van al 80 % de velocidad y, al matar a todos, se espera 1 s antes de salir (élite y jefe: hasta elegir la recompensa)   // en cualquier combate de más de 60 s, los enemigos pegan un 15 % más cada 5 s
     look:3,   // el mapa enseña los caminos de los próximos 3 pisos
     // almas: moneda de la partida (solo para los eventos ?). Combate normal / élite / jefe
     souls:{fight:10,elite:5,boss:20},

@@ -243,7 +243,7 @@ function createGame(opts){
     // jefe: al empujar una fase múltiplo de 10; y el de la fase 150 se puede repetir (farmear) una vez vencido
     const boss=(S.wave===10 && S.fase%10===0 && (S.fase===S.best+1 || (S.fase===CAP() && S.best>=CAP())));
     const h=heroStats();
-    B={t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase)*(hordeOn()?CFG.surprise.horde.count:1),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
+    B={intro:boss?CFG.encounter.intro:0,t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase)*(hordeOn()?CFG.surprise.horde.count:1),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     const g=boss?1:Math.min(B.count,groupAt(S.fase)); for(let i=0;i<g;i++) spawnEnemy(i*((WV()||{}).gap||0)); emit('wave',B);
   }
   // Embestida: los de cuerpo a cuerpo saltan al enemigo, así que esperan menos a que llegue (× enemy.dash)
@@ -262,6 +262,7 @@ function createGame(opts){
   function stepCore(dt){
     if(!S||!B) return;
     if(B.over){ B.wait-=dt; if(B.wait<=0) startWave(); return }
+    if(B.intro>0){ B.intro-=dt; return }   // entrada: el combate no empieza hasta que se va el cartel (élite, JEFE, Torre)
     if(B.rew&&!B.rewDone) return;   // Torre: el combate se queda parado mientras eliges la recompensa
     const h0=heroStats(), AF=B.event&&!B.kind&&B.aff, WB=B.kind==='boss'&&B.wb;
     const h=AF&&(AF.cr||AF.ls||AF.noHeal)?{...h0,cr:Math.min(CFG.caps.cr,h0.cr+(AF.cr||0)),ls:Math.min(CFG.caps.ls,h0.ls+(AF.ls||0)),noHealAll:!!AF.noHeal}   // Mazmorra: modificador del día
@@ -798,7 +799,7 @@ function createGame(opts){
   function towerFight(k){ const T=CFG.tower, run=S.tower.run, f=run.floor, c=towerFoe();
     const Hd=T.hard||{}, jump=Hd.jumpEvery?Math.pow(Hd.jump,Math.floor(f/Hd.jumpEvery)):1, eUp=(k==='elite'||(k==='boss'&&Hd.bossUp))&&Hd.eliteFrom&&f>=Hd.eliteFrom?Math.pow(k==='boss'?Hd.bossUp:Hd.eliteUp,1+Math.floor((f-Hd.eliteFrom)/Hd.eliteEvery)):1;
     const cv=towerCurve(f), hm=T.hp0*cv.hp*jump*eUp*(1+T.curses.vida.hp*(run.curses||[]).filter(x=>x==='vida').length), am=T.atk0*cv.atk*jump*Math.sqrt(eUp), h=heroStats();   // saltos: cada 25 pisos y élites reforzados (hard)
-    B={event:true,kind:'tower',node:k,t:0,boss:k==='boss',count:0,spawned:0,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
+    B={intro:k==='elite'||k==='boss'?CFG.encounter.intro:CFG.encounter.towerIntro,event:true,kind:'tower',node:k,t:0,boss:k==='boss',count:0,spawned:0,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     const nF=Math.min(T.countMax,T.count0+Math.floor(f/T.countEvery));   // enemigos de un combate normal de este piso
     const add=(n,hpM,atkM,boss)=>{ for(let i=0;i<n;i++){ const at=CFG.enemy.walk*0.6+Math.floor(i/T.group)*1.2+(i%T.group)*0.35, hp=c.hp*hm*hpM;
       B.enemies.push({hp,max:hp,atk:c.atk*am*atkM,df:c.df,spawn:B.t,walk:at,arrive:at,next:at,first:false,dead:false,spd:boss?1:1+Math.min(0.3,f*0.01)}); } };
@@ -905,7 +906,7 @@ function createGame(opts){
     const R=H.repeat[star-1], c=CFG.econ.bossScrap; return {gold:R.gold,scrap:Math.round((c.base+Math.floor(b.f/10)*c.per10)*(b.m+1)*R.scrap)} }
   function hallStart(id,star){ const b=hallBosses().find(x=>x.id===id); if(!S||inEvent()||!b||!b.beaten||!(star>=1&&star<=3)||star>b.stars+1||!hallTriesLeft()) return false;
     hallState().used++; const h=heroStats(), M=CFG.hall.stars[star-1], e=enemyStats(b.f,10,true,b.m), W=CFG.event.walk;
-    B={event:true,kind:'hall',t:0,boss:true,elite:b.elite,count:1,spawned:1,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,groups:b.f,hall:{id,m:b.m,f:b.f,star}};
+    B={intro:CFG.encounter.intro,event:true,kind:'hall',t:0,boss:true,elite:b.elite,count:1,spawned:1,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,groups:b.f,hall:{id,m:b.m,f:b.f,star}};
     B.enemies.push({hp:e.hp*M.hp,max:e.hp*M.hp,atk:e.atk*M.atk,df:e.df,spawn:0,walk:W,arrive:W,next:W,first:true,dead:false,f:b.f,spd:1});
     track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
   function hallEnd(){ const X=B.hall, won=B.hp>0&&B.enemies.every(e=>e.dead), C=hallState().clr, b={...X,elite:X.f%50===0}, first=won&&X.star>(C[X.id]||0);
@@ -939,7 +940,7 @@ function createGame(opts){
     if(wbPending()) wbClaim();
     if(wbFreeLeft()) S.wbFree=weekKey(); else S.bossTickets--; const h=heroStats(), s=wbStats(1), V=CFG.event;
     S.wbRun={week:weekKey(),dmg:0};
-    B={event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:wbBoss(weekKey())};
+    B={intro:CFG.encounter.intro,event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:wbBoss(weekKey())};
     B.enemies.push({hp:Infinity,max:Infinity,atk:s.atk,df:s.df,spawn:0,walk:V.walk,arrive:V.walk,next:V.walk,first:false,dead:false,immortal:true});
     save(); emit('eventStart',B); emit('change'); return true;
   }
