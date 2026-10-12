@@ -384,8 +384,9 @@ function renderTab(){
   if(tab==='ev') el.innerHTML=nbsp(tabEv());
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
   viewEnter();
-  if(tab==='mis'){ misKey=misKeyNow(); const pl=$('.plist'), y=window.scrollY, py=pl?pl.scrollTop:0; el.innerHTML=nbsp(tabMis());   // se conserva el scroll
-    const pl2=$('.plist'); if(pl2) pl2.scrollTop=py; window.scrollTo(0,y); }
+  if(tab==='mis'){ misKey=misKeyNow(); const pt=$('.ptrack'), y=window.scrollY, px=pt?pt.scrollLeft:null; el.innerHTML=nbsp(tabMis());   // se conserva el scroll
+    const pt2=$('.ptrack'); if(pt2){ if(px!=null) pt2.scrollLeft=px; else { const c=pt2.querySelector('.pcol.cur'); if(c) pt2.scrollLeft=Math.max(0,c.offsetLeft-pt2.clientWidth/2+c.offsetWidth/2); } }   // el pase se abre en tu nivel
+    window.scrollTo(0,y); }
   updateHUD();
 }
 function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev'||(tab==='inv'&&invView==='cofres')) renderTab(); else updateHUD(); }
@@ -1057,15 +1058,19 @@ function tabMis(){ const P=G.passState();
       ${st.got?'<span class="mcheck" aria-label="Recogido">✓</span>':st.can?`<button class="btn sm gold mclaim" data-act="misBonus" data-k="${kind}">Recoger</button>`:'<span class="mlock" aria-label="Aún no">🔒</span>'}</div>` };
   if(misView==='dia') body=bonusRow('day','Bonus: completa todas las diarias')+misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
   if(misView==='sem') body=bonusRow('week','Bonus: completa todas las semanales')+misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
-  if(misView==='pass'){ const L=CFG.pass.levels, rows=[]; for(let l=1;l<=L;l++){ const open=l<=P.lvl;
-      const cell=(prem)=>{ const got=prem?P.cp[l]:P.cf[l], lock=prem&&!P.prem; return `<div class="pc${got?' got':''}${open&&!got&&!lock?' can':''}${lock?' lock':''}">${bundleHTML(G.passReward(l,prem))}${got?' ✓':''}</div>` };
-      rows.push(`<div class="prow${open?' open':''}"><span class="pl">${l}</span>${cell(false)}${cell(true)}</div>`) }
-    body=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${P.lvl}/${L}</b><span class="s">Quedan ${P.daysLeft} días</span></div>
-      <div class="rbar"><i style="width:${P.lvl>=L?100:P.into/P.need*100}%;background:var(--gold)"></i></div><span class="s">${P.lvl>=L?'¡Pase completo!':P.into+'/'+P.need+' XP · las misiones dan XP'}</span>
-      ${P.prem?'':`<div class="chest offer"><div><div class="cn">Pase de pago</div><div class="s">Premios dorados</div></div><div class="acts">${payBtn('pass',CFG.stars.pass.stars,'data-act="devPass"')}</div></div>`}
-      <button class="btn gold" data-act="passAll" ${G.passReady()?'':'disabled'}>Reclamar todo (${G.passReady()})</button>
-      <div class="prow ph"><span class="pl">Nv</span><div class="pc">Gratis</div><div class="pc">De pago</div></div>
-      <div class="plist">${rows.join('')}</div>`; }
+  // Pase: dos líneas en horizontal (arriba la gratis, abajo la de pago) con los niveles en medio unidos por la barra de progreso.
+  // Se toca un premio que brilla para recogerlo; los de pago sin el pase llevan candado.
+  if(misView==='pass'){ const L=CFG.pass.levels, cols=[];
+    for(let l=1;l<=L;l++){ const open=l<=P.lvl;
+      const cell=prem=>{ const got=prem?P.cp[l]:P.cf[l], lock=prem&&!P.prem, can=open&&!got&&!lock;
+        return `<button class="pcell${prem?' prem':''}${got?' got':''}${can?' can':''}${lock?' lock':''}" ${can?`data-act="passClaim" data-k="${l}" data-v="${prem?1:0}"`:'disabled'}>${bundleHTML(G.passReward(l,prem))}${got?'<i class="pck">✓</i>':lock?'<i class="plk">🔒</i>':''}</button>` };
+      cols.push(`<div class="pcol${open?' open':''}${l===Math.min(L,P.lvl+1)?' cur':''}">${cell(false)}<span class="pnode">${l}</span>${cell(true)}</div>`) }
+    body=`<div class="phead"><div><b>Nivel ${P.lvl}/${L}</b><span class="s">Quedan ${P.daysLeft} días</span></div>
+        <div class="rbar"><i style="width:${P.lvl>=L?100:P.into/P.need*100}%;background:var(--gold)"></i></div><span class="s">${P.lvl>=L?'¡Pase completo!':P.into+'/'+P.need+' XP para el nivel '+(P.lvl+1)+' · las misiones dan XP'}</span></div>
+      <div class="pwrap"><div class="plabels"><span class="pfree">GRATIS</span><span class="ppay">PASE</span></div>
+        <div class="ptrack">${cols.join('')}</div></div>
+      ${P.prem?'':`<div class="chest offer"><div><div class="cn">Pase de pago</div><div class="s">Desbloquea la línea dorada (y lo que ya hayas pasado)</div></div><div class="acts">${payBtn('pass',CFG.stars.pass.stars,'data-act="devPass"')}</div></div>`}
+      <button class="btn gold" data-act="passAll" ${G.passReady()?'':'disabled'}>Reclamar todo (${G.passReady()})</button>`; }
   if(misView==='soc'){ const R=CFG.referral, inv=inviteRow();
     body=`<p class="hint">Invita a tus amigos: tu amigo recibe ${R.giftSilver} cofre de plata y tú ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}.</p>${inv||'<p class="hint">Para invitar, abre el juego desde Telegram.</p>'}`; }
   return `<section class="panel">${chips}<div id="misBox" class="mlist">${body}</div></section>` }
@@ -1073,15 +1078,30 @@ const misBadge=()=>G.missionsReady()+G.weeklyReady()+G.passReady();
 // Ruleta diaria: tirada gratis + tirada con anuncio; resalta el premio que toca
 // pestañas de «Premios diarios» (Calendario · Ruleta), con aviso si hay algo por recoger
 const dailyTabs=cur=>`<div class="fchips">${[['calOpen','Calendario',G.calState().can],['wheelOpen','Ruleta',G.wheelState().free]].map(([a,l,n])=>`<button data-act="${a}" aria-pressed="${cur===a}">${l}${n?' <sup class="nb" style="position:static">!</sup>':''}</button>`).join('')}</div>`;
+// Ruleta de verdad: una rueda con un sector por premio (mismo tamaño; la probabilidad de cada uno se ve debajo).
+// Gira con CSS y se para con el premio debajo de la flecha de arriba; wheelRot guarda dónde se quedó.
+let wheelRot=0;
+const WCOL=['#3b2a5c','#24304f','#4a2333','#1f3b36','#3d3320','#2b2650'];
+function wheelHTML(hit){ const W=G.wheelState(), L=W.list, n=L.length, seg=360/n;
+  const bg=`conic-gradient(${L.map((_,i)=>`${WCOL[i%WCOL.length]} ${i*seg}deg ${(i+1)*seg}deg`).join(',')})`;
+  const lines=L.map((_,i)=>`<i class="rwln" style="transform:rotate(${i*seg}deg)"></i>`).join('');
+  const labs=L.map((x,i)=>`<div class="rwl${hit===i?' hit':''}" style="transform:rotate(${(i+0.5)*seg}deg)"><span>${bundleHTML(x.b)}</span></div>`).join('');
+  return `<div class="rwheel"><div class="rwrot" id="rwRot" style="transform:rotate(${wheelRot}deg);background:${bg}">${lines}${labs}</div><i class="rwpin"></i><b class="rwhub">★</b></div>` }
 function wheelModal(hit){ const W=G.wheelState(), tot=W.list.reduce((a,x)=>a+x.w,0);
-  showModal(`<h3>Premios diarios</h3>${dailyTabs('wheelOpen')}<div class="wheelg">${W.list.map((x,i)=>`<div class="wcell${hit===i?' hit':''}"><b>${bundleHTML(x.b)}</b><span class="s">${Math.round(x.w/tot*100)} %</span></div>`).join('')}</div>
+  showModal(`<h3>Premios diarios</h3>${dailyTabs('wheelOpen')}${wheelHTML(hit)}
     <div class="ctrl"><button class="btn gold" data-act="wheelSpin" ${W.free?'':'disabled'}>${W.free?'Girar gratis':'Gratis: mañana'}</button><button class="btn" data-act="wheelAd" ${W.ad?'':'disabled'}>${W.ad?'Girar con anuncio':'Anuncio: mañana'}</button></div>
+    <details class="rwodds"><summary>Probabilidades</summary><div>${W.list.map(x=>`<span>${bundleHTML(x.b)} <b>${Math.round(x.w/tot*100)} %</b></span>`).join('')}</div></details>
     <p class="hint">Una tirada gratis al día y otra viendo un anuncio.</p><button class="btn" data-act="close">Cerrar</button>`) }
-function wheelGo(viaAd){ const r=G.spinWheel(viaAd); if(!r) return; const L=G.wheelState().list.length; let i=0, n=L*2+r.i;
-  if(!$('#modal .wcell')) wheelModal();   // (tras el anuncio se vuelve a abrir la ruleta)
-  if(reduceMotion()){ wheelModal(r.i); toast('Ruleta: '+bundleTxt(r.b)); return }
-  const tick=()=>{ document.querySelectorAll('#modal .wcell').forEach((c,j)=>c.classList.toggle('hit',j===i%L)); if(i++<n) setTimeout(tick,40+i*6); else { haptic('ok'); wheelModal(r.i); toast('Ruleta: '+bundleTxt(r.b)); updateHUD(); } };
-  document.querySelectorAll('#modal .ctrl button').forEach(b=>b.disabled=true); tick(); }
+function wheelGo(viaAd){ const r=G.spinWheel(viaAd); if(!r) return; const n=G.wheelState().list.length, seg=360/n;
+  if(!$('#rwRot')) wheelModal();   // (tras el anuncio se vuelve a abrir la ruleta)
+  // el sector r.i acaba arriba: su centro (r.i+0.5)·seg debe quedar en 0°; 5 vueltas enteras más un pequeño desvío dentro del sector
+  const cur=((wheelRot%360)+360)%360, want=(360-(r.i+0.5)*seg+(Math.random()-0.5)*seg*0.6+360)%360;
+  wheelRot+=5*360+((want-cur+360)%360);
+  const done=()=>{ haptic('ok'); wheelModal(r.i); toast('Ruleta: '+bundleTxt(r.b)); updateHUD(); };
+  if(reduceMotion()){ done(); return }
+  document.querySelectorAll('#modal .ctrl button').forEach(b=>b.disabled=true);
+  const el=$('#rwRot'); el.classList.add('spin'); requestAnimationFrame(()=>{ el.style.transform=`rotate(${wheelRot}deg)` });
+  let fin=false; const end=()=>{ if(fin) return; fin=true; done() }; el.addEventListener('transitionend',end,{once:true}); setTimeout(end,4800); }
 // Calendario: icono en el combate; ventana con los 7 días
 function calModal(){ const C=G.calState();
   showModal(`<h3>Premios diarios</h3>${dailyTabs('calOpen')}<div class="calg">${C.list.map((b,i)=>{ const d=i+1, got=d<C.day||(d===C.day&&!C.can), now=d===C.day&&C.can;
@@ -1297,6 +1317,7 @@ const ACT={
   calClaim:()=>{ const r=G.calState().day, b=G.claimCal(); if(b){ haptic('ok'); toast('Día '+r+': '+bundleTxt(b)); } calModal(); updateHUD(); if(b) notifyOffer() },
   notifyYes:()=>{ closeModal(); askNotify() },
   notifyAsk:()=>askNotify(),
+  passClaim:(b,k)=>{ const r=G.claimPass(+k,b.dataset.v==='1'); if(r){ haptic('ok'); toast('Pase: '+bundleTxt(r)); } misKey=null; renderTab() },
   passAll:()=>{ const n=G.claimPassAll(); if(n){ haptic('ok'); toast('+'+n+' premios del pase'); } renderTab() },
   devPass:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'pass',amount:G.passState().season,reason:'stars:pass'}]); renderTab() },
   evoOpen:()=>evoModal(),
