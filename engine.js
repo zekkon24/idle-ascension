@@ -1,3 +1,4 @@
+/* ARCHIVO GENERADO por tools/construir.js desde src/motor/ (orden en orden.json): no lo edites aquí. */
 /* Idle Ascension · MOTOR DEL JUEGO
    Toda la lógica: estado, fórmulas, combate, economía, armas, cofres, eventos y tienda.
    No toca la pantalla (ni DOM ni canvas): la interfaz escucha sus eventos y llama a sus acciones.
@@ -667,6 +668,38 @@ function createGame(opts){
     P.hist.unshift({name:r.name,cls:r.cls,bot:r.bot,win,draw:!!draw,d,rating:r.rating}); P.hist=P.hist.slice(0,10);
     return {win,draw:!!draw,d,rating:P.rating,rival:{name:r.name,cls:r.cls,bot:r.bot,id:r.id,match:r.match}} }
   const pvpLoss=r=>({...pvpResult(r,false),quit:true});
+  // Élite y JEFE fuera de la Torre (campaña, errante, Sala): el élite lleva rasgos fijos de su fase (1, o 2 desde la 101) y
+  // el JEFE la mecánica de jefe de la Torre según su fase (50 invocador, 100 enfurecido, 150 fases). Esbirros: enemigos normales de la fase.
+  function mechSetup(e,f,mode,jefe,rnd){ const C=CFG.mechs, TR=CFG.tower.traits, M=CFG.tower.bossMech; if(!C) return;
+    B.mechOn=true; const m=enemyStats(f,1,false,mode); B.minion={hp:m.hp,atk:m.atk,df:m.df,spd:eSpd(f)};
+    if(jefe){ e.mech=M.order[(Math.max(1,Math.floor(f/50))-1)%M.order.length]; if(e.mech==='fases') e.phases=M.fases.at.slice(); B.mech=e.mech; e.hpSeen=e.hp; return }
+    const pool=C.traits.slice(), n=f>C.twoFrom?2:1; let x=(f*2654435761+mode*40503)>>>0; e.traits=[];
+    for(let i=0;i<n&&pool.length;i++){ const j=rnd?Math.floor(rand()*pool.length):(x=(x*1103515245+12345)>>>0)%pool.length; e.traits.push(pool.splice(j,1)[0]); }
+    traitApply(e,TR); e.hpSeen=e.hp }
+  function traitApply(e,TR){ for(const t of e.traits){
+      if(t==='rapido') e.spd*=TR.rapido.spd; if(t==='gigante'){ e.hp*=TR.gigante.hp; e.max=e.hp; e.spd*=TR.gigante.spd; }
+      if(t==='regenera') e.regen=TR.regenera.regen; if(t==='espinas') e.thorns=TR.espinas.reflect; if(t==='furioso') e.fur=true; }
+    if(e.traits.includes('escudo')) e.sh=TR.escudo.shield*e.max; }
+  function towerGuard(e){ const seen=e.hpSeen==null?e.max:e.hpSeen, dealt=seen-e.hp; if(!(dealt>0)) return e.hp>0;
+    if(e.inv>B.t){ e.hp=seen; return true }
+    if(e.sh>0){ const a=Math.min(e.sh,dealt); e.sh-=a; e.hp+=a; }
+    e.hpSeen=e.hp; return e.hp>0 }
+  // Torre, cada paso: rasgos de élite y mecánicas de jefe. Devuelve true si el héroe cae (Espinas)
+  function towerTick(h,dt){ const T=CFG.tower, TR=T.traits, M=T.bossMech, TW=B.kind==='tower';
+    for(const e of B.enemies.slice()){ if(e.dead||e.arrive>B.t) { if(!e.dead) e.hpSeen=e.hp; continue; }
+      if(e.inf){ e.hp=e.max; if(B.t>=(e.rageAt||0)){ if(e.rageAt) e.atk*=T.final.rage; e.rageAt=B.t+T.final.every; } e.hpSeen=e.hp; continue; }   // jefe final: vida infinita y cada vez pega más
+      if(TW&&B.t>=T.enrage.after&&B.t>=(e.enrAt||0)){ if(e.enrAt) e.atk*=T.enrage.mult; e.enrAt=B.t+T.enrage.every; }   // combates muy largos: los enemigos se enfurecen (no hay empates)
+      towerGuard(e);
+      if(e.regen&&e.hp<e.max) e.hp=Math.min(e.max,e.hp+e.regen*e.max*dt);
+      if(e.fur&&!e.furOn&&e.hp<TR.furioso.below*e.max){ e.furOn=true; e.atk*=TR.furioso.atk; emit('fx',{k:'furia',e}); }
+      if(e.thN){ const d=e.thN*e.thorns*dmgF(e.atk,h.df*buffMul('df'))*h.dmgTaken; e.thN=0; B.hp-=d; emit('heroHit',{d}); if(B.hp<=0) return true; }
+      if(e.mech==='enfurecido'&&!e.rage&&e.hp<M.enfurecido.below*e.max){ e.rage=true; e.atk*=M.enfurecido.atk; e.spd=(e.spd||1)*M.enfurecido.spd; emit('bossPhase',{k:'rage'}); }
+      if(e.mech==='fases'&&e.phases&&e.phases.length&&e.hp<e.phases[0]*e.max){ e.phases.shift(); e.inv=B.t+M.fases.inv; e.hp=Math.min(e.max,e.hp+M.fases.heal*e.max); emit('bossPhase',{k:'shield'}); }
+      if(e.mech==='invocador'&&B.t>=(e.sumAt||0)){ e.sumAt=B.t+M.invocador.every; const m=B.minion;
+        for(let i=0;i<M.invocador.n;i++){ const at=B.t+0.4+i*0.3; B.enemies.push({hp:m.hp,max:m.hp,atk:m.atk,df:m.df,spawn:B.t,walk:0.4+i*0.3,arrive:at,next:at,first:false,dead:false,minion:true,spd:m.spd}); }
+        if(B.t>0.5) emit('bossPhase',{k:'summon'}); }
+      e.hpSeen=e.hp; }
+    return false }
   /* ---------- Torre (roguelike) ---------- */
   // Cartas y grimorios que pueden salir: las habilidades (hasta maxSkills) y los grimorios, solo 1 de cada
   const RNAME={C:'Común',R:'Rara',E:'Épica',L:'Legendaria'};
@@ -767,38 +800,6 @@ function createGame(opts){
     else if(id==='altar'){ res.curse=addCurse(run); const b=towerOfferR(1,'L',['g'])[0]; if(b){ res.got=b; towerGain(run,b); emit('towerGot',b); } run.ev=null; towerNext(); }   // 1 grimorio legendario al azar + 1 maldición
     save(); emit('change'); return res }
   // Torre: guarda de los enemigos (escudo de élite e invulnerabilidad de jefe) — devuelve true si el enemigo no muere
-  // Élite y JEFE fuera de la Torre (campaña, errante, Sala): el élite lleva rasgos fijos de su fase (1, o 2 desde la 101) y
-  // el JEFE la mecánica de jefe de la Torre según su fase (50 invocador, 100 enfurecido, 150 fases). Esbirros: enemigos normales de la fase.
-  function mechSetup(e,f,mode,jefe,rnd){ const C=CFG.mechs, TR=CFG.tower.traits, M=CFG.tower.bossMech; if(!C) return;
-    B.mechOn=true; const m=enemyStats(f,1,false,mode); B.minion={hp:m.hp,atk:m.atk,df:m.df,spd:eSpd(f)};
-    if(jefe){ e.mech=M.order[(Math.max(1,Math.floor(f/50))-1)%M.order.length]; if(e.mech==='fases') e.phases=M.fases.at.slice(); B.mech=e.mech; e.hpSeen=e.hp; return }
-    const pool=C.traits.slice(), n=f>C.twoFrom?2:1; let x=(f*2654435761+mode*40503)>>>0; e.traits=[];
-    for(let i=0;i<n&&pool.length;i++){ const j=rnd?Math.floor(rand()*pool.length):(x=(x*1103515245+12345)>>>0)%pool.length; e.traits.push(pool.splice(j,1)[0]); }
-    traitApply(e,TR); e.hpSeen=e.hp }
-  function traitApply(e,TR){ for(const t of e.traits){
-      if(t==='rapido') e.spd*=TR.rapido.spd; if(t==='gigante'){ e.hp*=TR.gigante.hp; e.max=e.hp; e.spd*=TR.gigante.spd; }
-      if(t==='regenera') e.regen=TR.regenera.regen; if(t==='espinas') e.thorns=TR.espinas.reflect; if(t==='furioso') e.fur=true; }
-    if(e.traits.includes('escudo')) e.sh=TR.escudo.shield*e.max; }
-  function towerGuard(e){ const seen=e.hpSeen==null?e.max:e.hpSeen, dealt=seen-e.hp; if(!(dealt>0)) return e.hp>0;
-    if(e.inv>B.t){ e.hp=seen; return true }
-    if(e.sh>0){ const a=Math.min(e.sh,dealt); e.sh-=a; e.hp+=a; }
-    e.hpSeen=e.hp; return e.hp>0 }
-  // Torre, cada paso: rasgos de élite y mecánicas de jefe. Devuelve true si el héroe cae (Espinas)
-  function towerTick(h,dt){ const T=CFG.tower, TR=T.traits, M=T.bossMech, TW=B.kind==='tower';
-    for(const e of B.enemies.slice()){ if(e.dead||e.arrive>B.t) { if(!e.dead) e.hpSeen=e.hp; continue; }
-      if(e.inf){ e.hp=e.max; if(B.t>=(e.rageAt||0)){ if(e.rageAt) e.atk*=T.final.rage; e.rageAt=B.t+T.final.every; } e.hpSeen=e.hp; continue; }   // jefe final: vida infinita y cada vez pega más
-      if(TW&&B.t>=T.enrage.after&&B.t>=(e.enrAt||0)){ if(e.enrAt) e.atk*=T.enrage.mult; e.enrAt=B.t+T.enrage.every; }   // combates muy largos: los enemigos se enfurecen (no hay empates)
-      towerGuard(e);
-      if(e.regen&&e.hp<e.max) e.hp=Math.min(e.max,e.hp+e.regen*e.max*dt);
-      if(e.fur&&!e.furOn&&e.hp<TR.furioso.below*e.max){ e.furOn=true; e.atk*=TR.furioso.atk; emit('fx',{k:'furia',e}); }
-      if(e.thN){ const d=e.thN*e.thorns*dmgF(e.atk,h.df*buffMul('df'))*h.dmgTaken; e.thN=0; B.hp-=d; emit('heroHit',{d}); if(B.hp<=0) return true; }
-      if(e.mech==='enfurecido'&&!e.rage&&e.hp<M.enfurecido.below*e.max){ e.rage=true; e.atk*=M.enfurecido.atk; e.spd=(e.spd||1)*M.enfurecido.spd; emit('bossPhase',{k:'rage'}); }
-      if(e.mech==='fases'&&e.phases&&e.phases.length&&e.hp<e.phases[0]*e.max){ e.phases.shift(); e.inv=B.t+M.fases.inv; e.hp=Math.min(e.max,e.hp+M.fases.heal*e.max); emit('bossPhase',{k:'shield'}); }
-      if(e.mech==='invocador'&&B.t>=(e.sumAt||0)){ e.sumAt=B.t+M.invocador.every; const m=B.minion;
-        for(let i=0;i<M.invocador.n;i++){ const at=B.t+0.4+i*0.3; B.enemies.push({hp:m.hp,max:m.hp,atk:m.atk,df:m.df,spawn:B.t,walk:0.4+i*0.3,arrive:at,next:at,first:false,dead:false,minion:true,spd:m.spd}); }
-        if(B.t>0.5) emit('bossPhase',{k:'summon'}); }
-      e.hpSeen=e.hp; }
-    return false }
   // curva por tramos de la Torre (multiplicador de vida y ataque del piso f)
   function towerCurve(f){ let hp=1, atk=1; const C=CFG.tower.curve; for(let i=0;i<C.length;i++){ const [a,gh,ga]=C[i], nx=C[i+1]?C[i+1][0]:Infinity, n=Math.max(0,Math.min(f,nx)-a); hp*=Math.pow(gh,n); atk*=Math.pow(ga,n); } return {hp,atk} }
   // enemigo base: mezcla del de tu fase récord y uno «a tu medida» (así tus estadísticas pesan menos)
@@ -1384,3 +1385,4 @@ function createGame(opts){
 root.createGame=createGame;
 if(typeof module!=='undefined'&&module.exports) module.exports={createGame};
 })(typeof window!=='undefined'?window:globalThis);
+

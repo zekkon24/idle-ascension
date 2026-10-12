@@ -1,3 +1,4 @@
+/* ARCHIVO GENERADO por tools/construir.js desde src/pantallas/ (orden en orden.json): no lo edites aquí. */
 /* Idle Ascension · INTERFAZ
    Dibuja la pantalla y traduce toques en acciones del motor (engine.js).
    No contiene reglas del juego: todo número o regla sale de G (el motor) o de CFG. */
