@@ -16,7 +16,7 @@ const G=createGame({cfg:window.CFG,storage,now:()=>Date.now()+clockOff});
 if(window.CFG.devTools) window.G=G; // solo en local (herramientas de prueba): en la versión publicada no se puede tocar desde la consola
 if(window.Telemetry) Telemetry.attach(G); // envío a la base de datos (solo dentro de Telegram y con servidor)
 if(window.Control) Control.attach(G);     // mantenimiento y actualizaciones obligatorias (solo en la versión publicada)
-const CFG=G.CFG, R=G.R, CLASSES=G.CLASSES;
+const CFG=G.CFG, R=G.R;
 let S=null; // alias de G.S (se actualiza al cargar, crear o borrar partida)
 const syncS=()=>{S=G.S};
 
@@ -164,7 +164,7 @@ function towerPickModal(){ const run=G.towerState().run; if(!run||!run.pick) ret
   showModal(`<h3>${G.B&&G.B.node==='boss'?'¡Jefe vencido!':'¡Élite vencido!'}</h3><p class="hint">Elige 1:</p><div class="mlist">${run.pick.map(boonCard).join('')}</div>`) }
 G.on('towerPickNow',()=>{ tab='up'; renderTab(); later(towerPickModal); haptic('ok') });
 G.on('towerReward',({floor,b})=>toast(`Piso ${floor}: ${bundleTxt(b)}`));
-G.on('surprise',({k,reward})=>{ const C=CFG.surprise;
+G.on('surprise',({k,reward})=>{
   if(k==='horde'||k==='wander') haptic('medium');   // el cartel y la barra del combate ya lo cuentan (encHUD)
   else if(/Win$/.test(k)){ haptic('ok'); toast({wanderWin:'¡Errante vencido! '}[k]+bundleTxt(reward)); updateHUD(); }
   else if(k==='wanderFled') toast('El errante huyó'); });
@@ -454,16 +454,6 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
   return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
     ${chips}${status}${sheet}<div class="hgrid">${tiles}</div>
     <p class="hint">Sin tiempo límite: desde el minuto 1, el jefe se enfurece cada 10 s · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
-function modeRows(){
-  const CAP=CFG.phaseCap; return CFG.modes.map((M,m)=>{
-    const cur=m===S.mode, done=m<S.mode, next=m===S.mode+1, tier=CFG.evo.tiers[m-1];
-    const need=M.locked?'':m?`Vencer la fase ${CAP} de ${CFG.modes[m-1].name} y hacer la evolución ${m}${tier&&tier.pending?' (próximamente)':''}`:'';
-    const st=cur?`<span class="pill" style="color:var(--gold)">Actual · fase ${S.best}/${CAP}</span>`:done?'<span class="pill">Completado</span>':`<span class="pill">${M.locked?'Próximamente':next&&G.canAdvanceMode()?'Desbloqueado':'Bloqueado'}</span>`;
-    return `<div class="mcard${cur?' cur':''}${!cur&&!done&&!(next&&G.canAdvanceMode())?' lock':''}">
-      <div class="ctrl" style="justify-content:space-between"><b>${M.name}</b>${st}</div>
-      <span class="s">Oro ×${(M.gold||1).toLocaleString('es-ES')} · ${M.mat}</span>
-      ${!cur&&!done&&need?`<span class="s">${need}</span>`:''}
-      ${next&&G.canAdvanceMode()?`<button class="btn sm gold" data-act="modeGo">Ir a ${M.name}</button>`:''}</div>`; }).join('') }
 
 /* ---------- Inventario ---------- */
 // ¿daño y velocidad base mejores que el arma equipada? (las armas ya no se equipan solas)
@@ -971,7 +961,7 @@ function tabEv(){
     <span class="evl"><span>${tk}</span><span>${line}</span></span></button>`;
   // Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Jefe semanal; la Liga está oculta) y PvP (próximamente)
   const back=`<button class="back" data-act="modview" data-v="">← Modos</button>`;
-  if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), M=G.modeCfg();
+  if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0);
     const tw=G.towerState(), tr=tw.run, pv=G.pvpState(), cap=CFG.phaseCap, bg=(z,w,h)=>`background-image:linear-gradient(180deg,rgba(10,10,16,0) 35%,rgba(10,10,16,.8)),url(${sceneImg(z,w,h)})`;
     const modesTxt=CFG.modes.map((x,i)=>`<span class="${i===S.mode?'on':''}">${x.name.toUpperCase()}</span>`).join('');
     return `<div class="mgrid2">
@@ -1292,7 +1282,7 @@ function showModal(html){const pop=!modalOpen()&&!reduceMotion();$('#modal').inn
 function closeModal(){$('#modal').innerHTML=''; if(modalQ.length) setTimeout(drainQ,150)}
 // Avisos que no deben pisar otra ventana (fin del evento, tiempo sin conexión): esperan su turno
 const modalQ=[];
-const modalOpen=()=>!!$('#modal').innerHTML;
+const modalOpen=()=>!!$('#modal').firstChild;   // (sin leer innerHTML: es caro y se llama muy a menudo)
 function later(fn){ if(modalOpen()) modalQ.push(fn); else fn() }
 function drainQ(){ if(!modalOpen()&&modalQ.length) modalQ.shift()() }
 let toastT=null, encBanUntil=0; const toastQ=[];

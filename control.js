@@ -11,9 +11,9 @@
 function attach(G){
   const CFG=G.CFG, C=CFG.control||{}, V=root.APP_VERSION||'DEV', SV=CFG.server||{};
   if(V==='DEV'&&!C.dev) return;
-  let blocked=false, inMaint=false, updating=false;
+  let inMaint=false, updating=false;
   const $=s=>document.querySelector(s);
-  function screen(title,msg,wait){ blocked=true; root.GAME_PAUSED=true; try{ G.save() }catch(e){}
+  function screen(title,msg,wait){ root.GAME_PAUSED=true; try{ G.save() }catch(e){}
     let el=$('#ctlBox'); if(!el){ el=document.createElement('div'); el.id='ctlBox'; el.className='boot'; el.setAttribute('role','alertdialog'); document.body.appendChild(el); }
     el.innerHTML=`<b>${title}</b><span>${msg}</span>${wait?'<span class="ctlw"></span>':''}` }
   function reload(v){ const u=new URL(location.href); u.searchParams.set('v',v||Date.now()); location.replace(u.toString()) } // conserva los datos de Telegram (#…)
