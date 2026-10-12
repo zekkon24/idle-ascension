@@ -280,6 +280,8 @@ input[type=number]{width:64px}
 .nav .ni{position:relative;display:grid;place-items:center;height:22px}
 .nav .nl{font-size:10.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .nav .nb{top:-4px;right:-10px;line-height:13px;min-width:13px}
+.nb.dot{min-width:9px;width:9px;height:9px;padding:0;top:-1px;right:-5px}.nb.gold{background:var(--gold);animation:none;box-shadow:0 0 6px rgba(232,176,74,.7)}
+.gear{flex:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);display:grid;place-items:center;padding:0}.gear svg{width:18px;height:18px}
 .nav button[aria-selected="true"] .ico{filter:drop-shadow(0 0 4px rgba(232,176,74,.55))}
 /* botones con relieve y pequeño rebote al tocar */
 .btn,.mcard,.fchips button,.calbtn,.skb,.evcard{transition:transform .08s ease-out,box-shadow .08s,border-color .15s}
@@ -343,6 +345,13 @@ input[type=number]{width:64px}
 .rwodds{font-size:12px;color:var(--muted)}.rwodds div{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px}.rwodds span{display:inline-flex;align-items:center;gap:3px}
 .stk{color:var(--gold)}
 .tchips{display:flex;flex-wrap:wrap;gap:4px}
+/* minitutorial: oscurece todo menos lo que señala; solo el cuadro de texto recibe toques */
+#tut{position:fixed;inset:0;z-index:300;pointer-events:none}
+.tuthole{position:fixed;border:2px solid var(--gold);border-radius:12px;box-shadow:0 0 0 9999px rgba(5,4,10,.62),0 0 16px rgba(232,176,74,.7);animation:tutp 1.6s ease-in-out infinite}
+@keyframes tutp{50%{border-color:#ffe2a0}}
+.tutbox{position:fixed;left:16px;right:16px;max-width:420px;margin:0 auto;pointer-events:auto;background:var(--panel);border:1.5px solid var(--gold);border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.tutbox p{margin:0 0 10px;font-weight:700;line-height:1.35}.tutbox .ctrl{justify-content:space-between;align-items:center}
+@media (prefers-reduced-motion:reduce){.tuthole{animation:none}}
 /* Torre a pantalla completa: sin marco ni botón de volver; el mapa ocupa todo el ancho y el alto libre */
 .panel.tfull{background:none;border:0;box-shadow:none;padding:0}
 .tfull .tfhead{grid-template-columns:repeat(4,1fr)}.tfxb{font:inherit;color:inherit;cursor:pointer;background:var(--panel2);border:1px solid var(--gold);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -406,7 +415,8 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .banner:hover{background:linear-gradient(90deg,rgba(232,176,74,.32),rgba(232,176,74,.1))}
 .calbtn{position:absolute;right:10px;top:8px;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;padding:0}
 .better{color:var(--good);font-size:12px}
-.sidebtns{position:absolute;right:10px;top:auto;bottom:36px;z-index:4;display:flex;flex-direction:row-reverse;align-items:center;gap:8px}   /* grimorio, premios diarios y potenciadores: en fila abajo a la derecha (a mano del pulgar) */
+.sidebtns{position:absolute;right:10px;top:auto;bottom:17px;z-index:4;display:flex;flex-direction:row;align-items:center;gap:8px}
+#grimBtn{order:1}#boostBtn{order:2}#dailyBtn{order:3}   /* grimorio, premios diarios y potenciadores: en fila abajo a la derecha (a mano del pulgar) */
 .sidebtns .calbtn{position:relative;right:auto;top:auto;width:44px;height:44px}
 .calbtn.on{border-color:var(--gold);background:rgba(232,176,74,.25);box-shadow:0 0 10px rgba(232,176,74,.5)}
 .lootn{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;font-style:normal;line-height:16px;text-align:center}
@@ -612,7 +622,6 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .enchb{position:absolute;left:50%;top:66px;transform:translateX(-50%);width:72%;padding:6px 10px;border-radius:12px;background:rgba(10,8,16,.82);border:1.5px solid var(--ec);text-align:center;box-shadow:0 0 14px var(--eg)}
 .enchb b{font-size:13px;font-weight:900;color:#fff;letter-spacing:.06em}.encpg{height:8px;border-radius:4px;background:#2a2533;margin-top:5px;overflow:hidden}.encpg i{display:block;height:100%;background:linear-gradient(90deg,var(--ec),#ffd08a);transition:width .25s linear}
 .enchb small{display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#e9e2d0;margin-top:4px}
-.encnotch{position:absolute;left:50%;top:-3px;width:3px;height:28px;background:#fff;box-shadow:0 0 6px #fff;border-radius:2px;pointer-events:none}
 .stage.encshake{animation:encshake .45s ease,encglow 2.2s ease-in-out infinite}@keyframes encshake{0%,100%{translate:0 0}20%{translate:-5px 2px}40%{translate:5px -2px}60%{translate:-3px 1px}80%{translate:3px 0}}
 @media (prefers-reduced-motion:reduce){.stage[class*="enc-"] .enc{animation:none;box-shadow:inset 0 0 calc(var(--es)*10px) 0 var(--eg)}.stage[class*="enc-"],.stage.encshake{animation:none;box-shadow:0 0 calc(var(--es)*8px) 0 var(--eg)}.encban{animation-duration:2.4s}}
 .vshud{position:absolute;left:6px;right:6px;top:6px;z-index:5;display:grid;grid-template-columns:1fr auto 1fr;align-items:start;pointer-events:none}   /* start: los iconos de debajo no mueven las barras */
@@ -652,10 +661,9 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 <nav class="nav" id="nav" hidden><div role="tablist">
   <button role="tab" data-tab="up" aria-selected="true">Inicio</button>
   <button role="tab" data-tab="inv">Inventario</button>
-  <button role="tab" data-tab="shop">Tienda</button>
   <button role="tab" data-tab="ev">Modos</button>
   <button role="tab" data-tab="mis">Misiones</button>
-  <button role="tab" data-tab="dev">Ajustes</button>
+  <button role="tab" data-tab="shop">Tienda</button>
 </div></nav>
 <div class="upstrip" id="upFab" hidden></div>
 <div id="modal"></div>
@@ -669,7 +677,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610121338-06f7885';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610121352-c4eca28';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

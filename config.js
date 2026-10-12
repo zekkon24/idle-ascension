@@ -140,7 +140,9 @@ const CFG = {
     // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
     weights:{horde:50,wander:50}},
   // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
-  bossPhase:{at:0.5, rage:1.3, summon:[2,3], jefeBoth:true},   // a mitad de vida: élite y errante, enfurecerse O llamar ayuda; el JEFE, las dos
+  // Mecánicas fuera de la Torre (como en la Torre): el élite lleva rasgos de tower.traits (1, o 2 desde la fase twoFrom) y el JEFE la
+  // mecánica de jefe de tower.bossMech según su fase. Sin «Regenera» en la campaña (con jefes lentos de matar sería un muro).
+  mechs:{traits:['rapido','escudo','espinas','furioso','gigante'], twoFrom:100},
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
   // × hp0·hpG^(piso−1) de vida y × atk0·atkG^(piso−1) de ataque. Premios la 1.ª vez que llegas a cada piso.
@@ -261,7 +263,7 @@ const CFG = {
   // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
   wheel:[{b:{gold:30},w:20},{b:{gold:60},w:15},{b:{gold:180},w:6},{b:{wood:1},w:15},{b:{wood:2},w:10},{b:{wood:3},w:5},
     {b:{silver:1},w:8},{b:{ticket:1},w:6},{b:{ess:1},w:5},{b:{ev:3},w:8},{b:{mode:1},w:2}],
-  shopTab:false, // pestaña Tienda: oculta hasta tener el juego casi terminado (su contenido sigue en el código)
+  shopTab:true, // pestaña Tienda en la barra de abajo
   skillGap:0.75,   // segundos de espera entre una habilidad y la siguiente (en todos los modos, a mano o solas)
   startWeapon:'C',
   // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube

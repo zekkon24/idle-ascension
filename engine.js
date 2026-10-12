@@ -236,6 +236,7 @@ function createGame(opts){
     if(k==='horde'){ SUR.kind='horde'; SUR.until=CT+C.horde.dur; emit('surprise',{k:'horde',dur:C.horde.dur}); return }
     const W=C[k], e=enemyStats(S.fase%50===0?S.fase-1:S.fase,S.wave,true), hp=e.hp*(W.hp||1);   // errante = un élite de su fase
     B.enemies.push({hp,max:hp,atk:e.atk*(W.atk||1),df:e.df,spawn:B.t,walk:walkT(),arrive:B.t+walkT(),next:B.t+walkT(),first:false,dead:false,wander:true,sk:k,spd:1});
+    mechSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,false,true);   // errante: 1 rasgo al azar
     SUR.kind=k; SUR.until=CT+W.dur; emit('surprise',{k,dur:W.dur}); }
   const surpriseState=()=>SUR.kind&&CT<SUR.until?{k:SUR.kind,left:SUR.until-CT}:null;
   function startWave(){
@@ -251,6 +252,7 @@ function createGame(opts){
   function spawnEnemy(late){   // late: sale un poco después (los del mismo grupo llegan escalonados)
     const e=enemyStats(S.fase,S.wave,B.boss), W=walkT()+(late||0); // (enemyStats ya aplica el modo)
     B.enemies.push({hp:e.hp,max:e.hp,atk:e.atk,df:e.df,spawn:B.t,walk:W,arrive:B.t+W,next:B.t+W,first:true,dead:false,spd:B.boss?1:eSpd(S.fase)});
+    if(B.boss) mechSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,B.elite);
     B.spawned++;
   }
   function endWave(delay){ B.over=true; B.wait=delay }
@@ -290,7 +292,7 @@ function createGame(opts){
       const nu=tcN('ultimo'); if(nu&&!B.lastUsed&&B.hp>0&&B.hp<TC.ultimo.below*h.hp){ B.lastUsed=true; heal(TC.ultimo.heal*nu*h.hp); emit('fx',{k:'ultimo'}); } };
     const loseHp=x=>{ const l=Math.max(0,Math.min(B.hp-1,x)); B.hp-=l; onLoss(l); return l };
     if(h.regen){ const lit=P&&P.lightMult&&B.t<(B.lightUntil||0); heal(h.regen*(lit?P.lightMult:1)*h.hp*dt,true); }
-    const kill=e=>{ if(e.dead) return; if(e.inf){ e.hp=e.max; return } if(B.kind==='tower'&&towerGuard(e)) return; e.dead=true; e.deadAt=B.t;
+    const kill=e=>{ if(e.dead) return; if(e.inf){ e.hp=e.max; return } if((B.kind==='tower'||B.mechOn)&&towerGuard(e)) return; e.dead=true; e.deadAt=B.t;
       if(TW&&!e.inf){ const ne=tcN('ejecutor'); if(ne&&TC.ejecutor.killHeal) heal(TC.ejecutor.killHeal*ne*h.hp); }   // Ejecutor: al matar, te curas un poco
       if(TW&&tgH('explosion')&&!e.inf){ const x=e.max*TG.explosion.pct; for(const o of B.enemies){ if(o.dead||o===e||o.arrive>B.t+0.5) continue; zap(o,x,{burst:true}); } }   // Torre: Explosión
       if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
@@ -403,13 +405,7 @@ function createGame(opts){
         B.th+=1/(h.spd*buffMul('spd'));
       }
     } else if(B.event||(B.th!==null&&B.th<=B.t)) B.th=null;   // en campaña, sin objetivo, el siguiente golpe respeta la cadencia (cuerpo a cuerpo: no es instantáneo al llegar)
-    // a mitad de vida: el élite (y el errante) se enfurece o invoca ayudantes (al azar); el JEFE (fases 50/100/150) hace las dos cosas
-    if(!B.event&&CFG.bossPhase&&(B.boss||SUR.kind==='wander')) for(const e of B.enemies){ if(e.dead||e.minion||e.phase||!(B.boss||e.wander)||e.hp>CFG.bossPhase.at*e.max) continue;
-      const P=CFG.bossPhase, both=B.elite&&P.jefeBoth; e.phase=both?'both':rand()<0.5?'rage':'summon';
-      if(e.phase!=='summon'){ e.atk*=P.rage; e.spd=(e.spd||1)*P.rage; }
-      if(e.phase!=='rage'){ const n=P.summon[0]+Math.floor(rand()*(P.summon[1]-P.summon[0]+1)), m=enemyStats(S.fase,1,false), W=walkT();
-        for(let i=0;i<n;i++) B.enemies.push({hp:m.hp,max:m.hp,atk:m.atk,df:m.df,spawn:B.t,walk:W+i*0.3,arrive:B.t+W+i*0.3,next:B.t+W+i*0.3,first:false,dead:false,minion:true,spd:eSpd(S.fase)}); }
-      emit('bossPhase',{k:e.phase}); }
+    // (élite y JEFE: sus mecánicas van en towerTick, igual que en la Torre)
     // recibir un golpe: dfn da el daño tras tu defensa (se calcula después de la esquiva, como siempre)
     const takeHit=(e,dfn)=>{ if(rand()>=h.ev){ let d=dfn()*h.dmgTaken*buffMul('taken'); const d0=d;
           if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad (y de la Torre)
@@ -435,6 +431,7 @@ function createGame(opts){
         if(e.dead) break;
       }
     }
+    if(B.mechOn&&B.kind!=='tower') towerTick(h,dt);   // élite y JEFE de campaña, errante y Sala: rasgos y mecánica (si caes, se resuelve como siempre)
     if(B.kind==='tower'){
       if(towerTick(h,dt)){ endEvent(); return }   // rasgos de los élites y mecánicas de los jefes
       if(!tgH('barricada')&&BUF.shield>0) BUF.shield*=Math.exp(-CFG.tower.shieldDecay*dt);   // el escudo se gasta con el tiempo
@@ -770,15 +767,27 @@ function createGame(opts){
     else if(id==='altar'){ res.curse=addCurse(run); const b=towerOfferR(1,'L',['g'])[0]; if(b){ res.got=b; towerGain(run,b); emit('towerGot',b); } run.ev=null; towerNext(); }   // 1 grimorio legendario al azar + 1 maldición
     save(); emit('change'); return res }
   // Torre: guarda de los enemigos (escudo de élite e invulnerabilidad de jefe) — devuelve true si el enemigo no muere
+  // Élite y JEFE fuera de la Torre (campaña, errante, Sala): el élite lleva rasgos fijos de su fase (1, o 2 desde la 101) y
+  // el JEFE la mecánica de jefe de la Torre según su fase (50 invocador, 100 enfurecido, 150 fases). Esbirros: enemigos normales de la fase.
+  function mechSetup(e,f,mode,jefe,rnd){ const C=CFG.mechs, TR=CFG.tower.traits, M=CFG.tower.bossMech; if(!C) return;
+    B.mechOn=true; const m=enemyStats(f,1,false,mode); B.minion={hp:m.hp,atk:m.atk,df:m.df,spd:eSpd(f)};
+    if(jefe){ e.mech=M.order[(Math.max(1,Math.floor(f/50))-1)%M.order.length]; if(e.mech==='fases') e.phases=M.fases.at.slice(); B.mech=e.mech; e.hpSeen=e.hp; return }
+    const pool=C.traits.slice(), n=f>C.twoFrom?2:1; let x=(f*2654435761+mode*40503)>>>0; e.traits=[];
+    for(let i=0;i<n&&pool.length;i++){ const j=rnd?Math.floor(rand()*pool.length):(x=(x*1103515245+12345)>>>0)%pool.length; e.traits.push(pool.splice(j,1)[0]); }
+    traitApply(e,TR); e.hpSeen=e.hp }
+  function traitApply(e,TR){ for(const t of e.traits){
+      if(t==='rapido') e.spd*=TR.rapido.spd; if(t==='gigante'){ e.hp*=TR.gigante.hp; e.max=e.hp; e.spd*=TR.gigante.spd; }
+      if(t==='regenera') e.regen=TR.regenera.regen; if(t==='espinas') e.thorns=TR.espinas.reflect; if(t==='furioso') e.fur=true; }
+    if(e.traits.includes('escudo')) e.sh=TR.escudo.shield*e.max; }
   function towerGuard(e){ const seen=e.hpSeen==null?e.max:e.hpSeen, dealt=seen-e.hp; if(!(dealt>0)) return e.hp>0;
     if(e.inv>B.t){ e.hp=seen; return true }
     if(e.sh>0){ const a=Math.min(e.sh,dealt); e.sh-=a; e.hp+=a; }
     e.hpSeen=e.hp; return e.hp>0 }
   // Torre, cada paso: rasgos de élite y mecánicas de jefe. Devuelve true si el héroe cae (Espinas)
-  function towerTick(h,dt){ const T=CFG.tower, TR=T.traits, M=T.bossMech;
+  function towerTick(h,dt){ const T=CFG.tower, TR=T.traits, M=T.bossMech, TW=B.kind==='tower';
     for(const e of B.enemies.slice()){ if(e.dead||e.arrive>B.t) { if(!e.dead) e.hpSeen=e.hp; continue; }
       if(e.inf){ e.hp=e.max; if(B.t>=(e.rageAt||0)){ if(e.rageAt) e.atk*=T.final.rage; e.rageAt=B.t+T.final.every; } e.hpSeen=e.hp; continue; }   // jefe final: vida infinita y cada vez pega más
-      if(B.t>=T.enrage.after&&B.t>=(e.enrAt||0)){ if(e.enrAt) e.atk*=T.enrage.mult; e.enrAt=B.t+T.enrage.every; }   // combates muy largos: los enemigos se enfurecen (no hay empates)
+      if(TW&&B.t>=T.enrage.after&&B.t>=(e.enrAt||0)){ if(e.enrAt) e.atk*=T.enrage.mult; e.enrAt=B.t+T.enrage.every; }   // combates muy largos: los enemigos se enfurecen (no hay empates)
       towerGuard(e);
       if(e.regen&&e.hp<e.max) e.hp=Math.min(e.max,e.hp+e.regen*e.max*dt);
       if(e.fur&&!e.furOn&&e.hp<TR.furioso.below*e.max){ e.furOn=true; e.atk*=TR.furioso.atk; emit('fx',{k:'furia',e}); }
@@ -809,10 +818,8 @@ function createGame(opts){
       e.mech=O[(Math.max(1,Math.floor(f/T.boss.every))-1)%O.length]; if(e.mech==='fases') e.phases=T.bossMech.fases.at.slice(); B.mech=e.mech; }
     else if(k==='elite'){ add(T.elite.n,T.elite.hp*nF/T.elite.n,T.elite.atk); const TR=T.traits, K=Object.keys(TR), extra=(run.curses||[]).filter(x=>x==='rasgo').length;   // vida total del grupo = elite.hp × la de un combate normal
       for(const e of B.enemies){ const n=Math.min(K.length,1+(rand()<0.5?1:0)+extra), pool=K.slice(); e.traits=[];
-        for(let i=0;i<n;i++){ const t=pool.splice(Math.floor(rand()*pool.length),1)[0]; e.traits.push(t);
-          if(t==='rapido') e.spd*=TR.rapido.spd; if(t==='gigante'){ e.hp*=TR.gigante.hp; e.max=e.hp; e.spd*=TR.gigante.spd; }
-          if(t==='regenera') e.regen=TR.regenera.regen; if(t==='espinas') e.thorns=TR.espinas.reflect; if(t==='furioso') e.fur=true; }
-        if(e.traits.includes('escudo')) e.sh=TR.escudo.shield*e.max; e.hpSeen=e.hp; } }
+        for(let i=0;i<n;i++) e.traits.push(pool.splice(Math.floor(rand()*pool.length),1)[0]);
+        traitApply(e,TR); e.hpSeen=e.hp; } }
     else add(nF,1,1);
     statsDirty(); HS=null; const H=heroStats(), G=T.grims; B.hp=H.hp*Math.max(0.01,run.hp==null?1:run.hp);
     BUF.shield=run.shield||0; run.shield=0; BUF.sang=0; B.regAt=CT+T.cards.escudoReg.every;   // Barricada: el escudo que traías
@@ -908,7 +915,7 @@ function createGame(opts){
     hallState().used++; const h=heroStats(), M=CFG.hall.stars[star-1], e=enemyStats(b.f,10,true,b.m), W=CFG.event.walk;
     B={intro:CFG.encounter.intro,event:true,kind:'hall',t:0,boss:true,elite:b.elite,count:1,spawned:1,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,groups:b.f,hall:{id,m:b.m,f:b.f,star}};
     B.enemies.push({hp:e.hp*M.hp,max:e.hp*M.hp,atk:e.atk*M.atk,df:e.df,spawn:0,walk:W,arrive:W,next:W,first:true,dead:false,f:b.f,spd:1});
-    track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
+    mechSetup(B.enemies[0],b.f,b.m,true); track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
   function hallEnd(){ const X=B.hall, won=B.hp>0&&B.enemies.every(e=>e.dead), C=hallState().clr, b={...X,elite:X.f%50===0}, first=won&&X.star>(C[X.id]||0);
     let rw=null; if(won){ rw=hallReward(b,X.star,first); if(first) C[X.id]=X.star; if(rw.scrap) S.scrap+=rw.scrap; giveBundle(rw); }
     const res={kind:'hall',won,first,star:X.star,f:X.f,m:X.m,rw,t:B.t}; B=null; save(); emit('hallEnd',res); startWave(); emit('change'); return res }

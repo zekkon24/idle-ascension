@@ -137,7 +137,7 @@ G.on('mode',({name})=>{ showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves 
 G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase));
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{});
-G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡Se enfurece!':k==='both'?'¡Se enfurece y llama refuerzos!':'¡Llama refuerzos!'); });
+G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡Se enfurece!':k==='shield'?'¡Escudo de fases!':'¡Llama refuerzos!'); });
 G.on('towerEnd',r=>{ tab='ev'; modView='torre'; evView=null; towerTab='run'; renderTab();
   if(r.won&&!r.pick){ toast(`Piso ${r.floor} superado · +${r.souls} almas`); return }   // combate normal: sin mejora, solo almas
   if(r.won){ toast(`Piso ${r.floor} superado${r.souls?` · +${r.souls} almas`:''}`); return }   // la recompensa se elige directamente en la pantalla de la Torre
@@ -247,20 +247,21 @@ const ICONS={
   mat:'<path d="M6 4h12l3 5-9 11L3 9z"/><path d="M3 9h18M12 20L9 9l3-5 3 5z"/>'};
 const NAVL={up:'Inicio',inv:'Inventario',shop:'Tienda',ev:'Modos',mis:'Misiones',dev:'Ajustes'};
 // botón de la barra: icono + nombre (+ globo)
-const navSet=(k,n)=>setHTML(document.querySelector(`[data-tab="${k}"]`),`<span class="ni">${IC(ICONS[k])}${n?`<sup class="nb">${n}</sup>`:''}</span><span class="nl">${NAVL[k]}</span>`);
+// aviso de la barra de abajo: número rojo = premios por recoger · punto rojo = algo nuevo · punto dorado = hay algo para jugar
+const navSet=(k,n,kind)=>{ const b=document.querySelector(`.nav [data-tab="${k}"]`); if(b) setHTML(b,`<span class="ni">${IC(ICONS[k])}${n?`<sup class="nb${kind?' dot '+kind:''}">${kind?'':n}</sup>`:''}</span><span class="nl">${NAVL[k]}</span>`) };
 function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pantalla nueva
   $('#app').innerHTML=`
   <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><div class="uname" id="uName"></div><b class="sttl" id="scrT"></b>
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
     <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
-    <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div></div>
+    <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div><button class="gear" data-tab="dev" aria-label="Ajustes" title="Ajustes">${IC(ICONS.dev)}</button></div>
   <div id="battle" class="battle">
   <div class="hero"><div id="evoSlot"></div>
     </div>
   <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="enc" id="enc" aria-hidden="true"></div><div class="vshud" id="vsHud" hidden><div class="vsw me"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gMe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe2a9"/><stop offset=".45" stop-color="#6cc47a"/><stop offset="1" stop-color="#3d8a4b"/></linearGradient><clipPath id="cpMe"><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z"/></clipPath></defs><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="trk"/><g clip-path="url(#cpMe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><i class="vssh"></i><div class="vsst" id="stMe"></div></div><div class="vsc" id="vsC"><small></small><b></b></div><div class="vsw foe"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gFoe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f29a93"/><stop offset=".45" stop-color="#e2605a"/><stop offset="1" stop-color="#9b3a35"/></linearGradient><clipPath id="cpFoe"><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z"/></clipPath></defs><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="trk"/><g clip-path="url(#cpFoe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><div class="vsst" id="stFoe"></div></div></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="#5a3a86"/><path d="M12 8H21V50H12Z" fill="#3b2a5e"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="#e9dfc8"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="11" fill="#b066e8" opacity="0.35"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="#ffd66b"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="2.8" fill="#140f1c"/><path d="M45 8H54V17Z" fill="#e8b04a"/><path d="M45 8H54V17Z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg><i class="lootn" id="grimN" hidden>!</i></button><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#8a5a34"/><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 46H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#5c3b1e" opacity="0.6"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="#a06a3e"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 18c3-3 7-4 11-4" fill="none" stroke="#ffe08a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/><path d="M19 12V57M45 12V57" fill="none" stroke="#140f1c" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 12V57M45 12V57" fill="none" stroke="#e8b04a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 25H37V38H27Z" fill="#e8b04a"/><path d="M27 25H37V38H27Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="31" r="1.8" fill="#140f1c"/><circle cx="32" cy="6" r="3" fill="#ffe08a" opacity="0.9"/><circle cx="24" cy="5" r="2" fill="#ffe08a" opacity="0.7"/><circle cx="41" cy="5" r="2" fill="#ffe08a" opacity="0.7"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="#2b2f40"/><path d="M13 39C21 35 43 43 51 39A19 19 0 0 1 13 39Z" fill="#e8b04a"/><path d="M14 44C24 46 40 48 50 44A19 19 0 0 1 14 44Z" fill="#a8741e" opacity="0.55"/><circle cx="26" cy="46" r="2.4" fill="#ffe08a"/><circle cx="36" cy="50" r="1.8" fill="#ffe08a"/><circle cx="31" cy="42" r="1.5" fill="#fff3c4"/><path d="M19 29c-3 3-4 7-4 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M23 3H41V10H23Z" fill="#8a5a34"/><path d="M23 3H41V10H23Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="boosttime" id="boostTime" hidden></span></button></div></div>
   </div>
   <div id="tab"></div>`;
-  for(const k in NAVL) navSet(k,0);
+  for(const k in NAVL) if(k!=='dev') navSet(k,0);
   $('#nav').hidden=false; { const st=document.querySelector('[data-tab="shop"]'); if(st) st.hidden=!CFG.shopTab; } if(tab==='shop'&&!CFG.shopTab) tab='up'; renderTab();
 }
 /* ---------- combates especiales (de menos a más fuerte): horda (naranja) · errante (azul) y élite (morado) · JEFE (rojo) ----------
@@ -271,6 +272,7 @@ const KNAME={slimeKing:'Rey Limo',hobgoblin:'Hobgoblin',shaman:'Chamán goblin',
   golemBoss:'Coloso de piedra',portalGuard:'Guardián del portal',demonLord:'Señor demonio',archdemon:'Archidemonio'};
 const encName=(zone,elite,mode)=>KNAME[ART.kindFor(zone,0,{boss:true,elite,mode})]||(elite?'Élite':'Jefe');
 const encZone=f=>Math.floor(((f-1)%150)/30);
+const MDESC=k=>(CFG.tower.bossMech.desc||{})[k]||'', trNames=B=>[...new Set(B.enemies.filter(e=>!e.minion).flatMap(e=>e.traits||[]))].map(t=>(CFG.tower.traits[t]||{}).name||t);
 function encInfo(B,ev){ if(!B) return null; const fmtN=n=>n.toLocaleString('es-ES');
   if(B.kind==='tower'){ const run=G.towerState().run||{floor:1}, z=Math.min(4,Math.floor(run.floor/20));
     if(B.final) return {k:'boss',s:'JEFE FINAL',b:'EL ÚLTIMO GUARDIÁN',i:'Vida infinita · tu daño va al ranking'};
@@ -278,15 +280,15 @@ function encInfo(B,ev){ if(!B) return null; const fmtN=n=>n.toLocaleString('es-E
     if(B.node==='elite'){ const n=encName(z,true,0), T=CFG.tower.traits, tr=[...new Set(B.enemies.flatMap(e=>e.traits||[]))];
       return {k:'elite',s:'✦ ÉLITE ✦',b:n,chips:tr.map(t=>(T[t]||{}).name||t)} }
     return null }
-  if(B.kind==='hall'){ const H=B.hall, n=encName(encZone(H.f),true,H.m); return {k:'boss',s:'⚠ JEFE '+'★'.repeat(H.star)+' ⚠',b:n,i:`Fase ${H.f} · ${CFG.modes[H.m].name} · desde el minuto 1 se enfurece`} }
+  if(B.kind==='hall'){ const H=B.hall, n=encName(encZone(H.f),true,H.m); return {k:'boss',s:'⚠ JEFE '+'★'.repeat(H.star)+' ⚠',b:n,i:MDESC(B.mech)+' · desde el minuto 1 se enfurece'} }
   if(B.kind==='boss'){ const W=B.wb||{}; return {k:'boss',s:'⚠ JEFE SEMANAL ⚠',b:W.name||'Jefe semanal',i:W.desc||''} }
   if(ev) return null;   // Mazmorra y PvP: sin cartel
   if(B.boss){ const n=encName(encZone(S.fase),B.elite,S.mode);
-    return B.elite?{k:'boss',s:'⚠ JEFE ⚠',b:n,i:`Fase ${fmtN(S.fase)} · a mitad de vida se enfurece y llama ayuda`,notch:true}
-      :{k:'elite',s:'✦ ÉLITE ✦',b:n,i:`Fase ${fmtN(S.fase)} · a mitad de vida se enfurece o llama ayuda`,notch:true} }
+    return B.elite?{k:'boss',s:'⚠ JEFE ⚠',b:n,i:`Fase ${fmtN(S.fase)} · ${MDESC(B.mech)}`}
+      :{k:'elite',s:'✦ ÉLITE ✦',b:n,i:`Fase ${fmtN(S.fase)}`,chips:trNames(B)} }
   const sp=G.surpriseState(), C=CFG.surprise; if(!sp) return null;
   if(sp.k==='horde') return {k:'horde',horde:sp};
-  if(sp.k==='wander') return {k:'event',s:'❓ EVENTO ❓',b:'¡ERRANTE!',i:`Si cae en ${C.wander.dur} s: 🎁 ${bundleTxt(C.wander.reward)}`};
+  if(sp.k==='wander') return {k:'event',s:'❓ EVENTO ❓',b:'¡ERRANTE!',i:`Si cae en ${C.wander.dur} s: 🎁 ${bundleTxt(C.wander.reward)}`,chips:trNames(B)};
   return null }
 let encB=null, encSp=null;
 function encHUD(B,ev){ const st=$('.stage'), box=$('#enc'); if(!st||!box) return;
@@ -298,16 +300,32 @@ function encHUD(B,ev){ const st=$('.stage'), box=$('#enc'); if(!st||!box) return
     ban.innerHTML=`<small>${esc(E.s)}</small><b>${esc(E.b)}</b>${E.i?`<i>${esc(E.i)}</i>`:''}${E.chips&&E.chips.length?`<div class="encchips">${E.chips.map(c=>`<span>${esc(c)}</span>`).join('')}</div>`:''}`;
     box.querySelectorAll('.encban').forEach(x=>x.remove()); box.appendChild(ban); setTimeout(()=>ban.remove(),1900); encBanUntil=performance.now()+1900;
     if(E.k==='boss'){ st.classList.remove('encshake'); void st.offsetWidth; st.classList.add('encshake'); setTimeout(()=>st.classList.remove('encshake'),500); haptic('medium'); } }
-  // lo que se queda: la barra de la horda y la marca de furia en la barra del élite o JEFE
-  const boss=B&&B.enemies?B.enemies.find(e=>!e.minion&&!e.dead):null, notch=E.notch&&boss&&!boss.phase;
+  // lo que se queda: la barra de la horda
   const C=CFG.surprise, H=E.horde;
   const html=H?`<div class="enchb"><b>🔥 ¡HORDA!</b><div class="encpg"><i style="width:${Math.max(0,H.left/C.horde.dur*100)}%"></i></div><small><span>×${C.horde.count} enemigos</span><span>+${Math.round((C.horde.gold-1)*100)} % oro</span><span>⏱ ${Math.ceil(H.left)} s</span></small></div>`:'';   // solo la barra de la horda (lleva el contador)
   let keep=box.querySelector('.enckeep'); if(!keep){ keep=document.createElement('div'); keep.className='enckeep'; box.prepend(keep); }
-  if(keep.dataset.h!==html){ keep.dataset.h=html; keep.innerHTML=html; }
-  const fw=$('.vsw.foe'); if(fw){ let n=fw.querySelector('.encnotch'); if(notch&&!n){ n=document.createElement('i'); n.className='encnotch'; fw.appendChild(n); } if(!notch&&n) n.remove(); } }
+  if(keep.dataset.h!==html){ keep.dataset.h=html; keep.innerHTML=html; } }
+
+/* ---------- minitutorial (solo partidas nuevas): 5 pasos señalando dónde está cada cosa ---------- */
+const TUT=[['#upFab','Mejora tu héroe con el oro que ganas. Mantén pulsado para comprar seguido.'],
+  ['#skBar .skb','Tus habilidades se lanzan solas. También puedes tocarlas para usarlas antes.'],
+  ['#dailyBtn','Premios diarios: calendario y ruleta gratis cada día.'],
+  ['.nav [data-tab="inv"]','Los élites y JEFES sueltan cofres. Ábrelos en Inventario y equipa mejores armas.'],
+  ['.nav [data-tab="ev"]','En Modos están la Sala de jefes, los eventos, el PvP y la Torre.']];
+let tutI=-1;
+function tutCheck(){ if(tutI>=0){ tutPlace(); return } if(!S||(S.opt&&S.opt.tut)) return; if(S.lvl>5){ G.setOpt('tut',true); return }   // partidas ya avanzadas: sin tutorial
+  if(tab==='up'&&S.name&&!modalOpen()&&!G.inEvent()) tutShow(0) }
+function tutShow(i){ for(;i<TUT.length;i++){ const el=$(TUT[i][0]); if(el&&!el.hidden&&el.getClientRects().length) break }
+  let o=$('#tut'); if(i>=TUT.length){ if(o) o.remove(); tutI=-1; G.setOpt('tut',true); return }
+  tutI=i; if(!o){ o=document.createElement('div'); o.id='tut'; document.body.appendChild(o) }
+  o.innerHTML=`<i class="tuthole"></i><div class="tutbox" role="dialog" aria-label="Tutorial"><p>${TUT[i][1]}</p><div class="ctrl"><button class="btn sm" data-act="tutSkip">Saltar</button><span class="s">${i+1}/${TUT.length}</span><button class="btn sm gold" data-act="tutNext">${i===TUT.length-1?'¡A jugar!':'Siguiente'}</button></div></div>`; tutPlace(); requestAnimationFrame(tutPlace) }
+// coloca el hueco sobre lo que se señala y el cuadro encima o debajo (se recoloca solo si algo se mueve)
+function tutPlace(){ const o=$('#tut'), el=tutI>=0&&$(TUT[tutI][0]); if(!o||!el) return; const r=el.getBoundingClientRect(), pad=6, h=o.querySelector('.tuthole'), bx=o.querySelector('.tutbox');
+  Object.assign(h.style,{left:r.left-pad+'px',top:r.top-pad+'px',width:r.width+pad*2+'px',height:r.height+pad*2+'px'});
+  if(r.top<innerHeight/2){ bx.style.top=Math.min(innerHeight-170,r.bottom+14)+'px'; bx.style.bottom='' } else { bx.style.bottom=Math.min(innerHeight-170,innerHeight-r.top+14)+'px'; bx.style.top='' } }
 function updateHUD(){
   if(!S||!$('#rGold')) return;
-  unlockCheck();
+  unlockCheck(); tutCheck();
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
   // en Inicio: retrato, nombre y dinero; en las demás pantallas, solo el dinero en una barra fina fija arriba (como en los RPG de móvil); luchando, nada
@@ -361,8 +379,9 @@ function updateHUD(){
   { const n=misBadge(); navSet('mis',n); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
   const nc=chestTotal();
-  navSet('ev',((G.evPaused()?0:(G.modeOpen('lab')?G.evFreeLeft():0)+(G.modeOpen('boss')?G.wbFreeLeft():0))+(G.modeOpen('pvp')?G.pvpFreeLeft():0)+(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0)));
-  navSet('inv',nc>99?'99+':nc);
+  { const prize=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), play=(G.evPaused()?0:(G.modeOpen('lab')?G.evFreeLeft():0)+(G.modeOpen('boss')?G.wbFreeLeft():0))+(G.modeOpen('pvp')?G.pvpFreeLeft():0)+G.hallTriesLeft();
+    navSet('ev',prize||play,prize?'':'gold'); }   // premio de un ranking por recoger: número rojo; si no, punto dorado si quedan entradas gratis
+  navSet('inv',nc?1:0,'red');   // cofres por abrir: punto rojo (el número ya se ve dentro)
 }
 // entrada suave de la pantalla nueva (al cambiar de pestaña o de sección)
 let lastView='';
@@ -1323,6 +1342,8 @@ const ACT={
   calClaim:()=>{ const r=G.calState().day, b=G.claimCal(); if(b){ haptic('ok'); toast('Día '+r+': '+bundleTxt(b)); } calModal(); updateHUD(); if(b) notifyOffer() },
   notifyYes:()=>{ closeModal(); askNotify() },
   notifyAsk:()=>askNotify(),
+  tutNext:()=>tutShow(tutI+1),
+  tutSkip:()=>{ const o=$('#tut'); if(o) o.remove(); tutI=-1; G.setOpt('tut',true) },
   passClaim:(b,k)=>{ const r=G.claimPass(+k,b.dataset.v==='1'); if(r){ haptic('ok'); toast('Pase: '+bundleTxt(r)); } misKey=null; renderTab() },
   passAll:()=>{ const n=G.claimPassAll(); if(n){ haptic('ok'); toast('+'+n+' premios del pase'); } renderTab() },
   devPass:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'pass',amount:G.passState().season,reason:'stars:pass'}]); renderTab() },
