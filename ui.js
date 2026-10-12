@@ -1683,7 +1683,8 @@ function start(){
     const el=$('#syncBox'); if(el) el.remove();
     if(r.error){ boot(); if(S) toast('Sin conexión: tu partida se guardará al volver'); T.startSync(G,T.myId()); return }
     pickSave(r); boot(); T.startSync(G,r.id);
-    T.onConflict=()=>{ G.S&&G.save(); syncBox('Partida en otro dispositivo','Tu partida se ha jugado en otro dispositivo. Cargando la más reciente…'); setTimeout(()=>location.reload(),2500) };
+    T.onConflict=j=>{ G.S&&G.save(); if(j&&j.fixed) syncBox('Partida corregida','Algunos datos de tu partida no eran posibles y el servidor los ha corregido. Cargando tu partida…');
+      else syncBox('Partida en otro dispositivo','Tu partida se ha jugado en otro dispositivo. Cargando la más reciente…'); setTimeout(()=>location.reload(),2500) };
   });
 }
 start();

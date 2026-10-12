@@ -30,7 +30,7 @@ function startSync(G,me){
       .then(r=>r.json().then(j=>({st:r.status,j}))).then(({st,j})=>{
         if(j&&j.now&&root.setServerTime) root.setServerTime(j.now);
         if(j&&j.ok&&j.rev){ G.S.srvRev=j.rev; last=save; G.save(); if(api.handle&&api.handle(j)) { busy=false; return push(false) } } // premios recibidos: se suben ya
-        else if(st===409){ dead=true; if(api.onConflict) api.onConflict(); }
+        else if(st===409){ dead=true; if(api.onConflict) api.onConflict(j); }   // j.fixed: el servidor corrigió datos imposibles
         else if(ev&&api.requeue) api.requeue(ev.events);
         done(); })
       .catch(()=>{ if(ev&&api.requeue) api.requeue(ev.events); done() }) }
