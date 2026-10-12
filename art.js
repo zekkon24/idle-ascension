@@ -1,3 +1,4 @@
+/* ARCHIVO GENERADO por tools/construir.js desde src/dibujo/ (orden en orden.json): no lo edites aquí. */
 /* Idle Ascension · DIBUJOS (héroes y monstruos en el canvas del combate: sprites de sprites/ y vectores)
    Lo que no tiene sprite se dibuja con formas; todo se anima por código. Solo dibuja; no sabe nada de las reglas.
    ART.hero(g, x, y, o)     o = {cls, color, evo, path, flip, walk, atk, hit, t}

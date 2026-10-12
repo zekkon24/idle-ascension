@@ -1,7 +1,9 @@
+/* ARCHIVO GENERADO por tools/construir.js desde src/datos/ (orden en orden.json): no lo edites aquí. */
 /* Idle Ascension · configuración de equilibrio.
    Todos los números del juego viven aquí. Lo usan el motor (engine.js) y la interfaz (ui.js). */
 (function(root){
 const CFG = {
+  // ---------- héroe: clases, mejoras de oro, topes, habilidades, evolución y grimorio (trozo de la lista CFG) ----------
   // Clases: sin pasivas propias; lo que las hace distintas va en sus estadísticas base (el Guerrero recibe un 5 % menos
   // de daño con dmgTaken, el Clérigo se regenera con regen) y en su habilidad. La pasiva llega con el camino de la 1.ª evolución.
   classes: {
@@ -15,14 +17,80 @@ const CFG = {
     df:12.35,gdf:0.105,   // +50 % de defensa (tanque)
      spd:0.88,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo'},
   },
+  upgrades:{ // coste ×1,031 por nivel (antes ×1,0325): compensa el calendario que ya no existe
+    atk:{name:'Daño',base:25,g:1.031,mult:1.0226},
+    hp:{name:'Vida',base:25,g:1.031,mult:1.008,ref:1.0226}, // números pequeños: +0,8 % por nivel (antes +2,26 %: ref)
+    df:{name:'Defensa',base:25,g:1.031,mult:1.008,ref:1.0226},
+    spd:{name:'Velocidad de ataque',base:5,g:1.031,mult:1.004}, // +0,4 % por nivel; más barata para que rinda como las demás
+  },
+  caps:{cr:0.5,ls:0.2},
+  // Habilidades activas (elegidas por el diseñador): la de clase es directa (golpe/cura al momento); la de evolución da un efecto unos segundos. En los eventos se usan a mano;
+  // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
+  skills:{
+    cls:{
+      Guerrero:{id:'muro', name:'Muro de escudos', cd:18, shield:3, dmgDef:5, desc:'Escudo según su defensa y golpe en área con parte de su defensa'},
+      Mago:{id:'bola', name:'Bola de fuego', cd:12, targets:3, mult:3, burn:0.5, dur:4, desc:'300 % en área hasta a 3 enemigos y los quema'},
+      Arquero:{id:'perforante', name:'Disparo perforante', cd:15, mult:3, desc:'Disparo que atraviesa a todos (300 %)'},
+      Asesino:{id:'ejecutar', name:'Ejecutar', cd:12, mult:9, refund:0.5, desc:'Golpe del 900 %; si mata, la recarga baja a la mitad'},
+      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:6, mult:0.2, back:0.6, heal:0.05, desc:'6 golpes de luz encadenados (20 % cada uno) que luego vuelven y le curan (5 % de vida cada uno)'}},
+    evo:{
+      Guerrero:{id:'sed', name:'Sed de sangre', cd:28, cost:0.2, shield:0.5, ls:0.4, dur:12, desc:'Pierde el 20 % de su vida: escudo de la mitad y +40 % de robo de vida 12 s'},
+      Mago:{id:'combustion', name:'Combustión', cd:28, dur:8, burnUp:0.5, desc:'8 s: las quemaduras hacen +50 % y los que mueren quemados la pasan a otro'},
+      Arquero:{id:'rapido', name:'Fuego rápido', cd:28, dur:6, spd:1.75, desc:'6 s con +75 % de velocidad de ataque'},
+      Asesino:{id:'clon', name:'Clon de sombra', cd:28, dur:8, mult:0.3, desc:'8 s: un clon copia sus golpes al 30 %'},
+      Clerigo:{id:'juicio', name:'Luz del juicio', cd:30, dur:6, heal:0.05, dps:1.0, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}},
+    // habilidad de evolución del camino B: POR DECIDIR (null = aún no hay)
+    evoB:{
+      Guerrero:{id:'baluarte', name:'Baluarte', cd:45, dur:8, df:1.25, reflect:0.75, desc:'8 s: +25 % de defensa y devuelve el 75 % del daño que recibe'},
+      Mago:{id:'armaduraHielo', name:'Armadura de hielo', cd:28, dur:8, shards:2, burst:4, desc:'Lanza 4 esquirlas a todos; 8 s: quien le pega recibe 2 esquirlas'},
+      Arquero:{id:'marca', name:'Marca del cazador', cd:35, dur:8, mult:0.5, desc:'8 s: el objetivo recibe +50 % de daño'},
+      Asesino:{id:'nube', name:'Nube tóxica', cd:60, dur:2, pct:0.05, extra:3, desc:'2 s: una nube envenena a todos cada segundo (+3 acumulaciones)'},
+      Clerigo:{id:'sacrificio', name:'Sacrificio', cd:28, cost:0.3, dur:8, atk:0.6, single:true, desc:'Consume el 30 % de su vida: +60 % de daño a los jefes durante 8 s'}}},
+  skillGap:0.75,   // segundos de espera entre una habilidad y la siguiente (en todos los modos, a mano o solas)
+  evo:{ // evoluciones: al llegar al nivel de cada una se gana su pasiva y el nivel sigue (hasta evolucionar, ese nivel es el tope)
+    tiers:[
+      {lvl:150, cost:{ess:3,gold:10000,ev:12}, bonus:{hp:0.15,atk:0.15}, classes:{ // cost: esencias del modo Normal + oro + material del evento · bonus: extra de vida y daño
+        Guerrero:{name:'Berserker',passive:'Furia: +1 % de daño por cada golpe recibido en la oleada (máx. +45 %)',rage:0.01,rageCap:0.45},
+        Mago:{name:'Archimago',passive:'Fuego: cada golpe quema al enemigo; la quemadura se acumula hasta 5 veces',burnPct:0.3,burnDur:3,burnMax:5},
+        Arquero:{name:'Tirador',passive:'Disparo doble: 15 % de probabilidad de disparar dos veces',double:0.15},
+        Asesino:{name:'Sombra',passive:'Instinto: +10 % de velocidad de ataque, recibe un 15 % menos de daño y tras un crítico el siguiente golpe hace +30 %',critNext:0.3,base:{spd:1.1,dmgTaken:0.85}},
+        Clerigo:{name:'Oráculo',passive:'Luz interior: al bajar del 50 % de vida, la regeneración se triplica 10 s (1 vez por oleada)',lightHp:0.5,lightMult:3,lightDur:10},
+      },
+      // camino B (el opuesto): su pasiva es un efecto de grimorio (grimoire.fx[grim])
+      alt:{
+        Guerrero:{name:'Guardián',grim:'fortaleza',passive:'Fortaleza: +10 % de defensa y +50 % de daño a los jefes'},
+        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 210 % ignorando el 50 % de su defensa y lo congela 2 s (no se mueve ni ataca)'},
+        Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +40 % de daño a los jefes'},
+        Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (70 % por s, 8 s), hasta 8 veces: brilla en peleas largas'},
+        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: solo se cura robando vida, y cuanta menos vida tiene, más roba (hasta el 20 % del daño). Cada golpe le cuesta el 2 % de su vida y hace +60 % de daño a los jefes'},
+      }},
+      // Evolución 2: mejora la pasiva de clase (base) y añade un efecto nuevo; se suma a la pasiva de la evolución 1
+      {lvl:300, pending:true, cost:{ess:5,gold:400000,ev:30}, // pending: bloqueada ("próximamente"), pide Esencia de pesadilla
+       bonus:{hp:0.15,atk:0.15}, classes:{
+        Guerrero:{name:'Titán',base:{dmgTaken:0.925},rageCap:0.40,defDmg:1.0,passive:'Piel dura: −7,5 % de daño recibido · Furia hasta +40 % · Sus golpes suman un 100 % de su defensa como daño'},
+        Mago:{name:'Hechicero del Vacío',base:{xp:1.15},burnPct:0.2,burnDur:4,burnMax:6,passive:'Erudito: +15 % de experiencia · La quemadura ignora la defensa, dura 4 s, quema más fuerte y se acumula hasta 6 veces'},
+        Arquero:{name:'Ojo de Halcón',base:{spd:1.075},dblBuff:0.05,dblDur:5,dblMax:5,passive:'Pulso firme: +7,5 % de velocidad · Cada disparo doble da +5 % de daño durante 5 s (hasta +25 %)'},
+        Asesino:{name:'Segador',base:{cd:0.5,cr:0.10},critStack:0.05,critStackMax:0.05,passive:'Letal: +50 % de daño crítico y +10 % de crítico · Tras un golpe sin crítico, el siguiente tiene +5 % de crítico'},
+        Clerigo:{name:'Santo',base:{regen:0.0075},aura:13,auraDur:5,passive:'Fe: regenera el 0,75 % de su vida por segundo · Aura sagrada: lo que se cura se convierte en daño en área durante 5 s'},
+      }},
+    ],
+  },
+  // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube
+  // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.
+  // Con el grimorio en el nivel 5 y el héroe en el nivel de la evolución, se evoluciona eligiendo uno de 2 caminos (evo.tiers[0]).
+  // Cambiar de camino después cuesta switchCost tokens. fx: números de la pasiva de cada camino B. SIN BALANCEAR.
+  grimoire:{showLvl:50, // icono del Grimorio (libro) en el combate desde este nivel del héroe (o si ya se tiene)
+    levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
+    up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
+    names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},
+    fx:{fortaleza:{df:0.1,boss:0.5}, escarcha:{need:3,mult:2.1,freeze:2,ignoreDf:0.5}, cazador:{boss:0.4}, veneno:{pct:0.7,dur:8,max:8}, sacrificio:{cost:0.02,atk:0.6,lsMax:0.2,single:true}}},
+  // ---------- enemigos: curvas, encuentros especiales y mecánicas (trozo de la lista CFG) ----------
   enemy:{hp:45,hpG:1.0358,atk:6,atkG:1.026,earlyTo:50,hpG0:1.035,atkG0:1.024, // hasta la fase 50 crecen con hpG0/atkG0
          hpBands:[[101,1.048,1.036]], // de la fase 101 a la 150 los enemigos crecen más (simulado: la fase 150 de Normal llega hacia el día 10-11)
-         walls:{50:{hp:5.74,atk:2.71},100:{hp:2.5,atk:1.95},150:{hp:1.7,atk:1.55}}, // (antiguo: sin uso mientras exista enemy.jefe)
          jefe:{hp:2,atk:2},   // JEFE (fases 50, 100 y 150 de cada modo) = el doble de vida y de daño que el élite de su tramo
          df:3,dfG:1.0119,waveHp:0.0145,
          bossHp:1.5,bossAtk:1.5,   // (respaldo: bossBands manda) jefe cada 10 fases: vida en oleadas (1 = toda la oleada de su fase), ataque en enemigos (1 = un enemigo)
          bossBands:[[1,1.6,1.4],[51,1.25,1.2],[101,1.0,1.0],[151,1.0,1.0]], // ÉLITE (cada 10 fases) y errante: [desde fase, vida en oleadas, ataque en enemigos]; un poco más que una oleada + mecánica a mitad de vida
-         eliteHp:3,eliteAtk:2,     // (respaldo: walls manda) jefe de élite cada 50 fases (mismas unidades)
          extraEvery:50,spd:0.8,walk:2.0,dash:0.05, // dash: Embestida de los de cuerpo a cuerpo (esperan el 5 % del camino)
          // Oleadas progresivas: n0 enemigos (+1 cada nEvery fases, máx. nMax); salen g0 a la vez (+1 cada gEvery fases, máx. gMax),
          // separados gap s; andan y pegan hasta un spd más rápido en la fase 150. La vida de la oleada entera es la de siempre
@@ -32,15 +100,36 @@ const CFG = {
          // Números pequeños: el ataque enemigo baja lo mismo que la vida y la defensa del héroe, × (1,008 / 1,0226)^u,
          // con u = nivel medio de mejoras de Vida/Defensa con que se vence cada fase (medido con simulaciones). [fase, u]
          atkShrink:[[1,0],[10,0],[20,8],[30,14],[40,23],[49,31],[50,59],[60,60],[70,64],[80,69],[90,77],[100,93],[110,100],[120,115],[130,128],[140,142],[150,151]]},
+  // Sorpresas en la campaña (cada every±jitter s de combate; no en jefes ni eventos): Horda (dur s, enemigos ×count, oro ×gold)
+  // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
+  // Entrada de los combates: élite y JEFE (y los de la Torre) esperan a que se vaya el cartel; los combates normales de la Torre, un respiro
+  encounter:{intro:2, towerIntro:0.9},
+  // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
+  // Mecánicas fuera de la Torre (como en la Torre): el élite lleva rasgos de tower.traits (1, o 2 desde la fase twoFrom) y el JEFE la
+  // mecánica de jefe de tower.bossMech según su fase. Sin «Regenera» en la campaña (con jefes lentos de matar sería un muro).
+  mechs:{traits:['rapido','escudo','espinas','furioso','gigante'], twoFrom:100},
+  // ---------- campaña: oro y experiencia, sorpresas, racha, modos y sin conexión (trozo de la lista CFG) ----------
   // waveXp: experiencia extra al ganar cada oleada (en «muertes»: una oleada da 3 por sus enemigos + waveXp)
   econ:{gold:0.45,goldG:1.0198,bossGold:10,xp:4,waveXp:3,xpG:1.0389,xpReq:1300,xpReqG:1.077, xpBands:[[101,1.0,0.06],[151,1.05,1]], // nivel 100 hacia el día 8-9; xpBands: [desde nivel, crecimiento] para niveles altos
        bossScrap:{base:4,per10:2,farm:10}}, // chatarra por jefe: 4 + 2 cada 10 fases (jefe de la 150 repetido: 10), × (modo+1)
-  upgrades:{ // coste ×1,031 por nivel (antes ×1,0325): compensa el calendario que ya no existe
-    atk:{name:'Daño',base:25,g:1.031,mult:1.0226},
-    hp:{name:'Vida',base:25,g:1.031,mult:1.008,ref:1.0226}, // números pequeños: +0,8 % por nivel (antes +2,26 %: ref)
-    df:{name:'Defensa',base:25,g:1.031,mult:1.008,ref:1.0226},
-    spd:{name:'Velocidad de ataque',base:5,g:1.031,mult:1.004}, // +0,4 % por nivel; más barata para que rinda como las demás
-  },
+  surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,reward:{silver:1}},
+    // probabilidad de cada sorpresa (sobre el total)
+    // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
+    weights:{horde:50,wander:50}},
+  // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
+  streak:{per:10, pct:0.01, max:0.25},
+  delays:{wave:0.25,fase:0.4,defeat:0.7}, // segundos de juego entre oleadas / fases / tras perder
+  phaseCap:150, // cada modo tiene 150 fases; tras vencer la 150 y evolucionar se pasa al siguiente modo
+  modes:[ // upPer: mejoras de Vida/Defensa que gana de media el jugador por fase en ese modo (números pequeños: baja el ataque enemigo; estimado, recalibrar al desbloquear)
+          // locked: modo bloqueado ("Próximamente"): no se puede entrar aunque se cumplan los requisitos
+          // enemigos: empiezan en los de la fase 150 del modo anterior × hpStart/atkStart y crecen hpG/atkG por fase · off: oro, experiencia y cofres continúan desde la fase off · gold: multiplicador de oro · mat: material propio (uso por definir)
+    {name:'Normal',off:0,gold:1,mat:'Esencia'},
+    {name:'Pesadilla',off:149,gold:1.5,mat:'Esencia de pesadilla',hpStart:2.2,atkStart:1.6,hpG:1.022,atkG:1.015,upPer:0.5}, // abierta: simulado, se entra el día 12-19 y se acaba el 23-43
+    {name:'Infierno',locked:true,off:298,gold:2.25,mat:'Esencia infernal',hpStart:2.2,atkStart:1.6,hpG:1.019,atkG:1.013,upPer:0.5},
+  ],
+  offlineMinMeasure:30, // sin conexión: se usa el DPS medido cuando ya se han medido ataques por valor de 30 golpes de tu daño
+  offlineCapH:3, offlineVipH:8, offlineAdMult:1.5, offlineAdPerDay:2, // horas de farmeo sin conexión (VIP); extra de oro con anuncio al llenar el tope, 2 veces por día
+  // ---------- objetos: rarezas, armas, stats, nombres, cofres y materiales (trozo de la lista CFG) ----------
   rar:['C','U','R','E','L','M'],
   rarName:{C:'Común',U:'Poco común',R:'Rara',E:'Épica',L:'Legendaria',M:'Mítica'},
   weapon:{ // daño%, velocidad%, nº stats
@@ -72,7 +161,6 @@ const CFG = {
     ls:{n:'Robo de vida',C:[1,2],U:[2,3],R:[3,4.5],E:[4,6],L:[6,8],M:[8,10]},
     bd:{n:'Daño a jefes',C:[5,10],U:[8,12],R:[12,18],E:[15,25],L:[25,35],M:[35,45]},
   },
-  caps:{cr:0.5,ls:0.2},
   names:{
     Guerrero:['Espada oxidada','Espada de acero','Hoja del capitán','Mandoble rúnico','Hacha del Titán','Espada del Primer Rey'],
     Mago:['Varita de sauce','Bastón de roble','Báculo de cristal','Cetro arcano','Báculo del Eclipse','Bastón del Origen'],
@@ -87,6 +175,10 @@ const CFG = {
     silver:{name:'Plata',from:'Tienda (oro)',goldMin:5,perDay:null,step:0.1}, // precio: el oro de 5 min farmeando tu récord, +10 % por cada compra del día (vuelve al base cada día); sin límite
     mode:{name:'Modo',from:'Tienda',price:100}, // 100 tokens (1 $)
   },
+  startWeapon:'C',
+  matDrop:{from:10,to:150,c0:0.01,c1:0.05,max0:1,max1:3,sure:[50,100]}, // sure: esos jefes de élite dan 1 esencia segura la primera vez (para el Grimorio) // todos los jefes sueltan esencia del modo: 1 % (1) en la fase 10 → 5 % (1-3) en la 150 (el de la 150 se puede farmear)
+  matShop:{ess:50, ev:25}, // tienda: Esencia 50 tokens, Emblema 25 tokens
+  // ---------- economía: tokens, pagos, ofertas, tienda, potenciadores, liga, tarjeta y VIP (trozo de la lista CFG) ----------
   // Tokens = dinero: 100 tokens = 1 $. Dos saldos: comprados (no se retiran) y ganados en los pools (se pueden retirar).
   // Al gastar se usan primero los comprados. Compras y retiros SIMULADOS hasta que haya servidor y pasarela de pago.
   // open: se pueden comprar tokens (poner a true al conectar Telegram Stars); mientras, lo que se paga con tokens sale "Próximamente"
@@ -94,6 +186,31 @@ const CFG = {
   // Reparto de cada compra (en valor de tokens a precio base, 2 tokens por Star): 30 % para ti; el 70 % restante vuelve a
   // los jugadores = regalo del paquete + lo que va al bote (bote = 70 % − regalo). Así el descuento sale del bote, no de tu 30 %.
   tokens:{perUsd:100, open:true, packs:[100,500,1000,2500], bonus:{500:25,1000:100,2500:500}, keep:0.3, withdraw:{fee:0.15, min:100}}, // retiro: solo en pruebas locales (desactivado en Telegram)
+  // Comprar tokens con TON / USDT (función "crypto"; sin retiros). on:true cuando el secreto TON_ADDRESS esté puesto en Supabase.
+  crypto:{on:false, url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/crypto', manifest:'https://zekkon24.github.io/idle-ascension/tonconnect-manifest.json'},
+  // Pagos con Telegram Stars (función "pay" del servidor; el precio que manda es el del servidor). 100 tokens = 50 Stars.
+  stars:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/pay', perToken:0.5,
+    first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez
+    pass:{stars:250}},
+  // Ofertas en el momento justo (se pagan con Stars; duran 'dur' horas y no vuelven a salir hasta pasadas 'cool' horas)
+  //  wall: llevas 'hours' horas sin superar tu récord · evo: tienes el nivel para evolucionar pero te faltan materiales · inv: inventario lleno
+  offers:{dur:24, cool:72,
+    wall:{stars:100, t:'Rompe el muro', b:{mode:3,silver:10}, hours:4},
+    evo:{stars:100, t:'Pack de evolución', b:{ess:3,ev:12}},
+    inv:{stars:100, t:'Inventario +25', inv:25, max:2}},
+  shopTab:true, // pestaña Tienda en la barra de abajo
+  boosts:{ // potenciadores por anuncios (cada uso pide 'ads' anuncios; 'perDay' usos al día)
+    speed:{ads:2,min:15,mult:2,perDay:3}, // combate ×2 durante 15 min reales (se acumula si ya está activo)
+    gold:{ads:2,hours:1,earlyHours:0.5,earlyUntil:50,perDay:3}, // oro de 1 h farmeando tu fase récord (30 min hasta pasar la fase 50)
+  },
+  // Liga mensual (SIMULADA: sin dinero real). Bote = 70 % de todos los tokens gastados en el mes. Se reparte entre TODOS los
+  // jugadores según sus puntos del mes: 1 por token gastado, 1 por anuncio visto (≈3× lo que genera: ~0,3 tokens) y
+  // 0,5 por hora de oro generado (oro ÷ lo que da 1 h farmeando tu récord). Premio en tokens ganados (retirables), el día 1 a la 01:00 UTC.
+  // Mientras no haya servidor: 99 rivales que gastan rivalSpend tokens/día y juegan rivalPlay puntos/día (14 anuncios + ~14 h de oro).
+  // show:false = Liga oculta por ahora (se implementará aparte); los puntos se siguen contando
+  league:{show:false, share:0.7, ptsToken:1, ptsAd:1, ptsGoldHour:0.5, rivals:99, rivalSpend:50, rivalPlay:21},
+  cardGold:0.2, cardPrice:500, vipSpeed:1.5, vipPrice:1000, // Tarjeta mensual (+20 % de oro) y VIP (combate ×1,5, 8 h sin conexión), 30 días, en tokens
+  // ---------- premios: misiones, calendario, pase, ruleta y socios (trozo de la lista CFG) ----------
   // Misiones diarias (se renuevan cada día): cada una da oro (minutos de farmeo de tu récord) y experiencia del pase
   missions:{list:[
       // rew: premio de cada misión (gold = minutos de farmeo de tu récord). Entre todas: oro de 4 h, 3 madera, 1 plata (la de anuncios), 1 ticket.
@@ -119,30 +236,86 @@ const CFG = {
   // Pase de temporada: 30 días, 50 niveles de 85 XP (diarias 100 XP/día + semanales 320 XP/semana ≈ nivel 50 hacia el día 29).
   // Línea gratis y línea de pago (Stars). Nivel 50: arma Rara (gratis) y Épica (pago). Pago: 60 tokens cada 10 niveles (300 = 3 $).
   pass:{days:30, levels:50, xp:85, item:{free:'R',prem:'E'}, tok:{every:10,n:60}},
-  // Ofertas en el momento justo (se pagan con Stars; duran 'dur' horas y no vuelven a salir hasta pasadas 'cool' horas)
-  //  wall: llevas 'hours' horas sin superar tu récord · evo: tienes el nivel para evolucionar pero te faltan materiales · inv: inventario lleno
-  offers:{dur:24, cool:72,
-    wall:{stars:100, t:'Rompe el muro', b:{mode:3,silver:10}, hours:4},
-    evo:{stars:100, t:'Pack de evolución', b:{ess:3,ev:12}},
-    inv:{stars:100, t:'Inventario +25', inv:25, max:2}},
-  // Comprar tokens con TON / USDT (función "crypto"; sin retiros). on:true cuando el secreto TON_ADDRESS esté puesto en Supabase.
-  crypto:{on:false, url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/crypto', manifest:'https://zekkon24.github.io/idle-ascension/tonconnect-manifest.json'},
-  // Pagos con Telegram Stars (función "pay" del servidor; el precio que manda es el del servidor). 100 tokens = 50 Stars.
-  stars:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/pay', perToken:0.5,
-    first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez
-    pass:{stars:250}},
-  // Sorpresas en la campaña (cada every±jitter s de combate; no en jefes ni eventos): Horda (dur s, enemigos ×count, oro ×gold)
-  // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
-  // Entrada de los combates: élite y JEFE (y los de la Torre) esperan a que se vaya el cartel; los combates normales de la Torre, un respiro
-  encounter:{intro:2, towerIntro:0.9},
-  surprise:{every:600, jitter:120, horde:{dur:30,count:2,gold:2}, wander:{dur:20,reward:{silver:1}},
-    // probabilidad de cada sorpresa (sobre el total)
-    // todo lo resuelve el héroe solo (juego idle: nada pide estar atento ni castiga)
-    weights:{horde:50,wander:50}},
-  // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
-  // Mecánicas fuera de la Torre (como en la Torre): el élite lleva rasgos de tower.traits (1, o 2 desde la fase twoFrom) y el JEFE la
-  // mecánica de jefe de tower.bossMech según su fase. Sin «Regenera» en la campaña (con jefes lentos de matar sería un muro).
-  mechs:{traits:['rapido','escudo','espinas','furioso','gigante'], twoFrom:100},
+  // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
+  wheel:[{b:{gold:30},w:20},{b:{gold:60},w:15},{b:{gold:180},w:6},{b:{wood:1},w:15},{b:{wood:2},w:10},{b:{wood:3},w:5},
+    {b:{silver:1},w:8},{b:{ticket:1},w:6},{b:{ess:1},w:5},{b:{ev:3},w:8},{b:{mode:1},w:2}],
+  // buyPct 0: el % de las compras del amigo está desactivado hasta tener pagos reales (lo da el servidor)
+  referral:{link:'https://t.me/IdleAscensionTestBot/game', goalFase:50, goalSilver:3, buyPct:0, giftSilver:1}, // enlace de la mini app (t.me/<bot>/<app>); premios (los da el servidor: supabase/functions/track)
+  // ---------- modos: desbloqueo, Sala de jefes, Mazmorra, jefe semanal y PvP (trozo de la lista CFG) ----------
+  // Desbloqueo de modos: fase récord (en Normal; desde Pesadilla, todo abierto) o días de juego (desde que empezó la partida).
+  // POR AHORA TODO ABIERTO (unlock vacío). Antes de lanzar: unlock = unlockPlan.
+  unlock:{}, unlockPlan:{lab:{fase:10}, pvp:{fase:50}, tower:{fase:50}, boss:{day:7}},
+  // Sala de jefes: cada jefe de campaña vencido (cada 10 fases, por modo) se puede volver a luchar. 3 intentos al día (se gastan al empezar).
+  // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first' (+'elite' en ★★★
+  // de los jefes de élite 50/100/150); repetir: 'repeat' (oro de X min y chatarra del jefe ×N)
+  // Sala de jefes: sin tiempo límite; desde el segundo 60 el jefe se enfurece cada 10 s (×1,2 velocidad, ×1,1 ataque)
+  hall:{rage:{from:60,every:10,spd:1.2,atk:1.1}, tries:3, stars:[{hp:1,atk:1},{hp:3,atk:1.6},{hp:8,atk:2.5}],
+    every:50, // solo los jefes de élite (fases 50, 100 y 150 de cada modo); entran al vencerlos en la campaña
+    first:[{silver:2,ev:2},{silver:3,ev:3,ess:1},{mode:1,ev:5,ess:2}],
+    repeat:[{gold:30,scrap:2},{gold:45,scrap:3},{gold:60,scrap:4}]},
+  event:{ // Mazmorra (diaria): infinita, monstruos sin parar hasta que mueres; ranking por muertes; 1 entrada gratis al día, las demás con ticket
+    // cada ramp.every s sube de nivel: +ramp.group monstruos por grupo, salen más a menudo (×spawn), andan más rápido (×walk) y pegan más rápido (+spd)
+    // máximo maxDur s reales (3 min): si sigues vivo, el intento acaba ahí. Desde speedFrom s el combate se acelera
+    // ×(1 + speedUp·(t − speedFrom)): ×3,4 a los 3 min, unos 5:24 de juego (los más fuertes del día 60 aguantan ≈ 3:30 de juego)
+    dur:0, maxDur:180, speedFrom:60, speedUp:0.02, ramp:{every:15, group:0.5, groupMax:12, spawn:0.95, spawnMin:0.5, walk:0.95, walkMin:0.25, spd:0.06},
+    spawnEvery:1.2, walk:0.6, group:3, groupHp:2, groupGap:0.3, groupAtk:0.9, // grupos de 3 monstruos con ×2 de vida; llegan cada 0,3 s y pegan un 10 % menos
+    ticketCost:100, // ticket extra en la tienda (tokens); las muertes de varios intentos del día se suman
+    mat:'Emblema', pauseH:1, // pausa de 00:00 a 01:00 UTC: se terminan los intentos a medias y a la 01:00 se reparten los premios
+    rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.84, // prob. de que un rival haga un 2º y un 3er intento; rivalBase ajusta la curva para que el jugador medio quede hacia el puesto 50
+                          // rivales simulados: jugador medio de tus mismos días × dispersión
+    curve:[[1,1],[2,10],[3,55],[5,141],[7,212],[10,261],[13,292],[15,310],[17,317],[20,333],[25,374],[30,404]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
+    // modificador del día (rota cada día, igual para todos): cambia las reglas con algo a cambio. score: cuánto mueve las muertes
+    // (medido con simulación); los rivales simulados se multiplican por lo mismo para que el ranking siga siendo justo
+    affixes:[
+      {id:'furia',name:'Furia',desc:'Los monstruos llegan y pegan más rápido, pero tienen −25 % de vida',walk:0.7,spd:1.3,hp:0.75,score:1.05},
+      {id:'enjambre',name:'Enjambre',desc:'+2 monstruos por grupo, cada uno con −40 % de vida y −30 % de daño',group:2,hp:0.6,atk:0.7,score:1.05},
+      {id:'certero',name:'Golpe certero',desc:'+20 % de crítico, pero los monstruos tienen +15 % de vida',cr:0.2,hp:1.15,score:0.96},
+      {id:'sinCura',name:'Sin curación',desc:'No te curas de ninguna forma, pero los monstruos pegan −35 %',noHeal:true,atk:0.65,score:1.04},
+      {id:'gigantes',name:'Gigantes',desc:'Grupos con 1 monstruo menos, con +40 % de vida y −20 % de daño',group:-1,hp:1.4,atk:0.8,score:0.74},
+      {id:'vampiros',name:'Sangre',desc:'+10 % de robo de vida, pero los monstruos pegan +30 %',ls:0.1,atk:1.3,score:1.01},
+    ],
+    milestones:{every:50,ch:'wood',big:200,bigCh:'silver'}, // premio personal: cada 50 muertes del día 1 cofre de madera; cada 200, además 1 de plata
+    rewards:[                                     // premio según tu puesto del día (se cobra al día siguiente)
+      {to:1,em:5,ch:'mode',n:1},{to:3,em:4,ch:'mode',n:1},{to:10,em:3,ch:'silver',n:2},
+      {to:25,em:2,ch:'silver',n:1},{to:50,em:1,ch:'wood',n:2},{to:100,em:1,ch:'wood',n:1}],
+  },
+  wboss:{ // Jefe semanal: 1 min contra un jefe inmortal; ranking semanal por daño (se suman los intentos); 1 entrada gratis a la semana, las demás con Ticket Jefe
+    dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
+    ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
+    // jefe de la semana (rota cada semana, igual para todos): cada uno con su mecánica y contra qué es débil.
+    // score: cuánto mueve el daño (medido con simulación); los rivales simulados se multiplican por lo mismo
+    bosses:[
+      {id:'enjambre',name:'Señor del Enjambre',desc:'Cada 8 s invoca 2 esbirros que también pegan (su daño también cuenta)',weak:'Guerrero (golpes en área)',summon:{every:8,n:2,hp:0.6,atk:0.4},score:0.99},
+      {id:'coloso',name:'Coloso de Hierro',desc:'Recibe −60 % de daño, pero cada 15 s se le rompe la armadura 5 s y recibe el doble',weak:'golpes fuertes cuando se le rompe la armadura',armor:{block:0.4,hit:2,every:15,open:5},score:1},
+      {id:'bestia',name:'Bestia Furiosa',desc:'Pega cada vez más rápido (hasta ×2,5 al final)',weak:'Guerrero y Clérigo (aguante)',frenzy:2.5,score:0.88},
+      {id:'liche',name:'Liche Maldito',desc:'Le haces +15 % de críticos y +100 % de daño crítico',weak:'Asesino y Arquero (críticos)',cr:0.15,cd:1,score:1.28},
+      {id:'dragon',name:'Dragón de Ceniza',desc:'Te quema: pierdes el 2 % de tu vida por segundo',weak:'Guerrero y Clérigo (vida y curación)',burn:0.02,score:0.84},
+    ],
+    rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
+    curve:[[1,2200],[2,6000],[3,13600],[5,32400],[7,70300],[10,127200],[13,191000],[15,288500],[17,458500],[20,958600],[25,1959000],[30,3131500],[35,4433500],[40,5820900],[45,7041000]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
+    rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
+      // ×3 del premio diario de la Mazmorra en el mismo puesto (solo hay uno por semana); los cofres de madera
+      // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca
+      {to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},
+      {to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
+  },
+  // PvP asíncrono: duelo al mejor de 3 contra la copia de otro jugador o un «fantasma» (rival generado a tu nivel).
+  // Antes de cada ronda eliges 1 de 3 cartas (mejoras de la Torre, se acumulan en el duelo). Ronda: hasta 'round' s (si nadie
+  // cae, gana quien tenga más % de vida). Estadísticas mezcladas: tu^mix × media^(1−mix). Liga semanal con puntos tipo ELO (k).
+  // PvP: combate contra el fantasma de otro jugador (su partida al 100 %, la maneja la IA). Elo para pocos jugadores:
+  // K alto (kNew) en las primeras newGames partidas y luego k; al defensor le cambia la mitad (defK). SIN BALANCEAR.
+  // maxT: segundos máximos del combate (si nadie cae, gana quien tenga más % de vida). botSpread: puntos del bot ± este valor.
+  // ttk: la vida de los dos en el duelo se multiplica igual, para que solo con ataques normales se tarde ~ttk s (con habilidades, menos)
+  // cls: multiplicador del daño que hace cada clase en PvP. Calibrado (días 4-60, mejoras al azar) para ganar de media:
+  // Mago 55 %, Asesino 52 %, Arquero 50 %, Clérigo 48 %, Guerrero 45 % (el Mago tiene ventaja: es su modo)
+  // Rival: el jugador más cercano en puntos, sin repetir ninguno de tus últimos 'recent' duelos (lo decide el servidor)
+  // free: duelos gratis al día; después 1 ticket PvP por duelo (paquete de 'pack' tickets por 'packCost' tokens = 1 $)
+  // rewards: premio del ranking semanal según tu puesto (igual que el Jefe semanal); lo reparte el servidor el lunes y los puntos
+  // quedan a medio camino de 1000. leagues: insignia según los puntos ([desde, nombre, color])
+  pvp:{free:3, pack:3, packCost:100, recent:5, maxT:30, speedUp:0.1, // duelo de 30 s (reales) que se acelera: a los t s va a ×(1 + 0,1·t); solo se gana por K.O., si nadie cae es empate; habilidades siempre automáticas
+    rewards:[{to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},{to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
+    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:31, cls:{Guerrero:1.2,Mago:0.75,Arquero:1.12,Asesino:1.04,Clerigo:0.38}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+  // ---------- Torre (trozo de la lista CFG) ----------
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
   // × hp0·hpG^(piso−1) de vida y × atk0·atkG^(piso−1) de ataque. Premios la 1.ª vez que llegas a cada piso.
@@ -242,179 +415,12 @@ const CFG = {
       corazon:{r:'L',fam:'s',type:'pas',name:'Corazón de sangre',desc:'Cada vez que pierdes vida, +1 % de daño hasta el final del combate (sin tope)',per:0.01},
       eco:{r:'L',fam:'',type:'pas',name:'Eco',desc:'Tus habilidades se lanzan dos veces'},
       explosion:{r:'L',fam:'',type:'fx',name:'Explosión',desc:'Los enemigos que mueren explotan: 120 % de su vida a los cercanos',pct:1.2}}},
-  // PvP asíncrono: duelo al mejor de 3 contra la copia de otro jugador o un «fantasma» (rival generado a tu nivel).
-  // Antes de cada ronda eliges 1 de 3 cartas (mejoras de la Torre, se acumulan en el duelo). Ronda: hasta 'round' s (si nadie
-  // cae, gana quien tenga más % de vida). Estadísticas mezcladas: tu^mix × media^(1−mix). Liga semanal con puntos tipo ELO (k).
-  // PvP: combate contra el fantasma de otro jugador (su partida al 100 %, la maneja la IA). Elo para pocos jugadores:
-  // K alto (kNew) en las primeras newGames partidas y luego k; al defensor le cambia la mitad (defK). SIN BALANCEAR.
-  // maxT: segundos máximos del combate (si nadie cae, gana quien tenga más % de vida). botSpread: puntos del bot ± este valor.
-  // ttk: la vida de los dos en el duelo se multiplica igual, para que solo con ataques normales se tarde ~ttk s (con habilidades, menos)
-  // cls: multiplicador del daño que hace cada clase en PvP. Calibrado (días 4-60, mejoras al azar) para ganar de media:
-  // Mago 55 %, Asesino 52 %, Arquero 50 %, Clérigo 48 %, Guerrero 45 % (el Mago tiene ventaja: es su modo)
-  // Rival: el jugador más cercano en puntos, sin repetir ninguno de tus últimos 'recent' duelos (lo decide el servidor)
-  // free: duelos gratis al día; después 1 ticket PvP por duelo (paquete de 'pack' tickets por 'packCost' tokens = 1 $)
-  // rewards: premio del ranking semanal según tu puesto (igual que el Jefe semanal); lo reparte el servidor el lunes y los puntos
-  // quedan a medio camino de 1000. leagues: insignia según los puntos ([desde, nombre, color])
-  pvp:{free:3, pack:3, packCost:100, recent:5, maxT:30, speedUp:0.1, // duelo de 30 s (reales) que se acelera: a los t s va a ×(1 + 0,1·t); solo se gana por K.O., si nadie cae es empate; habilidades siempre automáticas
-    rewards:[{to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},{to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
-    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:31, cls:{Guerrero:1.2,Mago:0.75,Arquero:1.12,Asesino:1.04,Clerigo:0.38}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
-  // Racha: +pct de oro por cada 'per' muertes seguidas sin recibir golpe (máx. max); se pierde al recibir un golpe
-  streak:{per:10, pct:0.01, max:0.25},
-  // Ruleta diaria: 1 tirada gratis al día + 1 con anuncio. w = peso (probabilidad relativa)
-  wheel:[{b:{gold:30},w:20},{b:{gold:60},w:15},{b:{gold:180},w:6},{b:{wood:1},w:15},{b:{wood:2},w:10},{b:{wood:3},w:5},
-    {b:{silver:1},w:8},{b:{ticket:1},w:6},{b:{ess:1},w:5},{b:{ev:3},w:8},{b:{mode:1},w:2}],
-  shopTab:true, // pestaña Tienda en la barra de abajo
-  skillGap:0.75,   // segundos de espera entre una habilidad y la siguiente (en todos los modos, a mano o solas)
-  startWeapon:'C',
-  // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube
-  // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.
-  // Con el grimorio en el nivel 5 y el héroe en el nivel de la evolución, se evoluciona eligiendo uno de 2 caminos (evo.tiers[0]).
-  // Cambiar de camino después cuesta switchCost tokens. fx: números de la pasiva de cada camino B. SIN BALANCEAR.
-  grimoire:{showLvl:50, // icono del Grimorio (libro) en el combate desde este nivel del héroe (o si ya se tiene)
-    levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
-    up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
-    names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},
-    fx:{fortaleza:{df:0.1,boss:0.5}, escarcha:{need:3,mult:2.1,freeze:2,ignoreDf:0.5}, cazador:{boss:0.4}, veneno:{pct:0.7,dur:8,max:8}, sacrificio:{cost:0.02,atk:0.6,lsMax:0.2,single:true}}},
-  // Habilidades activas (elegidas por el diseñador): la de clase es directa (golpe/cura al momento); la de evolución da un efecto unos segundos. En los eventos se usan a mano;
-  // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
-  skills:{
-    cls:{
-      Guerrero:{id:'muro', name:'Muro de escudos', cd:18, shield:3, dmgDef:5, desc:'Escudo según su defensa y golpe en área con parte de su defensa'},
-      Mago:{id:'bola', name:'Bola de fuego', cd:12, targets:3, mult:3, burn:0.5, dur:4, desc:'300 % en área hasta a 3 enemigos y los quema'},
-      Arquero:{id:'perforante', name:'Disparo perforante', cd:15, mult:3, desc:'Disparo que atraviesa a todos (300 %)'},
-      Asesino:{id:'ejecutar', name:'Ejecutar', cd:12, mult:9, refund:0.5, desc:'Golpe del 900 %; si mata, la recarga baja a la mitad'},
-      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:6, mult:0.2, back:0.6, heal:0.05, desc:'6 golpes de luz encadenados (20 % cada uno) que luego vuelven y le curan (5 % de vida cada uno)'}},
-    evo:{
-      Guerrero:{id:'sed', name:'Sed de sangre', cd:28, cost:0.2, shield:0.5, ls:0.4, dur:12, desc:'Pierde el 20 % de su vida: escudo de la mitad y +40 % de robo de vida 12 s'},
-      Mago:{id:'combustion', name:'Combustión', cd:28, dur:8, burnUp:0.5, desc:'8 s: las quemaduras hacen +50 % y los que mueren quemados la pasan a otro'},
-      Arquero:{id:'rapido', name:'Fuego rápido', cd:28, dur:6, spd:1.75, desc:'6 s con +75 % de velocidad de ataque'},
-      Asesino:{id:'clon', name:'Clon de sombra', cd:28, dur:8, mult:0.3, desc:'8 s: un clon copia sus golpes al 30 %'},
-      Clerigo:{id:'juicio', name:'Luz del juicio', cd:30, dur:6, heal:0.05, dps:1.0, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}},
-    // habilidad de evolución del camino B: POR DECIDIR (null = aún no hay)
-    evoB:{
-      Guerrero:{id:'baluarte', name:'Baluarte', cd:45, dur:8, df:1.25, reflect:0.75, desc:'8 s: +25 % de defensa y devuelve el 75 % del daño que recibe'},
-      Mago:{id:'armaduraHielo', name:'Armadura de hielo', cd:28, dur:8, shards:2, burst:4, desc:'Lanza 4 esquirlas a todos; 8 s: quien le pega recibe 2 esquirlas'},
-      Arquero:{id:'marca', name:'Marca del cazador', cd:35, dur:8, mult:0.5, desc:'8 s: el objetivo recibe +50 % de daño'},
-      Asesino:{id:'nube', name:'Nube tóxica', cd:60, dur:2, pct:0.05, extra:3, desc:'2 s: una nube envenena a todos cada segundo (+3 acumulaciones)'},
-      Clerigo:{id:'sacrificio', name:'Sacrificio', cd:28, cost:0.3, dur:8, atk:0.6, single:true, desc:'Consume el 30 % de su vida: +60 % de daño a los jefes durante 8 s'}}},
-  matShop:{ess:50, ev:25}, // tienda: Esencia 50 tokens, Emblema 25 tokens
-  boosts:{ // potenciadores por anuncios (cada uso pide 'ads' anuncios; 'perDay' usos al día)
-    speed:{ads:2,min:15,mult:2,perDay:3}, // combate ×2 durante 15 min reales (se acumula si ya está activo)
-    gold:{ads:2,hours:1,earlyHours:0.5,earlyUntil:50,perDay:3}, // oro de 1 h farmeando tu fase récord (30 min hasta pasar la fase 50)
-  },
-  evo:{ // evoluciones: al llegar al nivel de cada una se gana su pasiva y el nivel sigue (hasta evolucionar, ese nivel es el tope)
-    tiers:[
-      {lvl:150, cost:{ess:3,gold:10000,ev:12}, bonus:{hp:0.15,atk:0.15}, classes:{ // cost: esencias del modo Normal + oro + material del evento · bonus: extra de vida y daño
-        Guerrero:{name:'Berserker',passive:'Furia: +1 % de daño por cada golpe recibido en la oleada (máx. +45 %)',rage:0.01,rageCap:0.45},
-        Mago:{name:'Archimago',passive:'Fuego: cada golpe quema al enemigo; la quemadura se acumula hasta 5 veces',burnPct:0.3,burnDur:3,burnMax:5},
-        Arquero:{name:'Tirador',passive:'Disparo doble: 15 % de probabilidad de disparar dos veces',double:0.15},
-        Asesino:{name:'Sombra',passive:'Instinto: +10 % de velocidad de ataque, recibe un 15 % menos de daño y tras un crítico el siguiente golpe hace +30 %',critNext:0.3,base:{spd:1.1,dmgTaken:0.85}},
-        Clerigo:{name:'Oráculo',passive:'Luz interior: al bajar del 50 % de vida, la regeneración se triplica 10 s (1 vez por oleada)',lightHp:0.5,lightMult:3,lightDur:10},
-      },
-      // camino B (el opuesto): su pasiva es un efecto de grimorio (grimoire.fx[grim])
-      alt:{
-        Guerrero:{name:'Guardián',grim:'fortaleza',passive:'Fortaleza: +10 % de defensa y +50 % de daño a los jefes'},
-        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 210 % ignorando el 50 % de su defensa y lo congela 2 s (no se mueve ni ataca)'},
-        Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +40 % de daño a los jefes'},
-        Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (70 % por s, 8 s), hasta 8 veces: brilla en peleas largas'},
-        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: solo se cura robando vida, y cuanta menos vida tiene, más roba (hasta el 20 % del daño). Cada golpe le cuesta el 2 % de su vida y hace +60 % de daño a los jefes'},
-      }},
-      // Evolución 2: mejora la pasiva de clase (base) y añade un efecto nuevo; se suma a la pasiva de la evolución 1
-      {lvl:300, pending:true, cost:{ess:5,gold:400000,ev:30}, // pending: bloqueada ("próximamente"), pide Esencia de pesadilla
-       bonus:{hp:0.15,atk:0.15}, classes:{
-        Guerrero:{name:'Titán',base:{dmgTaken:0.925},rageCap:0.40,defDmg:1.0,passive:'Piel dura: −7,5 % de daño recibido · Furia hasta +40 % · Sus golpes suman un 100 % de su defensa como daño'},
-        Mago:{name:'Hechicero del Vacío',base:{xp:1.15},burnPct:0.2,burnDur:4,burnMax:6,passive:'Erudito: +15 % de experiencia · La quemadura ignora la defensa, dura 4 s, quema más fuerte y se acumula hasta 6 veces'},
-        Arquero:{name:'Ojo de Halcón',base:{spd:1.075},dblBuff:0.05,dblDur:5,dblMax:5,passive:'Pulso firme: +7,5 % de velocidad · Cada disparo doble da +5 % de daño durante 5 s (hasta +25 %)'},
-        Asesino:{name:'Segador',base:{cd:0.5,cr:0.10},critStack:0.05,critStackMax:0.05,passive:'Letal: +50 % de daño crítico y +10 % de crítico · Tras un golpe sin crítico, el siguiente tiene +5 % de crítico'},
-        Clerigo:{name:'Santo',base:{regen:0.0075},aura:13,auraDur:5,passive:'Fe: regenera el 0,75 % de su vida por segundo · Aura sagrada: lo que se cura se convierte en daño en área durante 5 s'},
-      }},
-    ],
-  },
-  matDrop:{from:10,to:150,c0:0.01,c1:0.05,max0:1,max1:3,sure:[50,100]}, // sure: esos jefes de élite dan 1 esencia segura la primera vez (para el Grimorio) // todos los jefes sueltan esencia del modo: 1 % (1) en la fase 10 → 5 % (1-3) en la 150 (el de la 150 se puede farmear)
-  event:{ // Mazmorra (diaria): infinita, monstruos sin parar hasta que mueres; ranking por muertes; 1 entrada gratis al día, las demás con ticket
-    // cada ramp.every s sube de nivel: +ramp.group monstruos por grupo, salen más a menudo (×spawn), andan más rápido (×walk) y pegan más rápido (+spd)
-    // máximo maxDur s reales (3 min): si sigues vivo, el intento acaba ahí. Desde speedFrom s el combate se acelera
-    // ×(1 + speedUp·(t − speedFrom)): ×3,4 a los 3 min, unos 5:24 de juego (los más fuertes del día 60 aguantan ≈ 3:30 de juego)
-    dur:0, maxDur:180, speedFrom:60, speedUp:0.02, ramp:{every:15, group:0.5, groupMax:12, spawn:0.95, spawnMin:0.5, walk:0.95, walkMin:0.25, spd:0.06},
-    spawnEvery:1.2, walk:0.6, group:3, groupHp:2, groupGap:0.3, groupAtk:0.9, // grupos de 3 monstruos con ×2 de vida; llegan cada 0,3 s y pegan un 10 % menos
-    ticketCost:100, // ticket extra en la tienda (tokens); las muertes de varios intentos del día se suman
-    mat:'Emblema', pauseH:1, // pausa de 00:00 a 01:00 UTC: se terminan los intentos a medias y a la 01:00 se reparten los premios
-    rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.84, // prob. de que un rival haga un 2º y un 3er intento; rivalBase ajusta la curva para que el jugador medio quede hacia el puesto 50
-                          // rivales simulados: jugador medio de tus mismos días × dispersión
-    curve:[[1,1],[2,10],[3,55],[5,141],[7,212],[10,261],[13,292],[15,310],[17,317],[20,333],[25,374],[30,404]], // [días de juego, muertes del jugador medio] (simulaciones F2P con la Mazmorra infinita; después sigue la última pendiente)
-    // modificador del día (rota cada día, igual para todos): cambia las reglas con algo a cambio. score: cuánto mueve las muertes
-    // (medido con simulación); los rivales simulados se multiplican por lo mismo para que el ranking siga siendo justo
-    affixes:[
-      {id:'furia',name:'Furia',desc:'Los monstruos llegan y pegan más rápido, pero tienen −25 % de vida',walk:0.7,spd:1.3,hp:0.75,score:1.05},
-      {id:'enjambre',name:'Enjambre',desc:'+2 monstruos por grupo, cada uno con −40 % de vida y −30 % de daño',group:2,hp:0.6,atk:0.7,score:1.05},
-      {id:'certero',name:'Golpe certero',desc:'+20 % de crítico, pero los monstruos tienen +15 % de vida',cr:0.2,hp:1.15,score:0.96},
-      {id:'sinCura',name:'Sin curación',desc:'No te curas de ninguna forma, pero los monstruos pegan −35 %',noHeal:true,atk:0.65,score:1.04},
-      {id:'gigantes',name:'Gigantes',desc:'Grupos con 1 monstruo menos, con +40 % de vida y −20 % de daño',group:-1,hp:1.4,atk:0.8,score:0.74},
-      {id:'vampiros',name:'Sangre',desc:'+10 % de robo de vida, pero los monstruos pegan +30 %',ls:0.1,atk:1.3,score:1.01},
-    ],
-    milestones:{every:50,ch:'wood',big:200,bigCh:'silver'}, // premio personal: cada 50 muertes del día 1 cofre de madera; cada 200, además 1 de plata
-    rewards:[                                     // premio según tu puesto del día (se cobra al día siguiente)
-      {to:1,em:5,ch:'mode',n:1},{to:3,em:4,ch:'mode',n:1},{to:10,em:3,ch:'silver',n:2},
-      {to:25,em:2,ch:'silver',n:1},{to:50,em:1,ch:'wood',n:2},{to:100,em:1,ch:'wood',n:1}],
-  },
-  wboss:{ // Jefe semanal: 1 min contra un jefe inmortal; ranking semanal por daño (se suman los intentos); 1 entrada gratis a la semana, las demás con Ticket Jefe
-    dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
-    ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
-    // jefe de la semana (rota cada semana, igual para todos): cada uno con su mecánica y contra qué es débil.
-    // score: cuánto mueve el daño (medido con simulación); los rivales simulados se multiplican por lo mismo
-    bosses:[
-      {id:'enjambre',name:'Señor del Enjambre',desc:'Cada 8 s invoca 2 esbirros que también pegan (su daño también cuenta)',weak:'Guerrero (golpes en área)',summon:{every:8,n:2,hp:0.6,atk:0.4},score:0.99},
-      {id:'coloso',name:'Coloso de Hierro',desc:'Recibe −60 % de daño, pero cada 15 s se le rompe la armadura 5 s y recibe el doble',weak:'golpes fuertes cuando se le rompe la armadura',armor:{block:0.4,hit:2,every:15,open:5},score:1},
-      {id:'bestia',name:'Bestia Furiosa',desc:'Pega cada vez más rápido (hasta ×2,5 al final)',weak:'Guerrero y Clérigo (aguante)',frenzy:2.5,score:0.88},
-      {id:'liche',name:'Liche Maldito',desc:'Le haces +15 % de críticos y +100 % de daño crítico',weak:'Asesino y Arquero (críticos)',cr:0.15,cd:1,score:1.28},
-      {id:'dragon',name:'Dragón de Ceniza',desc:'Te quema: pierdes el 2 % de tu vida por segundo',weak:'Guerrero y Clérigo (vida y curación)',burn:0.02,score:0.84},
-    ],
-    rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
-    curve:[[1,2200],[2,6000],[3,13600],[5,32400],[7,70300],[10,127200],[13,191000],[15,288500],[17,458500],[20,958600],[25,1959000],[30,3131500],[35,4433500],[40,5820900],[45,7041000]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
-    rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
-      // ×3 del premio diario de la Mazmorra en el mismo puesto (solo hay uno por semana); los cofres de madera
-      // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca
-      {to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},
-      {to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
-  },
-  // buyPct 0: el % de las compras del amigo está desactivado hasta tener pagos reales (lo da el servidor)
-  referral:{link:'https://t.me/IdleAscensionTestBot/game', goalFase:50, goalSilver:3, buyPct:0, giftSilver:1}, // enlace de la mini app (t.me/<bot>/<app>); premios (los da el servidor: supabase/functions/track)
-  // Liga mensual (SIMULADA: sin dinero real). Bote = 70 % de todos los tokens gastados en el mes. Se reparte entre TODOS los
-  // jugadores según sus puntos del mes: 1 por token gastado, 1 por anuncio visto (≈3× lo que genera: ~0,3 tokens) y
-  // 0,5 por hora de oro generado (oro ÷ lo que da 1 h farmeando tu récord). Premio en tokens ganados (retirables), el día 1 a la 01:00 UTC.
-  // Mientras no haya servidor: 99 rivales que gastan rivalSpend tokens/día y juegan rivalPlay puntos/día (14 anuncios + ~14 h de oro).
-  // show:false = Liga oculta por ahora (se implementará aparte); los puntos se siguen contando
-  league:{show:false, share:0.7, ptsToken:1, ptsAd:1, ptsGoldHour:0.5, rivals:99, rivalSpend:50, rivalPlay:21},
+  // ---------- servidor, mantenimiento y herramientas de prueba (trozo de la lista CFG) ----------
   // Mantenimiento y actualizaciones obligatorias (control.js): la versión se mira en GitHub cada 'every' s; el mantenimiento, al abrir/volver a la app y, con la clave pública, al instante
   control:{every:300, maintEvery:15},
   supabase:{url:'https://xdtxdaywotkppzssrjni.supabase.co', key:'sb_publishable_60pnk9ALWaV_ks2oAJ7TnA_IFHSG5qH'}, // key: clave pública (publishable/anon) para el aviso en directo
   server:{url:'https://xdtxdaywotkppzssrjni.supabase.co/functions/v1/track', every:10, saveEvery:120}, // saveEvery: subir la partida cada 2 min (lleva los eventos) // base de datos: dirección de la función "track" de Supabase (vacía = no se envía nada); envía como mucho cada 10 s
   devTools:false, // herramientas de prueba (velocidad, +oro, avanzar día…): poner a false al publicar en Telegram
-  phaseCap:150, // cada modo tiene 150 fases; tras vencer la 150 y evolucionar se pasa al siguiente modo
-  // Sala de jefes: cada jefe de campaña vencido (cada 10 fases, por modo) se puede volver a luchar. 3 intentos al día (se gastan al empezar).
-  // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first' (+'elite' en ★★★
-  // de los jefes de élite 50/100/150); repetir: 'repeat' (oro de X min y chatarra del jefe ×N)
-  // Sala de jefes: sin tiempo límite; desde el segundo 60 el jefe se enfurece cada 10 s (×1,2 velocidad, ×1,1 ataque)
-  hall:{rage:{from:60,every:10,spd:1.2,atk:1.1}, tries:3, stars:[{hp:1,atk:1},{hp:3,atk:1.6},{hp:8,atk:2.5}],
-    every:50, // solo los jefes de élite (fases 50, 100 y 150 de cada modo); entran al vencerlos en la campaña
-    first:[{silver:2,ev:2},{silver:3,ev:3,ess:1},{mode:1,ev:5,ess:2}],
-    repeat:[{gold:30,scrap:2},{gold:45,scrap:3},{gold:60,scrap:4}]},
-  // Desbloqueo de modos: fase récord (en Normal; desde Pesadilla, todo abierto) o días de juego (desde que empezó la partida).
-  // POR AHORA TODO ABIERTO (unlock vacío). Antes de lanzar: unlock = unlockPlan.
-  unlock:{}, unlockPlan:{lab:{fase:10}, pvp:{fase:50}, tower:{fase:50}, boss:{day:7}},
-  modes:[ // upPer: mejoras de Vida/Defensa que gana de media el jugador por fase en ese modo (números pequeños: baja el ataque enemigo; estimado, recalibrar al desbloquear)
-          // locked: modo bloqueado ("Próximamente"): no se puede entrar aunque se cumplan los requisitos
-          // enemigos: empiezan en los de la fase 150 del modo anterior × hpStart/atkStart y crecen hpG/atkG por fase · off: oro, experiencia y cofres continúan desde la fase off · gold: multiplicador de oro · mat: material propio (uso por definir)
-    {name:'Normal',off:0,gold:1,mat:'Esencia'},
-    {name:'Pesadilla',off:149,gold:1.5,mat:'Esencia de pesadilla',hpStart:2.2,atkStart:1.6,hpG:1.022,atkG:1.015,upPer:0.5, // abierta: simulado, se entra el día 12-19 y se acaba el 23-43
-      walls:{50:{hp:2.5,atk:1.95},100:{hp:2.3,atk:1.8},150:{hp:2.1,atk:1.7}}},
-    {name:'Infierno',locked:true,off:298,gold:2.25,mat:'Esencia infernal',hpStart:2.2,atkStart:1.6,hpG:1.019,atkG:1.013,upPer:0.5,
-      walls:{50:{hp:2.5,atk:1.95},100:{hp:2.3,atk:1.8},150:{hp:2.1,atk:1.7}}},
-  ],
-  delays:{wave:0.25,fase:0.4,defeat:0.7}, // segundos de juego entre oleadas / fases / tras perder
-  offlineMinMeasure:30, // sin conexión: se usa el DPS medido cuando ya se han medido ataques por valor de 30 golpes de tu daño
-  offlineCapH:3, offlineVipH:8, offlineAdMult:1.5, offlineAdPerDay:2, // horas de farmeo sin conexión (VIP); extra de oro con anuncio al llenar el tope, 2 veces por día
-  cardGold:0.2, cardPrice:500, vipSpeed:1.5, vipPrice:1000, // Tarjeta mensual (+20 % de oro) y VIP (combate ×1,5, 8 h sin conexión), 30 días, en tokens
 };
 /* ---------- Fórmulas de los cofres ----------
    PROGRESIÓN (madera y plata, jugador sin pagar). En cada tramo hay una rareza objetivo T que hay que subir de nv1 a nv5:

@@ -8,6 +8,7 @@
 <!-- la fuente no bloquea el arranque: si tarda o falla, se usa la del sistema -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&display=swap" media="print" onload="this.media='all'">
 <style>
+/* ARCHIVO GENERADO por tools/construir.js desde src/estilos/ (orden en orden.json): no lo edites aquí. */
 :root{
   color-scheme: dark;
   --bg:#12141c; --panel:#1b1e2a; --panel2:#232738; --line:#2f3448;
@@ -677,7 +678,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610121412-91971f8';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610121634-2a25609';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
