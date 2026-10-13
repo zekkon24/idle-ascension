@@ -119,6 +119,119 @@ function hero(g,x,y,o){
   g.restore();
 }
 
+/* ---------- monstruos de las zonas nuevas ----------
+   Cada uno se dibuja con los pies en y=0, mirando a la izquierda (hacia el héroe), en la misma escala que los demás (r=13).
+   o: {t tiempo, walk andar, atk ataque 0-1, eye(x,y,color)}. top: dónde va la corona de élite/JEFE.
+   Ya tienen los colores de su modo: no se les aplica el tinte (NOHUE). */
+const NOHUE=new Set(['demon','wolf','zombie','puppet','flesh','vampire','nightmare','imp','succubus','hellknight','firedemon','fallen']);
+const swing=atk=>atk?Math.sin(atk*Math.PI):0;
+const MONSTER_DRAW={
+  // lobo: cuatro patas, pelo gris, hocico y cola
+  wolf:Object.assign((g,{t,walk,atk})=>{ const run=walk?Math.sin(walk*12):0, a=swing(atk), fur='#7d828c', fur2='#5d616b';
+    g.translate(-a*4,0);
+    g.strokeStyle=fur2; g.lineWidth=3; g.lineCap='round'; [[-8,run],[-4,-run],[7,-run],[11,run]].forEach(([lx,d])=>{ g.beginPath(); g.moveTo(lx,-9); g.lineTo(lx+d*3,0); g.stroke() });
+    g.fillStyle=fur2; g.beginPath(); g.moveTo(13,-13); g.quadraticCurveTo(22,-18-Math.sin(t*4)*2,24,-24); g.quadraticCurveTo(19,-14,13,-10); g.fill();   // cola
+    g.fillStyle=fur; g.beginPath(); g.ellipse(2,-13,13,6.5,0,0,TAU); g.fill();
+    g.fillStyle='#c9ccd2'; g.beginPath(); g.ellipse(-2,-9,8,3,0,0,TAU); g.fill();   // pecho claro
+    g.fillStyle=fur; g.beginPath(); g.arc(-12,-18,6,0,TAU); g.fill(); g.beginPath(); g.moveTo(-16,-20); g.lineTo(-24,-17+a*2); g.lineTo(-16,-14); g.fill();   // hocico
+    g.beginPath(); g.moveTo(-14,-22); g.lineTo(-13,-30); g.lineTo(-9,-23); g.fill(); g.beginPath(); g.moveTo(-10,-23); g.lineTo(-7,-30); g.lineTo(-6,-21); g.fill();   // orejas
+    if(a){ g.fillStyle='#f3e9d2'; g.fillRect(-23,-17,1.5,2.5); g.fillRect(-20,-17,1.5,2.5); }
+    g.fillStyle='#ffd23e'; g.fillRect(-15,-20,2.5,2); g.fillStyle=DARK; g.fillRect(-24.5,-18.5,2,2); },{top:-33}),
+  // zombi: encorvado, piel verde, ropa rota, brazos hacia delante y un ojo que brilla
+  zombie:Object.assign((g,{t,walk,atk})=>{ const leg=walk?Math.sin(walk*7)*2.5:0, a=swing(atk), sk='#7f9a62', sk2='#5c7546';
+    g.rotate(-0.12); g.fillStyle='#3b3a44'; g.fillRect(-5+leg,-13,4.5,13); g.fillRect(1-leg*0.5,-13,4.5,13);
+    g.fillStyle='#6b5640'; rr(g,-7,-28,14,16,3); g.fill(); g.fillStyle='#4f3f2f'; g.beginPath(); g.moveTo(-7,-14); g.lineTo(-4,-11); g.lineTo(-1,-14); g.lineTo(3,-11); g.lineTo(7,-14); g.lineTo(7,-12); g.lineTo(-7,-12); g.fill();   // camisa rota
+    g.fillStyle=sk; g.save(); g.translate(-5,-25); g.rotate(-1.45-a*0.4+Math.sin(t*3)*0.06); g.fillRect(-2,-13,4,13); g.restore(); g.save(); g.translate(5,-25); g.rotate(-1.3-a*0.5); g.fillRect(-2,-12,4,12); g.restore();   // brazos
+    g.fillStyle=sk; g.beginPath(); g.arc(-2,-33,6.5,0,TAU); g.fill(); g.fillStyle=sk2; g.fillRect(-6,-30,8,2);   // cabeza y boca
+    g.fillStyle='#c6ff6a'; g.shadowColor='#c6ff6a'; g.shadowBlur=5; g.fillRect(-6,-36,2.5,2.5); g.shadowBlur=0; g.fillStyle=DARK; g.fillRect(-2,-35.5,2,1.5);
+    g.strokeStyle='#8a2a22'; g.lineWidth=1; g.beginPath(); g.moveTo(1,-38); g.lineTo(3,-34); g.stroke(); },{top:-42}),
+  // marioneta: muñeco de madera con articulaciones, cara pintada con sonrisa y los hilos hacia arriba
+  puppet:Object.assign((g,{t,walk,atk})=>{ const j=Math.sin(t*7)*0.25+(walk?Math.sin(walk*9)*0.3:0), a=swing(atk), wd='#c79a63', wd2='#9b7346', joint='#5a3e22';
+    g.strokeStyle='rgba(230,230,230,.35)'; g.lineWidth=0.6; [[-8,-26],[8,-26],[0,-40]].forEach(([sx,sy])=>{ g.beginPath(); g.moveTo(sx,sy); g.lineTo(sx*0.4,-70); g.stroke() });   // hilos
+    const limb=(x0,y0,ang,len)=>{ g.save(); g.translate(x0,y0); g.rotate(ang); g.fillStyle=wd2; g.fillRect(-1.6,0,3.2,len); g.fillStyle=joint; g.beginPath(); g.arc(0,0,1.8,0,TAU); g.fill(); g.restore() };
+    limb(-3,-13,0.25+j,12); limb(3,-13,-0.25-j,12);
+    g.fillStyle=wd; rr(g,-6,-27,12,15,3); g.fill(); g.fillStyle='#a1302c'; g.fillRect(-6,-20,12,3);   // cuerpo y faja
+    limb(-6,-25,0.9+j-a*1.4,11); limb(6,-25,-0.9-j,11);
+    g.fillStyle=wd; g.beginPath(); g.arc(0,-34,7,0,TAU); g.fill(); g.fillStyle=joint; g.fillRect(-1,-28,2,2);
+    g.fillStyle='#e05a6a'; g.beginPath(); g.arc(-4,-32,1.6,0,TAU); g.arc(3,-32,1.6,0,TAU); g.fill();   // mejillas
+    g.fillStyle=DARK; g.fillRect(-4.5,-37,2,2.5); g.fillRect(1,-37,2,2.5);
+    g.strokeStyle=DARK; g.lineWidth=1.2; g.beginPath(); g.arc(-0.5,-33,4,0.15*Math.PI,0.85*Math.PI); g.stroke();   // sonrisa
+    g.strokeStyle=joint; g.beginPath(); g.moveTo(-0.5,-29); g.lineTo(-0.5,-27); g.stroke(); },{top:-43}),
+  // abominación: masa de carne cosida, varios ojos y un cuchillo de carnicero
+  flesh:Object.assign((g,{t,walk,atk})=>{ const b=Math.sin(t*3)*1.2, leg=walk?Math.sin(walk*6)*2:0, a=swing(atk), fl='#b5626a', fl2='#8e434c';
+    g.fillStyle=fl2; g.fillRect(-9+leg,-10,7,10); g.fillRect(3-leg,-10,7,10);
+    g.fillStyle=fl; g.beginPath(); g.ellipse(0,-22,14,14+b,0,0,TAU); g.fill(); g.fillStyle=fl2; g.beginPath(); g.ellipse(5,-18,6,5,0.4,0,TAU); g.fill();
+    g.strokeStyle='#2b1b1e'; g.lineWidth=1; g.beginPath(); g.moveTo(-10,-28); g.lineTo(6,-12); for(let i=0;i<5;i++){ const px=-8+i*3.2, py=-26+i*3.2; g.moveTo(px-1.5,py+1.5); g.lineTo(px+1.5,py-1.5); } g.stroke();   // costuras
+    [[-6,-29,2.4],[-1,-31,1.8],[3,-27,1.5]].forEach(([ex,ey,r])=>{ g.fillStyle='#f4efe0'; g.beginPath(); g.arc(ex,ey,r,0,TAU); g.fill(); g.fillStyle='#8a1c2c'; g.beginPath(); g.arc(ex-0.5,ey,r*0.5,0,TAU); g.fill() });
+    g.fillStyle='#2b1b1e'; g.fillRect(-8,-20,9,3); g.fillStyle='#f4efe0'; for(let i=0;i<4;i++) g.fillRect(-7.5+i*2.2,-20,1.2,1.5);
+    g.save(); g.translate(-12,-22); g.rotate(-0.3-a*1.3); g.fillStyle=fl; g.fillRect(-2.5,-8,5,9); g.fillStyle=WOOD; g.fillRect(-1.5,-14,3,6); g.fillStyle=STEEL; rr(g,-9,-24,10,10,1.5); g.fill(); g.restore(); },{top:-40}),
+  // vampiro: alto, capa negra con cuello rojo, cara pálida, ojos rojos y colmillos
+  vampire:Object.assign((g,{t,walk,atk})=>{ const leg=walk?Math.sin(walk*8)*2:0, a=swing(atk), fl=Math.sin(t*3)*2;
+    g.fillStyle='#1d1820'; g.beginPath(); g.moveTo(-6,-36); g.lineTo(-14-fl,0); g.lineTo(14+fl,0); g.lineTo(6,-36); g.fill();   // capa
+    g.fillStyle='#8a1424'; g.beginPath(); g.moveTo(-5,-34); g.lineTo(-11,0); g.lineTo(-7,0); g.lineTo(-3,-30); g.fill();   // forro rojo
+    g.fillStyle='#2b2633'; g.fillRect(-3+leg,-12,3,12); g.fillRect(1-leg,-12,3,12); rr(g,-5,-34,10,22,2); g.fill();
+    g.fillStyle='#8a1424'; g.beginPath(); g.moveTo(-8,-40); g.lineTo(-4,-33); g.lineTo(4,-33); g.lineTo(8,-40); g.lineTo(5,-34); g.lineTo(-5,-34); g.fill();   // cuello alto
+    g.fillStyle='#e9e2ea'; g.beginPath(); g.ellipse(-1,-39,5,6,0,0,TAU); g.fill(); g.fillStyle='#1d1820'; g.beginPath(); g.moveTo(-6,-41); g.lineTo(-1,-47); g.lineTo(4,-41); g.lineTo(-1,-44); g.fill();   // pelo en pico
+    g.fillStyle='#ff2a3a'; g.fillRect(-4,-40,2,1.6); g.fillRect(0,-40,2,1.6); g.fillStyle='#fff'; g.fillRect(-3,-36,1,1.8+a); g.fillRect(0,-36,1,1.8+a);
+    g.save(); g.translate(-5,-30); g.rotate(-0.5-a*1.2); g.fillStyle='#e9e2ea'; g.fillRect(-1.5,-10,3,10); g.fillStyle='#e9e2ea'; [-2,0,2].forEach(dx=>g.fillRect(dx-0.4,-13,0.9,3)); g.restore(); },{top:-50}),
+  // pesadilla viva: sombra que flota con un ojo enorme y una sonrisa de dientes
+  nightmare:Object.assign((g,{t,atk})=>{ const fy=Math.sin(t*2.2)*3, a=swing(atk);
+    g.translate(0,-6+fy); const gr=g.createLinearGradient(0,-40,0,0); gr.addColorStop(0,'#3a2552'); gr.addColorStop(1,'rgba(20,10,30,0)'); g.fillStyle=gr;
+    g.beginPath(); g.moveTo(-13,-22); g.quadraticCurveTo(-14,-42,0,-42); g.quadraticCurveTo(14,-42,13,-22);
+    for(let i=0;i<=6;i++){ const px=13-i*26/6, py=-2+Math.sin(t*6+i)*3; g.lineTo(px,py); } g.closePath(); g.fill();   // cuerpo de humo con flecos
+    g.fillStyle='#f4efe0'; g.beginPath(); g.ellipse(-1,-30,6.5,5+a*1.5,0,0,TAU); g.fill(); g.fillStyle='#b21f6a'; g.beginPath(); g.arc(-2.5,-30,3,0,TAU); g.fill(); g.fillStyle=DARK; g.beginPath(); g.ellipse(-2.5,-30,1,2.6,0,0,TAU); g.fill();   // el ojo
+    g.fillStyle=DARK; g.beginPath(); g.ellipse(-1,-18,8,2.5+a*2,0,0,TAU); g.fill(); g.fillStyle='#f4efe0'; for(let i=0;i<6;i++){ g.beginPath(); g.moveTo(-7+i*2.6,-19); g.lineTo(-6+i*2.6,-16.5); g.lineTo(-5+i*2.6,-19); g.fill() }
+    g.strokeStyle='rgba(160,90,220,.55)'; g.lineWidth=1.2; g.beginPath(); g.moveTo(-12,-24); g.quadraticCurveTo(-20-a*6,-20,-22-a*8,-12); g.stroke(); },{top:-46}),
+  // diablillo: pequeño, rojo, cuernos, orejas grandes, alitas, cola con punta y bola de fuego en la mano
+  imp:Object.assign((g,{t,walk,atk})=>{ const leg=walk?Math.sin(walk*12)*2:0, a=swing(atk), fl=Math.sin(t*16)*0.3, sk='#d24a3a', sk2='#9c2f25';
+    g.fillStyle=sk2; g.save(); g.translate(3,-17); g.rotate(-0.6+fl); g.beginPath(); g.moveTo(0,0); g.lineTo(12,-8); g.lineTo(10,0); g.lineTo(13,3); g.closePath(); g.fill(); g.restore();   // ala
+    g.strokeStyle=sk2; g.lineWidth=1.5; g.beginPath(); g.moveTo(4,-8); g.quadraticCurveTo(14,-4,12,-14); g.stroke(); g.fillStyle=sk2; g.beginPath(); g.moveTo(10,-16); g.lineTo(14,-15); g.lineTo(12,-12); g.fill();   // cola
+    g.fillStyle=DARK; g.fillRect(-4+leg,-8,3,8); g.fillRect(1-leg,-8,3,8);
+    g.fillStyle=sk; rr(g,-5,-18,10,11,3); g.fill(); g.beginPath(); g.arc(-1,-23,6,0,TAU); g.fill();
+    g.beginPath(); g.moveTo(-6,-24); g.lineTo(-12,-26); g.lineTo(-6,-21); g.fill(); g.beginPath(); g.moveTo(4,-24); g.lineTo(9,-26); g.lineTo(4,-21); g.fill();   // orejas
+    g.fillStyle='#f3e9d2'; g.beginPath(); g.moveTo(-4,-28); g.lineTo(-5,-33); g.lineTo(-2,-28.5); g.fill(); g.beginPath(); g.moveTo(1.5,-28.5); g.lineTo(3,-33); g.lineTo(3.5,-28); g.fill();
+    g.fillStyle='#ffd23e'; g.fillRect(-5,-25,2.2,2); g.fillRect(-1,-25,2.2,2); g.fillStyle=DARK; g.fillRect(-4,-21,5,1.2);
+    g.save(); g.translate(-6,-15); g.rotate(-1.1-a*0.6); g.fillStyle=sk; g.fillRect(-1.5,-7,3,7); const fx=0, fy=-9;   // bola de fuego en la mano
+    const gr=g.createRadialGradient(fx,fy,0,fx,fy,4.5+Math.sin(t*10)); gr.addColorStop(0,'#fff2a0'); gr.addColorStop(0.5,'#ff8a2a'); gr.addColorStop(1,'rgba(255,60,20,0)'); g.fillStyle=gr; g.beginPath(); g.arc(fx,fy,5,0,TAU); g.fill(); g.restore(); },{top:-35}),
+  // súcubo: demonia con túnica, cuernos curvos, pelo largo, alas y un látigo
+  succubus:Object.assign((g,{t,walk,atk})=>{ const a=swing(atk), fl=Math.sin(t*3)*0.12, sk='#b77fc0', robe='#4a1f4f', robe2='#6e2b74';
+    g.fillStyle='#3a1838'; [[1,-26,0.5+fl],[-1,-26,0.9+fl]].forEach(([wx,wy,r],i)=>{ g.save(); g.translate(wx+(i?2:0),wy); g.rotate(r); g.beginPath(); g.moveTo(0,0); g.lineTo(16,-10); g.lineTo(13,-2); g.lineTo(18,2); g.lineTo(11,4); g.closePath(); g.fill(); g.restore() });   // alas
+    g.fillStyle=robe; g.beginPath(); g.moveTo(-6,-26); g.lineTo(-10,0); g.lineTo(10,0); g.lineTo(6,-26); g.fill(); g.fillStyle=robe2; g.fillRect(-6,-26,12,5); g.fillStyle='#d9b24a'; g.fillRect(-6,-19,12,1.6);   // túnica y cinturón
+    g.fillStyle='#2a1230'; g.beginPath(); g.moveTo(-6,-36); g.quadraticCurveTo(-10,-24,-6,-16); g.lineTo(4,-24); g.lineTo(6,-36); g.fill();   // pelo largo
+    g.fillStyle=sk; g.beginPath(); g.ellipse(-1,-33,5,6,0,0,TAU); g.fill();
+    g.strokeStyle='#d9cfe0'; g.lineWidth=2; g.beginPath(); g.moveTo(-4,-37); g.quadraticCurveTo(-9,-42,-6,-46); g.moveTo(2,-37); g.quadraticCurveTo(6,-42,4,-46); g.stroke();   // cuernos
+    g.fillStyle='#ffd23e'; g.fillRect(-4,-34,2,1.5); g.fillRect(0,-34,2,1.5);
+    g.save(); g.translate(-5,-22); g.rotate(-0.6-a*1.4); g.fillStyle=sk; g.fillRect(-1.3,-8,2.6,8); g.strokeStyle='#5b2a1c'; g.lineWidth=1.2; g.beginPath(); g.moveTo(0,-8); g.quadraticCurveTo(-10,-14-a*6,-16-a*10,-6); g.stroke(); g.restore(); },{top:-49}),
+  // caballero infernal: armadura negra y roja, yelmo con cuernos y rendija que brilla, espada enorme
+  hellknight:Object.assign((g,{t,walk,atk})=>{ const leg=walk?Math.sin(walk*7)*2.5:0, a=swing(atk), ar='#25222a', ar2='#3d3842', red='#a3271f';
+    g.fillStyle=ar; g.fillRect(-8+leg,-15,6,15); g.fillRect(2-leg,-15,6,15); g.fillStyle=red; g.fillRect(-8+leg,-7,6,2); g.fillRect(2-leg,-7,6,2);
+    g.fillStyle=ar2; rr(g,-10,-36,20,22,4); g.fill(); g.fillStyle=red; g.beginPath(); g.moveTo(-4,-34); g.lineTo(0,-22); g.lineTo(4,-34); g.fill();   // pecho
+    g.strokeStyle='rgba(255,120,40,.7)'; g.lineWidth=0.8; g.beginPath(); g.moveTo(-7,-30); g.lineTo(-4,-26); g.lineTo(-6,-20); g.moveTo(6,-28); g.lineTo(3,-24); g.stroke();   // grietas de lava
+    g.fillStyle=ar; g.beginPath(); g.arc(-10,-34,6,Math.PI,0); g.arc(10,-34,6,Math.PI,0); g.fill();   // hombreras
+    g.fillStyle=ar2; rr(g,-7,-48,13,13,3); g.fill(); g.fillStyle='#d9cfc0'; g.beginPath(); g.moveTo(-7,-45); g.lineTo(-12,-53); g.lineTo(-5,-47); g.fill(); g.beginPath(); g.moveTo(5,-45); g.lineTo(9,-53); g.lineTo(3,-47); g.fill();   // yelmo y cuernos
+    g.fillStyle='#ff6a1a'; g.shadowColor='#ff6a1a'; g.shadowBlur=6; g.fillRect(-6,-43,10,1.8); g.shadowBlur=0;
+    g.save(); g.translate(-9,-30); g.rotate(-0.25-a*1.5); g.fillStyle=ar2; g.fillRect(-2.5,-8,5,9); g.fillStyle='#4a3a2a'; g.fillRect(-1.5,-13,3,6); g.fillStyle=red; g.fillRect(-5,-14,10,2); g.fillStyle='#c9cfd8'; g.beginPath(); g.moveTo(-2.5,-14); g.lineTo(0,-40); g.lineTo(2.5,-14); g.fill(); g.restore(); },{top:-56}),
+  // demonio de fuego: cuerpo de roca con grietas de lava, llamas en la cabeza y puños enormes
+  firedemon:Object.assign((g,{t,walk,atk})=>{ const leg=walk?Math.sin(walk*6)*2:0, a=swing(atk), rock='#3a2a28', rock2='#55392f';
+    g.fillStyle=rock; g.fillRect(-10+leg,-14,8,14); g.fillRect(2-leg,-14,8,14);
+    g.fillStyle=rock2; rr(g,-14,-38,28,26,6); g.fill();
+    g.strokeStyle='#ff8a2a'; g.shadowColor='#ff6a1a'; g.shadowBlur=5; g.lineWidth=1.4; g.beginPath(); g.moveTo(-10,-34); g.lineTo(-4,-28); g.lineTo(-8,-20); g.moveTo(4,-36); g.lineTo(1,-28); g.lineTo(7,-22); g.lineTo(4,-15); g.stroke(); g.shadowBlur=0;   // grietas
+    for(let i=0;i<5;i++){ const fx=-8+i*4, h=8+Math.sin(t*9+i*1.7)*3; const gr=g.createLinearGradient(0,-38-h,0,-38); gr.addColorStop(0,'rgba(255,230,120,0)'); gr.addColorStop(1,'#ff7a1a'); g.fillStyle=gr; g.beginPath(); g.moveTo(fx-3,-38); g.quadraticCurveTo(fx,-38-h*1.4,fx+3,-38); g.fill(); }   // llamas
+    g.fillStyle='#ffd23e'; g.shadowColor='#ffd23e'; g.shadowBlur=6; g.fillRect(-7,-33,4,2.5); g.fillRect(0,-33,4,2.5); g.shadowBlur=0;
+    g.fillStyle=rock; g.save(); g.translate(-14,-30); g.rotate(-0.2-a*1.2); rr(g,-5,0,8,14,3); g.fill(); g.beginPath(); g.arc(-1,16,5.5,0,TAU); g.fill(); g.restore(); rr(g,12,-30,7,14,3); g.fill(); },{top:-50}),
+  // Caído de las estrellas: armadura de cristal clavada, alas de hueso y luz negra por las grietas (sin halos ni símbolos)
+  fallen:Object.assign((g,{t,walk,atk})=>{ const leg=walk?Math.sin(walk*7)*2:0, a=swing(atk), fy=Math.sin(t*2)*1.5;
+    g.translate(0,fy);
+    g.strokeStyle='#e6e1d6'; g.lineWidth=1.6; g.lineCap='round'; for(const side of [-1,1]) for(let i=0;i<4;i++){ g.beginPath(); g.moveTo(side*3,-30); g.lineTo(side*(10+i*3),-40+i*6-Math.sin(t*2)*2); g.stroke() }   // alas de hueso
+    g.fillStyle='#2a2440'; g.fillRect(-5+leg,-14,4,14); g.fillRect(1-leg,-14,4,14);
+    g.fillStyle='#2a2440'; rr(g,-7,-32,14,19,3); g.fill();
+    const cry=(pts,c)=>{ g.fillStyle=c; g.beginPath(); g.moveTo(pts[0],pts[1]); for(let i=2;i<pts.length;i+=2) g.lineTo(pts[i],pts[i+1]); g.closePath(); g.fill() };
+    cry([-7,-32,-2,-36,1,-30,-4,-24],'rgba(150,220,255,.85)'); cry([2,-30,8,-33,7,-22,3,-24],'rgba(190,235,255,.8)'); cry([-6,-20,-1,-22,0,-14,-5,-15],'rgba(150,220,255,.7)');   // cristales clavados
+    g.strokeStyle='#120a24'; g.shadowColor='#7a3cff'; g.shadowBlur=6; g.lineWidth=1.2; g.beginPath(); g.moveTo(-1,-31); g.lineTo(1,-25); g.lineTo(-1,-18); g.stroke(); g.shadowBlur=0;   // luz negra por las grietas
+    g.fillStyle='#d9d4e6'; g.beginPath(); g.arc(-1,-38,5.5,0,TAU); g.fill(); cry([-5,-41,-1,-47,3,-41],'rgba(170,230,255,.9)');
+    g.fillStyle='#1a0f30'; g.fillRect(-4.5,-39,2.5,2); g.fillRect(0,-39,2.5,2); g.fillStyle='#b48cff'; g.fillRect(-4,-38.6,1.2,1); g.fillRect(0.5,-38.6,1.2,1);
+    g.save(); g.translate(-7,-28); g.rotate(-0.3-a*1.3); g.fillStyle='#2a2440'; g.fillRect(-1.5,-9,3,9); cry([-2,-9,0,-28,2,-9],'rgba(170,230,255,.9)'); g.restore(); },{top:-50}),
+};
 /* ---------- monstruos ---------- */
 // franjas de 30 fases: monstruos normales, jefe (cada 10 fases) y élite (fases 50, 100 y 150; Jefe semanal). La última franja es
 // el portal (gólems) y, en el modo Infierno, el infierno (demonios). Sin élite propio en una franja, se usa el jefe.
@@ -134,10 +247,14 @@ const kindFor=(zone,i,o)=>{ o=o||{}; const zi=zone===4&&o.mode===2?5:Math.max(0,
   return o.boss?(o.elite?z.elite:z.boss):z.n[i%z.n.length] };
 const hsl=(h,s,l)=>`hsl(${h} ${s}% ${l}%)`;
 function monster(g,x,y,o){
-  const kk=o.kind||'slime', k=BASE[kk]||kk, r=o.r||13, s=r/13, t=o.t||0, die=o.die||0, hit=o.hit||0, atk=o.atk||0, walk=o.walk||0, hue=k==='demon'?0:o.hue||0;   // los demonios ya son del infierno: sin tinte
+  const kk=o.kind||'slime', k=BASE[kk]||kk, r=o.r||13, s=r/13, t=o.t||0, die=o.die||0, hit=o.hit||0, atk=o.atk||0, walk=o.walk||0, hue=NOHUE.has(k)?0:o.hue||0;   // los de Pesadilla e Infierno ya traen sus colores: sin tinte
   g.save(); g.translate(x+(hit?hit*5:0)-(atk?Math.sin(atk*Math.PI)*8:0),y);
   if(die){ g.globalAlpha=1-die; g.translate(0,die*6); }
   shadow(g,12*s);
+  if(o.boss&&!die){ const col=o.elite?'#e5484d':'#c86bff'; g.save(); g.strokeStyle=g.fillStyle=g.shadowColor=col; g.shadowBlur=8;   // élite y JEFE: aro de su color a los pies (el JEFE, con chispas que suben)
+    g.globalAlpha=0.35+0.15*Math.sin(t*3); g.lineWidth=2; g.beginPath(); g.ellipse(0,0,17*s,5*s,0,0,TAU); g.stroke();
+    if(o.elite) for(let i=0;i<4;i++){ const ph=(t*0.6+i/4)%1; g.globalAlpha=0.7*(1-ph); g.fillRect(((i*37)%28-14)*s,-ph*40*s,2,2); }
+    g.restore(); }
   g.scale(s,s);
   if(die) g.rotate(die*0.5);
   const eye=(ex,ey,c)=>{ g.fillStyle=c||'#fff'; g.beginPath(); g.arc(ex,ey,2.2,0,TAU); g.fill(); g.fillStyle=DARK; g.beginPath(); g.arc(ex-0.7,ey,1.1,0,TAU); g.fill(); };
@@ -180,6 +297,7 @@ function monster(g,x,y,o){
     g.fillStyle=c; rr(g,-12,-32,24,21,4); g.fill(); g.fillStyle=c2; rr(g,-7,-42,14,11,3); g.fill();
     g.fillStyle=hsl((25+hue)%360,95,60); g.shadowColor=g.fillStyle; g.shadowBlur=6; g.fillRect(-4,-38,3,3); g.fillRect(1,-38,3,3); g.fillRect(-2,-25,4,4); g.shadowBlur=0;
     g.fillStyle=c2; g.save(); g.translate(-12,-28); g.rotate(atk?-Math.sin(atk*Math.PI)*1.2:0); rr(g,-6,0,7,18,3); g.fill(); g.restore(); rr(g,11,-28,7,18,3); g.fill(); }
+  else if(MONSTER_DRAW[k]) MONSTER_DRAW[k](g,{t,walk,atk});
   else { const c=hsl((0+hue)%360,60,38), leg=walk?Math.sin(walk*10)*3:0, f=Math.sin(t*5)*3;   // demonio
     g.fillStyle=hsl((0+hue)%360,50,20); g.beginPath(); g.moveTo(2,-26); g.lineTo(18,-38-f); g.lineTo(14,-22); g.lineTo(20,-18); g.closePath(); g.fill(); g.beginPath(); g.moveTo(-2,-26); g.lineTo(-18,-38-f); g.lineTo(-14,-22); g.lineTo(-20,-18); g.closePath(); g.fill();
     g.fillStyle=DARK; g.fillRect(-6+leg,-12,5,12); g.fillRect(1-leg,-12,5,12);
@@ -190,7 +308,7 @@ function monster(g,x,y,o){
       g.strokeStyle=STEEL; g.beginPath(); g.moveTo(-4,-20); g.lineTo(-4,-26); g.moveTo(0,-20); g.lineTo(0,-27); g.moveTo(4,-20); g.lineTo(4,-26); g.stroke(); g.restore(); }   // tridente
   // corona: JEFE (o.elite) roja · élite (jefe de cada 10 fases) morada
   if(o.boss){ if(sp) g.translate((sp.hx-sp.ax)*sp.W,k==='bat'?7-sp.H:5-sp.H);   // sprite: corona sobre la cabeza
-    const top=sp?0:k==='orc'?-54:k==='bat'?-36:k==='slime'?-22:k==='golem'?-44:k==='skeleton'?-40:k==='demon'?-47:-37;
+    const top=sp?0:MONSTER_DRAW[k]?MONSTER_DRAW[k].top:k==='orc'?-54:k==='bat'?-36:k==='slime'?-22:k==='golem'?-44:k==='skeleton'?-40:k==='demon'?-47:-37;
     g.fillStyle=o.elite?'#e5484d':'#c86bff'; g.beginPath(); g.moveTo(-8,top); g.lineTo(-6,top-8); g.lineTo(-2,top-3); g.lineTo(0,top-9); g.lineTo(2,top-3); g.lineTo(6,top-8); g.lineTo(8,top); g.closePath(); g.fill(); }
   if(hit&&!sp){ g.globalAlpha=hit*0.3; g.fillStyle='#fff'; g.beginPath(); g.ellipse(0,-16,12,14,0,0,TAU); g.fill(); g.globalAlpha=1; }
   g.restore();
@@ -219,7 +337,7 @@ const glow=(g,c,b)=>{ g.shadowColor=c; g.shadowBlur=b };
 function orb(g,x,y,r,c){ glow(g,c,10); g.fillStyle=c; g.beginPath(); g.arc(x,y,r,0,TAU); g.fill(); g.shadowBlur=0; g.fillStyle='#fff'; g.beginPath(); g.arc(x,y,r*0.45,0,TAU); g.fill() }
 function drawFx(g,c){
   const T=c.now, out=[];
-  for(const f of FX){ const age=T-f.t0, life=f.dur||LIFE[f.type]||0.6, k=age/life; if(k>=1) continue; out.push(f);
+  for(const f of FX){ const age=T-f.t0, life=f.dur||LIFE[f.type]||(FX2[f.type]&&FX2[f.type].life)||0.6, k=age/life; if(k>=1) continue; out.push(f);
     const me=f.side==='rival'?c.rx:c.hx, dir=f.side==='rival'?-1:1, gy=c.gy;
     const tx=f.side==='rival'?[c.hx]:(c.foes.length?c.foes.map(o=>o.x):c.rx!=null?[c.rx]:[]), front=tx.length?tx[0]:me+60*dir;
     const to=f.e&&f.e.x!=null?f.e.x:f.tx!=null?f.tx:front;
@@ -271,6 +389,7 @@ function drawFx(g,c){
     else if(f.type==='loot'){ const x=to; g.globalAlpha=1-k; g.fillStyle='#ffd35a'; glow(g,'#ffd35a',18); for(let i=0;i<10;i++){ const a=i*TAU/10+age*1.5; g.save(); g.translate(x,gy-30); g.rotate(a); g.fillRect(8,-1.5,20+k*30,3); g.restore() } }
     else if(f.type==='reloj'){ g.globalAlpha=1-k; g.strokeStyle='#ffd35a'; g.lineWidth=2; glow(g,'#ffd35a',10); g.beginPath(); g.arc(me,gy-32,14+k*20,0,TAU); g.stroke(); }
     else if(f.type==='combustionHit'){ tx.forEach(x=>{ g.globalAlpha=1-k; orb(g,x,gy-14,4+k*12,'#ff7a1a') }); }
+    else if(FX2[f.type]) FX2[f.type](g,f,{k,age,me,dir,gy,tx,front,to,c});   // efectos nuevos (efectos-nuevos.js)
     g.restore(); }
   FX=out }
 // estados de un monstruo (encima de su dibujo): ardiendo, envenenado, congelado, marcado
@@ -282,6 +401,59 @@ function status(g,x,gy,r,st,t){ const s=r/13;
   if(st.mark){ g.save(); g.strokeStyle='#ff4d4d'; g.lineWidth=1.5; g.globalAlpha=0.9; const yy=gy-r*3.7-14, rr2=5; g.beginPath(); g.arc(x,yy,rr2,0,TAU); g.moveTo(x-rr2-3,yy); g.lineTo(x+rr2+3,yy); g.moveTo(x,yy-rr2-3); g.lineTo(x,yy+rr2+3); g.stroke(); g.restore(); } }
 const clearFx=()=>{ FX=[]; SH=0 };
 
+/* ---------- efectos nuevos: habilidades del kit y cosas de los enemigos de zona ----------
+   drawFx los llama por su tipo: FX2[tipo](g, f, x) con x = {k 0..1, age, me, dir, gy, tx (x de los enemigos), front, to}.
+   life: cuánto dura (s) si el efecto no trae 'dur'. */
+const fxCol=(c,a)=>c+Math.round(a*255).toString(16).padStart(2,'0');
+const FX2={
+  // tajos que caen uno tras otro sobre el primero (Triple, Desgarro, Mutilar, Mil cortes)
+  cortes:Object.assign((g,f,{k,dir,gy,front})=>{ const n=f.n||3, col=f.color||'#f4f6ff';
+    for(let i=0;i<n;i++){ const kk=k*n*0.8-i*0.55; if(kk<0||kk>1) continue; const a=(i%2?0.6:-0.6)+i*0.35, L=22;
+      g.globalAlpha=1-kk; g.strokeStyle=col; g.lineWidth=3; glow(g,col,10); g.beginPath();
+      g.moveTo(front-Math.cos(a)*L*dir,gy-24-Math.sin(a)*L); g.lineTo(front+Math.cos(a)*L*dir*(kk*2-1),gy-24+Math.sin(a)*L*(kk*2-1)); g.stroke(); } },{life:0.6}),
+  // onda que recorre el suelo y levanta piedras (Terremoto)
+  terremoto:Object.assign((g,f,{k,me,dir,gy,tx})=>{ const x=me+dir*k*360;
+    g.globalAlpha=1-k; g.strokeStyle='#c8a46a'; g.lineWidth=3; g.beginPath(); g.ellipse(x,gy,10+k*30,4+k*5,0,0,TAU); g.stroke();
+    g.fillStyle='#8a7a6a'; tx.forEach((ex,i)=>{ const d=Math.abs(ex-x); if(d>40) return; const up=(1-d/40)*16; for(let j=0;j<3;j++) g.fillRect(ex-8+j*7,gy-4-up-j*3,4,4); }); },{life:0.7}),
+  // una flecha a cada enemigo (Multidisparo)
+  flechas:Object.assign((g,f,{k,me,dir,gy,tx})=>{ tx.slice(0,5).forEach((x,i)=>{ const sx=me+12*dir, px=sx+(x-sx)*k, py=gy-34+(i-2)*4*(1-k)+k*14;
+      g.strokeStyle='#e8dcc0'; g.lineWidth=2; g.beginPath(); g.moveTo(px-12*dir,py); g.lineTo(px,py); g.stroke(); g.fillStyle=STEEL; g.beginPath(); g.moveTo(px+4*dir,py); g.lineTo(px-2*dir,py-3); g.lineTo(px-2*dir,py+3); g.fill(); }); },{life:0.35}),
+  // flechas que caen del cielo sobre todos (Lluvia)
+  lluvia:Object.assign((g,f,{age,gy,tx})=>{ g.strokeStyle='#e8dcc0'; g.lineWidth=2; tx.forEach((x,i)=>{ for(let j=0;j<3;j++){ const ph=(age*2.2+j*0.33+i*0.17)%1, px=x-14+j*12+ph*8, py=-10+ph*(gy-6);
+      g.globalAlpha=ph<0.9?1:(1-ph)*10; g.beginPath(); g.moveTo(px-4,py-14); g.lineTo(px,py); g.stroke(); } }); },{life:1.2}),
+  // cuchillos que giran hacia todos (Abanico)
+  cuchillos:Object.assign((g,f,{k,me,dir,gy,tx})=>{ g.fillStyle='#d8dde6'; tx.forEach((x,i)=>{ const sx=me+10*dir, px=sx+(x-sx)*k, py=gy-30-Math.sin(k*Math.PI)*(10+i*3);
+      g.save(); g.translate(px,py); g.rotate(k*18*dir); g.beginPath(); g.moveTo(0,-7); g.lineTo(2.5,0); g.lineTo(0,3); g.lineTo(-2.5,0); g.fill(); g.restore(); }); },{life:0.4}),
+  // orbes morados que van al primero y estallan (Sombra, Estallido, Devorar)
+  sombra:Object.assign((g,f,{k,me,dir,gy,front})=>{ const sx=me+10*dir;
+    if(k<0.55){ const kk=k/0.55; for(let i=0;i<2;i++) orb(g,sx+(front-sx)*kk,gy-36+i*10-Math.sin(kk*Math.PI)*12,4,'#8a5cd0'); }
+    else { const e=(k-0.55)/0.45; g.globalAlpha=1-e; orb(g,front,gy-24,6+e*20,'#5b3a9a'); } },{life:0.6}),
+  // rayo que salta entre enemigos (Cadena)
+  cadena:Object.assign((g,f,{k,me,dir,gy,tx})=>{ const pts=[me+12*dir,...tx.slice(0,5)], n=Math.min(pts.length-1,Math.floor(k*pts.length*1.3));
+    g.strokeStyle='#ffe066'; g.lineWidth=2.5; glow(g,'#ffe066',12); g.globalAlpha=1-k*0.6;
+    for(let i=0;i<n;i++){ const a=pts[i], b=pts[i+1], y=gy-30; g.beginPath(); g.moveTo(a,y); for(let s=1;s<5;s++) g.lineTo(a+(b-a)*s/5,y+((s*7+i*3)%2?-7:7)); g.lineTo(b,y); g.stroke(); } },{life:0.6}),
+  // meteoritos que caen en diagonal sobre los enemigos (Meteoros)
+  meteoros:Object.assign((g,f,{k,gy,tx})=>{ for(let i=0;i<5;i++){ const kk=k*1.6-i*0.15; if(kk<0||kk>1.2||!tx.length) continue; const x=tx[i%tx.length]+((i*13)%20)-10;
+      if(kk<1){ const px=x+60*(1-kk), py=gy-14-120*(1-kk); g.globalAlpha=0.5; g.strokeStyle='#ffb13b'; g.lineWidth=5; g.beginPath(); g.moveTo(px+18,py-36); g.lineTo(px,py); g.stroke(); g.globalAlpha=1; orb(g,px,py,5,'#ff6a1a'); }
+      else { g.globalAlpha=1-(kk-1)*5; orb(g,x,gy-10,8+(kk-1)*60,'#ff7a1a'); } } },{life:1.3}),
+  // anillo sobre un enemigo (color): furia, escudo de luz, devora, se levanta, humo…
+  ering:Object.assign((g,f,{k,gy,to})=>{ const col=f.color||'#ffffff'; g.globalAlpha=1-k; g.strokeStyle=col; g.lineWidth=2.5; glow(g,col,12);
+    if(f.puff){ g.fillStyle=fxCol(col,0.5); for(let i=0;i<6;i++){ const a=i*TAU/6; g.beginPath(); g.arc(to+Math.cos(a)*(6+k*16),gy-18+Math.sin(a)*(5+k*10),5+k*4,0,TAU); g.fill(); } }
+    else { g.beginPath(); g.ellipse(to,gy-24,10+k*18,14+k*22,0,0,TAU); g.stroke(); } },{life:0.6}),
+  // un enemigo carga un golpe: «!» rojo que late encima (dura lo que tarda en soltarlo)
+  cargando:Object.assign((g,f,{age,gy,to})=>{ const p=0.7+0.3*Math.sin(age*14); g.globalAlpha=p; g.fillStyle='#ff3b3b'; glow(g,'#ff3b3b',12);
+    g.font='900 20px "Nunito Sans", system-ui, sans-serif'; g.textAlign='center'; g.fillText('!',to,gy-(f.h||70)); },{life:2}),
+  // nombre de la habilidad de un enemigo, en rojo, encima de él
+  ename:Object.assign((g,f,{k,gy,to,c})=>{ g.globalAlpha=Math.min(1,(1-k)*3); g.textAlign='center'; g.fillStyle='#ff6b6b'; glow(g,'#000',4); g.font='800 10px "Nunito Sans", system-ui, sans-serif';
+    const w=g.measureText(f.text).width, Wd=c.W||1e4, x=Math.max(4+w/2,Math.min(Wd-4-w/2,to)); g.fillText(f.text,x,gy-(f.h||70)-10-k*10); },{life:1.2}),
+  // algo le pasa al héroe (aturdido, sin habilidades, quemadura de zona…): anillo de color y estrellitas
+  hring:Object.assign((g,f,{k,age,me,gy})=>{ const col=f.color||'#ffd35a'; g.globalAlpha=1-k; g.strokeStyle=col; g.lineWidth=2; glow(g,col,10);
+    g.beginPath(); g.ellipse(me,gy-30,14+k*14,22+k*14,0,0,TAU); g.stroke();
+    if(f.stars){ g.fillStyle=col; for(let i=0;i<3;i++){ const a=age*5+i*TAU/3; g.beginPath(); g.arc(me+Math.cos(a)*12,gy-66+Math.sin(a)*3,2.2,0,TAU); g.fill(); } } },{life:0.9}),
+  // onda que sale del héroe hacia los enemigos (Onda del Guerrero, Gracia del Clérigo, Último aliento)
+  ola:Object.assign((g,f,{k,me,dir,gy})=>{ const col=f.color||'#7fb6ff'; g.globalAlpha=1-k; g.strokeStyle=col; g.lineWidth=3; glow(g,col,12);
+    g.beginPath(); g.ellipse(me+dir*k*140,gy-20,6+k*10,18+k*12,0,0,TAU); g.stroke(); },{life:0.6})
+};
 /* ---------- escenarios ----------
    scene(g, W, H, gy, zone, scroll, mode, t): fondo en capas (cielo, lejos, medio y suelo) que se desplazan a distinta velocidad
    (parallax) según 'scroll' (cuánto ha andado el héroe). Mismo estilo que los personajes: contorno oscuro, sombreado plano y luces vivas.

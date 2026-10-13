@@ -64,7 +64,7 @@ const SKI={
   combustion:['<path d="M32 3C36 15 50 21 50 39A18 18 0 0 1 14 39C14 31 18 25 22 21C22 27 24 31 28 33C26 21 28 12 32 3Z" fill="#e2502a"/><path d="M33 20C36 28 44 32 44 41A12 12 0 0 1 20 41C20 36 23 32 26 30C26 34 28 36 30 37C29 31 31 26 33 20Z" fill="#ff8a2a"/><path d="M32 44c3 3 5 5 5 8a5 5 0 0 1-10 0c0-3 2-5 5-8z" fill="#ffd66b"/><path d="M24 37l6 2.5M40 37l-6 2.5" fill="none" stroke="#140f1c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="41" r="2" fill="#140f1c"/><circle cx="37" cy="41" r="2" fill="#140f1c"/><path d="M32 3C36 15 50 21 50 39A18 18 0 0 1 14 39C14 31 18 25 22 21C22 27 24 31 28 33C26 21 28 12 32 3Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>','Tus quemaduras hacen más daño y saltan a otros enemigos.'],
   rapido:['<path d="M4 26h12M2 36h10M6 46h9" fill="none" stroke="#140f1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 26h12M2 36h10M6 46h9" fill="none" stroke="#7fc8e8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 37L50 8L57 7L56 14L30 40Z" fill="#b9c0cc"/><path d="M30 40L56 14L57 7L52 9L28 38Z" fill="#6f7785" opacity="0.5"/><path d="M50 10L31 34" fill="none" stroke="#eef2f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 37L50 8L57 7L56 14L30 40Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M20 31L36 47" fill="none" stroke="#140f1c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 31L36 47" fill="none" stroke="#e8b04a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 42L16 51" fill="none" stroke="#140f1c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 42L16 51" fill="none" stroke="#8a5a34" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14" cy="53" r="4.5" fill="#e8b04a" stroke="#140f1c" stroke-width="2.5"/>','Atacas mucho más rápido durante un rato.'],
   clon:['<path d="M22 10C13 10 8 18 8 27V52H36V27C36 18 31 10 22 10Z" fill="#3b2a5e"/><path d="M22 10C13 10 8 18 8 27V52H36V27C36 18 31 10 22 10Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><ellipse cx="22" cy="28" rx="8" ry="7" fill="#140f1c"/><circle cx="19" cy="28" r="1.9" fill="#b066e8"/><circle cx="25" cy="28" r="1.9" fill="#b066e8"/><path d="M42 14C33 14 28 22 28 31V58H56V31C56 22 51 14 42 14Z" fill="#9b6ad6"/><path d="M42 14C51 14 56 22 56 31V58H46V31C46 23 45 17 42 14Z" fill="#5a3a86" opacity="0.55"/><path d="M42 14C33 14 28 22 28 31V58H56V31C56 22 51 14 42 14Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><ellipse cx="42" cy="33" rx="8.5" ry="7.5" fill="#140f1c"/><circle cx="38.5" cy="33" r="2.4" fill="#ffd66b"/><circle cx="45.5" cy="33" r="2.4" fill="#ffd66b"/>','Un clon de sombra copia tus golpes durante un rato.'],
-  juicio:['<circle cx="32" cy="32" r="27" fill="#ffd66b" opacity="0.12"/><path d="M28.3 15.4L32.0 2.0L35.7 15.4ZM41.1 17.6L53.2 10.8L46.4 22.9ZM48.6 28.3L62.0 32.0L48.6 35.7ZM46.4 41.1L53.2 53.2L41.1 46.4ZM35.7 48.6L32.0 62.0L28.3 48.6ZM22.9 46.4L10.8 53.2L17.6 41.1ZM15.4 35.7L2.0 32.0L15.4 28.3ZM17.6 22.9L10.8 10.8L22.9 17.6Z" fill="#e8b04a"/><path d="M28.3 15.4L32.0 2.0L35.7 15.4ZM41.1 17.6L53.2 10.8L46.4 22.9ZM48.6 28.3L62.0 32.0L48.6 35.7ZM46.4 41.1L53.2 53.2L41.1 46.4ZM35.7 48.6L32.0 62.0L28.3 48.6ZM22.9 46.4L10.8 53.2L17.6 41.1ZM15.4 35.7L2.0 32.0L15.4 28.3ZM17.6 22.9L10.8 10.8L22.9 17.6Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="32" r="15" fill="#ffd66b" stroke="#140f1c" stroke-width="3"/><path d="M20 32Q32 21 44 32Q32 43 20 32Z" fill="#fff3c4"/><path d="M20 32Q32 21 44 32Q32 43 20 32Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="32" r="5.5" fill="#e8b04a" stroke="#140f1c" stroke-width="2"/><circle cx="32" cy="32" r="2.4" fill="#140f1c"/>','Un aura que te cura y quema a los enemigos cercanos.'],
+  juicio:['<circle cx="32" cy="32" r="27" fill="#ffd66b" opacity="0.12"/><path d="M28.3 15.4L32.0 2.0L35.7 15.4ZM41.1 17.6L53.2 10.8L46.4 22.9ZM48.6 28.3L62.0 32.0L48.6 35.7ZM46.4 41.1L53.2 53.2L41.1 46.4ZM35.7 48.6L32.0 62.0L28.3 48.6ZM22.9 46.4L10.8 53.2L17.6 41.1ZM15.4 35.7L2.0 32.0L15.4 28.3ZM17.6 22.9L10.8 10.8L22.9 17.6Z" fill="#e8b04a"/><path d="M28.3 15.4L32.0 2.0L35.7 15.4ZM41.1 17.6L53.2 10.8L46.4 22.9ZM48.6 28.3L62.0 32.0L48.6 35.7ZM46.4 41.1L53.2 53.2L41.1 46.4ZM35.7 48.6L32.0 62.0L28.3 48.6ZM22.9 46.4L10.8 53.2L17.6 41.1ZM15.4 35.7L2.0 32.0L15.4 28.3ZM17.6 22.9L10.8 10.8L22.9 17.6Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="32" r="15" fill="#ffd66b" stroke="#140f1c" stroke-width="3"/><path d="M32 20L34.8 29.2L44 32L34.8 34.8L32 44L29.2 34.8L20 32L29.2 29.2Z" fill="#fff6c8"/><path d="M32 20L34.8 29.2L44 32L34.8 34.8L32 44L29.2 34.8L20 32L29.2 29.2Z" fill="none" stroke="#140f1c" stroke-width="2.2" stroke-linejoin="round"/>','Un aura que te cura y quema a los enemigos cercanos.'],
   baluarte:['<path d="M14 16L3 11L10 25Z" fill="#c9ced8"/><path d="M14 16L3 11L10 25Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M50 16L61 11L54 25Z" fill="#c9ced8"/><path d="M50 16L61 11L54 25Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M15 36L4 43L16 44Z" fill="#c9ced8"/><path d="M15 36L4 43L16 44Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M49 36L60 43L48 44Z" fill="#c9ced8"/><path d="M49 36L60 43L48 44Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 10L28 2L32 10ZM32 10L36 2L40 10Z" fill="#c9ced8"/><path d="M24 10L28 2L32 10ZM32 10L36 2L40 10Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 10H50V34C50 46 42 54 32 59C22 54 14 46 14 34Z" fill="#8a919e"/><path d="M32 10H50V34C50 46 42 54 32 59Z" fill="#5a6170" opacity="0.6"/><path d="M18 14H46" fill="none" stroke="#eef2f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/><path d="M14 10H50V34C50 46 42 54 32 59C22 54 14 46 14 34Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="31" r="8" fill="#e8b04a" stroke="#140f1c" stroke-width="2.5"/><circle cx="30" cy="29" r="2.2" fill="#ffe08a"/>','Más defensa y devuelves parte del daño que recibes.'],
   armaduraHielo:['<path d="M10 27L22 22L27 45L18 51Z" fill="#7fc8e8"/><path d="M10 27L22 22L27 45L18 51Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M54 27L42 22L37 45L46 51Z" fill="#7fc8e8"/><path d="M54 27L42 22L37 45L46 51Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M32 4L41 20L36 50H28L23 20Z" fill="#a8d8f0"/><path d="M32 4L41 20L36 50H32Z" fill="#3f86b8" opacity="0.45"/><path d="M30 12L27 22M18 28l3 10M46 28l-3 10" fill="none" stroke="#e6f6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 4L41 20L36 50H28L23 20Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 56H54" fill="none" stroke="#140f1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 56H54" fill="none" stroke="#a8d8f0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>','Esquirlas de hielo a todos; quien te golpea recibe más.'],
   marca:['<path d="M32 2v12M32 50v12M2 32h12M50 32h12" fill="none" stroke="#140f1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 2v12M32 50v12M2 32h12M50 32h12" fill="none" stroke="#e2605a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="21" fill="none" stroke="#140f1c" stroke-width="8"/><circle cx="32" cy="32" r="21" fill="none" stroke="#e2605a" stroke-width="4"/><circle cx="32" cy="30" r="9" fill="#e9dfc8" stroke="#140f1c" stroke-width="2.5"/><path d="M27 37h10v5H27z" fill="#e9dfc8"/><path d="M27 37h10v5H27z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="28.5" cy="29.5" r="2.4" fill="#140f1c"/><circle cx="35.5" cy="29.5" r="2.4" fill="#140f1c"/><path d="M32 32l-1.5 3h3z" fill="#140f1c"/>','Marcas a un enemigo y recibe más daño.'],
@@ -75,7 +75,76 @@ const SKI={
 { const A={tGolpe:'ejecutar',tMuro:'muro',tSangria:'sacrificio',tTorbellino:'perforante',tBaluarte:'baluarte',tSed:'sed',tLluvia:'rapido',tFestin:'marca'};
   for(const k in A) if(SKI[A[k]]&&CFG.tower.cards[k]) SKI[k]=[SKI[A[k]][0],CFG.tower.cards[k].desc]; }
 const skIcon=id=>`<svg class="ski" viewBox="0 0 64 64" width="30" height="30" aria-hidden="true">${(SKI[id]||['<circle cx="32" cy="32" r="15" fill="currentColor"/>'])[0]}</svg>`;   // iconos propios (64×64, paleta del juego)
-const skTip=x=>`<b>${esc(x.name||'')}</b><br>${(SKI[x.id]||[0,esc(x.desc||'')])[1]}`;
+const skTip=x=>`<b>${esc(x.name||'')}</b><br>${x.desc?esc(x.desc):(SKI[x.id]||[])[1]||''}`;   // su texto (las del kit, con números)
+/* ---------- iconos de las habilidades del kit (una por habilidad; las II usan el de la I) ---------- */
+// Mismo estilo que los de arriba (64×64, borde oscuro, paleta del juego). Se guardan en SKI sin texto: el texto sale de su desc.
+{ const D='#140f1c', ST='#b9c0cc', ST2='#6f7785', HL='#eef2f8', WD='#8a5a34', GD='#ffd66b', GD2='#a8741e', FI='#e2502a', FI2='#ffb13b',
+    IC='#7fc8e8', PO='#6cc47a', BL='#b8323a', SH='#3b2a5e', SH2='#8a5cd0', PAL='#f3e9d2';
+  const r1=n=>Math.round(n*10)/10;
+  const F=(d,c,w)=>`<path d="${d}" fill="${c}"/><path d="${d}" fill="none" stroke="${D}" stroke-width="${w||3}" stroke-linejoin="round" stroke-linecap="round"/>`;   // relleno con borde
+  const L=(d,c,w)=>`<path d="${d}" fill="none" stroke="${D}" stroke-width="${w+4}" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;   // trazo con borde
+  const G=(d,c,w,o)=>`<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"${o?` opacity="${o}"`:''}/>`;   // brillo o estela, sin borde
+  const C=(x,y,r,c,w)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/><circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${D}" stroke-width="${w||3}"/>`;
+  const glow=(c,o)=>`<circle cx="32" cy="32" r="27" fill="${c}" opacity="${o||0.13}"/>`;
+  const star=(cx,cy,n,ro,ri,rot)=>{ let d=''; for(let i=0;i<n*2;i++){ const a=(rot||0)+i*Math.PI/n, r=i%2?ri:ro; d+=(i?'L':'M')+r1(cx+Math.sin(a)*r)+' '+r1(cy-Math.cos(a)*r); } return d+'Z' };
+  const flame=(cx,by,h,w)=>`M${cx} ${by-h}Q${r1(cx+w)} ${r1(by-h*0.5)} ${r1(cx+w*0.8)} ${r1(by-w*0.8)}A${r1(w*0.8)} ${r1(w*0.8)} 0 0 1 ${r1(cx-w*0.8)} ${r1(by-w*0.8)}Q${r1(cx-w)} ${r1(by-h*0.5)} ${cx} ${by-h}Z`;
+  const drop=(x,y,s)=>F(`M${x} ${y-s*2}C${r1(x+s*0.6)} ${r1(y-s)} ${r1(x+s)} ${r1(y-s*0.4)} ${r1(x+s)} ${y}A${s} ${s} 0 0 1 ${r1(x-s)} ${y}C${r1(x-s)} ${r1(y-s*0.4)} ${r1(x-s*0.6)} ${r1(y-s)} ${x} ${y-s*2}Z`,BL,2);
+  // flecha de (x1,y1) a (x2,y2): astil, punta y plumas
+  const arrow=(x1,y1,x2,y2)=>{ const l=Math.hypot(x2-x1,y2-y1), ux=(x2-x1)/l, uy=(y2-y1)/l, bx=x2-ux*9, by=y2-uy*9, nx=-uy, ny=ux;
+    return L(`M${x1} ${y1}L${r1(bx)} ${r1(by)}`,WD,2.5)+F(`M${x2} ${y2}L${r1(bx+nx*4.5)} ${r1(by+ny*4.5)}L${r1(bx-nx*4.5)} ${r1(by-ny*4.5)}Z`,ST,2)
+      +G(`M${r1(x1+ux*6)} ${r1(y1+uy*6)}L${r1(x1+nx*4)} ${r1(y1+ny*4)}M${r1(x1+ux*6)} ${r1(y1+uy*6)}L${r1(x1-nx*4)} ${r1(y1-ny*4)}`,'#e2605a',2.5) };
+  // cuchillo arrojadizo: de (x,y) hacia el ángulo a (grados, 0 = arriba), largo l
+  const knife=(x,y,a,l)=>{ const t=a*Math.PI/180, ux=Math.sin(t), uy=-Math.cos(t), nx=-uy, ny=ux, hx=x+ux*l*0.35, hy=y+uy*l*0.35, tx=x+ux*l, ty=y+uy*l;
+    return L(`M${r1(x)} ${r1(y)}L${r1(hx)} ${r1(hy)}`,SH,3)+F(`M${r1(tx)} ${r1(ty)}L${r1(hx+nx*4.2)} ${r1(hy+ny*4.2)}L${r1(hx-nx*4.2)} ${r1(hy-ny*4.2)}Z`,ST,2)
+      +G(`M${r1(hx+nx*5)} ${r1(hy+ny*5)}L${r1(hx-nx*5)} ${r1(hy-ny*5)}`,GD,2.5) };
+  const snow=()=>{ let d=''; for(let i=0;i<6;i++){ const a=i*Math.PI/3, s=Math.sin(a), c=-Math.cos(a), ex=32+s*25, ey=32+c*25, mx=32+s*16, my=32+c*16;
+      d+=`M32 32L${r1(ex)} ${r1(ey)}`; for(const k of [-1,1]){ const b=a+k*0.7; d+=`M${r1(mx)} ${r1(my)}L${r1(mx+Math.sin(b)*8)} ${r1(my-Math.cos(b)*8)}`; } } return d };
+  const K={
+    // Guerrero
+    tajo:G('M8 28Q28 2 56 22',HL,4,0.5)+F('M50 8L56 8L56 14L24 46L18 40Z',ST)+G('M53 11L23 41',HL,1.5)+L('M13 36L28 51',GD,4)+L('M18 46L10 54',WD,4)+C(8,56,3.5,GD,2.5),
+    escudazo:L('M5 18L12 23M3 32H11M5 46L12 41',GD,3)+C(38,32,21,ST)+C(38,32,14,ST2,2.5)+C(38,32,5,GD,2.5)+G('M25 19Q31 13 40 12',HL,2.5),
+    provocar:L('M9 20Q3 32 9 44M55 20Q61 32 55 44',BL,2.5)+C(32,32,18,BL)+G('M25 19Q29 16 34 16',HL,2,0.6)+L('M32 21V34','#fff',4)+C(32,42,2.8,'#fff',2),
+    terremoto:G('M8 37Q16 31 24 37M40 37Q48 31 56 37',GD,2.5)+F('M3 42H61V60H3Z',WD)+G('M5 45H59',GD2,2)+G('M32 43L27 49L35 53L30 59',D,3)
+      +F('M12 24L19 20L23 27L16 31Z',ST2,2.5)+F('M42 16L49 14L50 22L43 23Z',ST2,2.5)+F('M29 6L34 5L35 11L30 12Z',ST2,2),
+    desgarro:L('M14 8Q24 30 16 56',BL,4)+L('M28 6Q38 30 30 58',BL,4)+L('M42 8Q52 30 44 56',BL,4)+G('M16 12Q23 28 18 44M30 10Q37 28 32 46M44 12Q51 28 46 44','#e2605a',1.5)+drop(55,52,4),
+    triple:L('M18 44L30 6',ST,4)+L('M20 46L50 12',ST,4)+L('M22 48L60 32',ST,4)+G('M19 41L29 9M22 43L48 14M24 46L57 33',HL,1.2)+L('M10 40L22 54',GD,3.5)+C(12,52,4,GD,2.5),
+    // Mago
+    misil:G('M2 60L16 46M12 34L24 22M28 60L40 48',SH2,7,0.35)+C(20,42,8,SH2)+C(30,18,8,SH2)+C(46,44,8,SH2)+C(17,39,2.2,'#fff',0.1)+C(27,15,2.2,'#fff',0.1)+C(43,41,2.2,'#fff',0.1),
+    llama:F(flame(12,58,24,7),FI,2.5)+F(flame(52,58,24,7),FI,2.5)+F(flame(32,58,48,15),FI)+F(flame(32,58,28,8),FI2,2.5),
+    explosion:F(star(32,32,10,29,15),FI)+F(star(32,32,10,18,9,0.3),FI2,2.5)+C(32,32,5,'#fff6c8',2),
+    meteoros:F('M16 32L62 2L32 48Z',FI)+F('M20 34L56 8L30 44Z',FI2,2)+C(24,40,11,'#7a4a32')+G('M18 36L24 42L30 38M22 46L26 44',FI2,2)+F('M43 47L63 33L53 57Z',FI,2.5)+C(48,52,7,'#7a4a32',2.5)+G('M45 51L50 54',FI2,2),
+    escarcha:glow(IC,0.12)+L(snow(),IC,3)+C(32,32,4,'#fff',2),
+    lanza:G('M10 46L4 40M18 54L12 58M22 36L16 34',IC,2,0.6)+F('M8 56L39 15L58 6L49 25Z',IC)+G('M10 54L56 8',HL,1.5,0.8)+F('M44 40L48 36L52 40L48 44Z','#e8f7ff',2)+F('M50 52L53 49L56 52L53 55Z','#e8f7ff',2),
+    cometa:G('M6 58Q24 42 36 26',IC,14,0.3)+G('M6 58Q24 42 36 26','#fff',5,0.45)+C(42,22,13,IC)+C(42,22,7,'#e8f7ff',2)+F(star(14,18,4,5,1.8),'#fff',1.5)+F(star(56,48,4,4,1.5),'#fff',1.5),
+    // Arquero
+    disparo:L('M22 6Q46 32 22 58',WD,4)+G('M22 6L12 32L22 58',HL,1.5)+arrow(12,32,60,32)+G('M30 22H40M30 42H40',HL,2,0.5),
+    multidisparo:arrow(6,50,48,8)+arrow(6,52,60,30)+arrow(6,54,58,56),
+    lluvia:arrow(22,4,14,32)+arrow(42,4,34,32)+arrow(58,20,50,48)+arrow(32,28,24,58),
+    remate:C(38,30,22,PAL)+C(38,30,14,BL,2.5)+C(38,30,6,PAL,2.5)+G('M38 4V0M60 30H64M54 12L58 8',GD,2.5)+L('M6 58L34 34',WD,2.5)+G('M8 50L10 56L4 54',BL,2.5)+F('M38 30L30 32L36 36Z',ST,2),
+    // Asesino
+    punalada:G('M40 4L34 10M50 18L58 14M30 2V8',HL,2,0.6)+F('M58 6L27 45L19 37Z',ST)+G('M55 9L25 41',HL,1.2)+L('M13 33L31 51',GD,3.5)+L('M20 46L11 55',SH,4)+C(9,57,3,GD,2),
+    giro:G('M50 14A24 24 0 1 1 14 14',HL,6,0.25)+L('M48 14A22 22 0 1 1 16 14','#c9ced8',3)+F('M16 14L8 10L10 20Z','#c9ced8',2)+knife(22,42,45,30),
+    abanico:knife(32,62,-60,40)+knife(32,62,-30,46)+knife(32,62,0,52)+knife(32,62,30,46)+knife(32,62,60,40),
+    torbellino:L('M32 30a3 3 0 1 1 -3 3a7 7 0 0 1 7 -7a11 11 0 0 1 11 11a15 15 0 0 1 -15 15a19 19 0 0 1 -19 -19a23 23 0 0 1 23 -23','#c9ced8',3)+G('M10 10L6 6M56 56L60 60',HL,2,0.6)+F('M55 4L49 12L44 6Z',ST,2),
+    mutilar:knife(10,54,45,52)+knife(54,54,-45,52)+drop(32,34,3.5)+drop(20,22,2.5).replace(new RegExp(BL,'g'),PO)+drop(44,22,2.5).replace(new RegExp(BL,'g'),PO),
+    envenenar:F('M26 8H38V20L50 44Q54 57 42 58H22Q10 57 14 44L26 20Z','#d9e6ee')+F('M17 38H47L50 46Q52 55 42 56H22Q12 55 14 46Z',PO,2.5)+F('M24 3H40V9H24Z',WD,2.5)
+      +C(26,46,2.5,'#bff0c5',1.5)+C(36,50,2,'#bff0c5',1.5)+C(42,42,1.6,'#bff0c5',1.2)+G('M30 24V34',HL,2,0.6),
+    milcortes:L('M8 16L54 40',HL,2.5)+L('M10 50L56 12',HL,2.5)+L('M6 32L58 28',HL,2.5)+L('M22 6L38 58',HL,2.5)+drop(14,58,3)+drop(52,58,3)+drop(56,8,2.5),
+    // Clérigo
+    cadena:glow(GD,0.12)+L('M10 48L19 37L15 32L26 23L32 16',GD,2.5)+L('M32 16L40 26L36 31L47 38L54 46',GD,2.5)+C(10,48,5,'#fff6c8',2.5)+C(32,16,5,'#fff6c8',2.5)+C(54,46,5,'#fff6c8',2.5),
+    consagrar:G('M16 40V20M32 42V8M48 40V20',GD,3,0.55)+F('M6 46A26 10 0 1 0 58 46A26 10 0 1 0 6 46Z','#ffe9a8')+G('M14 46A18 6 0 1 0 50 46A18 6 0 1 0 14 46Z',GD2,2)
+      +C(24,24,2,'#fff6c8',1.2)+C(40,16,2,'#fff6c8',1.2)+C(42,30,1.6,'#fff6c8',1),
+    sombra:F('M32 4C40 16 52 22 52 38A20 20 0 0 1 12 38C12 28 18 22 22 16C22 24 26 28 30 28C28 18 30 12 32 4Z',SH)+F('M32 22C38 30 44 34 44 42A12 12 0 0 1 20 42C20 36 24 32 28 30Z',SH2,2.5)
+      +'<ellipse cx="27" cy="40" rx="2.5" ry="3.5" fill="#e6d6ff"/><ellipse cx="37" cy="40" rx="2.5" ry="3.5" fill="#e6d6ff"/>',
+    estallido:F(star(32,32,8,29,13,0.2),SH)+F(star(32,32,8,18,8,0.6),SH2,2.5)+C(32,32,5,'#e6d6ff',2)+F('M8 8L14 12L10 16Z',SH2,2)+F('M56 54L50 50L54 46Z',SH2,2),
+    devorar:F('M5 30Q32 0 59 30Q32 20 5 30Z',SH)+F('M5 36Q32 26 59 36Q32 64 5 36Z',SH)
+      +F('M14 27L17 33L20 25ZM26 23L29 30L32 22ZM38 22L41 30L44 23ZM50 25L52 32L55 27Z','#fff',1.5)+F('M18 38L20 32L23 39ZM30 40L32 33L35 40ZM42 39L44 32L47 38Z','#fff',1.5)
+      +C(32,34,3.5,SH2,2)+'<ellipse cx="20" cy="18" rx="2.5" ry="2" fill="#e6d6ff"/><ellipse cx="44" cy="18" rx="2.5" ry="2" fill="#e6d6ff"/>'
+  };
+  for(const k in K) if(!SKI[k]) SKI[k]=[K[k]];
+  // las que ya tenían uno que encaja: Perforar (perforante), Apuntar (marca) y Ráfaga (rápido)
+  SKI.perforar=SKI.perforar||[SKI.perforante[0]]; SKI.apuntar=SKI.apuntar||[SKI.marca[0]]; SKI.rafaga=SKI.rafaga||[SKI.rapido[0]];
+}
 /* ---------- iconos: monedas, cofres, tickets y materiales ---------- */
 // iconos de las monedas de arriba: moneda de oro, token (rombo) y chatarra (engranaje)
 const ICON={
@@ -125,7 +194,8 @@ const fsMark=()=>{ try{ document.documentElement.classList.toggle('tgfs',!!(TG&&
 if(TG){ fsMark(); try{ TG.onEvent('fullscreenChanged',fsMark) }catch(e){} }
 if(TG){ try{ TG.setHeaderColor('#12141c'); TG.setBackgroundColor('#12141c'); if(TG.setBottomBarColor) TG.setBottomBarColor('#1b1e2a'); }catch(e){} }
 // vibración corta (jefe vencido, cofres, evolución); no en modo batería
-function haptic(kind){ if(!TG||!TG.HapticFeedback||battery()) return; try{ kind==='ok'?TG.HapticFeedback.notificationOccurred('success'):TG.HapticFeedback.impactOccurred(kind||'light') }catch(e){} }
+function haptic(kind){ if(kind==='ok') sfx('ok');   // (y su sonido: cofres, compras, evoluciones…)
+  if(!TG||!TG.HapticFeedback||battery()) return; try{ kind==='ok'?TG.HapticFeedback.notificationOccurred('success'):TG.HapticFeedback.impactOccurred(kind||'light') }catch(e){} }
 // Botón atrás de Telegram: cierra la ventana abierta o vuelve a la pantalla anterior (en Inicio sin ventanas, se oculta y atrás cierra el juego)
 function canGoBack(){ if(!S) return false; if(modalOpen()) return !pendingSpin&&!adTimerOn()&&!($('#nameIn')&&!S.name);
   return tab!=='up'||false }
@@ -139,6 +209,109 @@ let backShown=null;
 function syncBack(){ if(!TG||!TG.BackButton) return; const v=canGoBack(); if(v===backShown) return; backShown=v; try{ v?TG.BackButton.show():TG.BackButton.hide() }catch(e){} }
 if(TG&&TG.BackButton) try{ TG.BackButton.onClick(goBack) }catch(e){}
 
+/* ---------- sonido: efectos y música hechos con WebAudio (estilo retro suave, sin archivos) ----------
+   Efectos: golpes, críticos, golpes recibidos, habilidades (según su tipo), habilidades enemigas, nivel, jefes, victoria,
+   derrota, cofres y botones. Música: un bucle tranquilo por modo (Normal, Pesadilla, Infierno) y otro más tenso en los
+   JEFES. Se enciende con el primer toque (los navegadores no dejan sonar antes). Ajustes: opt.music y opt.sfx (encendidos
+   si no se han apagado), a volumen bajo. Sin pestaña visible, se calla. */
+const SND={ac:null,out:null,sfx:null,mus:null,noise:null,last:{},theme:null,next:0,step:0,timer:null};
+const sndOn=k=>!(S&&S.opt&&S.opt[k]===false);
+window.SND=SND;   // (para las pruebas de pantalla y la muestra de audio)
+const sndLib=()=>({THEMES,SFX,tone,hiss,NOTE});
+window.sndLib=()=>sndLib();
+function sndInit(){ if(SND.ac) return SND.ac; const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+  try{ const ac=new AC(), f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=3200; f.connect(ac.destination);   // suave: sin agudos chillones
+    const out=ac.createGain(); out.gain.value=0.9; out.connect(f);
+    const sfx=ac.createGain(); sfx.gain.value=0.32; sfx.connect(out); const mus=ac.createGain(); mus.gain.value=0.11; mus.connect(out);
+    const nb=ac.createBuffer(1,ac.sampleRate*0.5,ac.sampleRate), d=nb.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    Object.assign(SND,{ac,out,sfx,mus,noise:nb}); return ac }catch(e){ return null } }
+// una nota: frecuencia (o de f a f2), duración, forma de onda, volumen, retraso (s) y a qué va (efectos o música)
+function tone(f,dur,o){ const ac=SND.ac; if(!ac) return; o=o||{}; const t=ac.currentTime+(o.at||0), osc=ac.createOscillator(), g=ac.createGain();
+  osc.type=o.type||'triangle'; osc.frequency.setValueAtTime(f,t); if(o.f2) osc.frequency.exponentialRampToValueAtTime(Math.max(20,o.f2),t+dur);
+  const v=o.vol==null?0.3:o.vol; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+Math.min(0.01,dur/4)); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  osc.connect(g); g.connect(o.bus||SND.sfx); osc.start(t); osc.stop(t+dur+0.02) }
+// ruido filtrado (golpes, soplidos)
+function hiss(dur,o){ const ac=SND.ac; if(!ac) return; o=o||{}; const t=ac.currentTime+(o.at||0), s=ac.createBufferSource(), f=ac.createBiquadFilter(), g=ac.createGain();
+  s.buffer=SND.noise; f.type=o.filt||'bandpass'; f.frequency.setValueAtTime(o.freq||1500,t); if(o.f2) f.frequency.exponentialRampToValueAtTime(o.f2,t+dur); f.Q.value=o.q||1.2;
+  const v=o.vol==null?0.2:o.vol; g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  s.connect(f); f.connect(g); g.connect(o.bus||SND.sfx); s.start(t); s.stop(t+dur+0.02) }
+// efectos con nombre; cada uno con una espera mínima entre dos (para que 10 golpes a la vez no sean un ruido)
+const SFX_GAP={hit:0.07,crit:0.09,heroHit:0.12,kill:0.06,eskill:0.2,click:0.04};
+const NOTE=n=>440*Math.pow(2,(n-69)/12);   // número MIDI → Hz
+const SFX={
+  hit:()=>{ hiss(0.045,{freq:1800,vol:0.13}); tone(240,0.05,{f2:150,vol:0.08}) },
+  crit:()=>{ hiss(0.06,{freq:2600,vol:0.16}); tone(660,0.09,{f2:990,vol:0.12,type:'square'}) },
+  heroHit:()=>{ tone(150,0.12,{f2:70,vol:0.22,type:'sine'}); hiss(0.05,{freq:500,vol:0.08}) },
+  kill:()=>tone(520,0.07,{f2:820,vol:0.09}),
+  eskill:()=>{ tone(190,0.18,{f2:110,vol:0.12,type:'square'}); hiss(0.12,{freq:700,vol:0.06}) },
+  click:()=>tone(1150,0.025,{vol:0.05}),
+  level:()=>[72,76,79,84].forEach((n,i)=>tone(NOTE(n),0.12,{at:i*0.07,vol:0.16,type:'square'})),
+  coin:()=>[84,88].forEach((n,i)=>tone(NOTE(n),0.09,{at:i*0.06,vol:0.12})),
+  ok:()=>[76,79,84].forEach((n,i)=>tone(NOTE(n),0.1,{at:i*0.06,vol:0.12})),
+  boss:()=>{ tone(90,0.45,{f2:45,vol:0.3,type:'sine'}); tone(90,0.45,{at:0.32,f2:45,vol:0.25,type:'sine'}); hiss(0.4,{filt:'lowpass',freq:400,vol:0.08}) },
+  phase:()=>{ tone(220,0.3,{f2:330,vol:0.12,type:'square'}); tone(233,0.3,{f2:349,vol:0.08,type:'square'}) },
+  win:()=>[67,72,76,79,84].forEach((n,i)=>tone(NOTE(n),i===4?0.35:0.11,{at:i*0.09,vol:0.16,type:'square'})),
+  lose:()=>[64,60,55].forEach((n,i)=>tone(NOTE(n),0.22,{at:i*0.16,vol:0.14})),
+  evolve:()=>{ [60,64,67,72,76,79,84].forEach((n,i)=>tone(NOTE(n),0.14,{at:i*0.07,vol:0.14,type:'square'})); hiss(0.8,{freq:3000,f2:6000,vol:0.05,at:0.3}) },
+  // habilidades, según su dibujo (look)
+  bola:()=>{ hiss(0.3,{freq:600,f2:2400,vol:0.14}); tone(300,0.25,{f2:600,vol:0.1,type:'square'}) },
+  combustion:()=>{ hiss(0.45,{filt:'lowpass',freq:1800,f2:300,vol:0.2}); tone(120,0.35,{f2:60,vol:0.16,type:'sine'}) },
+  perforante:()=>{ tone(950,0.08,{f2:500,vol:0.1}); tone(950,0.08,{at:0.06,f2:500,vol:0.08}); hiss(0.1,{freq:3000,vol:0.06}) },
+  rapido:()=>[0,1,2,3].forEach(i=>hiss(0.04,{freq:2800,vol:0.07,at:i*0.05})),
+  ejecutar:()=>{ hiss(0.08,{freq:1200,vol:0.18}); tone(180,0.15,{f2:90,vol:0.16,type:'square'}) },
+  muro:()=>{ tone(110,0.25,{vol:0.2,type:'square'}); hiss(0.12,{freq:400,vol:0.12}) },
+  baluarte:()=>{ tone(196,0.3,{vol:0.12,type:'square'}); tone(294,0.3,{vol:0.08}) },
+  armaduraHielo:()=>[88,93,96].forEach((n,i)=>tone(NOTE(n),0.18,{at:i*0.05,vol:0.08,type:'sine'})),
+  luz:()=>[72,76,79,84].forEach((n,i)=>tone(NOTE(n),0.16,{at:i*0.05,vol:0.09,type:'sine'})),
+  juicio:()=>{ [60,67,72].forEach(n=>tone(NOTE(n),0.5,{vol:0.07,type:'sine'})); hiss(0.4,{freq:4000,vol:0.04}) },
+  clon:()=>[0,1,2].forEach(i=>hiss(0.06,{freq:1500+i*500,vol:0.09,at:i*0.06})),
+  nube:()=>{ hiss(0.5,{filt:'lowpass',freq:900,vol:0.12}); tone(150,0.4,{f2:120,vol:0.06,type:'sine'}) },
+  marca:()=>{ tone(1320,0.06,{vol:0.08}); tone(880,0.2,{at:0.05,vol:0.1,type:'square'}) },
+  sacrificio:()=>{ tone(110,0.35,{f2:80,vol:0.14,type:'square'}); tone(117,0.35,{f2:85,vol:0.1,type:'square'}) },
+};
+function sfx(k){ if(!SND.ac||!sndOn('sfx')||document.hidden) return; const fn=SFX[k]||SFX.hit, now=SND.ac.currentTime, gap=SFX_GAP[k]||0.05;
+  if(now-(SND.last[k]||-1)<gap) return; SND.last[k]=now; try{ fn() }catch(e){} }
+/* ---------- música: bucles de 4 compases (16 pasos cada uno), escalas y ritmo por tema ---------- */
+// mel: grados de la escala (null = silencio), bass: grado del bajo por compás. root: nota MIDI de la tónica
+const THEMES={
+  normal:{bpm:96,root:60,scale:[0,2,4,7,9,12,14,16],lead:'square',
+    mel:[0,null,2,4, 3,null,4,null, 2,null,1,0, 1,null,null,null, 0,null,2,4, 5,null,4,3, 2,null,3,1, 0,null,null,null],bass:[0,3,4,0,0,3,4,0]},
+  pesadilla:{bpm:78,root:57,scale:[0,2,3,5,7,8,10,12],lead:'triangle',
+    mel:[0,null,null,2, 3,null,2,null, 4,null,null,3, 2,null,null,null, 0,null,null,5, 4,null,3,null, 2,null,1,null, 0,null,null,null],bass:[0,5,3,4,0,5,4,4]},
+  infierno:{bpm:88,root:52,scale:[0,1,3,5,7,8,10,12],lead:'square',
+    mel:[0,null,1,null, 0,null,4,null, 3,null,1,null, 0,null,null,null, 0,null,1,3, 4,null,5,4, 3,null,1,null, 0,null,null,null],bass:[0,1,0,5,0,1,4,0]},
+  jefe:{bpm:132,root:50,scale:[0,1,3,5,6,8,10,12],lead:'square',
+    mel:[0,0,3,null, 0,0,4,null, 0,0,3,5, 4,null,3,null, 0,0,3,null, 0,0,6,null, 5,null,4,3, 1,null,0,null],bass:[0,0,5,4,0,0,5,6]},
+};
+function musicTheme(){ const B=G.B; if(B&&(B.boss||B.kind==='boss'||B.kind==='hall'||(B.kind==='tower'&&B.node==='boss'))) return 'jefe';
+  return ['normal','pesadilla','infierno'][Math.min(2,(S&&S.mode)||0)] }
+function musicTick(){ const ac=SND.ac; if(!ac||document.hidden) return;
+  if(!sndOn('music')){ SND.theme=null; return }
+  const want=musicTheme(), now=ac.currentTime;
+  if(SND.theme!==want&&(SND.theme==null||SND.step%16===0)){ SND.theme=want; SND.step=0; SND.next=Math.max(SND.next,now+0.05); }   // cambia al empezar un compás
+  const T=THEMES[SND.theme], spb=60/T.bpm/4; if(SND.next<now) SND.next=now+0.05;
+  while(SND.next<now+0.35){ const i=SND.step%T.mel.length, bar=Math.floor(SND.step/16)%T.bass.length, at=SND.next-now, deg=T.mel[i];
+    if(deg!=null) tone(NOTE(T.root+12+T.scale[deg%T.scale.length]),spb*1.7,{at,vol:0.16,type:T.lead,bus:SND.mus});
+    if(SND.step%4===0) tone(NOTE(T.root-12+T.scale[T.bass[bar]%T.scale.length]),spb*3.6,{at,vol:0.28,type:'triangle',bus:SND.mus});
+    if(SND.theme==='jefe'&&SND.step%2===0) hiss(0.03,{at,freq:SND.step%8===4?1800:5000,vol:0.05,bus:SND.mus});   // ritmo en los JEFES
+    SND.next+=spb; SND.step++; } }
+// el primer toque enciende el audio (y la música)
+function sndUnlock(){ const ac=sndInit(); if(!ac) return; if(ac.state==='suspended') ac.resume(); if(!SND.timer) SND.timer=setInterval(musicTick,120) }
+['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,sndUnlock,{passive:true}));
+document.addEventListener('visibilitychange',()=>{ if(!SND.ac) return; if(document.hidden) SND.ac.suspend(); else SND.ac.resume() });
+document.addEventListener('click',e=>{ if(e.target.closest&&e.target.closest('button')) sfx('click') },true);   // botones
+// lo que pasa en el juego
+G.on('hit',({crit,skill,thorns,e})=>{ if(tab!=='up') return; if(!skill&&!thorns) sfx(crit?'crit':'hit'); if(e&&e.dead&&e.hp<=0) sfx('kill') });
+G.on('heroHit',()=>{ if(tab==='up') sfx('heroHit') });
+G.on('fx',ev=>{ if(tab!=='up') return; if(ev.k==='skill') sfx(SFX[ev.id]?ev.id:'bola'); else if(ev.k==='eskill') sfx('eskill') });
+G.on('level',()=>sfx('level'));
+G.on('wave',B=>{ if(B&&B.boss) sfx('boss') });
+G.on('eventStart',B=>{ if(B&&(B.kind==='boss'||B.kind==='hall'||(B.kind==='tower'&&(B.node==='boss'||B.node==='elite')))) sfx('boss') });
+G.on('bossPhase',()=>sfx('phase'));
+G.on('boss',()=>sfx('win'));
+G.on('defeat',()=>sfx('lose'));
+G.on('evolve',()=>sfx('evolve'));
+G.on('hallEnd',r=>sfx(r.won?'win':'lose'));
 /* ---------- premios en texto y con iconos ---------- */
 const RN={silver:'cofre de plata',wood:'cofre de madera',mode:'cofre de modo',ess:'esencia',ev:'emblema',ticket:'ticket Mazmorra',bossTicket:'ticket Jefe'};
 const bundleTxt=b=>Object.entries(b).map(([k,v])=>k==='gold'?`oro de ${v} min`:k==='tok'?`${v} tokens`:k==='item'?`arma ${CFG.rarName[v]}`:RN[k]+(v>1?' ×'+v:'')).join(' + ');
@@ -162,18 +335,31 @@ G.on('hit',({e,d,crit,ranged,thorns,clone,skill,frost,burst,bolt,cleave})=>{ if(
   if(!skill&&!thorns&&!clone&&!frost&&!burst&&!bolt&&!cleave) attackFx(S.cls,'hero',e,crit);
   if(d>=0.5) pushFloat({e,v:d,txt:fmt(d),crit,life:0.9}) });   // (sin «0» de golpes que no hacen daño)
 G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(d>0.08*G.heroStats().hp) ART.shake(3); if(d>=0.5) pushFloat({hero:true,v:d,txt:'-'+fmt(d),life:0.8}) });
-G.on('dodge',()=>{ if(!battery()&&tab==='up') pushFloat({hero:true,txt:'esquiva',life:0.8}) });
 G.on('level',l=>{ if(tab==='up'&&!battery()){ ART.addFx('levelup',{text:'¡Nivel '+l+'!'}); haptic('light') } else toast('¡Nivel '+l+'!') });
+// habilidades del kit con efecto propio (las demás usan el de su dibujo, look); [efecto, nº de tajos]
+const KFX={triple:['cortes',3],desgarro:['cortes',2],mutilar:['cortes',2],milcortes:['cortes',8],terremoto:['terremoto'],multidisparo:['flechas'],lluvia:['lluvia'],
+  abanico:['cuchillos'],sombra:['sombra'],estallido:['sombra'],devorar:['sombra'],cadena:['cadena'],meteoros:['meteoros']};
+// lo que pasa con los enemigos de zona y las cargas del kit: anillo en un enemigo (ering), en el héroe (hring) u onda (ola)
+const ZFX={contagio:['ering','#ff7a1a',1],furia:['ering','#ff3b3b'],devora:['ering','#8a5cd0'],levanta:['ering','#b9a88a',1],caido:['ering','#b9a88a',1],caja:['ering','#9aa0aa',1],
+  invisible:['ering','#9aa0aa',1],hermandad:['ering','#9aa0aa',1],onda:['ola','#7fb6ff'],gracia:['ola','#ffe066'],ultimo:['hring','#ffe066'],
+  aturdido:['hring','#ffd35a',1],hipnosis:['hring','#c86bff',1],locura:['hring','#c86bff',1],desarmado:['hring','#b9c0cc'],encierro:['hring','#8a5a34'],sueno:['hring','#7f8cff',1]};
+const DOTC={quemadura:'#ff7a1a',veneno:'#6cc47a',sangrado:'#e5484d'};
+const eTop=e=>(e&&e._r||13)*3.9+14;   // altura de un monstruo en el dibujo (para poner cosas encima)
 function skillFx(ev,side,eng){ if(battery()) return;
-  if(ev.k==='skill'){ const d=eng.skillDef(ev.slot)||{}, id=ev.id;
-    if(['rapido','sed','sacrificio','combustion','clon','juicio','baluarte'].includes(id)) ART.addFx(id,{side,dur:d.dur||1});
+  if(ev.k==='skill'){ const d=eng.skillDef(ev.slot)||{}, id=ev.id, kf=KFX[ev.sid];
+    if(kf) ART.addFx(kf[0],{side,n:kf[1],dur:kf[0]==='meteoros'||kf[0]==='lluvia'?d.dur||3:0});
+    else if(['rapido','sed','sacrificio','combustion','clon','juicio','baluarte'].includes(id)) ART.addFx(id,{side,dur:d.dur||1});
     else ART.addFx(id,{side});
-    if(id==='armaduraHielo') ART.addFx('iceArmor',{side,dur:d.dur||8});
-    if(id==='combustion') ART.addFx('combustionHit',{side});
-    if(id==='ejecutar'||id==='bola') ART.shake(id==='ejecutar'?4:2); }
+    if(id==='combustion'&&!kf) ART.addFx('combustionHit',{side});
+    if(ev.sid==='terremoto'||ev.sid==='meteoros') ART.shake(3); else if(id==='ejecutar'||id==='bola') ART.shake(id==='ejecutar'?4:2); }
   else if(ev.k==='congelar') ART.addFx('congelar',{side,e:ev.e});
   else if(ev.k==='luzVuelve') ART.addFx('luzVuelve',{side,n:ev.n});
-  else if(ev.k==='reloj') ART.addFx('reloj',{side}); }
+  else if(ev.k==='reloj') ART.addFx('reloj',{side});
+  else if(ev.k==='eskill'){ ART.addFx('ename',{e:ev.e,text:ev.name||'',h:eTop(ev.e)}); ART.addFx('ering',{e:ev.e,color:'#ff3b3b'}); }
+  else if(ev.k==='cargando'){ const B=eng.B; ART.addFx('cargando',{e:ev.e,h:eTop(ev.e),dur:Math.max(0.3,((ev.e&&ev.e.windU)||0)-((B&&B.t)||0))||2}); }
+  else if(ev.k==='escudoLuz'){ const B=eng.B; if(B) B.enemies.filter(o=>!o.dead&&!o.down&&o.x!=null).forEach(o=>ART.addFx('ering',{e:o,color:'#ffe066'})); }
+  else if(ev.k==='heroDot') ART.addFx('hring',{side,color:DOTC[ev.dot]||'#c86bff'});
+  else if(ZFX[ev.k]){ const [t,color,x]=ZFX[ev.k]; ART.addFx(t,{side,e:ev.e,color,puff:t==='ering'&&!!x,stars:t==='hring'&&!!x}); } }
 G.on('fx',ev=>skillFx(ev,'hero',G));
 G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
   const gh=G.pvpOn()&&G.ghost(); if(gh){   // PvP: el fantasma también lanza sus habilidades y dispara
@@ -201,6 +387,8 @@ function lootHTML(list){
 }
 
 /* ---------- estructura ---------- */
+// dibujo del grimorio (su casilla en Inventario)
+const GRIMSVG='<svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="#5a3a86"/><path d="M12 8H21V50H12Z" fill="#3b2a5e"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="#e9dfc8"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="11" fill="#b066e8" opacity="0.35"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="#ffd66b"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="2.8" fill="#140f1c"/><path d="M45 8H54V17Z" fill="#e8b04a"/><path d="M45 8H54V17Z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>';
 const NAVL={up:'Inicio',inv:'Inventario',shop:'Tienda',ev:'Modos',mis:'Misiones',dev:'Ajustes'};
 // botón de la barra: icono + nombre (+ globo)
 // aviso de la barra de abajo: número rojo = premios por recoger · punto rojo = algo nuevo · punto dorado = hay algo para jugar
@@ -214,37 +402,38 @@ function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pan
   <div id="battle" class="battle">
   <div class="hero"><div id="evoSlot"></div>
     </div>
-  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="enc" id="enc" aria-hidden="true"></div><div class="vshud" id="vsHud" hidden><div class="vsw me"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gMe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe2a9"/><stop offset=".45" stop-color="#6cc47a"/><stop offset="1" stop-color="#3d8a4b"/></linearGradient><clipPath id="cpMe"><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z"/></clipPath></defs><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="trk"/><g clip-path="url(#cpMe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><i class="vssh"></i><div class="vsst" id="stMe"></div></div><div class="vsc" id="vsC"><small></small><b></b></div><div class="vsw foe"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gFoe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f29a93"/><stop offset=".45" stop-color="#e2605a"/><stop offset="1" stop-color="#9b3a35"/></linearGradient><clipPath id="cpFoe"><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z"/></clipPath></defs><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="trk"/><g clip-path="url(#cpFoe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><div class="vsst" id="stFoe"></div></div></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><div class="sidebtns"><button class="calbtn" id="grimBtn" data-act="grimOpen" aria-label="Grimorio" title="Grimorio" hidden><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="#5a3a86"/><path d="M12 8H21V50H12Z" fill="#3b2a5e"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="#e9dfc8"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="11" fill="#b066e8" opacity="0.35"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="#ffd66b"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="2.8" fill="#140f1c"/><path d="M45 8H54V17Z" fill="#e8b04a"/><path d="M45 8H54V17Z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg><i class="lootn" id="grimN" hidden>!</i></button><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#8a5a34"/><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 46H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#5c3b1e" opacity="0.6"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="#a06a3e"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 18c3-3 7-4 11-4" fill="none" stroke="#ffe08a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/><path d="M19 12V57M45 12V57" fill="none" stroke="#140f1c" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 12V57M45 12V57" fill="none" stroke="#e8b04a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 25H37V38H27Z" fill="#e8b04a"/><path d="M27 25H37V38H27Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="31" r="1.8" fill="#140f1c"/><circle cx="32" cy="6" r="3" fill="#ffe08a" opacity="0.9"/><circle cx="24" cy="5" r="2" fill="#ffe08a" opacity="0.7"/><circle cx="41" cy="5" r="2" fill="#ffe08a" opacity="0.7"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="#2b2f40"/><path d="M13 39C21 35 43 43 51 39A19 19 0 0 1 13 39Z" fill="#e8b04a"/><path d="M14 44C24 46 40 48 50 44A19 19 0 0 1 14 44Z" fill="#a8741e" opacity="0.55"/><circle cx="26" cy="46" r="2.4" fill="#ffe08a"/><circle cx="36" cy="50" r="1.8" fill="#ffe08a"/><circle cx="31" cy="42" r="1.5" fill="#fff3c4"/><path d="M19 29c-3 3-4 7-4 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M23 3H41V10H23Z" fill="#8a5a34"/><path d="M23 3H41V10H23Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="boosttime" id="boostTime" hidden></span></button></div></div>
+  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="enc" id="enc" aria-hidden="true"></div><div class="vshud" id="vsHud" hidden><div class="vsw me"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gMe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe2a9"/><stop offset=".45" stop-color="#6cc47a"/><stop offset="1" stop-color="#3d8a4b"/></linearGradient><clipPath id="cpMe"><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z"/></clipPath></defs><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="trk"/><g clip-path="url(#cpMe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><i class="vssh"></i><div class="vsst" id="stMe"></div></div><div class="vsc" id="vsC"><small></small><b></b></div><div class="vsw foe"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gFoe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f29a93"/><stop offset=".45" stop-color="#e2605a"/><stop offset="1" stop-color="#9b3a35"/></linearGradient><clipPath id="cpFoe"><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z"/></clipPath></defs><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="trk"/><g clip-path="url(#cpFoe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><div class="vsst" id="stFoe"></div></div></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><button class="evobtn" id="evoBtn" data-act="evoOpen" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Evolucionar</button><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#8a5a34"/><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 46H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#5c3b1e" opacity="0.6"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="#a06a3e"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 18c3-3 7-4 11-4" fill="none" stroke="#ffe08a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/><path d="M19 12V57M45 12V57" fill="none" stroke="#140f1c" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 12V57M45 12V57" fill="none" stroke="#e8b04a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 25H37V38H27Z" fill="#e8b04a"/><path d="M27 25H37V38H27Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="31" r="1.8" fill="#140f1c"/><circle cx="32" cy="6" r="3" fill="#ffe08a" opacity="0.9"/><circle cx="24" cy="5" r="2" fill="#ffe08a" opacity="0.7"/><circle cx="41" cy="5" r="2" fill="#ffe08a" opacity="0.7"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="#2b2f40"/><path d="M13 39C21 35 43 43 51 39A19 19 0 0 1 13 39Z" fill="#e8b04a"/><path d="M14 44C24 46 40 48 50 44A19 19 0 0 1 14 44Z" fill="#a8741e" opacity="0.55"/><circle cx="26" cy="46" r="2.4" fill="#ffe08a"/><circle cx="36" cy="50" r="1.8" fill="#ffe08a"/><circle cx="31" cy="42" r="1.5" fill="#fff3c4"/><path d="M19 29c-3 3-4 7-4 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M23 3H41V10H23Z" fill="#8a5a34"/><path d="M23 3H41V10H23Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="boosttime" id="boostTime" hidden></span></button></div></div>
   </div>
   <div id="tab"></div>`;
   for(const k in NAVL) if(k!=='dev') navSet(k,0);
   $('#nav').hidden=false; { const st=document.querySelector('[data-tab="shop"]'); if(st) st.hidden=!CFG.shopTab; } if(tab==='shop'&&!CFG.shopTab) tab='up'; renderTab();
 }
 /* ---------- combates especiales (de menos a más fuerte): horda (naranja) · errante (azul) y élite (morado) · JEFE (rojo) ----------
-   Élite = jefe de cada 10 fases de la campaña y élite de la Torre; JEFE = fases 50/100/150, jefe de la Torre, Sala de jefes y Jefe semanal.
+   Élite = fases 10 y 20 de cada zona de la campaña y élite de la Torre; JEFE = fases 30/60/90/120/150, jefe de la Torre, Sala de jefes y Jefe semanal.
+   El cartel dice su nombre (y su título), su pasiva y sus habilidades.
    Al empezar sale un cartel ~1,8 s; mientras dura, el combate tiene un borde de color que brilla y una etiqueta con el nombre.
    Igual en la campaña, la Sala de jefes, el Jefe semanal y la Torre. */
-const KNAME={slimeKing:'Rey Limo',hobgoblin:'Hobgoblin',shaman:'Chamán goblin',orcWarlord:'Caudillo orco',skelKnight:'Caballero esqueleto',lichKing:'Rey no muerto',
-  golemBoss:'Coloso de piedra',portalGuard:'Guardián del portal',demonLord:'Señor demonio',archdemon:'Archidemonio'};
-const encName=(zone,elite,mode)=>KNAME[ART.kindFor(zone,0,{boss:true,elite,mode})]||(elite?'Élite':'Jefe');
-const encZone=f=>Math.floor(((f-1)%150)/30);
-const MDESC=k=>(CFG.tower.bossMech.desc||{})[k]||'', trNames=B=>[...new Set(B.enemies.filter(e=>!e.minion).flatMap(e=>e.traits||[]))].map(t=>(CFG.tower.traits[t]||{}).name||t);
+// el élite o JEFE de zona del combate (el primero que tenga pasiva) y lo que sale en su cartel
+const encFoe=B=>B.enemies.find(e=>e.zp&&!e.summoned);
+const encSkills=e=>(e.zsAll||[]).map(s=>s.name);
+const encSub=e=>(e.title?e.title+' · ':'')+e.zp.name+': '+e.zp.desc;
 function encInfo(B,ev){ if(!B) return null; const fmtN=n=>n.toLocaleString('es-ES');
-  if(B.kind==='tower'){ const run=G.towerState().run||{floor:1}, z=Math.min(4,Math.floor(run.floor/20));
+  if(B.kind==='tower'){
     if(B.final) return {k:'boss',s:'JEFE FINAL',b:'EL ÚLTIMO GUARDIÁN',i:'Vida infinita · tu daño va al ranking'};
-    if(B.node==='boss'){ const n=encName(z,false,0); return {k:'boss',s:'⚠ JEFE ⚠',b:n,i:(CFG.tower.bossMech.desc||{})[B.mech]||''} }
-    if(B.node==='elite'){ const n=encName(z,true,0), T=CFG.tower.traits, tr=[...new Set(B.enemies.flatMap(e=>e.traits||[]))];
-      return {k:'elite',s:'✦ ÉLITE ✦',b:n,chips:tr.map(t=>(T[t]||{}).name||t)} }
+    const F=encFoe(B);
+    if(B.node==='boss'&&F) return {k:'boss',s:'⚠ JEFE ⚠',b:F.name,i:encSub(F)+' · '+((CFG.tower.bossMech.desc||{})[B.mech]||''),chips:encSkills(F)};
+    if(B.node==='elite'&&F){ const T=CFG.tower.traits, tr=[...new Set(B.enemies.flatMap(e=>e.traits||[]))];
+      return {k:'elite',s:'✦ ÉLITE ✦',b:F.name,i:encSub(F),chips:encSkills(F).concat(tr.map(t=>(T[t]||{}).name||t))} }
     return null }
-  if(B.kind==='hall'){ const H=B.hall, n=encName(encZone(H.f),true,H.m); return {k:'boss',s:'⚠ JEFE '+'★'.repeat(H.star)+' ⚠',b:n,i:MDESC(B.mech)+' · desde el minuto 1 se enfurece'} }
-  if(B.kind==='boss'){ const W=B.wb||{}; return {k:'boss',s:'⚠ JEFE SEMANAL ⚠',b:W.name||'Jefe semanal',i:W.desc||''} }
+  if(B.kind==='hall'){ const H=B.hall, F=encFoe(B); return {k:'boss',s:'⚠ JEFE '+'★'.repeat(H.star)+' ⚠',b:F?F.name:'JEFE',i:(F?encSub(F)+' · ':'')+'desde el minuto 1 se enfurece',chips:F?encSkills(F):[]} }
+  if(B.kind==='boss'){ const W=B.wb||{}, F=encFoe(B); return {k:'boss',s:'⚠ JEFE SEMANAL ⚠',b:F?F.name:W.name||'Jefe semanal',i:F?encSub(F):W.desc||'',chips:F?encSkills(F):[]} }
   if(ev) return null;   // Mazmorra y PvP: sin cartel
-  if(B.boss){ const n=encName(encZone(S.fase),B.elite,S.mode);
-    return B.elite?{k:'boss',s:'⚠ JEFE ⚠',b:n,i:`Fase ${fmtN(S.fase)} · ${MDESC(B.mech)}`}
-      :{k:'elite',s:'✦ ÉLITE ✦',b:n,i:`Fase ${fmtN(S.fase)}`,chips:trNames(B)} }
+  if(B.boss){ const F=encFoe(B); if(!F) return null;
+    return B.elite?{k:'boss',s:'⚠ JEFE ⚠',b:F.name,i:`Fase ${fmtN(S.fase)} · ${encSub(F)}`,chips:encSkills(F)}
+      :{k:'elite',s:'✦ ÉLITE ✦',b:F.name,i:`Fase ${fmtN(S.fase)} · ${encSub(F)}`,chips:encSkills(F)} }
   const sp=G.surpriseState(), C=CFG.surprise; if(!sp) return null;
   if(sp.k==='horde') return {k:'horde',horde:sp};
-  if(sp.k==='wander') return {k:'event',s:'❓ EVENTO ❓',b:'¡ERRANTE!',i:`Si cae en ${C.wander.dur} s: 🎁 ${bundleTxt(C.wander.reward)}`,chips:trNames(B)};
+  if(sp.k==='wander'){ const F=B.enemies.find(e=>e.wander&&e.zp); return {k:'event',s:'❓ EVENTO ❓',b:'¡ERRANTE!',i:`${F?F.name+' · ':''}Si cae en ${C.wander.dur} s: 🎁 ${bundleTxt(C.wander.reward)}`,chips:F?[F.zp.name].concat(encSkills(F)):[]}; }
   return null }
 let encB=null, encSp=null;
 function encHUD(B,ev){ const st=$('.stage'), box=$('#enc'); if(!st||!box) return;
@@ -313,7 +502,7 @@ function updateHUD(){
    // el nivel solo cuenta farmeando: en eventos, Torre y PvP no se ve   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   $('#faseTxt').classList.add('top');   // debajo de tu barra de vida (los iconos de abajo a la derecha quedan libres)
-  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-(B.rt||0)))} s · ×${G.duelSpeed().toLocaleString('es-ES',{maximumFractionDigits:1})}`:ev&&B.kind==='hall'?`⏱ ${mmss(B.t*1000)}${B.rage?` · 🔥 Furia ${B.rage}`:''}`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:''):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
+  setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-(B.rt||0)))} s · ×${G.duelSpeed().toLocaleString('es-ES',{maximumFractionDigits:1})}`:ev&&B.kind==='hall'?`⏱ ${mmss(B.t*1000)}${B.hallRage?` · 🔥 Furia ${B.hallRage}`:''}`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:''):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
     :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-(B.rt||0))*1000)}${G.labSpeed()>1.05?` · ×${G.labSpeed().toLocaleString('es-ES',{maximumFractionDigits:1})}`:''} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:G.streak().mul>1?`<span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:'');   // campaña: la fase ya va en el emblema de arriba
   { const f=$('#faseTxt'); f.hidden=!f.innerHTML; }
   setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span>`);   // solo el nombre: la clase ya se ve en el retrato
@@ -330,15 +519,14 @@ function updateHUD(){
       c.setAttribute('aria-label',lb); c.innerHTML=(mn===SK?`<svg viewBox="0 0 24 24" width="27" height="27" aria-hidden="true"><path fill="currentColor" d="M12 2C6.9 2 3 5.6 3 10.3c0 2.9 1.5 5.2 3.8 6.6V20a1 1 0 0 0 1 1h1.6v-2h1.4v2h2.4v-2h1.4v2h1.6a1 1 0 0 0 1-1v-3.1c2.3-1.4 3.8-3.7 3.8-6.6C21 5.6 17.1 2 12 2Zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2Zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2ZM12 13.3l1.2 2.2h-2.4l1.2-2.2Z"/></svg>`:`<b>${esc(String(mn))}</b>`); } }
   encHUD(B,ev);
   const fab=$('#upFab'); if(fab){ fab.hidden=tab!=='up'||ev; if(!fab.hidden) setHTML(fab,upStrip()); }
-  // Grimorio: icono de libro en el combate desde el nivel grimoire.showLvl (o si ya se tiene); brilla cuando se puede evolucionar
-  const gb=$('#grimBtn'); if(gb){ const shown=!ev&&(G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1), evoNow=shown&&!(S.evo>=1)&&G.grimDone()&&G.evoLvlOk();
-    gb.hidden=!shown; gb.classList.toggle('on',evoNow); gb.dataset.act=evoNow?'evoOpen':'grimOpen'; gb.setAttribute('aria-label',evoNow?'Evolucionar':'Grimorio'); $('#grimN').hidden=!evoNow; }
+  // Evolucionar: cartel dorado sobre el combate cuando ya se puede (1.ª con la llave del grimorio y 2.ª); el grimorio está en Inventario
+  const eb=$('#evoBtn'); if(eb) eb.hidden=ev||!(G.evoKeyOk()&&G.evoLvlOk());
   const es=$('#evoSlot'); if(es){ const soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(); setHTML(es,soon&&!ev?'<span class="pill">Evolución: próximamente</span>':''); }
   const sbs=document.querySelector('.sidebtns'); if(sbs) sbs.hidden=ev;   // en los eventos no se ven los iconos del combate
   const db=$('#dailyBtn'); if(db){ db.hidden=ev; $('#dailyN').hidden=!(G.calState().can||G.wheelState().free); }   // premios diarios: calendario y ruleta
 
   const hs=$('#hStats'); if(hs) hs.innerHTML=`<div class="sl">
-      <span>Vida <b>${fmt(h.hp)}</b></span><span>Def <b>${fmt(h.df)}</b></span>${h.ls?`<span>Robo <b>${pct(h.ls)}</b></span>`:''}${h.ev?`<span>Evasión <b>${pct(h.ev)}</b></span>`:''}</div>
+      <span>Vida <b>${fmt(h.hp)}</b></span><span>Def <b>${fmt(h.df)}</b></span>${h.ls?`<span>Robo <b>${pct(h.ls)}</b></span>`:''}</div>
     <div class="sl"><span>Daño <b>${fmt(h.atk)}</b></span><span>Vel <b>${h.spd.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})}/s</b></span><span>Crít <b>${pct(h.cr)}</b></span><span>D. crít <b>+${Math.round(h.cd*100)} %</b></span>${h.bd?`<span>Jefes <b>+${pct(h.bd)}</b></span>`:''}</div>`;
   if(S.loot) G.claimLoot();   // el botín de los jefes entra solo en el inventario (sin icono de botín)
   const ep=$('#evPause'); if(ep){ const l=G.evPauseLeft(); if(l>0) ep.textContent=mmss(l); else if(tab==='ev') renderTab(); }
@@ -351,7 +539,7 @@ function updateHUD(){
   const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?true:inEv&&!!(S.opt&&S.opt.evAuto), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false), key=L.map(x=>x.slot+x.id).join()+inEv+on;
     // al final de las habilidades, un círculo AUTO/MAN (se lanzan solas o a mano)
     sb.hidden=G.autoOnly();   // PvP, Torre y Mazmorra: siempre automáticas, sin botones
-    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.classList.toggle('many',L.length>4); sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}">${skIcon(x.id)}<i class="skcd"></i></button>`).join('')
+    if(sb.dataset.k!==key){ sb.dataset.k=key; sb.classList.toggle('many',L.length>4); sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}">${skIcon(SKI[x.id]?x.id:x.look||x.id)}<i class="skcd"></i></button>`).join('')
       +(L.length?`<button class="skmode${on?' on':''}" data-act="skAuto" aria-pressed="${on}" aria-label="Habilidades ${on?'automáticas':'a mano'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg><small>${on?'AUTO':'MAN'}</small></button>`:''); }
     { const sm=$('#skMode'); if(sm&&sm.innerHTML) sm.innerHTML=''; }
     L.forEach((x,i)=>{ const b=sb.children[i]; if(!b) return; const p=x.ready?0:x.left/x.cd; b.classList.toggle('ready',x.ready);
@@ -391,7 +579,7 @@ function renderTab(){
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
     el.innerHTML=nbsp((invView==='forja'?'':invView==='grim'?back('main','Volver al inventario'):invBanner())+tabInv()); if(invView==='armas'||invView==='main') renderList(); fitSheet(); }
   if(tab==='shop') el.innerHTML=nbsp(tabShop());
-  if(tab==='ev') el.innerHTML=nbsp(tabEv());
+  if(tab==='ev'){ el.innerHTML=nbsp(tabEv()); towerMapScroll(); }   // (Torre: el mapa se coloca en tu piso)
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
   viewEnter();
   if(tab==='mis'){ misKey=misKeyNow(); const pt=$('.ptrack'), y=window.scrollY, px=pt?pt.scrollLeft:null; el.innerHTML=nbsp(tabMis());   // se conserva el scroll
@@ -413,7 +601,7 @@ const UPS={atk:'Daño',hp:'Vida',df:'Defensa',spd:'Velocidad'};
 function upStrip(){ const st=G.heroStats();
   const t=Object.keys(UPS).map(k=>{ const c=G.upCost(k), v=st[k], ok=S.gold>=c;
     const nv=k==='spd'?v.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}):fmt(v);
-    return `<button class="upt${ok?' ok':''}" data-act="upBuy" data-k="${k}" aria-label="Mejorar ${UPS[k]} por ${fmt(c)} oro"><span class="un">${UPS[k]}</span><b>${nv}</b><span class="uc"><i class="dot" style="background:var(--gold)"></i>${fmtG(c)}</span></button>` }).join('');
+    return `<button class="upt${ok?' ok':''}" data-act="upBuy" data-k="${k}" aria-label="Mejorar ${UPS[k]} por ${fmt(c)} oro"><span class="un">${k==='spd'?'Vel.':UPS[k]}</span><b>${nv}</b><span class="uc"><i class="dot" style="background:var(--gold)"></i>${fmtG(c)}</span></button>` }).join('');
   return `<div class="upx lv" aria-label="Nivel ${S.lvl}"><small>Lv.</small><b>${S.lvl}</b></div>${t}` }
 // Modos: Normal, Pesadilla, Infierno. Muestra dónde estás, qué da cada uno y qué hace falta para pasar al siguiente.
 function nameModal(){ showModal(`<h3>Tu nombre</h3><input id="nameIn" class="nameinp" maxlength="16" autocomplete="nickname" placeholder="3-16 letras" value="${esc(S.name||'')}">
@@ -423,13 +611,13 @@ acts({
   nameSave:()=>{ const n=($('#nameIn')||{}).value; if(!G.setName(n)) return toast('Escribe tu nombre (3-16 letras)'); closeModal(); toast('Nombre guardado'); updateHUD(); if(tab==='dev') renderTab(); },
   upBuy:(b,k)=>{ if(upHeld){ upHeld=false; return } if(!G.buyUpgrade(k)) toast('No tienes oro suficiente'); updateHUD() },
 });
-// Campaña · Sala de jefes: cada jefe de campaña vencido se puede volver a luchar (3 intentos al día, ★/★★/★★★)
+// Campaña · Sala de jefes: cada JEFE de campaña vencido (5 por modo) se puede volver a luchar (3 intentos al día, ★/★★/★★★)
 let hallMode=null, hallSel=null, hallStar=1;
 const bossPicCache={};
 // retrato del jefe para la Sala: se dibuja cuando ya han cargado los dibujos (si no, saldría vacío y se quedaría así)
 let bossPicReady=false; if(window.ART) ART.onSprites(()=>{ bossPicReady=true; for(const k in bossPicCache) delete bossPicCache[k]; if(S&&tab==='ev'&&modView==='campana') renderTab() });
 function bossPic(m,f){ const k=m+'_'+f; if(!bossPicReady) return ''; if(bossPicCache[k]===undefined&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=120; cv.height=120; const g=cv.getContext('2d');
-    g.scale(1.3,1.3); ART.monster(g,46,82,{kind:ART.kindFor(Math.floor((f-1)/30),0,{boss:true,elite:f%50===0,mode:m}),r:f%50===0?24:20,hue:[0,190,300][m]||0,boss:true,elite:f%50===0,t:0});
+    const Z=G.zoneAt(m,f); g.scale(1.3,1.3); ART.monster(g,46,82,{kind:(Z&&Z.art)||'slime',r:24,hue:[0,190,300][m]||0,boss:true,elite:true,t:0});
     bossPicCache[k]=cv.toDataURL() }catch(e){ bossPicCache[k]='' } } return bossPicCache[k]||'' }
 const starsHTML=(n,size)=>[1,2,3].map(i=>`<i class="${i<=n?'on':''}"${size?` style="font-size:${size}px"`:''}>★</i>`).join('');
 function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
@@ -439,11 +627,11 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
   const status=M.locked?'<p class="hint">Próximamente.</p>':cur?`<p class="hint">Fase actual ${S.best}/${CFG.phaseCap} · ${mine.some(b=>b.beaten)?'cada JEFE que vences entra aquí':`vence al JEFE de la fase ${H.every} para abrir la sala`}</p>`:hallMode<S.mode?'<p class="hint">Completado</p>'
     :next&&G.canAdvanceMode()?`<button class="btn gold" data-act="modeGo">Ir a ${M.name}</button>`:`<p class="hint">Vence la fase ${CFG.phaseCap} de ${CFG.modes[hallMode-1].name} y evoluciona para entrar.</p>`;
   const tiles=mine.map(b=>`<button class="htile${b.beaten?'':' lock'}${b.elite?' elite':''}${hallSel===b.id?' sel':''}" data-act="hallSel" data-id="${b.id}" ${b.beaten?'':'disabled'}>
-      ${b.beaten?`<img src="${bossPic(b.m,b.f)}" alt="">`:'<span class="hlk">🔒</span>'}<span class="hf">${b.elite?'👑 ':''}${b.f}</span><span class="hst">${starsHTML(b.stars)}</span></button>`).join('');
+      ${b.beaten?`<img src="${bossPic(b.m,b.f)}" alt="">`:'<span class="hlk">🔒</span>'}<span class="hf">${b.beaten&&b.foe?b.foe.name:'👑 '+b.f}</span><span class="hst">${starsHTML(b.stars)}</span></button>`).join('');
   const sel=mine.find(b=>b.id===hallSel&&b.beaten); let sheet='';
   if(sel){ const st=Math.min(hallStar,sel.stars+1), first=st>sel.stars, rw=G.hallReward(sel,st,first);
     const sb=[1,2,3].map(i=>`<button class="hsb${i===st?' on':''}${i<=sel.stars?' done':''}" data-act="hallStar" data-v="${i}" ${i>sel.stars+1?'disabled':''}>${'★'.repeat(i)}${i<=sel.stars?' ✓':''}</button>`).join('');
-    sheet=`<div class="hsheet"><div class="ctrl" style="justify-content:space-between"><b>JEFE de la fase ${sel.f}</b><span class="hst big">${starsHTML(sel.stars)}</span></div>
+    sheet=`<div class="hsheet"><div class="ctrl" style="justify-content:space-between"><b>${sel.foe?sel.foe.name+(sel.foe.title?', '+sel.foe.title:''):'JEFE'} · fase ${sel.f}</b><span class="hst big">${starsHTML(sel.stars)}</span></div>
       <div class="hsbs">${sb}</div>
       <div class="loot"><div><span>${first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(rw)}${rw.scrap?` ${ICON.scrap}${fmt(rw.scrap)}`:''}</b></div></div>
       <button class="btn gold" data-act="hallGo" data-id="${sel.id}" data-v="${st}" ${left&&!G.inEvent()?'':'disabled'}>Luchar ${'★'.repeat(st)} · ${left}/${H.tries} intentos</button></div>`; }
@@ -452,7 +640,7 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
     <p class="hint">Sin tiempo límite: desde el minuto 1, el jefe se enfurece cada 10 s · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
 
 G.on('hallEnd',r=>{ tab='ev'; modView='campana'; renderTab(); haptic(r.won?'ok':'medium');
-  later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">JEFE de la fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · te ha derrotado'}</p>
+  later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">${(f=>f?f.name:'JEFE')(G.zoneFoe(G.zoneAt(r.m,r.f),'jefe'))} · fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · te ha derrotado'}</p>
     ${r.rw?`<div class="loot"><div><span>${r.first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(r.rw)}${r.rw.scrap?` ${ICON.scrap}${fmt(r.rw.scrap)}`:''}</b></div></div>`:''}
     <p class="hint">Intentos hoy: ${G.hallTriesLeft()}/${CFG.hall.tries}</p><button class="btn gold" data-act="close">Continuar</button>`)) });
 // botones de esta pantalla (data-act)
@@ -572,7 +760,7 @@ if(window.ART) ART.onSprites(()=>{ for(const k in heroImgCache) delete heroImgCa
 // Cabecera del inventario: el héroe grande sobre el escenario de su zona y sus huecos (arma y grimorio)
 function invBanner(){ const w=G.equipped(), bg=sceneImg(zoneNow(),390,190), gshown=G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1;
   const ws=w?`<button class="ibslot" style="--rc:var(--r${w.r})" data-act="forge" data-id="${w.id}" data-from="main" aria-label="Arma: ${wName(w)}">${wIcon(w)}<span class="ibl">Nv ${w.lvl}</span></button>`:`<button class="ibslot empty" data-act="invview" data-v="armas" aria-label="Sin arma">—</button>`;
-  const gs=gshown?`<button class="ibslot" style="--rc:var(--rE)" data-act="grimOpen" aria-label="Grimorio">${((document.querySelector('#grimBtn svg')||{}).outerHTML||'📖').replace(/width="\d+" height="\d+"/,'width="34" height="34"')}${G.grimOwned()?`<span class="ibl">Nv ${G.grimLevel()}</span>`:''}</button>`:`<span class="ibslot empty" aria-label="Grimorio bloqueado">🔒</span>`;
+  const gs=gshown?`<button class="ibslot" style="--rc:var(--rE)" data-act="grimOpen" aria-label="Grimorio">${GRIMSVG.replace(/width="\d+" height="\d+"/,'width="34" height="34"')}${G.grimOwned()?`<span class="ibl">Nv ${G.grimLevel()}</span>`:''}</button>`:`<span class="ibslot empty" aria-label="Grimorio bloqueado">🔒</span>`;
   return `<section class="ibanner" style="background-image:linear-gradient(180deg,rgba(18,20,28,.1),rgba(18,20,28,.85)),url(${bg})">
     <div class="ibart">${heroImg()}</div>
     <div class="ibinfo"><b>${esc(S.name||'')}</b><span>${heroName().toUpperCase()}</span><small>Nivel ${S.lvl}</small></div>
@@ -634,10 +822,11 @@ acts({
 // coste: si lo tienes, "124 ✓" en verde; si no, "tienes / pide" en rojo
 const costRow=(n,have,v)=>{ const f=n==='Oro'?fmtG:fmt; return `<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${have>=v?f(v)+' ✓':f(Math.floor(have))+' / '+f(v)}</b></div>` };
 const hms=sec=>{ sec=Math.max(0,Math.ceil(sec)); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60); return h?h+' h '+m+' min':m+' min' };
-// camino: nombre, pasiva y habilidad de evolución (la del camino B puede estar por decidir)
-function pathCard(k,P,cur){ const sk=(k==='B'?(CFG.skills.evoB||{}):CFG.skills.evo)[S.cls];
-  return `<div class="wcard${cur?' eq':''}"><div class="hd"><span class="nm" style="font-size:16px;color:var(--rE)">${P.name}</span><span class="rar">Camino ${k}</span></div>
-    <div class="s">${P.passive}</div><div class="s">Habilidad: <b>${sk?sk.name:'por decidir'}</b>${sk?' · '+sk.desc:''}</div>${cur?'<span class="pill">Tu camino</span>':''}</div>` }
+// camino: nombre, pasiva y habilidades de esa etapa (A = área: oleadas más rápido · B = un objetivo: mejor contra jefes)
+const skList=L=>L.map(s=>`<div class="s">• <b>${s.name}</b> · ${s.desc}</div>`).join('');
+function pathCard(k,P,cur){
+  return `<div class="wcard${cur?' eq':''}"><div class="hd"><span class="nm" style="font-size:16px;color:var(--rE)">${P.name}</span><span class="rar">Camino ${k} · ${k==='A'?'área':'un objetivo'}</span></div>
+    <div class="s">Pasiva · <b>${P.pname}</b>: ${P.pdesc}</div>${skList(P.skills)}${cur?'<span class="pill">Tu camino</span>':''}</div>` }
 function tabGrim(){ const GC=CFG.grimoire, P=G.evoPaths(), lv=G.grimLevel();
   let top='';
   if(!G.grimOwned()){ const c=G.grimCost(), miss=G.grimMissing();
@@ -653,6 +842,7 @@ function tabGrim(){ const GC=CFG.grimoire, P=G.evoPaths(), lv=G.grimLevel();
   else if(!(S.evo>=1)) top=`<div class="ctrl" style="justify-content:space-between"><b>Nivel ${GC.levels} · aprendido</b><span class="pill" style="color:var(--good)">Llave lista</span></div>
       <p class="hint">${G.evoLvlOk()?'¡Ya puedes evolucionar y elegir camino!':`Evoluciona al llegar al nivel ${CFG.evo.tiers[0].lvl} y elige camino.`}</p>${G.evoLvlOk()?'<button class="btn gold" data-act="evoOpen">Evolucionar</button>':''}`;
   else top=`<div class="ctrl" style="justify-content:space-between"><b>Camino elegido: ${P[S.path].name}</b></div>
+      ${G.evoLvlOk()?`<button class="btn gold" data-act="evoOpen">Evolucionar a ${G.nextEvoInfo().name}</button>`:''}
       ${tokOpen()?`<button class="btn" data-act="pathAsk">Cambiar a ${P[S.path==='B'?'A':'B'].name} · ${GC.switchCost} tokens</button>`:''}`;
   return `<h3>${G.grimName()}</h3>${top}` }
 let grimOpen=false;
@@ -666,7 +856,7 @@ acts({
   grimBuyGo:()=>{ const r=G.grimBuy(); closeModal(); toast(r.ok?'¡Grimorio conseguido!':'Tokens insuficientes'); renderTab() },
   grimUp:()=>{ const r=G.grimUp(); if(r.ok){ haptic('ok'); toast(r.lvl>=CFG.grimoire.levels?'¡Grimorio aprendido! Ya puedes evolucionar':'Grimorio nivel '+r.lvl) } else toast(r.why==='xp'?'Sigue luchando':'Te faltan recursos'); renderTab(); if(grimOpen) showGrim() },
   pathAsk:()=>{ const P=G.evoPaths(), to=P[S.path==='B'?'A':'B'];
-    showModal(`<h3>Cambiar a ${to.name}</h3><p class="hint">${to.passive}</p><p class="hint">Cuesta ${CFG.grimoire.switchCost} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="pathGo" ${G.tokens()>=CFG.grimoire.switchCost?'':'disabled'}>Cambiar</button></div>`) },
+    showModal(`<h3>Cambiar a ${to.name}</h3><p class="hint">${to.passive}</p>${skList(to.skills)}<p class="hint">Cuesta ${CFG.grimoire.switchCost} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="pathGo" ${G.tokens()>=CFG.grimoire.switchCost?'':'disabled'}>Cambiar</button></div>`) },
   pathGo:()=>{ const r=G.pathSwitch(); closeModal(); toast(r.ok?'Ahora eres '+G.evoP().name:r.why==='event'?'Termina el evento primero':'Tokens insuficientes'); updateHUD(); renderTab() },
 });
 // Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.
@@ -906,16 +1096,18 @@ function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward
     <button class="btn gold" data-act="close">Continuar</button>`); }
 /* ---------- Torre (roguelike) ---------- */
 const NODE={fight:['⚔️','Combate','Enemigos normales · +'+CFG.tower.souls.fight+' almas'],elite:['💀','Élite','Con rasgos · eliges 1 de 3 (hasta Épica)'],treasure:['🎁','Cofre','Sin luchar · 1 grimorio al azar'],rest:['🔥','Hoguera','Antes del jefe: te curas del todo'],boss:['👑','Jefe','Eliges 1 de 3 grimorios legendarios'],shop:['🛒','Tienda','Cartas y grimorios por almas'],event:['❓','?','Evento, combate, tienda o cofre'],altar:['🕯️','Altar maldito','1 grimorio legendario y 1 maldición']};
-// mapa de la Torre (estilo Slay the Spire): abajo el piso de donde vienes (✓), encima el actual (los caminos que puedes
-// tomar brillan y llevan su nombre) y arriba los 3 siguientes. Cada tipo de casilla tiene su color.
+// mapa de la Torre (estilo Slay the Spire): el tramo entero de 10 pisos, de abajo arriba: lo ya recorrido (✓), el piso actual
+// (los caminos que puedes tomar brillan) y los siguientes hasta el jefe, arriba del todo. Se desliza; al abrirlo se coloca en tu piso.
+// Al vencer al jefe, mapa nuevo (cartel «Mapa N · pisos a-b»). Cada tipo de casilla tiene su color.
 const NCOL={shop:'#2fb37a',fight:'#c8735a',elite:'#a86be0',treasure:'#e8b04a',rest:'#f08a3c',event:'#4f95e6',altar:'#c0392b',boss:'#e5484d'};
-function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(t=>t.f<run.floor).sort((a,b)=>a.f-b.f), E=CFG.tower.boss.every, FK=CFG.tower.route.fork||1;
+let towerMapSeen={n:0,at:0}, towerScroll={floor:0,top:0};   // cartel del último mapa nuevo (n, cuándo salió) · scroll del mapa (se conserva en el mismo piso)
+function towerMapSvg(run){ const E=CFG.tower.boss.every, t0=Math.floor((run.floor-1)/E)*E, map=G.towerMap(), trail=(run.trail||[]).filter(t=>t.f<run.floor&&t.f>t0).sort((a,b)=>a.f-b.f), FK=CFG.tower.route.fork||1;   // t0: último piso del mapa anterior
   // filas de abajo arriba: el camino ya recorrido, el piso actual y los siguientes
   const rows=trail.map(t=>({f:t.f,n:t.row.n,c:t.row.c,pick:t.i,past:true})).concat(map.map((m,k)=>({f:run.floor+k,n:m.n,c:m.c,now:k===0})));
   const boss=rows.some(r=>r.n[0]==='boss'), W=340, top=40+(boss?16:0);
   // a pantalla completa el mapa llena el alto libre: si sobra sitio, los pisos se separan más (hasta 150)
   const fillH=typeof innerHeight==='number'?Math.round(Math.max(320,innerHeight-252)/Math.min(innerWidth||390,520)*W):0;
-  const rowH=Math.max(92,Math.min(150,(fillH-top)/rows.length)), H=Math.max(rows.length*rowH+top,fillH);
+  const rowH=Math.max(96,Math.min(150,(fillH-top)/rows.length)), H=Math.max(rows.length*rowH+top,fillH);
   const jit=(f,c,k)=>{ const x=Math.sin(f*91.7+c*13.3+k)*43758.5; return (x-Math.floor(x))*2-1 };   // pequeño desorden fijo: aire de mapa dibujado
   const rowY=r=>H-52-r*rowH, X=(c,f)=>[70,170,270][c]+jit(f,c,1)*10, Y=(r,f,c)=>rowY(r)+jit(f,c,2)*6;
   const P=(r,i)=>{ const R=rows[r]; return R.n.length===1?[W/2,rowY(r)]:[X(R.c[i],R.f),Y(r,R.f,R.c[i])] };   // una casilla sola (jefe, hoguera, élite obligatorio): en el centro exacto
@@ -956,7 +1148,16 @@ function towerMapSvg(run){ const map=G.towerMap(), trail=(run.trail||[]).filter(
     nodes+=g+'</g>' }));
   // franja del tramo: 9 pisos y el jefe al final
   const m=(run.floor-1)%E, strip=`<div class="ttramo">${Array.from({length:E-1},(_,i)=>`<i class="${i<m?'d':i===m?'c':''}"></i>`).join('')}<b class="${m===E-1?'c':''}">👑</b></div>`;
-  return `${strip}<div class="tmapbox"><svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%" data-now="${nowR}">${s}${nodes}</svg></div>` }
+  // cartel al empezar un mapa nuevo (tras vencer a un jefe), una vez
+  // (si la pantalla se vuelve a pintar mientras sale, sigue por donde iba: no empieza de nuevo ni se corta)
+  const mapN=t0/E+1, now=Date.now(); if(run.floor===t0+1&&run.floor>1&&towerMapSeen.n!==mapN) towerMapSeen={n:mapN,at:now};
+  const age=now-towerMapSeen.at, banner=towerMapSeen.n===mapN&&age<2600?`<div class="tnewmap" style="animation-delay:-${age}ms"><b>Mapa ${mapN}</b><span>Pisos ${t0+1}-${Math.min(CFG.tower.maxFloor,t0+E)}</span></div>`:'';
+  return `${strip}<div class="tmapbox">${banner}<svg class="tmapsvg" viewBox="0 0 ${W} ${H}" width="100%" data-now="${nowR}" data-y="${nowR>=0?Math.round(rowY(nowR)):0}" data-h="${H}" data-f="${run.floor}">${s}${nodes}</svg></div>` }
+// después de pintar: el mapa se coloca con tu piso en el tercio de abajo; si no has cambiado de piso, se queda donde lo dejaste
+function towerMapScroll(){ const box=$('.tmapbox'), svg=box&&box.querySelector('.tmapsvg'); if(!svg) return; const f=+svg.dataset.f;
+  box.onscroll=()=>{ towerScroll.top=box.scrollTop };
+  if(towerScroll.floor===f){ box.scrollTop=towerScroll.top; return }
+  const k=svg.clientWidth/svg.viewBox.baseVal.width, y=(+svg.dataset.y)*k; box.scrollTop=Math.max(0,y-box.clientHeight*0.7); towerScroll={floor:f,top:box.scrollTop} }
 /* ---------- Torre: eventos ? ---------- */
 // eventos ?: título, texto y botones [c, etiqueta, ¿se puede?]
 function towerEvView(run){ const id=run.ev.id, E=CFG.tower.events, hp=run.hp==null?1:run.hp, so=run.souls||0, cu=(run.curses||[]).length;
@@ -1193,7 +1394,7 @@ function tabBoss(){
   <section class="panel"><h3>Jefe semanal</h3>
     ${pend?`<div class="misTop"><div class="ctrl" style="justify-content:space-between"><b>Premio de la semana pasada · puesto ${pend.pos}</b><button class="btn sm gold" data-act="wbClaim">Recoger</button></div><span class="s">${pendText(pend)}</span></div>`:''}
     ${paused?pauseBox():''}
-    ${(J=>J?`<div class="affx boss"><span class="affi">${WBICO[J.id]||'👑'}</span><div><small>JEFE DE ESTA SEMANA</small><b>${J.name}</b><span>${J.desc}</span><span class="weak">Débil contra: <b>${J.weak}</b></span></div></div>`:'')(G.wbBoss(w))}
+    ${(J=>J?`<div class="affx boss"><span class="affi">${WBICO[J.id]||'👑'}</span><div><small>JEFE DE ESTA SEMANA</small><b>${J.name}</b><span>${J.desc}</span><span class="weak">Habilidades: <b>${[J.zone.jefe.own,J.zone.jefe.s1,J.zone.jefe.s2].map(s=>s.name).join(' · ')}</b></span></div></div>`:'')(G.wbBoss(w))}
     <div class="evhead"><div><span class="s">Entradas</span><b>${G.wbFreeLeft()+S.bossTickets}</b></div><div><span class="s">Daño semana</span><b>${dmg?fmt(dmg):'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="wbGo" ${(S.bossTickets>0||G.wbFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Luchar'}</button>
     ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="bossTicket">+1 ticket · ${W.ticketCost} tok</button>`:''}</div>
@@ -1375,9 +1576,10 @@ function evoModal(){
     ${pathCard('B',P.B)}<button class="btn gold" data-act="evoGo" data-k="B" ${ok?'':'disabled'}>Ser ${P.B.name}</button>
     ${evoCostHtml()}<p class="hint">Podrás cambiar de camino más adelante por ${CFG.grimoire.switchCost} tokens.</p>
     <button class="btn" data-act="close">Ahora no</button>`) }
-  const E=G.nextEvo().classes[S.cls];
+  const E=G.nextEvoInfo();
   showModal(`<h3>Evolución</h3>
     <div class="win-card" style="--rc:var(--gold)"><span class="s">${heroName()} →</span><b>${E.name}</b><span class="s">${E.passive}</span></div>
+    ${skList(E.skills)}
     ${evoCostHtml()}
     <p class="hint">Sigues en nivel ${S.lvl}; ${CFG.evo.tiers[S.evo+1]?'el tope de nivel pasa a '+CFG.evo.tiers[S.evo+1].lvl:'el nivel deja de tener tope'}.</p>
     <div class="ctrl"><button class="btn" data-act="close">Ahora no</button><button class="btn gold" data-act="evoGo" ${G.canEvolve()?'':'disabled'}>Evolucionar</button></div>`);
@@ -1386,7 +1588,7 @@ function evoModal(){
 // botones de esta pantalla (data-act)
 acts({
   evoOpen:()=>evoModal(),
-  evoGo:(b,k)=>{ const r=G.evolve(k); if(!r.ok) return; haptic('ok'); closeModal(); showModal(`<h3>¡Ahora eres ${G.evoP().name}!</h3><p class="hint">${G.evoP().passive}</p><button class="btn gold" data-act="close">Continuar</button>`); updateHUD(); },
+  evoGo:(b,k)=>{ const r=G.evolve(k); if(!r.ok) return; haptic('ok'); closeModal(); showModal(`<h3>¡Ahora eres ${G.evoP().name}!</h3><p class="hint">${G.evoP().passive}</p>${skList(G.evoP().skills)}<button class="btn gold" data-act="close">Continuar</button>`); updateHUD(); },
 });
 /* ---------- combates abandonados (se cerró la app a mitad) ---------- */
 function quitModal(q){ const p=q.pvp, t=q.tower;
@@ -1470,7 +1672,7 @@ acts({
 /* ---------- Ajustes ---------- */
 function tabDev(){
   const on=battery();
-  return `<section class="panel"><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Modo batería</div><div class="s">Menos efectos, gasta menos</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
+  return `<section class="panel"><div class="row"><div><div class="t">Nombre</div><div class="s">${esc(S.name||'—')}</div></div></div>${canNotify()?`<div class="row"><div><div class="t">Avisos del bot</div><div class="s">Te escribe cuando tu héroe llena el tiempo sin conexión</div></div><div class="acts"><button class="btn sm${S.opt&&S.opt.notify?' on':''}" data-act="notifyAsk">${S.opt&&S.opt.notify?'Activados':'Activar'}</button></div></div>`:''}<div class="row"><div><div class="t">Música</div><div class="s">Melodía de fondo (una por modo y otra en los JEFES)</div></div><div class="acts"><button class="btn sm${sndOn('music')?' on':''}" data-act="sndToggle" data-k="music">${sndOn('music')?'Activada':'Apagada'}</button></div></div><div class="row"><div><div class="t">Efectos de sonido</div><div class="s">Golpes, habilidades, premios y botones</div></div><div class="acts"><button class="btn sm${sndOn('sfx')?' on':''}" data-act="sndToggle" data-k="sfx">${sndOn('sfx')?'Activados':'Apagados'}</button></div></div><div class="row"><div><div class="t">Modo batería</div><div class="s">Menos efectos, gasta menos</div></div><div class="acts"><button class="btn sm${on?' gold':''}" data-act="battery" aria-pressed="${on}">${on?'Activado':'Desactivado'}</button></div></div>
   </section>
   
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
@@ -1498,7 +1700,8 @@ function renderSelect(){
   <p class="hint">Elige tu clase</p>
   <div class="classes">${Object.entries(CFG.classes).map(([k,c])=>`<button class="ccard" data-act="pick" data-c="${k}">
     <span class="cn">${clsLabel(k)}</span>
-    <span class="cs">Habilidad: <b>${CFG.skills.cls[k].name}</b> · ${CFG.skills.cls[k].desc}</span></button>`).join('')}</div>`;
+    <span class="cs">Rasgo: <b>${c.trait.name}</b> · ${c.trait.desc}</span>
+    <span class="cs">Habilidad: <b>${CFG.kit[k].base.skills[0].name}</b> · ${CFG.kit[k].base.skills[0].desc}</span></button>`).join('')}</div>`;
 }
 
 // botones de esta pantalla (data-act)
@@ -1510,6 +1713,7 @@ acts({
     if(tg&&tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank') },
   invCopy:()=>{ const link=Telemetry.inviteLink(CFG); const ok=()=>toast('Enlace copiado'), no=()=>toast(link);
     try{ navigator.clipboard.writeText(link).then(ok,no) }catch(e){ no() } },
+  sndToggle:(b,k)=>{ G.setOpt(k,!sndOn(k)); sndUnlock(); renderTab() },
   battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.flash=0;ART.clearFx();ART.clearParts()}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},
@@ -1601,10 +1805,8 @@ function draw(dt){
   const g=C.ctx; g.setTransform(dpr*sc,0,0,dpr*sc,0,0);
   if(!battery()){ const [sx,sy]=ART.shakeOffset(dt); g.translate(sx,sy); }   // sacudida (críticos, golpes fuertes)
   const bars=!battery();
-  // escenario según dónde luchas: campaña (zona de la fase), Mazmorra (zona del último grupo), Torre (piso), Jefe semanal (infierno), PvP (arena)
-  const zoneOf=f=>Math.floor(((f-1)%150)/30), modeOf=f=>Math.min(2,Math.floor((f-1)/150));
-  const zone=!B?zoneOf(S.fase):B.kind==='pvp'?'arena':B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):B.event?zoneOf(B.groups||1):zoneOf(S.fase);
-  const smode=!B||!B.event?S.mode:B.kind?0:modeOf(B.groups||1);
+  // escenario y monstruos según dónde luchas (viewZone): campaña (fase), Mazmorra (último grupo), Torre (piso), Sala, Jefe semanal; PvP (arena)
+  const VZ=viewZone(B), zone=B&&B.kind==='pvp'?'arena':(VZ.Z?VZ.Z.scene:0), smode=VZ.m;
   const gy=Math.min(H-30,Math.round(H*0.68)); fx.sc=sc; fx.gy=gy;
   ART.scene(g,W,H,gy,zone,battery()?0:fx.scroll||0,smode,battery()?0:performance.now()/1000);
   const hx=W*0.24, c=CFG.classes[S.cls], now=performance.now(), T=now/1000, anim=!battery();
@@ -1626,19 +1828,18 @@ function draw(dt){
   let q=0, idx=0; const drawQ=[];
   for(const e of B.enemies){ if(B.kind==='pvp') break;
     const dieK=e.dead?(B.t-(e.deadAt||0))/0.45:0; if(e.dead&&(dieK>=1||e.x===undefined)) continue;
-    if(!e._k){ const f=e.f||S.fase, zone=B.kind==='boss'?4:B.kind==='tower'?Math.min(4,Math.floor((G.towerState().run||{floor:1}).floor/20)):zoneOf(f);
-      const m=e.f?Math.floor((e.f-1)/150):B.kind?0:S.mode; e._k=ART.kindFor(zone,idx,{boss:B.boss&&!e.minion,elite:B.elite,mode:m}); e._hue=modeHue(m); }   // color del modo
+    if(!e._k){ const Z=e.zone||VZ.Z; e._k=(Z&&Z.art)||'slime'; e._hue=modeHue(e.zone?CFG.zones.list.findIndex(M=>M.includes(e.zone)):VZ.m); }   // dibujo de su zona, con el color del modo
     idx++;
     const p=Math.min(1,(B.t-e.spawn)/(e.walk||CFG.enemy.walk));
-    const big=B.boss&&!e.minion, cx=contact+((big?(B.elite?26:21):13)-13)*2.4;   // los esbirros del jefe, de tamaño normal y sin corona   // los grandes se paran más lejos (no tapan al héroe)
+    const big=(B.boss||!!e.zp)&&!e.minion&&!e.summoned, grow=e.grow||1, cx=contact+((big?(B.elite?26:21):13)*grow-13)*2.4;   // (Absorber, Luna llena: crece)   // los esbirros del jefe, de tamaño normal y sin corona   // los grandes se paran más lejos (no tapan al héroe)
     // en cola, en dos filas al tresbolillo: la de atrás un poco más arriba y más pequeña (da profundidad y no se tapan)
     if(e._row==null) e._row=big?0:idx%2;
-    const r=(big?(B.elite?26:21):13)*(e._row?0.86:1), y=gy-e._row*3;
+    const r=(big?(B.elite?26:21):13)*grow*(e._row?0.86:1)*(e.zp&&!big?1.25:1), y=gy-e._row*3; e._r=r;   // (élites llamados: algo más grandes)
     let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*24;q++}
     e.x=x; drawQ.push(()=>{
     if(e.dead&&!e._burst){ e._burst=1; if(anim) ART.burst(x,gy-r,'#d9d2c0',8); }
-    ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:big,elite:!!(B.elite||B.node==='boss'),t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK)});
-    if(anim&&!e.dead) ART.status(g,x,gy,r,{frozen:e.frozen>B.t,burn:(e.burn&&e.burn.some(u=>u>B.t))||(e.dot>B.t&&e.dotKind==='fuego'),poison:e.poison&&e.poison.some(p=>p.until>B.t),mark:e.mark>B.t},T);
+    ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:big,elite:!!(B.elite||B.node==='boss'),t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK,e.down||e.untarget>B.t||e.batU>B.t||e.boxIn?0.55:0)});   // caído, invisible, en murciélagos o en la caja: medio transparente
+    if(anim&&!e.dead) ART.status(g,x,gy,r,{frozen:e.frozen>B.t,burn:(e.burn&&e.burn.some(u=>u.until>B.t))||(e.dot>B.t&&e.dotKind==='fuego'),poison:e.poison&&e.poison.some(p=>p.until>B.t),mark:e.mark>B.t},T);
     if(bars&&!e.immortal&&!e.dead&&B.event&&!B.kind){ const by=y-r*3.7-6; g.fillStyle='#0009'; g.fillRect(x-18,by,36,4); g.fillStyle='#e2605a'; g.fillRect(x-18,by,36*Math.max(0,e.hp/e.max),4); }   // Mazmorra (sin fin): barra de cada uno
     }); drawQ[drawQ.length-1].row=e._row;
   }
@@ -1663,7 +1864,19 @@ function draw(dt){
 // izquierda y la de los enemigos (todos juntos) a la derecha, en espejo, con el emblema del centro entre las dos.
 // Se vacían hacia el centro; lo que acabas de perder queda en claro un momento (estela) y luego baja.
 // El escudo es una barra azul fina justo debajo de la tuya. Con menos del 25 % de vida tu barra late en rojo.
-const WBICO={enjambre:'🪲',coloso:'🛡️',bestia:'🐗',liche:'💀',dragon:'🐉'};   // jefes de la semana
+// zona que se ve: campaña (fase), Sala (su JEFE), Jefe semanal (el de la semana), Torre (piso: zonas de Normal), Mazmorra (grupo)
+function viewZone(B){ const L=CFG.zones.list, zi=f=>Math.max(0,Math.min(4,Math.floor(((Math.max(1,f)-1)%150)/30))), md=m=>Math.max(0,Math.min(L.length-1,m||0));
+  if(!B) return {m:md(S.mode),Z:L[md(S.mode)][zi(S.fase)]};
+  if(B.kind==='tower'){ const fl=(G.towerState().run||{floor:1}).floor; return {m:0,Z:L[0][Math.min(4,Math.floor(fl/20))]} }
+  if(B.kind==='boss') return {m:md(S.mode),Z:(B.wb&&B.wb.zone)||L[md(S.mode)][4]};
+  if(B.kind==='hall') return {m:md(B.hall.m),Z:L[md(B.hall.m)][zi(B.hall.f)]};
+  if(B.event&&!B.kind){ const g=B.groups||1, m=md(Math.floor((g-1)/150)); return {m,Z:L[m][zi(g)]} }
+  return {m:md(S.mode),Z:L[md(S.mode)][zi(S.fase)]} }
+const WBICO={slimes:'🟢',lobos:'🐺',goblins:'👺',nomuertos:'💀',orcos:'🪓',zombis:'🧟',marionetas:'🎭',abominaciones:'🥩',vampiros:'🧛',pesadillas:'👁️',diablillos:'😈',sucubos:'💋',caballeros:'⚔️',demonios:'🌋',caidos:'🌑'};   // jefes de la semana (por zona)
+// pasivas de los élites y JEFES de zona
+const ZICO={dividirse:'🫧',division:'🫧',dotGolpe:'☠️',alfa:'🐺',acecho:'🐾',cabezaDura:'🪖',totem:'🗿',llamada:'👥',rearmarse:'🦴',armaduraHueso:'🛡️',ejercito:'💀',ansia:'💢',waaagh:'📣',festin:'🍖',
+  infecta:'🦠',gases:'💨',pudricion:'🪱',caja:'🎁',burla:'🎭',hilos:'🧵',robaVida:'🩸',desmembrarse:'🧩',descosido:'🪡',sed:'🦇',beso:'💋',senorSangre:'🧛',locura:'😵',estatica:'📺',sueno:'🌙',
+  invisible:'👻',puerta:'🚪',armaduraInf:'🛡️',festinDolor:'⛓️',montura:'🐎',hermandad:'🤝',inquebrantable:'🗿',ardiente:'🔥',forja:'⚒️',lago:'🌋',escudoLuz:'✨',hambreLuz:'🕳️',formas:'💠'};
 // Desbloqueo de modos: nombre, qué es y qué falta («Fase 10 · vas por la 4», «Día 7 · faltan 3 días»)
 const UNL={lab:['Mazmorra','Aguanta oleadas sin fin: ranking diario y cofres por muertes','lab'],boss:['Jefe semanal','Un jefe distinto cada semana: ranking por daño','boss'],
   pvp:['PvP','Duelos contra la partida de otros jugadores','pvp'],tower:['Torre','Roguelike: sube pisos eligiendo cartas y grimorios','torre']};
@@ -1678,8 +1891,13 @@ const VST={B:null,me:{cur:1,from:0,at:0},foe:{cur:1,from:0,at:0}};
 // iconos de estado bajo las barras: [icono, nombre, qué hace, ¿malo?]
 const ST_ICO={life:['❤️','Vida','Si caes, pierdes una vida (sin vidas, la partida termina)'],atk:['⚔️','Más daño','Tus golpes hacen más daño'],spd:['💨','Más velocidad','Atacas más rápido'],ls:['🩸','Robo de vida','Te curas con el daño que haces'],
   baluarte:['🛡️','Baluarte','Más defensa y devuelves el daño que recibes'],atk1:['👑','Contra jefes','Más daño a los jefes'],taken:['🧱','Protegido','Recibes menos daño'],
-  sang:['🗡️','Sangría','Tus próximos golpes hacen +100 %'],combust:['🔥','Combustión','Tus golpes queman'],clone:['👥','Clon de sombra','Un clon copia tus golpes'],
-  aura:['✨','Luz del juicio','Te curas y quemas a los cercanos'],ice:['❄️','Armadura de hielo','Quien te pega recibe esquirlas'],cloud:['☁️','Nube tóxica','Envenena a todos los enemigos'],
+  h_veneno:['🧪','Veneno','Pierdes vida cada segundo',1],h_sangrado:['🩸','Sangrado','Pierdes vida cada segundo',1],h_quemadura:['🔥','Quemadura','Pierdes vida cada segundo',1],
+  h_stun:['💫','Aturdido','No atacas ni lanzas habilidades',1],h_noskill:['🚫','Sin arma','No puedes lanzar habilidades',1],h_noheal:['❌','Sin curación','No te puedes curar',1],
+  h_inf:['🦠','Infección','Te curas menos',1],h_rot:['🪱','Pudrición','Menos vida máxima',1],h_burla:['🎭','Burla','Haces menos daño',1],h_mad:['😵','Locura','Con 3, atacas a uno al azar',1],h_locura:['😵','¡Locura!','Atacas a un enemigo al azar',1],
+  h_def:['🪓','Defensa rota','Tienes menos defensa',1],h_sueno_arde:['🔥','Sueño: el suelo arde','Pierdes vida cada segundo',1],h_sueno_lento:['🐌','Sueño: lento','Atacas más lento',1],
+  h_sueno_roban:['🩸','Sueño: roban vida','Los enemigos se curan con lo que te hacen',1],h_sueno_copias:['👥','Sueño: copias','Han aparecido copias de un élite',1],
+  sang:['🗡️','Sangría','Tus próximos golpes hacen +100 %'],aura:['✨','Consagrar','Te curas y dañas a los cercanos'],
+  guard:['🛡️','Guardia','Cada carga: −5 % de daño recibido'],rage:['😤','Furia','Cada carga: más daño'],conc:['🎯','Concentración','Cada carga: +5 % de daño'],luz:['🌟','Luz','Al llenarse, te curas y dañas a todos'],blades:['🌀','Cuchillas','Giran a tu alrededor y cortan a los cercanos'],
   c_vida:['💪','Enemigos más fuertes','Maldición: los enemigos tienen +20 % de vida',1],c_fragil:['💔','Frágil','Maldición: −15 % de vida máxima',1],c_rasgo:['☠️','Élites temibles','Maldición: los élites traen un rasgo más',1],
   t_rapido:['⚡'],t_regenera:['💚'],t_escudo:['🛡️'],t_espinas:['🌵'],t_furioso:['😡'],t_gigante:['🗿'],
   m_invocador:['👥'],m_enfurecido:['💢'],m_fases:['🔰'],m_final:['♾️'],p_rage:['💢','Enfurecido','Pega y ataca más rápido'],p_summon:['👥','Refuerzos','Ha llamado ayudantes']};
@@ -1703,10 +1921,11 @@ function vsHud(B,h){ const el=$('#vsHud'); if(!el) return; el.hidden=!B; if(!B) 
   const run=B.kind==='tower'?G.towerState().run:null, TT=CFG.tower;
   const lives=run?Array(Math.max(0,run.lives||0)).fill(['life']):[];   // Torre: tus vidas, como corazones
   const AF=B.event&&!B.kind&&B.aff; if(AF&&!ST_ICO['a_'+AF.id]) ST_ICO['a_'+AF.id]=[AFFICO[AF.id]||'✦','Modificador del día: '+AF.name,AF.desc];
-  const mine=(AF?[['a_'+AF.id]]:[]).concat(lives,G.heroBuffs().map(x=>[x.k,x.left!=null?` · ${Math.ceil(x.left)} s`:x.n?` · quedan ${x.n}`:'']),run?(run.curses||[]).map(c=>['c_'+c]):[]);
+  const fmtX=x=>x.left!=null?` · ${Math.ceil(x.left)} s`:x.max?` · ${x.n} de ${x.max}`:x.n?` · quedan ${x.n}`:'';
+  const mine=(AF?[['a_'+AF.id]]:[]).concat(lives,G.heroBuffs().map(x=>[x.k,fmtX(x)]),G.heroDebuffs().map(x=>[x.k,fmtX(x)]),run?(run.curses||[]).map(c=>['c_'+c]):[]);   // (y lo que te hacen los enemigos de zona)
   const foes=[]; if(run){ if(B.mech) foes.push(['m_'+B.mech]); if(B.node==='elite') for(const t of new Set(B.enemies.flatMap(e=>e.traits||[]))) foes.push(['t_'+t]); }
   for(const e of B.enemies) if(!e.dead&&e.phase&&!foes.some(f=>f[0]==='p_'+e.phase)) foes.push(['p_'+e.phase]);
-  if(B.kind==='boss'&&B.wb){ const J=B.wb, k='w_'+J.id; if(!ST_ICO[k]) ST_ICO[k]=[WBICO[J.id]||'👑',J.name,J.desc+' · Débil contra: '+J.weak,1]; foes.push([k,J.armor&&B.enemies[0]&&B.enemies[0].broken?' · ¡armadura rota!':'']); }
+  for(const e of B.enemies) if(!e.dead&&e.zp){ const k='z_'+e.zp.id+'_'+e.zp.name; if(!ST_ICO[k]) ST_ICO[k]=[ZICO[e.zp.id]||'✦',e.name+' · '+e.zp.name,e.zp.desc,1]; if(!foes.some(f=>f[0]===k)) foes.push([k]); }   // pasivas de los élites y JEFES de zona
   for(const [k] of foes){ if(k[0]==='t'&&!ST_ICO[k][1]){ const t=TT.traits[k.slice(2)]; ST_ICO[k][1]=t.name; ST_ICO[k][2]=t.desc; } if(k[0]==='m'&&!ST_ICO[k][1]){ ST_ICO[k][1]=MECH[k.slice(2)]; ST_ICO[k][2]=TT.bossMech.desc[k.slice(2)]; } }
   const put=(id,list)=>{ const x=$(id), hh=stIcons(list.map(([k,e])=>[k,e&&e.replace(/\d+ s$/,'')])); if(x&&x.dataset.h!==hh){ x.dataset.h=hh; x.innerHTML=stIcons(list); } };
   put('#stMe',mine); put('#stFoe',foes); }

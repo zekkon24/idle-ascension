@@ -4,18 +4,19 @@
 (function(root){
 const CFG = {
   // ---------- héroe: clases, mejoras de oro, topes, habilidades, evolución y grimorio (trozo de la lista CFG) ----------
-  // Clases: sin pasivas propias; lo que las hace distintas va en sus estadísticas base (el Guerrero recibe un 5 % menos
-  // de daño con dmgTaken, el Clérigo se regenera con regen) y en su habilidad. La pasiva llega con el camino de la 1.ª evolución.
+  // Clases: su pasiva base es un RASGO que se queda siempre (trait): el Guerrero recibe menos daño (dmgTaken), el Mago recarga antes
+  // (cdr), el Arquero y el Asesino tienen más crítico (cr) y el Clérigo se regenera (regen). Lo demás llega con el kit (CFG.kit).
+  // Sin esquiva: desapareció del juego. grow / growHp: curva por nivel tras la 1.ª y la 2.ª evolución (× gatk / × ghp y gdf), calculada con simulaciones.
   classes: {
     Guerrero:{hp:250.6,ghp:2.105,   // +30 % de vida (tanque)
-     atk:22,gatk:0.40,df:12.35,gdf:0.1049,spd:0.82,   // más daño y velocidad: fase 100 en ~175 h (antes ~216; Mago ~150) y farmea como las demás
-    cr:0,cd:1.0,ev:0,ranged:false,color:'#d9774a',dmgTaken:0.95, role:'Tanque · cuerpo a cuerpo'},
-    Mago:{hp:138.82,ghp:1.0977,atk:20.959,gatk:0.3051,df:4.12,gdf:0.035,spd:0.84,cr:0,cd:1.0,ev:0,ranged:true,color:'#8f7cf0', role:'Daño · a distancia'},
-    Arquero:{hp:131.06,ghp:1.1558,atk:24,gatk:0.09,df:5.15,gdf:0.0437,spd:1.365,cr:0.05,cd:1.0,ev:0.05,ranged:true,color:'#5fb86a', role:'Daño · a distancia'},
-    Asesino:{hp:142.29,ghp:0.9114,atk:20.13,gatk:0.18,df:4.12,gdf:0.035,spd:1.0,cr:0.10,cd:1.5,ev:0.15,ranged:false,color:'#c95a8a', role:'Daño · cuerpo a cuerpo'},
-    Clerigo:{hp:228.46,ghp:1.4863,atk:18,gatk:0.44,   // más daño y velocidad: fase 100 en ~190 h (antes ~250) y farmea como las demás
+     atk:22,gatk:0.34,df:12.35,gdf:0.1049,spd:0.82,
+    cr:0,cd:1.0,ranged:false,color:'#d9774a',dmgTaken:0.95, role:'Tanque · cuerpo a cuerpo', grow:[1.174,1.837], trait:{name:'Aguante',desc:'Recibe un 5 % menos de daño'}},
+    Mago:{hp:138.82,ghp:1.0977,atk:20.959,gatk:0.3051,df:4.12,gdf:0.035,spd:0.84,cr:0,cd:1.0,ranged:true,color:'#8f7cf0', role:'Daño · a distancia', cdr:0.1, grow:[1.001,1.306], trait:{name:'Canalizar',desc:'Sus habilidades se recargan un 10 % más rápido'}},
+    Arquero:{hp:131.06,ghp:1.1558,atk:24,gatk:0.15,df:5.15,gdf:0.0437,spd:1.365,cr:0.10,cd:1.0,ranged:true,color:'#5fb86a', role:'Daño · a distancia', grow:[1.032,1.144], trait:{name:'Puntería',desc:'+10 % de crítico'}},
+    Asesino:{hp:142.29,ghp:0.9114,atk:20.13,gatk:0.25,df:4.12,gdf:0.035,spd:1.0,cr:0.10,cd:1.5,ranged:false,color:'#c95a8a', role:'Daño · cuerpo a cuerpo', grow:[1.024,2.315], trait:{name:'Instinto',desc:'+10 % de crítico'}},
+    Clerigo:{hp:228.46,ghp:1.4863,atk:18,gatk:0.44,
     df:12.35,gdf:0.105,   // +50 % de defensa (tanque)
-     spd:0.88,cr:0,cd:1.0,ev:0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo'},
+     spd:0.88,cr:0,cd:1.0,ranged:true,color:'#e9c75a',regen:0.005, role:'Tanque · a distancia', label:'Clérigo', grow:[0.8,1.681], trait:{name:'Fe',desc:'Regenera el 0,5 % de su vida por segundo'}},
   },
   upgrades:{ // coste ×1,031 por nivel (antes ×1,0325): compensa el calendario que ya no existe
     atk:{name:'Daño',base:25,g:1.031,mult:1.0226},
@@ -24,73 +25,123 @@ const CFG = {
     spd:{name:'Velocidad de ataque',base:5,g:1.031,mult:1.004}, // +0,4 % por nivel; más barata para que rinda como las demás
   },
   caps:{cr:0.5,ls:0.2},
-  // Habilidades activas (elegidas por el diseñador): la de clase es directa (golpe/cura al momento); la de evolución da un efecto unos segundos. En los eventos se usan a mano;
-  // en la campaña se lanzan solas (si opt.autoSkills no está apagado). cd = recarga en segundos de combate. SIN BALANCEAR.
-  skills:{
-    cls:{
-      Guerrero:{id:'muro', name:'Muro de escudos', cd:18, shield:3, dmgDef:5, desc:'Escudo según su defensa y golpe en área con parte de su defensa'},
-      Mago:{id:'bola', name:'Bola de fuego', cd:12, targets:3, mult:3, burn:0.5, dur:4, desc:'300 % en área hasta a 3 enemigos y los quema'},
-      Arquero:{id:'perforante', name:'Disparo perforante', cd:15, mult:3, desc:'Disparo que atraviesa a todos (300 %)'},
-      Asesino:{id:'ejecutar', name:'Ejecutar', cd:12, mult:9, refund:0.5, desc:'Golpe del 900 %; si mata, la recarga baja a la mitad'},
-      Clerigo:{id:'luz', name:'Golpe de luz', cd:15, hits:6, mult:0.2, back:0.6, heal:0.05, desc:'6 golpes de luz encadenados (20 % cada uno) que luego vuelven y le curan (5 % de vida cada uno)'}},
-    evo:{
-      Guerrero:{id:'sed', name:'Sed de sangre', cd:28, cost:0.2, shield:0.5, ls:0.4, dur:12, desc:'Pierde el 20 % de su vida: escudo de la mitad y +40 % de robo de vida 12 s'},
-      Mago:{id:'combustion', name:'Combustión', cd:28, dur:8, burnUp:0.5, desc:'8 s: las quemaduras hacen +50 % y los que mueren quemados la pasan a otro'},
-      Arquero:{id:'rapido', name:'Fuego rápido', cd:28, dur:6, spd:1.75, desc:'6 s con +75 % de velocidad de ataque'},
-      Asesino:{id:'clon', name:'Clon de sombra', cd:28, dur:8, mult:0.3, desc:'8 s: un clon copia sus golpes al 30 %'},
-      Clerigo:{id:'juicio', name:'Luz del juicio', cd:30, dur:6, heal:0.05, dps:1.0, desc:'6 s: aura que le cura el 5 % por segundo y quema a los enemigos cercanos'}},
-    // habilidad de evolución del camino B: POR DECIDIR (null = aún no hay)
-    evoB:{
-      Guerrero:{id:'baluarte', name:'Baluarte', cd:45, dur:8, df:1.25, reflect:0.75, desc:'8 s: +25 % de defensa y devuelve el 75 % del daño que recibe'},
-      Mago:{id:'armaduraHielo', name:'Armadura de hielo', cd:28, dur:8, shards:2, burst:4, desc:'Lanza 4 esquirlas a todos; 8 s: quien le pega recibe 2 esquirlas'},
-      Arquero:{id:'marca', name:'Marca del cazador', cd:35, dur:8, mult:0.5, desc:'8 s: el objetivo recibe +50 % de daño'},
-      Asesino:{id:'nube', name:'Nube tóxica', cd:60, dur:2, pct:0.05, extra:3, desc:'2 s: una nube envenena a todos cada segundo (+3 acumulaciones)'},
-      Clerigo:{id:'sacrificio', name:'Sacrificio', cd:28, cost:0.3, dur:8, atk:0.6, single:true, desc:'Consume el 30 % de su vida: +60 % de daño a los jefes durante 8 s'}}},
-  skillGap:0.75,   // segundos de espera entre una habilidad y la siguiente (en todos los modos, a mano o solas)
-  evo:{ // evoluciones: al llegar al nivel de cada una se gana su pasiva y el nivel sigue (hasta evolucionar, ese nivel es el tope)
+  skillCd:[6,9,12],   // recarga de cada hueco de habilidad (1.ª, 2.ª y 3.ª), en segundos de combate (el Mago, un 10 % menos)
+  skillGap:0.75,      // segundos de espera entre una habilidad y la siguiente (en todos los modos, a mano o solas)
+  evo:{ // evoluciones: al llegar al nivel de cada una se cambia de etapa del kit (CFG.kit) y el nivel sigue (hasta evolucionar, ese nivel es el tope)
     tiers:[
-      {lvl:150, cost:{ess:3,gold:10000,ev:12}, bonus:{hp:0.15,atk:0.15}, classes:{ // cost: esencias del modo Normal + oro + material del evento · bonus: extra de vida y daño
-        Guerrero:{name:'Berserker',passive:'Furia: +1 % de daño por cada golpe recibido en la oleada (máx. +45 %)',rage:0.01,rageCap:0.45},
-        Mago:{name:'Archimago',passive:'Fuego: cada golpe quema al enemigo; la quemadura se acumula hasta 5 veces',burnPct:0.3,burnDur:3,burnMax:5},
-        Arquero:{name:'Tirador',passive:'Disparo doble: 15 % de probabilidad de disparar dos veces',double:0.15},
-        Asesino:{name:'Sombra',passive:'Instinto: +10 % de velocidad de ataque, recibe un 15 % menos de daño y tras un crítico el siguiente golpe hace +30 %',critNext:0.3,base:{spd:1.1,dmgTaken:0.85}},
-        Clerigo:{name:'Oráculo',passive:'Luz interior: al bajar del 50 % de vida, la regeneración se triplica 10 s (1 vez por oleada)',lightHp:0.5,lightMult:3,lightDur:10},
-      },
-      // camino B (el opuesto): su pasiva es un efecto de grimorio (grimoire.fx[grim])
-      alt:{
-        Guerrero:{name:'Guardián',grim:'fortaleza',passive:'Fortaleza: +10 % de defensa y +50 % de daño a los jefes'},
-        Mago:{name:'Criomante',grim:'escarcha',passive:'Escarcha: clava esquirlas; con 3 hace 210 % ignorando el 50 % de su defensa y lo congela 2 s (no se mueve ni ataca)'},
-        Arquero:{name:'Cazador',grim:'cazador',passive:'Cazador: +40 % de daño a los jefes'},
-        Asesino:{name:'Envenenador',grim:'veneno',passive:'Veneno: cada golpe envenena (70 % por s, 8 s), hasta 8 veces: brilla en peleas largas'},
-        Clerigo:{name:'Oscuro',grim:'sacrificio',noHeal:true,passive:'Corrupto: solo se cura robando vida, y cuanta menos vida tiene, más roba (hasta el 20 % del daño). Cada golpe le cuesta el 2 % de su vida y hace +60 % de daño a los jefes'},
-      }},
-      // Evolución 2: mejora la pasiva de clase (base) y añade un efecto nuevo; se suma a la pasiva de la evolución 1
-      {lvl:300, pending:true, cost:{ess:5,gold:400000,ev:30}, // pending: bloqueada ("próximamente"), pide Esencia de pesadilla
-       bonus:{hp:0.15,atk:0.15}, classes:{
-        Guerrero:{name:'Titán',base:{dmgTaken:0.925},rageCap:0.40,defDmg:1.0,passive:'Piel dura: −7,5 % de daño recibido · Furia hasta +40 % · Sus golpes suman un 100 % de su defensa como daño'},
-        Mago:{name:'Hechicero del Vacío',base:{xp:1.15},burnPct:0.2,burnDur:4,burnMax:6,passive:'Erudito: +15 % de experiencia · La quemadura ignora la defensa, dura 4 s, quema más fuerte y se acumula hasta 6 veces'},
-        Arquero:{name:'Ojo de Halcón',base:{spd:1.075},dblBuff:0.05,dblDur:5,dblMax:5,passive:'Pulso firme: +7,5 % de velocidad · Cada disparo doble da +5 % de daño durante 5 s (hasta +25 %)'},
-        Asesino:{name:'Segador',base:{cd:0.5,cr:0.10},critStack:0.05,critStackMax:0.05,passive:'Letal: +50 % de daño crítico y +10 % de crítico · Tras un golpe sin crítico, el siguiente tiene +5 % de crítico'},
-        Clerigo:{name:'Santo',base:{regen:0.0075},aura:13,auraDur:5,passive:'Fe: regenera el 0,75 % de su vida por segundo · Aura sagrada: lo que se cura se convierte en daño en área durante 5 s'},
-      }},
+      {lvl:150, cost:{ess:3,gold:10000,ev:12}, bonus:{hp:0.15,atk:0.15}},   // cost: esencias del modo Normal + oro + material del evento · bonus: extra de vida y daño
+      {lvl:300, cost:{ess:5,gold:400000,ev:30}, bonus:{hp:0.15,atk:0.15}},  // pide Esencia de pesadilla; sigue el camino de la 1.ª (A → A2 · B → B2)
     ],
   },
   // Grimorio: la LLAVE de la 1.ª evolución. Uno por clase. Se consigue CERRADO (oro + esencias + emblemas, o tokens) y se sube
   // del nivel 1 al 5: cada subida pide tiempo luchando con él (secs, también cuenta el tiempo sin conexión) + recursos.
   // Con el grimorio en el nivel 5 y el héroe en el nivel de la evolución, se evoluciona eligiendo uno de 2 caminos (evo.tiers[0]).
-  // Cambiar de camino después cuesta switchCost tokens. fx: números de la pasiva de cada camino B. SIN BALANCEAR.
+  // Cambiar de camino después cuesta switchCost tokens.
   grimoire:{showLvl:50, // icono del Grimorio (libro) en el combate desde este nivel del héroe (o si ya se tiene)
     levels:5, switchCost:250, cost:{goldH:2,ess:2,ev:4}, pack:300,
     up:[{secs:7200,goldH:1,ess:1,ev:2},{secs:10800,goldH:2,ess:1,ev:3},{secs:14400,goldH:3,ess:2,ev:4},{secs:21600,goldH:4,ess:2,ev:5}],
-    names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'},
-    fx:{fortaleza:{df:0.1,boss:0.5}, escarcha:{need:3,mult:2.1,freeze:2,ignoreDf:0.5}, cazador:{boss:0.4}, veneno:{pct:0.7,dur:8,max:8}, sacrificio:{cost:0.02,atk:0.6,lsMax:0.2,single:true}}},
+    names:{Guerrero:'Grimorio del Guerrero',Mago:'Grimorio del Mago',Arquero:'Grimorio del Arquero',Asesino:'Grimorio del Asesino',Clerigo:'Grimorio del Clérigo'}},
+  // ---------- kit de cada clase: pasiva y habilidades por etapa (trozo de la lista CFG) ----------
+  // Etapas: base (sin evolucionar: 1 habilidad) · A1/B1 (1.ª evolución: pasiva nueva y 2 habilidades) · A2/B2 (2.ª: pasiva y
+  // habilidades mejoradas, y una 3.ª). Camino A = área (pasa las oleadas antes) · camino B = un objetivo (mejor contra jefes).
+  // mult: veces el daño de un golpe normal (4 = 400 %). Las cargas del héroe (B.*) vuelven a 0 en cada oleada.
+  // look: icono y efecto que usa mientras no tenga dibujo propio. stat: ajuste de daño de esa etapa ({atk}): solo la diferencia entre el camino A y el B de cada clase (lo de
+  // cada clase va en su curva por nivel, classes[cls].grow).
+  bleed:{pct:0.5,dur:6,max:3},   // Sangrado del Gladiador: cada carga hace el 50 % de un golpe por segundo durante 6 s
+  kit:{
+    Guerrero:{
+      base:{skills:[{id:'tajo',name:'Tajo',mult:4,look:'ejecutar',desc:'400 % a un enemigo'}]},
+      A1:{stat:{atk:1.229},name:'Guardián',passive:{id:'guardia',name:'Guardia',max:3,per:0.05,thorns:0.2,desc:'Cada golpe recibido da 1 de Guardia, hasta 3 (−5 % de daño recibido por carga). Devuelve el 20 % del daño recibido repartido entre todos'},
+        skills:[{id:'escudazo',name:'Escudazo',mult:3,def:1,look:'muro',desc:'300 % al primero y el 100 % de su defensa a todos'},
+                {id:'provocar',name:'Provocar',mult:1,taken:0.7,dur:6,look:'baluarte',desc:'100 % a todos y recibe un 30 % menos de daño durante 6 s'}]},
+      A2:{stat:{atk:0.717},name:'Coloso',passive:{id:'guardia',name:'Represalia',max:3,per:0.05,thorns:0.3,wave:3,desc:'Guardia hasta 3 (−5 % de daño por carga). Con 3, Onda de escudo: el 300 % de su defensa a todos (gasta la Guardia). Devuelve el 30 % del daño recibido'},
+        skills:[{id:'escudazo',name:'Escudazo II',mult:4,def:1.5,guard:1,look:'muro',desc:'400 % al primero y el 150 % de su defensa a todos; 1 de Guardia por enemigo alcanzado'},
+                {id:'provocar',name:'Provocar II',mult:1,taken:0.7,dur:6,shield:0.2,look:'baluarte',desc:'100 % a todos, −30 % de daño recibido 6 s y escudo del 20 % de su vida'},
+                {id:'terremoto',name:'Terremoto',mult:2,dot:0.5,dur:4,slow:0.8,look:'perforante',desc:'200 % a todos y 50 % por segundo durante 4 s; mientras, los enemigos pegan un 20 % más lento'}]},
+      B1:{stat:{atk:0.816},name:'Gladiador',passive:{id:'furia',name:'Furia',max:3,per:0.05,boss:0.2,desc:'+5 % de daño por golpe recibido, hasta 3 (+15 %). +20 % de daño a los jefes'},
+        skills:[{id:'desgarro',name:'Desgarro',mult:5,bleed:1,look:'ejecutar',desc:'500 % y 1 Sangrado (hasta 3; cada uno, 50 % por segundo durante 6 s)'},
+                {id:'triple',name:'Triple',hits:3,mult:2,perRage:0.5,look:'perforante',desc:'3 tajos del 200 %; cada uno +50 % por carga de Furia (las gasta)'}]},
+      B2:{stat:{atk:1.388},name:'Berserker',passive:{id:'furia',name:'Frenesí',max:3,per:0.07,boss:0.2,ls:0.2,desc:'+7 % de daño por carga de Furia (hasta +21 %); con 3, +20 % de robo de vida. +20 % de daño a los jefes'},
+        skills:[{id:'desgarro',name:'Desgarro II',mult:6.5,bleed:2,low:0.3,lowMul:2,look:'ejecutar',desc:'650 % y 2 Sangrados; el doble si le queda menos del 30 % de vida'},
+                {id:'triple',name:'Triple II',hits:3,mult:2.5,perRage:0.5,bleed:1,look:'perforante',desc:'3 tajos del 250 % (+50 % por Furia gastada); cada uno pone 1 Sangrado'},
+                {id:'ejecutar',name:'Ejecutar',mult:3,low:0.3,lowMult:10,look:'ejecutar',desc:'1.000 % si al enemigo le queda menos del 30 % de vida (si no, 300 %)'}]},
+    },
+    Mago:{
+      base:{skills:[{id:'misil',name:'Misil',hits:3,mult:1.5,look:'bola',desc:'3 proyectiles del 150 %'}]},
+      A1:{stat:{atk:1.101},name:'Piromante',passive:{id:'ignicion',name:'Ignición',max:3,spread:3,pct:0.3,dur:4,desc:'Cada golpe quema (30 % de su daño por segundo, 4 s), hasta 3 quemaduras; al llegar a 3 se contagian al siguiente enemigo'},
+        skills:[{id:'llama',name:'Llama',targets:3,mult:3,burn:1,look:'bola',desc:'300 % hasta a 3 enemigos y 1 quemadura'},
+                {id:'explosion',name:'Explosión',mult:2,burn:1,look:'combustion',desc:'200 % a todos y 1 quemadura'}]},
+      A2:{stat:{atk:1.177},name:'Infernal',passive:{id:'ignicion',name:'Incendio',max:5,spread:3,pct:0.3,dur:4,desc:'Cada golpe quema, hasta 5 quemaduras; siguen contagiándose al llegar a 3'},
+        skills:[{id:'llama',name:'Llama II',targets:3,mult:3,burn:1,perBurn:0.5,look:'bola',desc:'300 % hasta a 3 enemigos (+50 % por quemadura) y 1 quemadura'},
+                {id:'explosion',name:'Explosión II',mult:2,burn:2,perBurn:0.3,look:'combustion',desc:'200 % a todos (+30 % por quemadura) y 2 quemaduras'},
+                {id:'meteoros',name:'Meteoros',n:5,over:3,mult:1.5,perBurn:0.2,look:'combustion',desc:'5 meteoritos en 3 s: 150 % a todos cada uno (+20 % por quemadura)'}]},
+      B1:{stat:{atk:0.905},name:'Criomante',passive:{id:'esquirlas',name:'Esquirlas',need:3,mult:2.1,freeze:2,ignoreDf:0.5,desc:'Cada golpe clava 1 esquirla; con 3, estallido del 210 % (ignora la mitad de su defensa) que congela 2 s'},
+        skills:[{id:'escarcha',name:'Escarcha',mult:3,freeze:2,look:'armaduraHielo',desc:'300 % y congela 2 s'},
+                {id:'lanza',name:'Lanza',mult:4,frozenMul:2,look:'perforante',desc:'400 %; el doble si está congelado'}]},
+      B2:{stat:{atk:0.854},name:'Glaciar',passive:{id:'esquirlas',name:'Destrozar',need:3,mult:2.6,freeze:3,ignoreDf:0.5,frozenTaken:0.3,desc:'Estallido del 260 % que congela 3 s; los congelados reciben un 30 % más de daño'},
+        skills:[{id:'escarcha',name:'Escarcha II',mult:4,freeze:3,shards:3,look:'armaduraHielo',desc:'400 %, congela 3 s y clava las 3 esquirlas (estallido al momento)'},
+                {id:'lanza',name:'Lanza II',mult:5,frozenMul:3,look:'perforante',desc:'500 %; el triple si está congelado'},
+                {id:'cometa',name:'Cometa',mult:7,frozenMul:2,look:'armaduraHielo',desc:'700 %; el doble si está congelado'}]},
+    },
+    Arquero:{
+      base:{skills:[{id:'disparo',name:'Disparo',mult:4,look:'perforante',desc:'400 % al primer enemigo'}]},
+      A1:{stat:{atk:0.971},name:'Tirador',passive:{id:'doble',name:'Doble',chance:0.2,max:3,per:0.05,desc:'20 % de disparar 2 flechas a 2 enemigos; cada doble da 1 de Concentración, hasta 3 (+5 % de daño por carga)'},
+        skills:[{id:'multidisparo',name:'Multidisparo',mult:2.5,targets:5,look:'perforante',desc:'Una flecha del 250 % a cada enemigo (hasta 5)'},
+                {id:'lluvia',name:'Lluvia',waves:4,over:3,mult:1,look:'rapido',desc:'Durante 3 s, 4 oleadas de flechas del 100 % a todos'}]},
+      A2:{stat:{atk:1.106},name:'Vendaval',passive:{id:'doble',name:'Triple',chance:0.3,max:3,per:0.05,triple:true,desc:'Dobles al 30 %; con 3 de Concentración, los dobles pasan a triples'},
+        skills:[{id:'multidisparo',name:'Multidisparo II',mult:2.5,targets:5,times:2,look:'perforante',desc:'2 abanicos seguidos del 250 % (hasta 5 cada vez)'},
+                {id:'lluvia',name:'Lluvia II',waves:4,over:3,mult:1.2,perConc:1,look:'rapido',desc:'4 oleadas del 120 % a todos, +1 oleada por carga de Concentración'},
+                {id:'perforar',name:'Perforar',mult:5,look:'perforante',desc:'Una flecha que atraviesa a todos (500 % a cada uno)'}]},
+      B1:{stat:{atk:1.03},name:'Acechador',passive:{id:'ritmo',name:'Ritmo',max:3,mul:2,desc:'Cada disparo al mismo enemigo da 1 carga, hasta 3; el que llega a 3 hace el doble y vuelve a 0'},
+        skills:[{id:'apuntar',name:'Apuntar',mult:9,charge:1.5,look:'marca',desc:'Apunta 1,5 s y hace 900 %'},
+                {id:'rafaga',name:'Ráfaga',hits:5,mult:1.2,look:'rapido',desc:'5 flechas del 120 % al mismo enemigo'}]},
+      B2:{stat:{atk:0.911},name:'Francotirador',passive:{id:'ritmo',name:'Letal',max:3,mul:3,crit:true,desc:'El disparo que llega a 3 de Ritmo hace el triple y siempre es crítico'},
+        skills:[{id:'apuntar',name:'Apuntar II',mult:10,charge:0.8,look:'marca',desc:'Apunta 0,8 s y hace 1.000 %'},
+                {id:'rafaga',name:'Ráfaga II',hits:8,mult:1.3,rhythm:true,look:'rapido',desc:'8 flechas del 130 %; cada una suma al Ritmo'},
+                {id:'remate',name:'Remate',mult:4,perStack:3,look:'marca',desc:'400 % +300 % por cada carga de Ritmo que gasta'}]},
+    },
+    Asesino:{
+      base:{skills:[{id:'punalada',name:'Puñalada',mult:4,look:'ejecutar',desc:'400 % a un enemigo'}]},
+      A1:{stat:{atk:1.01},name:'Danzante',passive:{id:'cuchillas',name:'Cuchillas',max:3,pct:0.4,dur:6,desc:'Cada crítico añade 1 cuchilla que gira a su alrededor, hasta 3; cada una hace el 40 % por segundo a todos los cercanos (dura 6 s)'},
+        skills:[{id:'giro',name:'Giro',mult:2.5,targets:4,look:'clon',desc:'250 % a los cercanos (hasta 4)'},
+                {id:'abanico',name:'Abanico',mult:2,look:'perforante',desc:'200 % a todos'}]},
+      A2:{stat:{atk:0.969},name:'Huracán',passive:{id:'cuchillas',name:'Enjambre',max:5,pct:0.4,dur:6,desc:'Hasta 5 cuchillas'},
+        skills:[{id:'giro',name:'Giro II',mult:3,targets:4,blades:1,look:'clon',desc:'300 % a los cercanos (hasta 4) y añade 1 cuchilla'},
+                {id:'abanico',name:'Abanico II',mult:2.5,fill:true,look:'perforante',desc:'250 % a todos y llena las cuchillas'},
+                {id:'torbellino',name:'Torbellino',dur:3,every:0.3,mult:0.7,look:'clon',desc:'Durante 3 s, 70 % a todos cada 0,3 s'}]},
+      B1:{stat:{atk:0.99},name:'Víbora',passive:{id:'veneno',name:'Veneno',max:3,pct:0.7,dur:8,desc:'Cada golpe envenena (70 % de su daño por segundo, 8 s), hasta 3 capas'},
+        skills:[{id:'mutilar',name:'Mutilar',hits:2,mult:2.5,stacks:1,look:'ejecutar',desc:'2 puñaladas del 250 %; cada una pone 1 capa de veneno'},
+                {id:'envenenar',name:'Envenenar',mult:3,perStack:1.5,look:'nube',desc:'300 % +150 % por cada capa de veneno que gasta'}]},
+      B2:{stat:{atk:1.041},name:'Plaga',passive:{id:'veneno',name:'Toxina',max:5,pct:0.7,dur:8,desc:'Hasta 5 capas de veneno'},
+        skills:[{id:'mutilar',name:'Mutilar II',hits:2,mult:2.5,perStack:0.2,stacks:1,look:'ejecutar',desc:'2 puñaladas del 250 % (+20 % por capa de veneno); cada una pone 1 capa'},
+                {id:'envenenar',name:'Envenenar II',mult:4,perStack:2,look:'nube',desc:'400 % +200 % por cada capa que gasta'},
+                {id:'milcortes',name:'Mil cortes',hits:8,mult:0.8,stacks:1,look:'nube',desc:'8 golpes del 80 % al mismo enemigo; cada uno pone 1 capa'}]},
+    },
+    Clerigo:{
+      base:{skills:[{id:'luz',name:'Luz',hits:6,mult:0.2,back:0.6,heal:0.05,look:'luz',desc:'6 golpes de luz encadenados del 20 % que vuelven y le curan el 5 % cada uno'}]},
+      A1:{stat:{atk:0.563},name:'Oráculo',passive:{id:'gracia',name:'Gracia',max:3,heal:0.1,dmg:1,desc:'Cada golpe recibido da 1 de Luz, hasta 3; con 3, se cura el 10 % y hace lo curado como daño a todos los enemigos'},
+        skills:[{id:'cadena',name:'Cadena',jumps:8,mult:0.4,heal:0.01,look:'luz',desc:'8 saltos del 40 % entre enemigos distintos; cada salto le cura un 1 %'},
+                {id:'consagrar',name:'Consagrar',dur:6,dps:0.6,heal:0.01,look:'juicio',desc:'Durante 6 s, 60 % a todos cada segundo, y se cura el 1 % por segundo'}]},
+      A2:{stat:{atk:0.84},name:'Santo',passive:{id:'gracia',name:'Bendición',max:5,heal:0.15,dmg:1.5,desc:'Hasta 5 de Luz; con 5, se cura el 15 % y hace 1,5 veces lo curado a todos'},
+        skills:[{id:'cadena',name:'Cadena II',jumps:8,mult:0.5,heal:0.01,luzEvery:3,look:'luz',desc:'8 saltos del 50 %; cada salto cura un 1 % y cada 3 saltos, +1 de Luz'},
+                {id:'consagrar',name:'Consagrar II',dur:8,dps:0.8,heal:0.015,look:'juicio',desc:'Durante 8 s, 80 % a todos cada segundo, y se cura el 1,5 % por segundo'},
+                {id:'juicio',name:'Juicio',mult:4,healPer:0.03,look:'juicio',desc:'400 % a todos y se cura el 3 % por enemigo alcanzado'}]},
+      B1:{stat:{atk:0.705},name:'Hereje',passive:{id:'corrupcion',name:'Corrupción',max:3,pct:0.4,dur:8,healK:0.2,desc:'Cada golpe pone 1 Sombra al enemigo, hasta 3; cada Sombra hace el 40 % de su daño por segundo y le cura una parte (como robo de vida)'},
+        skills:[{id:'sombra',name:'Sombra',mult:3.5,stacks:2,look:'sacrificio',desc:'350 % y 2 Sombras'},
+                {id:'estallido',name:'Estallido',mult:3,perStack:1,look:'sacrificio',desc:'300 % +100 % por cada Sombra del enemigo'}]},
+      B2:{stat:{atk:1.192},name:'Profanador',passive:{id:'corrupcion',name:'Vacío',max:5,pct:0.4,dur:8,healK:0.2,desc:'Hasta 5 Sombras'},
+        skills:[{id:'sombra',name:'Sombra II',mult:4,perStack:0.5,stacks:2,look:'sacrificio',desc:'400 % (+50 % por Sombra) y 2 Sombras'},
+                {id:'estallido',name:'Estallido II',mult:4,perStack:1.5,look:'sacrificio',desc:'400 % +150 % por cada Sombra'},
+                {id:'devorar',name:'Devorar',perStack:2.5,reapply:3,look:'sacrificio',desc:'Hace estallar las Sombras (250 % por cada una, y se cura una parte) y vuelve a poner 3'}]},
+    },
+  },
   // ---------- enemigos: curvas, encuentros especiales y mecánicas (trozo de la lista CFG) ----------
   enemy:{hp:45,hpG:1.0358,atk:6,atkG:1.026,earlyTo:50,hpG0:1.035,atkG0:1.024, // hasta la fase 50 crecen con hpG0/atkG0
          hpBands:[[101,1.048,1.036]], // de la fase 101 a la 150 los enemigos crecen más (simulado: la fase 150 de Normal llega hacia el día 10-11)
-         jefe:{hp:2,atk:2},   // JEFE (fases 50, 100 y 150 de cada modo) = el doble de vida y de daño que el élite de su tramo
+         jefe:{hp:2,atk:1},   // JEFE (fases 30, 60, 90, 120 y 150 de cada modo) = el doble de vida que el élite de su tramo y su mismo ataque (sus habilidades ya pegan; cada uno con su ajuste k en zonas)
          df:3,dfG:1.0119,waveHp:0.0145,
          bossHp:1.5,bossAtk:1.5,   // (respaldo: bossBands manda) jefe cada 10 fases: vida en oleadas (1 = toda la oleada de su fase), ataque en enemigos (1 = un enemigo)
-         bossBands:[[1,1.6,1.4],[51,1.25,1.2],[101,1.0,1.0],[151,1.0,1.0]], // ÉLITE (cada 10 fases) y errante: [desde fase, vida en oleadas, ataque en enemigos]; un poco más que una oleada + mecánica a mitad de vida
+         bossBands:[[1,1.6,1.4],[51,1.25,1.2],[101,1.0,1.0],[151,1.0,1.0]], // ÉLITE (fases 10 y 20 de cada zona) y errante: [desde fase, vida en oleadas, ataque en enemigos]; un poco más que una oleada + mecánica a mitad de vida
          extraEvery:50,spd:0.8,walk:2.0,dash:0.05, // dash: Embestida de los de cuerpo a cuerpo (esperan el 5 % del camino)
          // Oleadas progresivas: n0 enemigos (+1 cada nEvery fases, máx. nMax); salen g0 a la vez (+1 cada gEvery fases, máx. gMax),
          // separados gap s; andan y pegan hasta un spd más rápido en la fase 150. La vida de la oleada entera es la de siempre
@@ -104,10 +155,159 @@ const CFG = {
   // o Jefe errante (vida = hp × la vida de la oleada, ataque ×atk; hay que vencerlo en dur s → cofre de plata)
   // Entrada de los combates: élite y JEFE (y los de la Torre) esperan a que se vaya el cartel; los combates normales de la Torre, un respiro
   encounter:{intro:2, towerIntro:0.9},
-  // Jefes de campaña con fases: al bajar de 'at' de vida, al azar se enfurecen (ataque y velocidad ×rage) o invocan 'summon' enemigos normales
-  // Mecánicas fuera de la Torre (como en la Torre): el élite lleva rasgos de tower.traits (1, o 2 desde la fase twoFrom) y el JEFE la
-  // mecánica de jefe de tower.bossMech según su fase. Sin «Regenera» en la campaña (con jefes lentos de matar sería un muro).
-  mechs:{traits:['rapido','escudo','espinas','furioso','gigante'], twoFrom:100},
+  // ---------- zonas: monstruos, élites y JEFES de cada modo (trozo de la lista CFG) ----------
+  // Cada modo tiene 5 zonas de 30 fases: élite 1 en su fase 10, élite 2 en la 20 y JEFE en la 30 (JEFES en 30, 60, 90, 120 y 150).
+  // Élite: 1 pasiva (p) y 1 habilidad (s). JEFE: su pasiva, su habilidad propia (own) y las de sus élites mejoradas (s1, s2: II).
+  // mult: veces el golpe normal de ese enemigo (2 = 200 %). cd: recarga escrita en el diseño (en el juego, × cdK: un 35 % menos).
+  // dot: cargas en el héroe ({k, n}; cada carga quita pct de su vida por segundo, ver heroDot). stun: segundos sin atacar ni lanzar.
+  // k: ajuste propio de vida y ataque de ese élite o JEFE ({hp, atk}; 1 si no está), medido con simulaciones para que su mecánica no lo haga un muro.
+  // art: su dibujo (los de Normal llevan el color del modo) · scene: escenario. escort: el élite sale con N monstruos normales de su zona.
+  // SIN BALANCEAR: los números salen del diseño y se ajustan con simulaciones.
+  heroDot:{veneno:{pct:0.01,dur:6,max:3}, sangrado:{pct:0.01,dur:6,max:3}, quemadura:{pct:0.01,dur:6,max:3}},
+  zones:{cdK:0.65, first:3,   // first: segundos hasta la primera habilidad
+    minion:{hp:0.6,atk:0.6},   // esbirros que llaman (lobos, goblins, zombis…): vida y ataque × los de un monstruo normal de la fase
+    list:[
+    [ // ---------- Normal ----------
+      {id:'slimes',name:'Slimes',where:'pradera',art:'slime',scene:0,
+        e1:{name:'Slime Gordo',p:{id:'dividirse',name:'Dividirse',at:0.5,n:2,hp:0.25,desc:'Al 50 % de vida suelta 2 slimes con el 25 % de su vida cada uno'},
+            s:{name:'Aplastar',cd:10,mult:2,stun:1,desc:'200 % y aturde 1 s'}},
+        e2:{name:'Slime Ácido',p:{id:'dotGolpe',name:'Corrosión',dot:'veneno',desc:'Cada golpe envenena (hasta 3 cargas; 1 % de tu vida por segundo cada una)'},
+            s:{name:'Escupitajo venenoso',cd:10,mult:1.5,dot:{k:'veneno',n:3},desc:'150 % y las 3 cargas de veneno de golpe'}},
+        jefe:{name:'Slimey',k:{hp:0.5,atk:0.7},title:'el Rey Slime',p:{id:'division',name:'División',at:[0.75,0.5,0.25],n:2,hp:0.1,desc:'Al 75 %, 50 % y 25 % de vida suelta 2 slimes'},
+            own:{id:'absorber',name:'Absorber',after:10,grow:0.15,desc:'Los slimes que siguen vivos a los 10 s se los come: suma su vida y su ataque y crece'},
+            s1:{name:'Aplastar II',cd:10,mult:3,stun:1.5,desc:'300 % y aturde 1,5 s'},
+            s2:{name:'Escupitajo venenoso II',cd:10,mult:2.5,dot:{k:'veneno',n:3},dotX:{mul:2,dur:6},desc:'250 % y 3 de veneno; 6 s con el veneno al doble'}}},
+      {id:'lobos',name:'Lobos',where:'bosque',art:'wolf',scene:2,
+        e1:{name:'Huargo',p:{id:'dotGolpe',name:'Colmillos',dot:'sangrado',desc:'Cada mordisco te hace sangrar (hasta 3 cargas)'},
+            s:{name:'Yugular',cd:10,mult:2.5,low:{below:0.5,mul:2},desc:'250 %; el doble si te queda menos del 50 % de vida'}},
+        e2:{name:'Lobo Acechador',p:{id:'acecho',name:'Acecho',mult:3,stun:1,desc:'Su primer golpe hace 300 % y aturde 1 s'},
+            s:{name:'Salto',cd:10,mult:2,acecho:true,desc:'200 % y repite el golpe de Acecho'}},
+        jefe:{name:'Fenrir',title:'',p:{id:'alfa',name:'Alfa',every:15,n:2,per:0.1,max:5,desc:'Cada 15 s aúlla y llama a 2 lobos; +10 % de daño por lobo vivo (hasta +50 %)'},
+            own:{id:'lunaLlena',name:'Luna llena',at:0.5,heal:0.2,dmg:0.3,grow:0.3,desc:'Al bajar del 50 % se transforma: crece, se cura el 20 % y hace +30 % de daño'},
+            s1:{name:'Yugular II',cd:10,mult:3.5,low:{below:0.5,mul:2},desc:'350 %; el doble si te queda menos del 50 %'},
+            s2:{name:'Salto II',cd:10,mult:3,stun:1.5,desc:'300 % y aturde 1,5 s'}}},
+      {id:'goblins',name:'Goblins',where:'cueva',art:'goblin',scene:1,
+        e1:{name:'Goblin Bruto',p:{id:'cabezaDura',name:'Cabeza dura',crit:0.3,desc:'Recibe un 30 % menos de los golpes críticos'},
+            s:{name:'Garrotazo',cd:10,mult:3,stun:1,desc:'300 % y aturde 1 s'}},
+        e2:{name:'Goblin Chamán',escort:2,p:{id:'totem',name:'Tótem',hp:0.15,heal:0.03,desc:'Pone un tótem (con el 15 % de su vida) que cura a los goblins el 3 % por segundo'},
+            s:{name:'Rayo',cd:8,mult:2,desc:'200 %'}},
+        jefe:{name:'Snag',k:{atk:0.7},title:'el Rey Goblin',p:{id:'llamada',name:'Escudo de goblins',every:15,n:2,dr:0.1,max:5,desc:'Cada 15 s llama a 2 goblins; −10 % de daño recibido por goblin vivo (hasta −50 %)'},
+            own:{name:'Rabieta',cd:20,dur:4,every:0.5,mult:0.6,desc:'4 s golpeando sin parar: 60 % cada medio segundo'},
+            s1:{name:'Garrotazo II',cd:10,mult:4,stun:1.5,desc:'400 % y aturde 1,5 s'},
+            s2:{name:'Rayo II',cd:8,mult:3,desc:'300 %'}}},
+      {id:'nomuertos',name:'No muertos',where:'cementerio',art:'skeleton',scene:3,
+        e1:{name:'Esqueleto Rearmado',p:{id:'rearmarse',name:'Rearmarse',after:3,hp:0.5,desc:'3 s después de morir se levanta con el 50 % de vida (una vez)'},
+            s:{name:'Tajo oxidado',cd:8,mult:2,defDown:{pct:0.1,dur:6},desc:'200 % y −10 % de defensa 6 s'}},
+        e2:{name:'Caballero Óseo',p:{id:'armaduraHueso',name:'Armadura de hueso',sh:0.3,every:15,desc:'Escudo del 30 % de su vida que vuelve cada 15 s'},
+            s:{name:'Carga',cd:10,mult:2.5,stun:1,desc:'250 % y aturde 1 s'}},
+        jefe:{name:'Mortimer',k:{hp:0.6,atk:0.7},title:'el Rey Esqueleto',p:{id:'ejercito',name:'Ejército eterno',every:15,n:2,desc:'Cada 15 s levanta 2 esqueletos que se rearman al morir'},
+            own:{id:'reencarnacion',name:'Reencarnación',after:3,hp:0.5,buff:0.5,desc:'La primera vez que muere se levanta a los 3 s con el 50 %; mientras, sus esqueletos pegan +50 %'},
+            s1:{name:'Tajo oxidado II',cd:8,mult:3,defDown:{pct:0.15,dur:6},desc:'300 % y −15 % de defensa 6 s'},
+            s2:{name:'Carga II',cd:10,mult:3.5,stun:1.5,desc:'350 % y aturde 1,5 s'}}},
+      {id:'orcos',name:'Orcos',where:'campamento',art:'orc',scene:4,
+        e1:{name:'Orco Berserker',p:{id:'ansia',name:'Ansia de sangre',per:0.1,max:3,desc:'Cada golpe que da, +10 % de velocidad (hasta +30 %)'},
+            s:{name:'Hachazo',cd:10,mult:3,dot:{k:'sangrado',n:1,pct:0.02,dur:4},desc:'300 % y sangrado (2 % de tu vida por segundo, 4 s)'}},
+        e2:{name:'Gran Orco',escort:2,p:{id:'waaagh',name:'¡Waaagh!',per:0.1,max:3,desc:'Cada orco que muere a su lado le da +10 % de daño y de vida (hasta 3)'},
+            s:{name:'Giro brutal',cd:12,dur:4,every:0.5,mult:0.6,desc:'4 s girando: 60 % cada medio segundo'}},
+        jefe:{name:'Warmaw',k:{hp:0.5,atk:0.7},title:'el Señor Orco',p:{id:'festin',name:'Festín de guerra',hits:10,per:0.05,max:0.3,every:20,n:2,eat:8,eatPer:0.1,eatMax:5,desc:'Cada 10 golpes que recibe, +5 % de daño (hasta +30 %); cada 20 s llama a 2 orcos y a los 8 s se come a los vivos (+10 % de vida y daño cada uno)'},
+            own:{id:'llamar',name:'Grito del señor de la guerra',cd:25,n:4,desc:'Llama a 4 orcos de golpe'},
+            s1:{name:'Hachazo II',cd:10,mult:4,dot:{k:'sangrado',n:1,pct:0.03,dur:4},desc:'400 % y un sangrado más fuerte'},
+            s2:{name:'Giro brutal II',cd:12,dur:6,every:0.5,mult:0.7,desc:'6 s girando: 70 % cada medio segundo'}}},
+    ],
+    [ // ---------- Pesadilla (terror) ----------
+      {id:'zombis',name:'Zombis podridos',where:'pradera',art:'zombie',scene:0,
+        e1:{name:'Zombi Corredor',p:{id:'infecta',name:'Infección',max:3,per:0.05,desc:'Cada mordisco te infecta (hasta 3; −5 % de curación cada una)'},
+            s:{name:'Abalanzarse',cd:10,mult:2.5,stun:1,desc:'250 % y aturde 1 s'}},
+        e2:{name:'Zombi Gordo',p:{id:'gases',name:'Gases',max:3,per:0.05,boom:3,desc:'Al recibir daño suelta gases que te infectan; al morir revienta (300 %)'},
+            s:{name:'Vómito',cd:10,mult:1.5,dot:{k:'veneno',n:2},desc:'150 % y 2 cargas de veneno'}},
+        jefe:{name:'Zuman',k:{hp:0.5,atk:0.7},title:'el Rey Podrido',p:{id:'pudricion',name:'Pudrición real',max:5,per:0.04,desc:'Cada golpe suyo o de sus zombis te pudre (hasta 5; −4 % de vida máxima cada una)'},
+            own:{id:'llamar',name:'Marea de muertos',cd:25,n:6,desc:'Llama a 6 zombis de golpe'},
+            s1:{name:'Abalanzarse II',cd:10,mult:3.5,stun:1.5,desc:'350 % y aturde 1,5 s'},
+            s2:{name:'Vómito II',cd:10,mult:2.5,dot:{k:'veneno',n:3},desc:'250 % y 3 cargas de veneno'}}},
+      {id:'marionetas',name:'Marionetas malditas',where:'bosque',art:'puppet',scene:2,
+        e1:{name:'Caja sorpresa',p:{id:'caja',name:'Dentro de la caja',every:8,hide:2,dr:0.7,desc:'Cada 8 s se esconde 2 s y recibe un 70 % menos de daño'},
+            s:{id:'sorpresa',name:'¡Sorpresa!',mult:2.5,stun:1,desc:'Al salir de la caja: 250 % y aturde 1 s'}},
+        e2:{name:'Muñeco de ventrílocuo',p:{id:'burla',name:'Burla',max:3,per:0.05,desc:'Cada golpe te roba un 5 % de ataque (hasta −15 %)'},
+            s:{id:'imitar',name:'Imitar',cd:15,mul:1,desc:'Repite contra ti tu última habilidad, con su daño'}},
+        jefe:{name:'Mister Strings',k:{atk:0.8},title:'el Titiritero',p:{id:'hilos',name:'Hilos',every:15,n:2,dr:0.6,desc:'Cada 15 s llama a 2 marionetas; mientras vivan, recibe un 60 % menos de daño'},
+            own:{id:'clon',name:'Marioneta del héroe',cd:30,pct:0.4,desc:'Crea una copia tuya (40 % de tu vida y ataque) que te ataca hasta que la matas'},
+            s1:{name:'¡Sorpresa! II',cd:8,mult:3.5,stun:1.5,desc:'350 % y aturde 1,5 s'},
+            s2:{id:'imitar',name:'Imitar II',cd:15,mul:1.5,desc:'Repite tu última habilidad con un 50 % más de daño'}}},
+      {id:'abominaciones',name:'Abominaciones de carne',where:'cueva',art:'flesh',scene:1,
+        e1:{name:'Carnicero',p:{id:'robaVida',name:'Carne fresca',pct:0.25,desc:'Se cura el 25 % de lo que te hace'},
+            s:{name:'Cuchillada',cd:10,mult:3,dot:{k:'sangrado',n:1,pct:0.02,dur:4},desc:'300 % y sangrado 4 s'}},
+        e2:{name:'Divisor',p:{id:'desmembrarse',name:'Desmembrarse',n:3,after:8,hp:0.5,desc:'Al morir se parte en 3 trozos; si no los matas en 8 s, se vuelve a montar con el 50 %'},
+            s:{name:'Latigazo',cd:10,mult:2.5,desc:'250 %'}},
+        jefe:{name:'Stitches',k:{hp:0.8,atk:0.7},title:'el Remendado',p:{id:'descosido',name:'Descosido',step:0.25,dmg:0.2,max:3,desc:'Por cada 25 % de vida que pierde: +20 % de daño y suelta un trozo que ataca (hasta 3)'},
+            own:{name:'Golpe odioso',cd:15,mult:4,perStitch:1,desc:'400 %, +100 % por cada vez que se ha descosido'},
+            s1:{name:'Cuchillada II',cd:10,mult:4,dot:{k:'sangrado',n:1,pct:0.03,dur:4},desc:'400 % y un sangrado más fuerte'},
+            s2:{name:'Latigazo II',cd:10,mult:3.5,desc:'350 %'}}},
+      {id:'vampiros',name:'Vampiros',where:'cementerio',art:'vampire',scene:3,
+        e1:{name:'Enjambre de sangre',p:{id:'sed',name:'Sed',below:0.5,spd:1.5,desc:'Si te queda menos del 50 % de vida, ataca un 50 % más rápido'},
+            s:{name:'Picadura',cd:8,hits:10,mult:0.25,heal:1,desc:'10 picaduras del 25 %; se cura todo lo que hace'}},
+        e2:{name:'Novia vampira',p:{id:'beso',name:'Beso',pct:0.02,desc:'Cada golpe te roba el 2 % de tu vida y se la queda'},
+            s:{name:'Hipnosis',cd:15,noAttack:2,desc:'Te hipnotiza 2 s (no atacas)'}},
+        jefe:{name:'Conde Crimson',k:{atk:0.7},title:'',p:{id:'senorSangre',name:'Señor de la sangre',pct:0.3,step:0.1,per:0.1,max:5,desc:'Roba el 30 % de lo que hace; cada 10 % de vida que recupera así, +10 % de daño (hasta 5 veces)'},
+            own:{id:'murcielagos',name:'Forma de murciélagos',cd:20,dur:3,every:0.5,mult:0.5,desc:'3 s en murciélagos (no recibe daño), que pegan 50 % cada medio segundo y le curan'},
+            s1:{name:'Picadura II',cd:8,hits:14,mult:0.25,heal:1,desc:'14 picaduras del 25 %; se cura todo lo que hace'},
+            s2:{name:'Hipnosis II',cd:15,noAttack:3,desc:'Te hipnotiza 3 s'}}},
+      {id:'pesadillas',name:'Pesadillas vivas',where:'portal',art:'nightmare',scene:4,
+        e1:{name:'La Sonrisa',p:{id:'locura',name:'Locura',max:3,dur:2,desc:'Cada golpe te da 1 de locura; con 3, durante 2 s atacas a un enemigo al azar'},
+            s:{name:'Sonrisa',cd:12,mult:2,madness:1,desc:'200 % y 1 de locura'}},
+        e2:{name:'El Sin Rostro',p:{id:'estatica',name:'Estática',cd:0.3,desc:'Mientras viva, tus habilidades tardan un 30 % más en recargar'},
+            s:{name:'Aparecer detrás',cd:10,mult:3,desc:'Aparece detrás de ti: 300 %'}},
+        jefe:{name:'Sleepless',title:'el Rey de las Pesadillas',p:{id:'sueno',name:'Cambio de sueño',every:15,dur:8,burn:0.02,slow:0.6,steal:0.5,copies:2,desc:'Cada 15 s cambia una regla al azar durante 8 s: el suelo arde, atacas más lento, los enemigos roban vida o aparecen 2 copias de un élite'},
+            own:{id:'peorMiedo',name:'Tu peor miedo',cd:30,hp:0.5,desc:'Llama a un élite de Pesadilla al azar, con el 50 % de vida'},
+            s1:{name:'Sonrisa II',cd:12,mult:3,madness:2,desc:'300 % y 2 de locura'},
+            s2:{name:'Aparecer detrás II',cd:10,mult:4.5,desc:'450 %'}}},
+    ],
+    [ // ---------- Infierno ----------
+      {id:'diablillos',name:'Diablillos',where:'pradera',art:'imp',scene:0,
+        e1:{name:'Diablillo de fuego',p:{id:'dotGolpe',name:'Fuego infernal',dot:'quemadura',ranged:true,desc:'Ataca desde lejos, antes de llegar; cada golpe te quema (hasta 3 cargas)'},
+            s:{name:'Bola de fuego',cd:8,mult:2.5,dot:{k:'quemadura',n:1},desc:'250 % y 1 quemadura'}},
+        e2:{name:'Diablillo travieso',p:{id:'invisible',name:'Invisible',every:10,dur:2,desc:'Cada 10 s se vuelve invisible 2 s (no se le puede atacar)'},
+            s:{name:'Robar el arma',cd:15,mult:1.5,noSkills:4,desc:'150 % y te quita el arma: 4 s sin habilidades'}},
+        jefe:{name:'Brimstone',k:{hp:0.5,atk:0.7},title:'el Guardián de la Puerta',p:{id:'puerta',name:'Puerta cerrada',every:10,n:2,per:0.05,max:5,desc:'Cada 10 s llegan 2 diablillos; cada uno que muere le da +5 % de defensa (hasta 5)'},
+            own:{id:'encierro',name:'Cerrar la puerta',cd:20,dur:2,pct:0.03,desc:'Te encierra 2 s (no atacas) mientras el fuego te quita el 3 % de vida por segundo'},
+            s1:{name:'Bola de fuego II',cd:8,mult:3.5,dot:{k:'quemadura',n:2},desc:'350 % y 2 quemaduras'},
+            s2:{name:'Robar el arma II',cd:15,mult:1.5,noSkills:6,desc:'150 % y 6 s sin habilidades'}}},
+      {id:'sucubos',name:'Súcubos',where:'bosque',art:'succubus',scene:2,
+        e1:{name:'Íncubo',p:{id:'armaduraInf',name:'Armadura infernal',hits:5,per:0.1,max:3,desc:'Cada 5 golpes que recibe, +10 % de defensa (hasta 3)'},
+            s:{name:'Golpe de escudo',cd:10,mult:3,desc:'300 %'}},
+        e2:{name:'Hechicera del deseo',p:{id:'beso',name:'Beso robado',pct:0.02,desc:'Cada golpe te roba el 2 % de tu vida'},
+            s:{name:'Encanto',cd:15,charm:3,desc:'Durante 3 s no puedes atacarla'}},
+        jefe:{name:'Vesper',k:{hp:0.7,atk:0.7},title:'la Reina del Dolor',p:{id:'festinDolor',name:'Festín de dolor',pct:0.2,below:0.5,dmg:0.3,desc:'Todo el daño que recibes la cura un 20 %; si te queda menos del 50 %, hace +30 % de daño'},
+            own:{name:'Látigo del tormento',cd:15,hits:4,mult:1,heal:0.5,desc:'4 latigazos del 100 %; se cura la mitad de lo que hace'},
+            s1:{name:'Golpe de escudo II',cd:10,mult:4,desc:'400 %'},
+            s2:{name:'Encanto II',cd:15,charm:4,desc:'Durante 4 s no puedes atacarla'}}},
+      {id:'caballeros',name:'Caballeros infernales',where:'cueva',art:'hellknight',scene:1,
+        e1:{name:'Jinete infernal',p:{id:'montura',name:'Montura',at:0.5,hp:0.3,desc:'Al bajar del 50 % pierde la montura, y la bestia de lava sigue luchando aparte (30 % de su vida)'},
+            s:{name:'Galope de lava',cd:12,mult:3,stun:1,desc:'300 % y aturde 1 s'}},
+        e2:{name:'Vigilante del Abismo',p:{id:'hermandad',name:'Hermandad',hp:0.5,desc:'Al morir aparece otro vigilante con el 50 % de vida (una vez)'},
+            s:{name:'Danza de espadas',cd:10,hits:4,mult:0.8,desc:'4 tajos del 80 %'}},
+        jefe:{name:'Cinder',k:{hp:0.5,atk:0.7},title:'el Caballero Negro',p:{id:'inquebrantable',name:'Inquebrantable',small:0.01,dr:0.3,spd:0.6,atk:2,desc:'No se le puede congelar ni frenar; los golpes pequeños le hacen un 30 % menos; ataca un 40 % más lento pero el doble de fuerte'},
+            own:{name:'Golpe partecielos',cd:20,windup:2,mult:7,desc:'Levanta la espada 2 s y descarga un 700 %'},
+            s1:{name:'Galope de lava II',cd:12,mult:4,stun:1.5,desc:'400 % y aturde 1,5 s'},
+            s2:{name:'Danza de espadas II',cd:10,hits:6,mult:0.9,desc:'6 tajos del 90 %'}}},
+      {id:'demonios',name:'Demonios de fuego',where:'cementerio',art:'firedemon',scene:3,
+        e1:{name:'Infernal',p:{id:'ardiente',name:'Ardiente',pct:0.01,desc:'Mientras viva, pierdes el 1 % de tu vida por segundo'},
+            s:{name:'Meteoritos',cd:12,hits:4,mult:1,desc:'4 meteoritos del 100 %'}},
+        e2:{name:'Fundidor',p:{id:'forja',name:'Forja',every:10,per:0.15,max:3,desc:'Cada 10 s se recalienta: +15 % de daño (hasta 3)'},
+            s:{name:'Espada al rojo',cd:10,mult:3,desc:'300 %'}},
+        jefe:{name:'Pyrax',k:{hp:0.6,atk:0.7},title:'el Señor de la Lava',p:{id:'lago',name:'Lago de lava',every:10,per:0.005,max:5,desc:'Cada 10 s el lago sube: pierdes un 0,5 % más de vida por segundo (hasta 2,5 %)'},
+            own:{name:'Martillo de magma',cd:15,mult:5,dot:{k:'quemadura',n:3},desc:'500 % y 3 quemaduras'},
+            s1:{name:'Meteoritos II',cd:12,hits:6,mult:1.1,desc:'6 meteoritos del 110 %'},
+            s2:{name:'Espada al rojo II',cd:10,mult:4,desc:'400 %'}}},
+      {id:'caidos',name:'Caídos de las estrellas',where:'portal',art:'fallen',scene:4,
+        e1:{name:'Centinela roto',escort:2,p:{id:'escudoLuz',name:'Escudo de luz',every:12,sh:0.2,desc:'Cada 12 s pone a todos los enemigos un escudo del 20 % de su vida'},
+            s:{name:'Lanza estelar',cd:10,mult:3,defDown:{pct:0.2,dur:6},desc:'300 % y −20 % de defensa 6 s'}},
+        e2:{name:'Devorador de luz',p:{id:'hambreLuz',name:'Hambre de luz',pct:0.3,desc:'Se come el 30 % de lo que te curas o ganas de escudo, y se cura lo mismo'},
+            s:{name:'Tragar',cd:12,mult:2.5,shieldBreak:true,desc:'Rompe tu escudo y hace 250 %'}},
+        jefe:{name:'Umbra',k:{hp:0.6,atk:0.7},title:'el Primer Caído',p:{id:'formas',name:'Tres formas',at:[0.66,0.33],inv:3,dr:0.4,spd:1.5,burn:0.01,dmg:0.5,steal:0.3,desc:'Cristal (−40 % de daño recibido) · alas de hueso (ataca un 50 % más rápido y pierdes el 1 % por segundo) · luz negra (+50 % de daño y roba el 30 %); al cambiar, 3 s sin recibir daño'},
+            own:{name:'Rayo de luz negra',cd:15,mult:4,noHeal:5,desc:'400 % y 5 s sin poder curarte'},
+            s1:{name:'Lanza estelar II',cd:10,mult:4,defDown:{pct:0.3,dur:6},desc:'400 % y −30 % de defensa 6 s'},
+            s2:{name:'Tragar II',cd:12,mult:3.5,shieldBreak:true,desc:'Rompe tu escudo y hace 350 %'}}},
+    ]]},
   // ---------- campaña: oro y experiencia, sorpresas, racha, modos y sin conexión (trozo de la lista CFG) ----------
   // waveXp: experiencia extra al ganar cada oleada (en «muertes»: una oleada da 3 por sus enemigos + waveXp)
   econ:{gold:0.45,goldG:1.0198,bossGold:10,xp:4,waveXp:3,xpG:1.0389,xpReq:1300,xpReqG:1.077, xpBands:[[101,1.0,0.06],[151,1.05,1]], // nivel 100 hacia el día 8-9; xpBands: [desde nivel, crecimiento] para niveles altos
@@ -122,10 +322,10 @@ const CFG = {
   phaseCap:150, // cada modo tiene 150 fases; tras vencer la 150 y evolucionar se pasa al siguiente modo
   modes:[ // upPer: mejoras de Vida/Defensa que gana de media el jugador por fase en ese modo (números pequeños: baja el ataque enemigo; estimado, recalibrar al desbloquear)
           // locked: modo bloqueado ("Próximamente"): no se puede entrar aunque se cumplan los requisitos
-          // enemigos: empiezan en los de la fase 150 del modo anterior × hpStart/atkStart y crecen hpG/atkG por fase · off: oro, experiencia y cofres continúan desde la fase off · gold: multiplicador de oro · mat: material propio (uso por definir)
+          // enemigos: empiezan en los de la fase 150 del modo anterior × hpStart/atkStart y crecen hpG/atkG por fase (zoneHp: la vida, por zona de 30 fases, calculada con simulaciones) · off: oro, experiencia y cofres continúan desde la fase off · gold: multiplicador de oro · mat: material propio (uso por definir)
     {name:'Normal',off:0,gold:1,mat:'Esencia'},
-    {name:'Pesadilla',off:149,gold:1.5,mat:'Esencia de pesadilla',hpStart:2.2,atkStart:1.6,hpG:1.022,atkG:1.015,upPer:0.5}, // abierta: simulado, se entra el día 12-19 y se acaba el 23-43
-    {name:'Infierno',locked:true,off:298,gold:2.25,mat:'Esencia infernal',hpStart:2.2,atkStart:1.6,hpG:1.019,atkG:1.013,upPer:0.5},
+    {name:'Pesadilla',off:149,gold:1.5,mat:'Esencia de pesadilla',hpStart:2.2,atkStart:1.6,hpG:1.024,zoneHp:[1.024,1.024,1.024,1.024,1.024],atkG:1.015,upPer:0.5}, // abierta: simulado, se entra el día 12-19 y se acaba el 23-43
+    {name:'Infierno',off:298,gold:2.25,mat:'Esencia infernal',hpStart:2.4,atkStart:1.7,hpG:1.023,zoneHp:[1.023,1.023,1.023,1.023,1.023],atkG:1.016,upPer:0.5},
   ],
   offlineMinMeasure:30, // sin conexión: se usa el DPS medido cuando ya se han medido ataques por valor de 30 golpes de tu daño
   offlineCapH:3, offlineVipH:8, offlineAdMult:1.5, offlineAdPerDay:2, // horas de farmeo sin conexión (VIP); extra de oro con anuncio al llenar el tope, 2 veces por día
@@ -245,13 +445,13 @@ const CFG = {
   // Desbloqueo de modos: fase récord (en Normal; desde Pesadilla, todo abierto) o días de juego (desde que empezó la partida).
   // POR AHORA TODO ABIERTO (unlock vacío). Antes de lanzar: unlock = unlockPlan.
   unlock:{}, unlockPlan:{lab:{fase:10}, pvp:{fase:50}, tower:{fase:50}, boss:{day:7}},
-  // Sala de jefes: cada jefe de campaña vencido (cada 10 fases, por modo) se puede volver a luchar. 3 intentos al día (se gastan al empezar).
-  // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first' (+'elite' en ★★★
-  // de los jefes de élite 50/100/150); repetir: 'repeat' (oro de X min y chatarra del jefe ×N)
+  // Sala de jefes: cada JEFE de campaña vencido (fases 30, 60, 90, 120 y 150 de cada modo) se puede volver a luchar. 3 intentos al día (se gastan al empezar).
+  // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first';
+  // repetir: 'repeat' (oro de X min y chatarra del jefe ×N). Con 5 JEFES por modo, ★★ sin esencia y ★★★ con 2 (unas 10 por modo, como con 3)
   // Sala de jefes: sin tiempo límite; desde el segundo 60 el jefe se enfurece cada 10 s (×1,2 velocidad, ×1,1 ataque)
   hall:{rage:{from:60,every:10,spd:1.2,atk:1.1}, tries:3, stars:[{hp:1,atk:1},{hp:3,atk:1.6},{hp:8,atk:2.5}],
-    every:50, // solo los jefes de élite (fases 50, 100 y 150 de cada modo); entran al vencerlos en la campaña
-    first:[{silver:2,ev:2},{silver:3,ev:3,ess:1},{mode:1,ev:5,ess:2}],
+    every:30, // solo los JEFES (fases 30, 60, 90, 120 y 150 de cada modo); entran al vencerlos en la campaña
+    first:[{silver:2,ev:2},{silver:3,ev:3},{mode:1,ev:5,ess:2}],
     repeat:[{gold:30,scrap:2},{gold:45,scrap:3},{gold:60,scrap:4}]},
   event:{ // Mazmorra (diaria): infinita, monstruos sin parar hasta que mueres; ranking por muertes; 1 entrada gratis al día, las demás con ticket
     // cada ramp.every s sube de nivel: +ramp.group monstruos por grupo, salen más a menudo (×spawn), andan más rápido (×walk) y pegan más rápido (+spd)
@@ -282,15 +482,10 @@ const CFG = {
   wboss:{ // Jefe semanal: 1 min contra un jefe inmortal; ranking semanal por daño (se suman los intentos); 1 entrada gratis a la semana, las demás con Ticket Jefe
     dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
     ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
-    // jefe de la semana (rota cada semana, igual para todos): cada uno con su mecánica y contra qué es débil.
-    // score: cuánto mueve el daño (medido con simulación); los rivales simulados se multiplican por lo mismo
-    bosses:[
-      {id:'enjambre',name:'Señor del Enjambre',desc:'Cada 8 s invoca 2 esbirros que también pegan (su daño también cuenta)',weak:'Guerrero (golpes en área)',summon:{every:8,n:2,hp:0.6,atk:0.4},score:0.99},
-      {id:'coloso',name:'Coloso de Hierro',desc:'Recibe −60 % de daño, pero cada 15 s se le rompe la armadura 5 s y recibe el doble',weak:'golpes fuertes cuando se le rompe la armadura',armor:{block:0.4,hit:2,every:15,open:5},score:1},
-      {id:'bestia',name:'Bestia Furiosa',desc:'Pega cada vez más rápido (hasta ×2,5 al final)',weak:'Guerrero y Clérigo (aguante)',frenzy:2.5,score:0.88},
-      {id:'liche',name:'Liche Maldito',desc:'Le haces +15 % de críticos y +100 % de daño crítico',weak:'Asesino y Arquero (críticos)',cr:0.15,cd:1,score:1.28},
-      {id:'dragon',name:'Dragón de Ceniza',desc:'Te quema: pierdes el 2 % de tu vida por segundo',weak:'Guerrero y Clérigo (vida y curación)',burn:0.02,score:0.84},
-    ],
+    // jefe de la semana: rota cada semana entre los 5 JEFES de tu modo (CFG.zones), con su pasiva y sus habilidades. Como no
+    // muere, lo que salta al bajar de vida salta con el tiempo (a los 30 s es como si estuviera al 50 %). minion: sus esbirros
+    // (vida y ataque × los del jefe de ese momento). score: cuánto mueve el daño (1 hasta medirlo con simulaciones)
+    minion:{hp:0.6,atk:0.4}, score:1,
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
     curve:[[1,2200],[2,6000],[3,13600],[5,32400],[7,70300],[10,127200],[13,191000],[15,288500],[17,458500],[20,958600],[25,1959000],[30,3131500],[35,4433500],[40,5820900],[45,7041000]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
@@ -314,7 +509,25 @@ const CFG = {
   // quedan a medio camino de 1000. leagues: insignia según los puntos ([desde, nombre, color])
   pvp:{free:3, pack:3, packCost:100, recent:5, maxT:30, speedUp:0.1, // duelo de 30 s (reales) que se acelera: a los t s va a ×(1 + 0,1·t); solo se gana por K.O., si nadie cae es empate; habilidades siempre automáticas
     rewards:[{to:1,em:15,ch:'mode',n:3},{to:3,em:12,ch:'mode',n:3},{to:10,em:9,ch:'silver',n:6},{to:25,em:6,ch:'silver',n:3},{to:50,em:3,ch:'silver',n:3},{to:100,em:3,ch:'silver',n:2}],
-    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:31, cls:{Guerrero:1.2,Mago:0.75,Arquero:1.12,Asesino:1.04,Clerigo:0.38}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+    leagues:[[0,'Bronce','#c07a45'],[1100,'Plata','#b9c0cc'],[1300,'Oro','#e8b04a'],[1500,'Diamante','#6fc7e8'],[1700,'Leyenda','#c86bff']], ttk:[33.9, 29.3, 33.6], heal:0.2, reflect:0.5,
+    // PvP equilibrado con simulaciones (héroes con el nivel, arma y mejoras típicos de cada etapa: sin evolucionar 60-150, 1.ª 150-300, 2.ª 300-500):
+    // ttk: duración buscada por evolución [sin evolucionar, 1.ª, 2.ª] (duelos de unos 15 s). heal: en PvP se cura × esto. reflect: espinas y Onda de escudo × esto.
+    // cls: fuerza de cada clase y etapa del kit (multiplica el daño que hace); con el mismo equipo cada una gana entre el 40 y el 60 % de media.
+    // vs: ajuste por pareja ('Clase·etapa|Clase·etapa', orden alfabético): sin él la mitad de las parejas acababan casi siempre igual (contras);
+    // con él cada pareja queda cerca del 50 % y decide el equipo (con algo más de equipo se gana el 87-100 %)
+    vs:{'Arquero·A1|Arquero·B1':1.01,'Arquero·A1|Asesino·A1':1.04,'Arquero·A1|Asesino·B1':1.03,'Arquero·A1|Clerigo·A1':0.3,'Arquero·A1|Clerigo·B1':1.02,'Arquero·A1|Guerrero·A1':1.081,
+      'Arquero·A1|Guerrero·B1':0.981,'Arquero·A1|Mago·A1':1.04,'Arquero·A2|Arquero·B2':1.015,'Arquero·A2|Asesino·A2':1.025,'Arquero·A2|Asesino·B2':1.02,'Arquero·A2|Clerigo·A2':0.497,
+      'Arquero·A2|Guerrero·A2':2.539,'Arquero·A2|Guerrero·B2':1.01,'Arquero·A2|Mago·A2':1.02,'Arquero·B1|Asesino·A1':1.03,'Arquero·B1|Asesino·B1':1.03,'Arquero·B1|Clerigo·A1':0.278,
+      'Arquero·B1|Clerigo·B1':1.02,'Arquero·B1|Guerrero·A1':1.081,'Arquero·B1|Guerrero·B1':1.01,'Arquero·B2|Asesino·A2':1.04,'Arquero·B2|Asesino·B2':1.02,'Arquero·B2|Clerigo·A2':0.394,
+      'Arquero·B2|Clerigo·B2':0.99,'Arquero·B2|Guerrero·A2':1.861,'Arquero·base|Clerigo·base':1.02,'Arquero·base|Guerrero·base':0.981,'Arquero·base|Mago·base':0.96,'Asesino·A1|Guerrero·A1':1.168,
+      'Asesino·A1|Guerrero·B1':0.981,'Asesino·A1|Mago·A1':1.01,'Asesino·A2|Asesino·B2':1.01,'Asesino·A2|Clerigo·B2':0.995,'Asesino·A2|Guerrero·A2':3.464,'Asesino·B1|Clerigo·A1':3.464,
+      'Asesino·B1|Guerrero·A1':1.168,'Asesino·B1|Guerrero·B1':0.993,'Asesino·B1|Mago·A1':0.993,'Asesino·B1|Mago·B1':0.84,'Asesino·B2|Clerigo·A2':3.464,'Asesino·B2|Clerigo·B2':0.986,
+      'Asesino·B2|Guerrero·A2':3.464,'Asesino·base|Clerigo·base':1.02,'Asesino·base|Guerrero·base':0.981,'Asesino·base|Mago·base':0.976,'Clerigo·A1|Clerigo·B1':0.289,'Clerigo·A1|Guerrero·A1':0.289,
+      'Clerigo·A1|Guerrero·B1':0.962,'Clerigo·A1|Mago·B1':1.987,'Clerigo·A2|Clerigo·B2':0.289,'Clerigo·A2|Guerrero·A2':0.394,'Clerigo·A2|Guerrero·B2':0.856,'Clerigo·A2|Mago·B2':1.474,
+      'Clerigo·B1|Guerrero·A1':0.856,'Clerigo·B1|Guerrero·B1':0.986,'Clerigo·B1|Mago·B1':0.873,'Clerigo·B2|Guerrero·A2':1.861,'Clerigo·B2|Guerrero·B2':1.01,'Clerigo·B2|Mago·B2':0.792,
+      'Clerigo·base|Guerrero·base':0.986,'Clerigo·base|Mago·base':0.971,'Guerrero·A1|Guerrero·B1':1.312,'Guerrero·A1|Mago·A1':0.925,'Guerrero·A1|Mago·B1':0.856,'Guerrero·A2|Mago·A2':0.394,
+      'Guerrero·A2|Mago·B2':0.537,'Guerrero·B1|Mago·A1':1.01,'Guerrero·B1|Mago·B1':1.04,'Guerrero·B2|Mago·B2':0.925,'Guerrero·base|Mago·base':1.005},
+    cls:{Guerrero:{base:0.624,A1:0.394,B1:1.783,A2:0.05,B2:2.083}, Mago:{base:1.236,A1:4.419,B1:0.253,A2:7.776,B2:0.299}, Arquero:{base:1.294,A1:4.659,B1:3.693,A2:7.136,B2:5.69}, Asesino:{base:1.419,A1:5.935,B1:3.526,A2:9.859,B2:6.465}, Clerigo:{base:0.694,A1:0.221,B1:2.905,A2:0.512,B2:3.094}}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // ---------- Torre (trozo de la lista CFG) ----------
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
@@ -323,6 +536,7 @@ const CFG = {
   // «A tu medida»: tardas tKill s en matar a uno normal y cada golpe suyo te quita hitPct de tu vida (en el piso 1).
   // Crecimiento por tramos: curve=[[desde piso, ×vida por piso, ×ataque por piso], …] (suave hasta el 50, duro hasta el 100, muy duro después).
   tower:{lives:1, lifeCost:50, w:0.35, tKill:1.0, hitPct:0.0107, curve:[[1,1.03,1.015],[30,1.06,1.03],[60,1.08,1.04]], hp0:0.75, atk0:0.8, count0:4, countEvery:5, countMax:10, group:3,
+    zoneK:{boss:{hp:0.75,atk:0.6}, elite:{atk:0.75}},   // élites y JEFES de zona en la Torre: su vida y ataque × esto (sus habilidades ya pegan; simulado: piso mediano 50-55)
     // Élite: 3 enemigos con, entre todos, elite.hp × la vida de un combate normal; JEFE: el doble que el élite (vida y daño) + mecánica
     elite:{n:3,hp:1.3,atk:1.2}, boss:{every:10,hp:2.6,atk:2.4},
     // saltos de dificultad: desde 'from' los élites se hacen mucho más duros (×eliteUp cada 'every' pisos); cada 'jumpEvery' pisos
@@ -341,7 +555,6 @@ const CFG = {
     maxFloor:100, final:{atk:1.6, every:10, rage:1.2},
     enrage:{after:60, every:5, mult:1.15},
     speed:0.8, endDelay:1.6,   // los combates de la Torre van al 80 % de velocidad y, al matar a todos, se espera 1 s antes de salir (élite y jefe: hasta elegir la recompensa)   // en cualquier combate de más de 60 s, los enemigos pegan un 15 % más cada 5 s
-    look:3,   // el mapa enseña los caminos de los próximos 3 pisos
     // almas: moneda de la partida (solo para los eventos ?). Combate normal / élite / jefe
     souls:{fight:10,elite:5,boss:20},
     // 1 vida (permadeath): al morir se puede revivir UNA vez por partida viendo un anuncio (con revHp de vida)

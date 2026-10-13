@@ -100,24 +100,28 @@ function createGame(opts){
   // efecto del arma equipada si es Legendaria o Mítica (el de su clase)
   function legendFx(){ const w=S&&equipped(); return w&&CFG.weapon.legend&&R.indexOf(w.r)>=R.indexOf('L')?CFG.weapon.legend[w.cls]||null:null }
   const heroStats=()=>HS||(HS=computeStats());
+  // curva por nivel de cada clase: los niveles ganados después de cada evolución valen grow[i] × lo de antes en daño (gatk)
+  // y growHp[i] en vida y defensa (ghp, gdf). Calculada con simulaciones para que todas las clases tarden lo mismo.
+  function lvlGain(k){ const L=S.lvl-1, T=evoTiers(), c=CFG.classes[S.cls]||{}, G=(k==='atk'?c.grow:c.growHp)||[]; let v=0, from=0;
+    for(let i=0;i<=Math.min(S.evo,T.length);i++){ const to=i<S.evo&&T[i]?T[i].lvl-1:Infinity, n=Math.max(0,Math.min(L,to)-from);
+      v+=n*(i===0?1:G[i-1]||1); from=Math.max(from,to); if(L<=to) break; }
+    return v }
   function computeStats(){
     if(towerOn()) return towerStats();
-    const c=CFG.classes[S.cls], L=S.lvl-1, u=S.up, U=CFG.upgrades, w=equipped(), ps={...(c.p||{}),...evoBase()}, A=S.absorb||{}, EV=S.evo?evoP():null;
+    const c=CFG.classes[S.cls], u=S.up, U=CFG.upgrades, w=equipped(), A=S.absorb||{}, KS=(kitNow()||{}).stat||{};   // KS: ajuste de daño de la etapa del kit (equilibrio)
     const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}; let wd=0,ws=0;
-    const gs=grimSet(), GFX=CFG.grimoire.fx;                               // camino B (y Torre): defensa (Guardián) o daño a jefes (Cazador)
-    if(gs.has('fortaleza')){ sec.dfp+=GFX.fortaleza.df; sec.bd+=GFX.fortaleza.boss||0; } if(gs.has('cazador')) sec.bd+=GFX.cazador.boss;
     if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
     return {
-      // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida,
-      // el Aura del Santo y el daño por defensa del Titán se escalan con ellas para que sigan valiendo lo mismo.
+      // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida
+      // y lo que depende de la vida o la defensa (espinas, Onda de escudo, Gracia…) se escalan con ellas para que sigan valiendo lo mismo.
       hpK:Math.pow(U.hp.mult/(U.hp.ref||U.hp.mult),u.hp), dfK:Math.pow(U.df.mult/(U.df.ref||U.df.mult),u.df),
-      hp:(c.hp+(A.hp||0)+c.ghp*L)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*(pvpOn()&&B.hpM||1),
-      atk:(c.atk+(A.atk||0)+c.gatk*L)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk'),
-      df:(c.df+(A.df||0)+c.gdf*L)*Math.pow(U.df.mult,u.df)*(1+sec.dfp),
-      spd:c.spd*(ps.spd||1)*Math.pow(U.spd.mult,u.spd)*(1+ws),
-      cr:Math.min(CFG.caps.cr,c.cr+(ps.cr||0)+sec.cr), cd:c.cd+(ps.cd||0)+sec.cd, ev:c.ev,
+      hp:(c.hp+(A.hp||0)+c.ghp*lvlGain('hp'))*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*(pvpOn()&&B.hpM||1),
+      atk:(c.atk+(A.atk||0)+c.gatk*lvlGain('atk'))*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(KS.atk||1),
+      df:(c.df+(A.df||0)+c.gdf*lvlGain('df'))*Math.pow(U.df.mult,u.df)*(1+sec.dfp),
+      spd:c.spd*Math.pow(U.spd.mult,u.spd)*(1+ws),
+      cr:Math.min(CFG.caps.cr,c.cr+sec.cr), cd:c.cd+sec.cd,
       ls:Math.min(CFG.caps.ls,sec.ls), bd:sec.bd, ranged:c.ranged,
-      regen:EV&&EV.noHeal?0:ps.regen||c.regen||0, dmgTaken:ps.dmgTaken||c.dmgTaken||1, xpMult:ps.xp||1, noHeal:!!(EV&&EV.noHeal),
+      regen:c.regen||0, dmgTaken:c.dmgTaken||1, xpMult:1,
     };
   }
   // Torre: héroe único (CFG.tower.hero) + solo las cartas, grimorios y maldiciones de la partida.
@@ -128,9 +132,9 @@ function createGame(opts){
     const spd=H.spd*(1+X.spd), crT=H.cr+X.cr;
     return { hpK:1, dfK:1,
       hp:H.hp*Math.max(0.2,1+X.hp+(run.hpBonus||0)+CFG.tower.curses.fragil.hp*tcurse('fragil')), atk:H.atk*(1+X.atk), df:H.df*(1+X.df), spd,
-      cr:Math.min(1,crT), cd:H.cd+X.cd+Math.max(0,crT-1)+(tgH('furiaCiega')?X.spd:0), ev:0,
+      cr:Math.min(1,crT), cd:H.cd+X.cd+Math.max(0,crT-1)+(tgH('furiaCiega')?X.spd:0),
       ls:Math.min(1,X.ls), bd:0, ranged:false, regen:X.regen, refl:X.refl, dbl:X.dbl,
-      dmgTaken:Math.pow(1-CFG.tower.cards.talisman.taken,tcN('talisman')), xpMult:1, noHeal:false } }
+      dmgTaken:Math.pow(1-CFG.tower.cards.talisman.taken,tcN('talisman')), xpMult:1 } }
   /* ---------- enemigos: vida, ataque y oleadas ---------- */
   // Modos (Normal, Pesadilla, Infierno): la fase f de un modo usa los enemigos de la fase f+off
   const MODES=()=>CFG.modes||[{name:'Normal',off:0,gold:1}];
@@ -151,14 +155,16 @@ function createGame(opts){
   // Cada modo empieza en el enemigo de la fase 150 del modo anterior × start y crece a su propio ritmo (hpG/atkG)
   function modeCurve(m,f){ if(!m) return normalCurve(f); const M=MODES()[m], b=modeCurve(m-1,CAP());
     const k=CFG.upgrades.hp.ref?Math.pow(CFG.upgrades.hp.mult/CFG.upgrades.hp.ref,(M.upPer||0)*(f-1)):1;   // números pequeños (ver atkShrink)
-    return {hp:b.hp*M.hpStart*Math.pow(M.hpG,f-1), atk:b.atk*M.atkStart*Math.pow(M.atkG,f-1)*k, df:b.df*Math.pow(CFG.enemy.dfG,f-1)} }
+    return {hp:b.hp*M.hpStart*zoneGrow(M,f), atk:b.atk*M.atkStart*Math.pow(M.atkG,f-1)*k, df:b.df*Math.pow(CFG.enemy.dfG,f-1)} }
+  // crecimiento de la vida hasta la fase f del modo: zoneHp[z] por fase dentro de cada zona de 30 (o hpG si no hay)
+  function zoneGrow(M,f){ const Z=M.zoneHp; if(!Z) return Math.pow(M.hpG,f-1); let v=1; for(let i=2;i<=f;i++) v*=Z[Math.min(Z.length-1,Math.floor((i-1)/30))]; return v }
   function enemyStats(f,w,boss,mode){
     const md=mode==null?(S?S.mode||0:0):mode, E=CFG.enemy, mc=modeCurve(md,f);
     let hp=mc.hp*(1+E.waveHp*(w-1)), atk=mc.atk, df=mc.df;
     // Jefes: su vida se mide en "oleadas" (la vida de toda la oleada de su fase) y su ataque en enemigos (×1 = un enemigo normal)
     if(!boss&&WV()){ const V=WV(); hp*=perOld(f)/perWave(f)*(V.hpMul||1); atk*=Math.pow(V.atkG||1,groupAt(f)-1); }
     if(boss){ const per=perOld(f);
-      const bb=bossBand(f), J=E.jefe, m=f%50!==0?bb:{hp:bb.hp*J.hp,atk:bb.atk*J.atk}; hp*=per*m.hp; atk*=m.atk; }   // JEFE = el élite de su tramo × enemy.jefe
+      const bb=bossBand(f), J=E.jefe, m=f%30!==0?bb:{hp:bb.hp*J.hp,atk:bb.atk*J.atk}; hp*=per*m.hp; atk*=m.atk; }   // JEFE (fases 30, 60…) = el élite de su tramo × enemy.jefe
     return {hp,atk,df};
   }
   // jefe normal según el tramo de fases: bossBands=[[desde, vida, ataque], ...] (en oleadas)
@@ -182,27 +188,37 @@ function createGame(opts){
   const lvlCap=()=>{ const t=nextEvo(); return t?t.lvl:Infinity };
   function addXp(x){ const l0=S.lvl, cap=lvlCap(); S.xp+=x; while(S.lvl<cap&&S.xp>=xpReq(S.lvl)){S.xp-=xpReq(S.lvl);S.lvl++}
     if(S.lvl>=cap) S.xp=Math.min(S.xp,xpReq(S.lvl)); if(S.lvl>l0){statsDirty();emit('level',S.lvl)} return S.lvl-l0 }
-  /* ---------- habilidades activas ---------- */
+  /* ---------- kit del héroe: pasiva y habilidades de su etapa (CFG.kit) ---------- */
+  // Etapas: base (sin evolucionar) · A1/B1 (1.ª evolución, según el camino) · A2/B2 (2.ª, sigue el camino de la 1.ª).
+  // La pasiva base de la clase es un rasgo que se queda siempre (CFG.classes[cls].trait); la de la etapa es la que cambia.
   // CT: reloj de combate (no se guarda). CD[slot]: cuándo vuelve a estar lista. BUF: efectos de habilidades que duran unos segundos.
   let CT=0, GCD=0; const CD={}; const BUF={list:[]};   // GCD: hasta cuándo hay que esperar para lanzar la siguiente habilidad
   function buffMul(k){ BUF.list=BUF.list.filter(b=>b.until>CT); let m=1;
     for(const b of BUF.list){ if(k==='atk') m*=1+(b.atk||0); else if(k==='taken') m*=b.taken||1; else if(k==='spd') m*=b.spd||1; else if(k==='thorns') m*=b.thorns||1; else if(k==='df') m*=b.df||1; } return m }
   function buffAdd(k){ let a=0; for(const b of BUF.list) if(b.until>CT) a+=b[k]||0; return a }
-  function skillDef(k){ const K=CFG.skills;
-    if((k==='cls'||k==='evo')&&towerOn()) return null;   // Torre: solo los hechizos que consigues en la partida
-    if(k==='cls') return K.cls[S.cls]||null;
-    if(k==='evo') return S.evo>=1?(S.path==='B'?(K.evoB||{})[S.cls]:K.evo[S.cls])||null:null;
-    if(k[0]==='t'&&towerOn()){ const t=towerSkills()[+k.slice(1)-1]; return t?{...CFG.tower.cards[t.id],id:t.id}:null } return null }   // Torre: las cartas de habilidad
-  const SLOTS0=['cls','evo'], TSL=['t1','t2','t3','t4','t5','t6','t7','t8'];
-  const SLOTS_=()=>towerOn()?SLOTS0.concat(TSL.slice(0,towerSkills().length)):SLOTS0;
+  const kitStage=()=>!S.evo?'base':(S.path==='B'?'B':'A')+Math.min(2,S.evo);
+  const kitOf=(cls,st)=>((CFG.kit||{})[cls]||{})[st]||null;
+  const kitNow=()=>kitOf(S.cls,kitStage());
+  const heroPassive=()=>towerOn()?null:(kitNow()||{}).passive||null;   // la Torre usa su propio héroe, sin kit
+  // las 3 habilidades del kit (s1, s2, s3); recarga según su hueco (CFG.skillCd), un 10 % menos con Canalizar (Mago)
+  const SLOTS0=['s1','s2','s3'], TSL=['t1','t2','t3','t4','t5','t6','t7','t8'];
+  let SKk='', SKv=null;
+  function kitSkills(){ const k=S.cls+kitStage(); if(SKk===k) return SKv; const K=kitNow(), cdr=(CFG.classes[S.cls]||{}).cdr||0;
+    SKv=((K&&K.skills)||[]).map((d,i)=>({...d,cd:(d.cd||CFG.skillCd[i])*(1-cdr)})); SKk=k; return SKv }
+  function skillDef(k){
+    if(k[0]==='t'){ if(!towerOn()) return null; const t=towerSkills()[+k.slice(1)-1]; return t?{...CFG.tower.cards[t.id],id:t.id}:null }   // Torre: las cartas de habilidad
+    if(towerOn()) return null;   // Torre: solo los hechizos que consigues en la partida
+    const i=SLOTS0.indexOf(k); return i<0?null:kitSkills()[i]||null }
+  const SLOTS_=()=>towerOn()?TSL.slice(0,towerSkills().length):SLOTS0;
   const skillSlots=()=>SLOTS_().filter(skillDef);
   // estado para la pantalla: nombre, recarga y si está lista. Las bloqueadas dicen cómo se consiguen.
-  function skills(){ return SLOTS_().map(k=>{ const d=skillDef(k); return d?{slot:k,id:d.id,name:d.name,desc:d.desc,cd:d.cd,left:Math.max(0,(CD[k]||0)-CT),ready:CT>=(CD[k]||0)}
-    :{slot:k,locked:true,name:S.evo>=1?'Por decidir':'Evolución',desc:S.evo>=1?'Habilidad de este camino: aún por decidir':'Se desbloquea al evolucionar'} }) }
+  function skills(){ return SLOTS_().map((k,i)=>{ const d=skillDef(k); return d?{slot:k,id:d.id,look:d.look,name:d.name,desc:d.desc,cd:d.cd,left:Math.max(0,(CD[k]||0)-CT),ready:CT>=(CD[k]||0)}
+    :{slot:k,locked:true,name:'Evolución '+i,desc:'Se desbloquea en la '+i+'.ª evolución'} }) }
   function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'}; if(autoOnly()) return {ok:false,why:'auto'};
     if(CT<(CD[k]||0)) return {ok:false,why:'cd',left:CD[k]-CT};
     if(CT<GCD) return {ok:false,why:'gap',left:GCD-CT};   // aún no ha pasado la espera desde la anterior
-    GCD=CT+(CFG.skillGap||0); CD[k]=CT+d.cd; (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
+    if(heroNoSkills()) return {ok:false,why:'stun'};      // aturdido o sin arma (enemigos de zona)
+    GCD=CT+(CFG.skillGap||0); CD[k]=CT+d.cd*cdMul(); (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
   // en los eventos se usan a mano, salvo que el jugador ponga «Auto» (opt.evAuto); en la campaña, solas (opt.autoSkills)
   // en PvP, la Torre y la Mazmorra, siempre solas (sin botones)
   const autoOnly=()=>!!(B&&(B.kind==='pvp'||B.kind==='tower'||(B.event&&!B.kind)));
@@ -220,8 +236,6 @@ function createGame(opts){
   const tcN=id=>tBoons().filter(b=>b.t==='c'&&b.id===id).length;   // cuántas copias de esta carta
   const tgH=id=>tBoons().some(b=>b.t==='g'&&b.id===id)?1:0;       // ¿tienes este grimorio?
   const tcurse=id=>towerOn()&&S.tower&&S.tower.run?(S.tower.run.curses||[]).filter(c=>c===id).length:0;   // maldiciones de la partida
-  const stepP=()=>towerOn()?null:evoP();
-  function grimSet(){ const s=new Set(); const g=towerOn()?null:grimFx(); if(g) s.add(g); return s }
   function legendSet(){ const o={}, L=towerOn()?null:legendFx(); if(L) o[L.id]=L; return o }
   /* ---------- sorpresas en la campaña y racha ---------- */
   const STK={n:0}, SUR={next:null,kind:null,until:0};
@@ -240,18 +254,18 @@ function createGame(opts){
     SUR.next=CT+every+(rand()*2-1)*jit;
     const k=pickSurprise();
     if(k==='horde'){ SUR.kind='horde'; SUR.until=CT+C.horde.dur; emit('surprise',{k:'horde',dur:C.horde.dur}); return }
-    const W=C[k], e=enemyStats(S.fase%50===0?S.fase-1:S.fase,S.wave,true), hp=e.hp*(W.hp||1);   // errante = un élite de su fase
+    const W=C[k], e=enemyStats(S.fase%30===0?S.fase-1:S.fase,S.wave,true), hp=e.hp*(W.hp||1);   // errante = un élite de su fase
     B.enemies.push({hp,max:hp,atk:e.atk*(W.atk||1),df:e.df,spawn:B.t,walk:walkT(),arrive:B.t+walkT(),next:B.t+walkT(),first:false,dead:false,wander:true,sk:k,spd:1});
-    mechSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,false,true);   // errante: 1 rasgo al azar
+    zoneSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,rand()<0.5?'e1':'e2',{noEscort:true});   // errante: uno de los 2 élites de su zona
     SUR.kind=k; SUR.until=CT+W.dur; emit('surprise',{k,dur:W.dur}); }
   const surpriseState=()=>SUR.kind&&CT<SUR.until?{k:SUR.kind,left:SUR.until-CT}:null;
   /* ---------- combate ---------- */
   function startWave(){
     if(B&&B.event) return; // el evento en curso no se interrumpe
     // jefe: al empujar una fase múltiplo de 10; y el de la fase 150 se puede repetir (farmear) una vez vencido
-    const boss=(S.wave===10 && S.fase%10===0 && (S.fase===S.best+1 || (S.fase===CAP() && S.best>=CAP())));
+    const boss=(S.wave===10 && S.fase%10===0 && (S.fase===S.best+1 || (S.fase===CAP() && S.best>=CAP())));   // fase 10 y 20 de cada zona: élite · 30: JEFE
     const h=heroStats();
-    B={intro:boss?CFG.encounter.intro:0,t:0,boss,elite:boss&&S.fase%50===0,count:boss?1:perWave(S.fase)*(hordeOn()?CFG.surprise.horde.count:1),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
+    B={intro:boss?CFG.encounter.intro:0,t:0,boss,elite:boss&&S.fase%30===0,count:boss?1:perWave(S.fase)*(hordeOn()?CFG.surprise.horde.count:1),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     const g=boss?1:Math.min(B.count,groupAt(S.fase)); for(let i=0;i<g;i++) spawnEnemy(i*((WV()||{}).gap||0)); emit('wave',B);
   }
   // Embestida: los de cuerpo a cuerpo saltan al enemigo, así que esperan menos a que llegue (× enemy.dash)
@@ -259,7 +273,7 @@ function createGame(opts){
   function spawnEnemy(late){   // late: sale un poco después (los del mismo grupo llegan escalonados)
     const e=enemyStats(S.fase,S.wave,B.boss), W=walkT()+(late||0); // (enemyStats ya aplica el modo)
     B.enemies.push({hp:e.hp,max:e.hp,atk:e.atk,df:e.df,spawn:B.t,walk:W,arrive:B.t+W,next:B.t+W,first:true,dead:false,spd:B.boss?1:eSpd(S.fase)});
-    if(B.boss) mechSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,B.elite);
+    if(B.boss) zoneSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,bossRole(S.fase));   // élite o JEFE de su zona
     B.spawned++;
   }
   function endWave(delay){ B.over=true; B.wait=delay }
@@ -273,94 +287,77 @@ function createGame(opts){
     if(B.over){ B.wait-=dt; if(B.wait<=0) startWave(); return }
     if(B.intro>0){ B.intro-=dt; return }   // entrada: el combate no empieza hasta que se va el cartel (élite, JEFE, Torre)
     if(B.rew&&!B.rewDone) return;   // Torre: el combate se queda parado mientras eliges la recompensa
-    const h0=heroStats(), AF=B.event&&!B.kind&&B.aff, WB=B.kind==='boss'&&B.wb;
-    const h=AF&&(AF.cr||AF.ls||AF.noHeal)?{...h0,cr:Math.min(CFG.caps.cr,h0.cr+(AF.cr||0)),ls:Math.min(CFG.caps.ls,h0.ls+(AF.ls||0)),noHealAll:!!AF.noHeal}   // Mazmorra: modificador del día
-      :WB&&(WB.cd||WB.cr)?{...h0,cr:Math.min(1,h0.cr+(WB.cr||0)),cd:h0.cd+(WB.cd||0)}:h0;                                                                     // Liche: más críticos y más daño crítico
-    const P=stepP(), GS=grimSet(), FX=CFG.grimoire.fx, LS=legendSet(), TW=towerOn(), TC=CFG.tower.cards, TG=CFG.tower.grims;
+    const h0=heroStats(), AF=B.event&&!B.kind&&B.aff;
+    const h=AF&&(AF.cr||AF.ls||AF.noHeal)?{...h0,cr:Math.min(CFG.caps.cr,h0.cr+(AF.cr||0)),ls:Math.min(CFG.caps.ls,h0.ls+(AF.ls||0)),noHealAll:!!AF.noHeal}:h0;   // Mazmorra: modificador del día
+    const P=heroPassive(), LS=legendSet(), TW=towerOn(), TC=CFG.tower.cards, TG=CFG.tower.grims;
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
-    if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(h,dt); if(B.hp<=0){ endEvent(); return } }
+    if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); if(B.hp<=0){ endEvent(); return } }
     if(!B.event) surpriseTick();
     else if(!B.kind){ if((CFG.event.dur&&B.t>=CFG.event.dur)||(B.rt||0)>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // solo la Mazmorra (no tiene kind): un intento de ayer se cierra al acabar la pausa
-    // curación: lo que de verdad se recupera (Santo: cada curación se convierte en daño en área durante unos segundos)
-    // solo la regeneración (Fe) alimenta el aura; lo curado se pasa a la escala antigua (÷ hpK) para que el aura siga pegando igual
-    // curación (el Oscuro solo se cura robando vida: ls)
-    const heal=(x,aura,ls)=>{ if(h.noHealAll||(h.noHeal&&!ls)) return; const b=B.hp; B.hp=Math.min(h.hp,B.hp+x); const got=B.hp-b; if(aura&&got>0&&P&&P.aura) B.auraPool=(B.auraPool||0)+got*P.aura/h.hpK;
+    // curación (ls: viene del robo de vida)
+    // (zonas: infección, sin curar, pudrición… · PvP: × pvp.heal)
+    const heal=(x,ls)=>{ if(h.noHealAll) return; x=zoneHeal(x,h); if(B.kind==='pvp') x*=CFG.pvp.heal==null?1:CFG.pvp.heal; const b=B.hp; B.hp=Math.max(b,Math.min(heroCap(h),B.hp+x)); const got=B.hp-b;
       if(ls&&TW&&x>got&&tgH('sangreHirviente')) addShield(x-got); };   // Torre · Sangre hirviente: el robo de vida que sobra es escudo
     // Torre: multiplicador de daño de las cartas y grimorios (golpes y habilidades)
     const tMul=tg=>{ if(!TW) return 1; let m=1; const ne=tcN('ejecutor'); if(ne&&tg.hp<TC.ejecutor.below*tg.max) m*=1+TC.ejecutor.mult*ne;
       if(tgH('demonio')) m*=1+TG.demonio.per*B.t; if(tgH('furiaSangre')) m*=1+TG.furiaSangre.per*Math.max(0,1-B.hp/h.hp);
       return m*(1+(B.heart||0))*(1+(B.shur||0)) };
     // Torre: ganar escudo (Juggernaut: golpe a un enemigo al azar, como mucho cada 0,5 s)
-    const addShield=x=>{ if(!(x>0)) return; BUF.shield=Math.min((BUF.shield||0)+x,TW?h.hp*CFG.tower.shieldMax:Infinity);   // Torre: el escudo no pasa de tu vida máxima
+    const addShield=x=>{ if(!(x>0)) return; x=zoneShield(x,h); BUF.shield=Math.min((BUF.shield||0)+x,TW?h.hp*CFG.tower.shieldMax:Infinity);   // Torre: el escudo no pasa de tu vida máxima
       if(TW&&tgH('juggernaut')&&CT>=(B.jugAt||0)){ const os=B.enemies.filter(e=>!e.dead&&e.arrive<=B.t+0.5), o=os[Math.floor(rand()*os.length)]; if(o){ B.jugAt=CT+0.5; zap(o,dmgF(h.atk,o.df)*TG.juggernaut.mult*tMul(o),{jug:true}); } } };
     // Torre: perder vida (por golpes o por tus cartas): Corazón de sangre, Arcilla viva y Último aliento
     const onLoss=x=>{ if(!TW||!(x>0)) return; if(tgH('corazon')) B.heart=(B.heart||0)+TG.corazon.per; if(tgH('arcilla')) addShield(TG.arcilla.pct*x);
       const nu=tcN('ultimo'); if(nu&&!B.lastUsed&&B.hp>0&&B.hp<TC.ultimo.below*h.hp){ B.lastUsed=true; heal(TC.ultimo.heal*nu*h.hp); emit('fx',{k:'ultimo'}); } };
     const loseHp=x=>{ const l=Math.max(0,Math.min(B.hp-1,x)); B.hp-=l; onLoss(l); return l };
-    if(h.regen){ const lit=P&&P.lightMult&&B.t<(B.lightUntil||0); heal(h.regen*(lit?P.lightMult:1)*h.hp*dt,true); }
-    const kill=e=>{ if(e.dead) return; if(e.inf){ e.hp=e.max; return } if((B.kind==='tower'||B.mechOn)&&towerGuard(e)) return; e.dead=true; e.deadAt=B.t;
+    if(h.regen) heal(h.regen*h.hp*dt);
+    const kill=e=>{ if(e.dead) return; if(e.inf){ e.hp=e.max; return } if((B.kind==='tower'||B.mechOn)&&towerGuard(e)) return; e.dead=true; e.deadAt=B.t; zoneOnDeath(e);
       if(TW&&!e.inf){ const ne=tcN('ejecutor'); if(ne&&TC.ejecutor.killHeal) heal(TC.ejecutor.killHeal*ne*h.hp); }   // Ejecutor: al matar, te curas un poco
       if(TW&&tgH('explosion')&&!e.inf){ const x=e.max*TG.explosion.pct; for(const o of B.enemies){ if(o.dead||o===e||o.arrive>B.t+0.5) continue; zap(o,x,{burst:true}); } }   // Torre: Explosión
-      if(CT<(BUF.combust||0)&&e.burn&&e.burn.some(u=>u>B.t)){ const nx=B.enemies.find(x=>!x.dead); if(nx){ nx.burn=(nx.burn||[]).concat(e.burn.filter(u=>u>B.t)).slice(-(P&&P.burnMax||5)); emit('fx',{k:'combustion',e:nx}); } }
       if(B.event){ B.kills++; if(S.evRun) S.evRun.kills=B.kills; return }
       if(e.wander){ const sk=e.sk||'wander', rw=(CFG.surprise[sk]||CFG.surprise.wander).reward; giveBundle(rw); SUR.kind=null; emit('surprise',{k:sk+'Win',reward:rw}); }
       onKill(e); if(e.first&&B.spawned<B.count){e.first=false;spawnEnemy()} };
-    // daño que no es un golpe normal (habilidades, espinas, efectos): Torre · Segador también cura con él
-    const zap=(e,d,o)=>{ if(e.dead) return; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e,d,crit:false,...(o||{})}); if(TW&&!(o&&o.thorns)&&tgH('segador')) heal(d*h.ls,false,true); if(e.hp<=0) kill(e); };
-    if(B.auraPool>0){ const d=B.auraPool*Math.min(1,dt/P.auraDur); B.auraPool-=d;                    // Santo: aura sagrada (en área)
-      for(const e of B.enemies){ if(e.dead||e.arrive>B.t) continue; const dd=d*(B.boss?1+h.bd:1); e.hp-=dd; B.auraDmg=(B.auraDmg||0)+dd; B.mD+=dd; if(B.kind==='boss') addDmg(dd); if(e.hp<=0) kill(e); } }
-    if(P&&P.burnPct) for(const e of B.enemies){ // Archimago: quemaduras (cada acumulación hace burnPct del daño por segundo)
-      if(e.dead||!e.burn) continue; e.burn=e.burn.filter(u=>u>B.t); if(!e.burn.length) continue;
-      const d=e.burn.length*P.burnPct*h.atk*dt*(CT<(BUF.combust||0)?1+(BUF.burnUp||0):1); e.hp-=d; B.burnDmg=(B.burnDmg||0)+d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
+    // daño que no es un golpe normal (habilidades, espinas, efectos): Torre · Segador también cura con él · Inquebrantable: los golpes pequeños le hacen menos
+    const zap=(e,d,o)=>{ if(e.dead) return; if(e.smallRes&&d<e.smallRes.small*e.max) d*=1-e.smallRes.dr; if(!(o&&o.thorns)) e.hitN=(e.hitN||0)+1; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e,d,crit:false,...(o||{})}); if(TW&&!(o&&o.thorns)&&tgH('segador')) heal(d*h.ls,true); if(e.hp<=0) kill(e); };
+    const X={h,zap,heal,kill,addShield};   // lo que usa el kit (combate/kit.js)
+    kitTick(P,dt,X);                       // quemaduras, veneno, sangrado, Sombras, cuchillas, Terremoto y lo que llega más tarde
     for(const e of B.enemies){ if(e.dead||!(e.dot>B.t)) continue;                   // daño con el tiempo: veneno, sangrado, fuego
       const d=e.dotDps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
-    for(const e of B.enemies){ if(e.dead||!e.poison||!e.poison.length) continue; e.poison=e.poison.filter(x=>x.until>B.t); // Veneno: acumulaciones
-      const d=e.poison.reduce((a,x)=>a+x.dps,0)*dt; if(!d) continue; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     const hitOnce=(tg,extra)=>{   // extra: golpe de más (Golpe doble, Tormenta, Lluvia): no vuelve a repetir
       if(tg.thorns) tg.thN=(tg.thN||0)+1;   // Torre: élite con Espinas (te devuelve parte de cada golpe)
-      const atkE=h.atk+(P&&P.defDmg?P.defDmg*h.df/h.dfK:0), dfE=tg.df*(LS.vacio?Math.pow(1-LS.vacio.ignoreDf,LS.vacio.n||1):1);   // Titán: daño extra según su defensa · Vacío: ignora defensa
-      let d=dmgF(atkE,dfE)*(B.boss?1+h.bd:1), crit=false;
-      if(P&&P.rage) d*=1+Math.min(P.rageCap,(B.rage||0)*P.rage);        // Berserker: furia por golpes recibidos
-      if(P&&P.dblBuff&&B.dblSt){ B.dblSt=B.dblSt.filter(u=>u>B.t); d*=1+P.dblBuff*B.dblSt.length; } // Ojo de Halcón: racha tras disparo doble
-      if(B.critBuff){ d*=1+P.critNext; B.critBuff=false; }                // Sombra: golpe potenciado tras un crítico
-      d*=buffMul('atk');                                                        // habilidades: +daño
+      const atkE=h.atk, dfE=tg.df*(LS.vacio?Math.pow(1-LS.vacio.ignoreDf,LS.vacio.n||1):1);   // Vacío: ignora defensa
+      let d=dmgF(atkE,dfE)*(B.boss?1+h.bd:1)*kitMul(P,tg), crit=false;     // kit: Furia, Concentración, Destrozar…
+      d*=buffMul('atk')*heroAtkMul();                                           // habilidades: +daño · Burla: −ataque
+      const rh=P&&P.id==='ritmo'?rhythm(P,tg):null; if(rh) d*=rh.m;            // Ritmo: el disparo que llega al tope pega más
       if(TW){ d*=tMul(tg); if(tgH('coloso')) d+=TG.coloso.pct*(BUF.shield||0);   // Torre: cartas y grimorios · Coloso: el escudo suma daño
         if(!B.firstHit){ B.firstHit=true; if(tgH('primerGolpe')) d*=1+TG.primerGolpe.mult; }
         if(BUF.sang>0){ BUF.sang--; d*=1+BUF.sangMult; } }   // Sangría
       { const a1=buffAdd('atk1'); if(a1&&(B.boss||B.kind==='boss')) d*=1+a1; }   // +daño solo contra jefes
-      if(tg.mark>B.t) d*=1+tg.markMult;                                         // Marca del cazador
-      if(GS.has('sacrificio')&&B.hp>1){ const GF=FX.sacrificio; B.hp=Math.max(1,B.hp-GF.cost*h.hp); if(!GF.single||B.boss||B.kind==='boss') d*=1+GF.atk; }   // Oscuro: el extra solo contra jefes   // Sacrificio: vida por daño
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
-      if(forced||rand()<h.cr+(B.critAcc||0)){ d*=1+h.cd; crit=true; if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE);   // Filo del vacío: el crítico ignora la defensa
-        B.critAcc=0; if(P&&P.critNext) B.critBuff=true; }
-      else if(P&&P.critStack) B.critAcc=Math.min(P.critStackMax||1,(B.critAcc||0)+P.critStack); // Segador: cada golpe sin crítico suma probabilidad de crítico
-      tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls')+(GS.has('sacrificio')?FX.sacrificio.lsMax*Math.max(0,1-B.hp/h.hp):0))*h.hpK,false,true); if(B.kind==='boss') addDmg(d);   // (Oscuro: roba más cuanta menos vida)   // robo de vida: cura la misma parte de tu vida máxima que antes
-      if(P&&P.burnPct){ tg.burn=tg.burn||[]; if(tg.burn.length>=P.burnMax) tg.burn.shift(); tg.burn.push(B.t+P.burnDur); }
+      if(forced||(rh&&rh.crit)||rand()<h.cr){ d*=1+h.cd; crit=true; if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE); if(tg.critRes) d*=1-tg.critRes; }   // Filo del vacío: el crítico ignora la defensa · Cabeza dura
+      if(tg.smallRes&&d<tg.smallRes.small*tg.max) d*=1-tg.smallRes.dr; tg.hitN=(tg.hitN||0)+1;   // Inquebrantable
+      tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls')+kitLs(P))*h.hpK,true); if(B.kind==='boss') addDmg(d);   // robo de vida: cura la misma parte de tu vida máxima que antes
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
-      if(BUF.clone&&CT<BUF.clone.until&&!tg.dead){ const c=d*BUF.clone.mult; tg.hp-=c; B.mD+=c; if(B.kind==='boss') addDmg(c); emit('hit',{e:tg,d:c,crit,clone:true}); }   // Clon de sombra
-      if(GS.has('escarcha')&&!tg.dead&&(tg.shards=(tg.shards||0)+1)>=FX.escarcha.need){ const GF=FX.escarcha; tg.shards=0; const x=dmgF(h.atk,tg.df*(1-GF.ignoreDf))*GF.mult*(B.boss?1+h.bd:1)*buffMul('atk'); tg.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x);   // Escarcha: 3 esquirlas → daño y congela
-        tg.frozen=B.t+FX.escarcha.freeze; emit('hit',{e:tg,d:x,crit:false,frost:true}); emit('fx',{k:'congelar',e:tg}); }
+      kitOnHit(P,tg,d,crit,X);                                                  // kit: quemaduras, esquirlas, veneno, Sombras, cuchillas
       if(LS.llamarada&&(B.flare=(B.flare||0)+1)%LS.llamarada.every===0) for(const e of B.enemies){ if(e.dead) continue; e.dot=B.t+LS.llamarada.dur; e.dotDps=LS.llamarada.pct*(LS.llamarada.n||1)*d; e.dotKind='fuego'; }   // Llamarada solar
-      if(CT<(BUF.combust||0)&&BUF.burnHit&&!(P&&P.burnPct)){ tg.dot=B.t+3; tg.dotDps=Math.max(tg.dotKind==='fuego'&&tg.dot>B.t?tg.dotDps||0:0,BUF.burnHit*d); tg.dotKind='fuego'; }   // Combustión (Torre): tus golpes queman
-      if(GS.has('veneno')){ const GF=FX.veneno; tg.poison=(tg.poison||[]).filter(x=>x.until>B.t); tg.poison.push({until:B.t+GF.dur,dps:GF.pct*d}); if(tg.poison.length>GF.max) tg.poison.shift(); }
       if(TW&&tgH('shuriken')&&(B.shN=(B.shN||0)+1)%TG.shuriken.every===0) B.shur=(B.shur||0)+TG.shuriken.atk;   // Shuriken
       if(tg.hp<=0) kill(tg);
       if(TW&&crit&&!extra&&tgH('tormenta')) for(let i=0;i<TG.tormenta.n;i++){ const os=B.enemies.filter(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5), o=os.length?os[Math.floor(rand()*os.length)]:!tg.dead?tg:null; if(o) hitOnce(o,true); }   // Tormenta de acero
       // Tajo partido (después de matar: también alcanza al que acaba de salir)
       if(LS.tajo){ const o=B.enemies.find(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5); if(o){ const x=d*LS.tajo.mult*(LS.tajo.n||1); o.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); emit('hit',{e:o,d:x,crit:false,cleave:true}); if(o.hp<=0) kill(o); } }
     };
-    const canHit=e=>!e.dead&&((h.ranged&&!B.event)||e.arrive<=B.t); // en el evento nadie dispara antes de que llegue (igual para todas las clases)
-    // habilidades: las pedidas a mano (B.cast) y, en automático, las que estén listas
+    const canHit=e=>canTarget(e)&&((h.ranged&&!B.event)||e.arrive<=B.t);   // (zonas: ni caídos, ni invisibles, ni encantadores) // en el evento nadie dispara antes de que llegue (igual para todas las clases)
+    // habilidades: las pedidas a mano (B.cast) y, en automático, las que estén listas (aturdido o sin arma: ninguna)
     if(skillsAuto()&&B.enemies.some(e=>!e.dead&&e.arrive<=B.t+0.3))
-      for(const k of skillSlots()){ if(CT<GCD) break; const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;   // entre una habilidad y la siguiente, una pequeña espera (CFG.skillGap)
-        if((sk.id==='sed'||sk.id==='sacrificio')&&B.hp<0.5*h.hp) continue;         // no gastar vida si va mal
-        if((sk.id==='tSed'||sk.id==='tSangria')&&B.hp<0.35*h.hp) continue;
-        CD[k]=CT+sk.cd; GCD=CT+(CFG.skillGap||0); (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }
+      for(const k of heroNoSkills()?[]:skillSlots()){ if(CT<GCD) break; const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;   // entre una habilidad y la siguiente, una pequeña espera (CFG.skillGap)
+        if((sk.id==='tSed'||sk.id==='tSangria')&&B.hp<0.35*h.hp) continue;         // no gastar vida si va mal
+        if(!kitReady(sk)&&CT<(CD[k]||0)+3) continue;                               // las que gastan cargas esperan a tenerlas (hasta 3 s)
+        CD[k]=CT+sk.cd*cdMul(); GCD=CT+(CFG.skillGap||0); (B.cast=B.cast||[]).push(k); emit('skill',{slot:k,name:sk.name,auto:true}); }   // (Estática: recargas más lentas)
     if(B.cast&&B.cast.length){ const list=B.cast; B.cast=[];
       const alive=()=>B.enemies.filter(e=>!e.dead).sort((a,b)=>a.arrive-b.arrive), base=e=>dmgF(h.atk,e.df)*(B.boss?1+h.bd:1)*buffMul('atk')*tMul(e);
       const hurt=(e,d,k)=>{ zap(e,d,{skill:k}); return e.dead };
       for(const k of (TW&&tgH('eco')?list.flatMap(k=>k[0]==='t'?[k,k]:[k]):list)){ const sk=skillDef(k); if(!sk) continue;   // Eco: las habilidades de la Torre se lanzan dos veces
+        B.lastSkMult=Math.min(10,(sk.mult||2)*(sk.hits||1));   // lo que repite Imitar
         switch(sk.id){
           // Torre
           case 'tGolpe': { const e=alive()[0]; if(e) hurt(e,base(e)*sk.mult,k); break; }
@@ -371,86 +368,188 @@ function createGame(opts){
           case 'tSed': { const l=loseHp(sk.cost*h.hp); addShield(sk.shield*l); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
           case 'tLluvia': for(let i=0;i<sk.hits;i++){ const e=alive().find(x=>x.arrive<=B.t+0.5); if(e) hitOnce(e,true); } break;
           case 'tFestin': { const e=alive()[0]; if(e&&hurt(e,base(e)*sk.mult,k)&&!e.minion){ const run=S.tower.run; run.hpBonus=(run.hpBonus||0)+sk.maxHp; statsDirty(); } break; }
-          case 'muro': BUF.shield=(BUF.shield||0)+sk.shield*h.df;                                   // escudo según la defensa
-            for(const e of alive()) hurt(e,dmgF(sk.dmgDef*h.df/h.dfK,e.df)*(B.boss?1+h.bd:1),k); break;   // golpe en área con la defensa (escala antigua)
-          case 'bola': for(const e of alive().slice(0,sk.targets)){ hurt(e,base(e)*sk.mult,k); if(!e.dead){ if(GS.has('escarcha')&&!(P&&P.burnPct)) e.shards=(e.shards||0)+1; else { e.dot=B.t+sk.dur; e.dotDps=base(e)*sk.burn; e.dotKind='fuego'; } } } break;
-          case 'rapido': BUF.list.push({until:CT+sk.dur,spd:sk.spd}); break;
-          case 'ejecutar': { const tg=alive()[0]; if(tg&&hurt(tg,base(tg)*sk.mult,k)) CD[k]=CT+sk.cd*sk.refund; break; }   // si mata, media recarga
-          case 'luz': { for(let i=0;i<sk.hits;i++){ const e=alive()[0]; if(e) hurt(e,base(e)*sk.mult,k); }   // golpes encadenados al mismo objetivo (si muere, siguen con el siguiente)
-            BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
-          case 'sed': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.shield=(BUF.shield||0)+sk.shield*Math.max(0,lost); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
-          case 'combustion': BUF.combust=CT+sk.dur; BUF.burnUp=sk.burnUp||0; BUF.burnHit=sk.burnHit||0; break;
-          case 'perforante': for(const e of alive()) hurt(e,base(e)*sk.mult,k); break;
-          case 'clon': BUF.clone={until:CT+sk.dur,mult:sk.mult}; break;
-          case 'juicio': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps}; break;
-          case 'baluarte': BUF.list.push({until:CT+sk.dur,df:sk.df,reflect:sk.reflect}); break;
-          case 'armaduraHielo': { BUF.iceArmor=CT+sk.dur; BUF.iceShards=sk.shards||1; const F=CFG.grimoire.fx.escarcha;
-            // al lanzarla: esquirlas a todos
-            for(const e of alive()){ hurt(e,dmgF(h.atk,e.df*(1-F.ignoreDf))*F.mult*(sk.burst||1)*(B.boss?1+h.bd:1),k); if(!e.dead) e.frozen=B.t+F.freeze; } break; }
-          case 'marca': { const tg=alive()[0]; if(tg){ tg.mark=B.t+sk.dur; tg.markMult=sk.mult; } break; }
-          case 'nube': BUF.cloud={until:CT+sk.dur,next:CT,pct:sk.pct,extra:sk.extra}; break;
-          case 'sacrificio': { const lost=Math.min(B.hp-1,sk.cost*h.hp); B.hp-=Math.max(0,lost); BUF.list.push({until:CT+sk.dur,atk:sk.single?0:sk.atk,atk1:sk.single?sk.atk:0}); break; }
+          default: kitCast(sk,k,X);   // las del kit del héroe (combate/kit.js)
         }
-        emit('fx',{k:'skill',slot:k,id:sk.id,name:sk.name}); } }
+        emit('fx',{k:'skill',slot:k,id:sk.look||sk.id,sid:sk.id,name:sk.name}); } }
     if(BUF.lightBack&&BUF.lightBack.length){ const back=BUF.lightBack.filter(x=>CT>=x.at); if(back.length){ BUF.lightBack=BUF.lightBack.filter(x=>CT<x.at); for(const x of back) heal(x.heal*h.hp); emit('fx',{k:'luzVuelve',n:back.length}); } }
-    if(BUF.cloud&&CT<BUF.cloud.until&&CT>=BUF.cloud.next){ BUF.cloud.next+=1; const V=CFG.grimoire.fx.veneno;
-      for(const e of B.enemies){ if(e.dead) continue; e.poison=(e.poison||[]).filter(x=>x.until>B.t); e.poison.push({until:B.t+V.dur,dps:(BUF.cloud.pct||V.pct)*dmgF(h.atk,e.df)}); if(e.poison.length>V.max+(BUF.cloud.extra||0)) e.poison.shift(); } }
-    if(BUF.aura&&CT<BUF.aura.until){ heal(BUF.aura.heal*h.hp*dt);                              // Luz del juicio: cura y quema a los cercanos
-      for(const e of B.enemies){ if(e.dead||e.arrive>B.t+0.5) continue; const d=dmgF(h.atk,e.df)*BUF.aura.dps*dt*(B.boss?1+h.bd:1); e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); } }
+    if(BUF.aura&&CT<BUF.aura.until){ heal(BUF.aura.heal*h.hp*dt);                              // Consagrar: cura y quema a los cercanos
+      for(const e of B.enemies){ if(e.dead||e.arrive>B.t+0.5) continue; const d=kitBase(P,h,e)*BUF.aura.dps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); } }
     if(B.stun>B.t) B.th=Math.max(B.th==null?B.t:B.th,B.stun);   // PvP: congelado por el rival
     if(B.enemies.some(canHit)){
       if(B.th===null) B.th=B.t;
       while(B.t>=B.th){
         const cand=B.enemies.filter(canHit);
         if(!cand.length){B.th=null;break}
-        const tg=cand.reduce((a,b)=>a.arrive<=b.arrive?a:b);
+        const tg=zoneTarget(cand)||cand.reduce((a,b)=>a.arrive<=b.arrive?a:b);   // Locura: a uno al azar
         B.mB+=dmgF(h.atk,tg.df)*(B.boss?1+h.bd:1)*(1+h.cr*h.cd);   // lo que diría la fórmula por ataque (para medir el DPS real)
         hitOnce(tg);
         if(TW&&h.dbl) for(let c=h.dbl;c>0;c--) if(rand()<c){ const t2=tg.dead?B.enemies.filter(canHit)[0]:tg; if(t2) hitOnce(t2,true); }   // Torre · Golpe doble (más del 100 %: golpes seguros)
         if(LS.rafaga&&(B.shots=(B.shots||0)+1)%LS.rafaga.every===0) for(let i=1;i<1+(LS.rafaga.arrows-1)*(LS.rafaga.n||1);i++){ const t2=tg.dead?B.enemies.filter(canHit)[0]:tg; if(t2) hitOnce(t2); }   // Ráfaga: 3 flechas
-        if(P&&P.double&&!tg.dead&&rand()<P.double){ hitOnce(tg); if(P.dblBuff){ B.dblSt=(B.dblSt||[]).filter(u=>u>B.t); if(B.dblSt.length<P.dblMax) B.dblSt.push(B.t+P.dblDur); } } // Tirador: disparo doble
-        B.th+=1/(h.spd*buffMul('spd'));
+        if(P&&P.id==='doble'&&rand()<P.chance){ const n=P.triple&&(B.conc||0)>=P.max?2:1, os=B.enemies.filter(e=>canHit(e)&&e!==tg);   // Doble: flechas de más a otros enemigos
+          for(let i=0;i<n;i++){ const t2=os[i]||(tg.dead?B.enemies.filter(canHit)[0]:tg); if(t2) hitOnce(t2,true); } B.conc=Math.min(P.max,(B.conc||0)+1); }
+        B.th+=1/(h.spd*buffMul('spd')*heroSpdMul());
       }
     } else if(B.event||(B.th!==null&&B.th<=B.t)) B.th=null;   // en campaña, sin objetivo, el siguiente golpe respeta la cadencia (cuerpo a cuerpo: no es instantáneo al llegar)
     // (élite y JEFE: sus mecánicas van en towerTick, igual que en la Torre)
-    // recibir un golpe: dfn da el daño tras tu defensa (se calcula después de la esquiva, como siempre)
-    const takeHit=(e,dfn)=>{ if(rand()>=h.ev){ let d=dfn()*h.dmgTaken*buffMul('taken'); const d0=d;
+    // recibir un golpe: dfn da el daño tras tu defensa
+    const takeHit=(e,dfn)=>{ let d=dfn()*h.dmgTaken*buffMul('taken')*kitTaken(P); const d0=d;
           if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad (y de la Torre)
           if(BUF.gshield>0){ const a=Math.min(BUF.gshield,d); BUF.gshield-=a; d-=a; }    // escudo del Grimorio de la Luz
-          B.hp-=d; emit('heroHit',{d}); if(!B.event&&STK.n){ STK.n=0; emit('streak',{n:0}); } if(!(B.hp>0)){ B.hp=0; return } onLoss(d);   // si caes, ya no devuelves daño
+          B.hp-=d; emit('heroHit',{d}); zoneOnHurt(e,d); if(!B.event&&STK.n){ STK.n=0; emit('streak',{n:0}); } if(!(B.hp>0)){ B.hp=0; return } onLoss(d);   // si caes, ya no devuelves daño
           { const rf=buffAdd('reflect')+(TW?h.refl:0); if(rf>0) zap(e,(TW&&tgH('corazaPuas')?d0:d)*rf/h.hpK,{thorns:true}); }   // Baluarte y Púas: devuelven daño (Coraza de púas: también lo que para el escudo)
           { const ne=TW?tcN('erizo'):0; if(ne) for(const o of B.enemies) if(!o.dead&&o.arrive<=B.t+0.5) zap(o,dmgF(h.atk,o.df)*TC.erizo.pct*ne*tMul(o),{thorns:true}); }   // Erizo
-          if(CT<(BUF.iceArmor||0)&&!e.dead&&(e.shards=(e.shards||0)+(BUF.iceShards||1))>=CFG.grimoire.fx.escarcha.need){ const F=CFG.grimoire.fx.escarcha; e.shards=0;   // Armadura de hielo: esquirla al que pega
-            const x=dmgF(h.atk,e.df*(1-F.ignoreDf))*F.mult*(B.boss?1+h.bd:1); e.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); e.frozen=B.t+F.freeze; emit('hit',{e,d:x,crit:false,frost:true}); if(e.hp<=0) kill(e); }
-          if(P&&P.rage) B.rage=(B.rage||0)+1;
-          if(P&&P.lightMult&&!B.lightUsed&&B.hp>0&&B.hp<P.lightHp*h.hp){ B.lightUsed=true; B.lightUntil=B.t+P.lightDur; } } // Oráculo: luz interior
-      else emit('dodge'); };
-    // PvP: daño del otro héroe (ya con tu defensa base; aquí se añaden tus mejoras de defensa, esquiva, escudos…)
+          kitOnHurt(P,e,d0,X); };   // kit: Guardia y espinas, Furia, Luz
+    // PvP: daño del otro héroe (ya con tu defensa base; aquí se añaden tus mejoras de defensa, escudos…)
     if(B.kind==='pvp'&&B.inc&&B.inc.length){ const e=B.enemies[0], inc=B.inc; B.inc=[]; for(const x of inc) takeHit(e,()=>x.d*(x.a+h.df)/(x.a+h.df*buffMul('df'))); if(B.hp<=0) return; }
     for(const e of B.enemies){
-      if(!e.dead&&e.frozen>B.t){ if(e.arrive>B.t){ e.spawn+=dt; e.arrive+=dt; } e.next=Math.max(e.next,e.frozen); continue; }   // congelado
-      if(e.dead||e.arrive>B.t) continue;
+      if(!e.dead&&e.frozen>B.t&&!e.noCC){ if(e.arrive>B.t){ e.spawn+=dt; e.arrive+=dt; } e.next=Math.max(e.next,e.frozen); continue; }   // congelado
+      if(e.dead||e.down||(e.arrive>B.t&&!e.ranged)) continue;   // (Fuego infernal: ataca antes de llegar)
+      if(e.boxIn||e.windU>B.t||e.batU>B.t){ e.next=Math.max(e.next,B.t); continue; }   // escondido, cargando el golpe o en murciélagos
       while(B.t>=e.next){
-        takeHit(e,()=>{ let d=dmgF(e.atk,h.df*buffMul('df')); if(e.cr&&rand()<e.cr) d*=1+e.cd; return d });
-        e.next+=1/(CFG.enemy.spd*(e.spd||1));
+        takeHit(e,()=>{ let d=dmgF(e.atk*(e.am||1),h.df*buffMul('df')*heroDfMul())*zoneAtkMul(e); if(e.cr&&rand()<e.cr) d*=1+e.cd; return d });
+        if(B.hp>0&&B.mechOn) zoneAfterAttack(e);   // zonas: veneno, infección, burla, locura…
+        e.next+=1/(CFG.enemy.spd*(e.spd||1)*(e.sm||1)*(B.eslow>B.t&&!e.noCC?B.eslowM:1));   // Terremoto: pegan más lento
         if(e.first){e.first=false;if(B.spawned<B.count)spawnEnemy()}
         if(B.hp<=0){ if(B.event) endEvent(); else lose(); return }
         if(e.dead) break;
       }
     }
-    if(B.mechOn&&B.kind!=='tower') towerTick(h,dt);   // élite y JEFE de campaña, errante y Sala: rasgos y mecánica (si caes, se resuelve como siempre)
+    const Y={h,kill,hit:(e,m)=>takeHit(e,()=>m*dmgF(e.atk*(e.am||1),h.df*buffMul('df')*heroDfMul()))};   // golpes de las habilidades de los enemigos
+    if(B.mechOn&&B.kind!=='tower'){ towerTick(h,dt); if(zoneTick(h,dt,Y)){ B.hp=0; if(B.event) endEvent(); else lose(); return } }   // élites y JEFES de zona: pasivas y habilidades
     if(B.kind==='tower'){
-      if(towerTick(h,dt)){ endEvent(); return }   // rasgos de los élites y mecánicas de los jefes
+      if(towerTick(h,dt)||(B.mechOn&&zoneTick(h,dt,Y))){ endEvent(); return }   // rasgos de los élites, mecánicas de los jefes y lo de su zona
       if(!tgH('barricada')&&BUF.shield>0) BUF.shield*=Math.exp(-CFG.tower.shieldDecay*dt);   // el escudo se gasta con el tiempo
       { const n=tcN('escudoReg'); if(n&&CT>=B.regAt){ B.regAt=CT+TC.escudoReg.every; addShield(TC.escudoReg.shield*n*h.hp); } }   // Escudo regenerable
       if(B.enemies.every(e=>e.dead)){ if(B.endAt==null) B.endAt=B.t+(CFG.tower.endDelay||0);   // al matar a todos, una pausa antes de salir
         if(B.t>=B.endAt){ if(towerRewardNow()) return; endEvent(); return } } }
     if(B.kind==='hall'){ if(B.enemies.every(e=>e.dead)){ endEvent(); return }   // Sala de jefes: gana al matarlo; sin tiempo límite
       const R=CFG.hall.rage, n=B.t>=R.from?1+Math.floor((B.t-R.from)/R.every):0;   // furia: cada 10 s desde el 60, más rápido y más fuerte
-      if(n>(B.rage||0)){ for(const e of B.enemies) if(!e.dead){ const k=n-(B.rage||0); e.spd=(e.spd||1)*Math.pow(R.spd,k); e.atk*=Math.pow(R.atk,k); } B.rage=n; emit('bossPhase',{k:'rage'}); } }
+      if(n>(B.hallRage||0)){ for(const e of B.enemies) if(!e.dead){ const k=n-(B.hallRage||0); e.spd=(e.spd||1)*Math.pow(R.spd,k); e.atk*=Math.pow(R.atk,k); } B.hallRage=n; emit('bossPhase',{k:'rage'}); } }   // (hallRage: aparte de la Furia del Berserker, B.rage)
     if(B.event){ if(B.enemies.length>40) B.enemies=B.enemies.filter(e=>!e.dead); return }
     if(B.spawned>=B.count && B.enemies.every(e=>e.dead)) waveClear();
   }
+  /* ---------- kit en combate: pasivas, cargas y habilidades del héroe (CFG.kit) ---------- */
+  // X: lo que da cada paso del combate ({h, zap, heal, kill, addShield}). Las cargas del héroe viven en B y vuelven a 0 en cada
+  // oleada (B.guard Guardia, B.rage Furia, B.conc Concentración, B.luz Luz, B.blades Cuchillas). Las de los enemigos, en cada uno:
+  // e.burn quemaduras, e.poison veneno, e.bleed sangrado, e.shadow Sombras ({until, dps}), e.shards esquirlas y e.rhy Ritmo.
+  const aliveE=()=>B.enemies.filter(canTarget).sort((a,b)=>a.arrive-b.arrive);   // (zonas: ni caídos ni invisibles)
+  const nearE=()=>aliveE().filter(e=>e.arrive<=B.t+0.5);   // los cercanos (ya han llegado o están a punto)
+  const stk=(e,k)=>(e[k]=(e[k]||[]).filter(x=>x.until>B.t));   // cargas vivas de un enemigo
+  function addStack(e,k,dps,dur,max){ const a=stk(e,k); a.push({until:B.t+dur,dps}); while(a.length>max) a.shift(); return a.length }
+  const bossM=h=>B.boss?1+h.bd:1;
+  // multiplicador del kit contra tg: Furia/Frenesí (y +daño a jefes), Concentración y Destrozar (congelados)
+  function kitMul(P,tg){ if(!P) return 1; let m=1;
+    if(P.id==='furia'){ m*=1+P.per*Math.min(P.max,B.rage||0); if(B.boss) m*=1+P.boss; }
+    else if(P.id==='doble') m*=1+P.per*Math.min(P.max,B.conc||0);
+    else if(P.id==='esquirlas'&&P.frozenTaken&&tg&&tg.frozen>B.t) m*=1+P.frozenTaken;
+    return m }
+  const kitTaken=P=>P&&P.id==='guardia'?1-P.per*Math.min(P.max,B.guard||0):1;   // Guardia: menos daño recibido
+  const kitLs=P=>P&&P.id==='furia'&&P.ls&&(B.rage||0)>=P.max?P.ls:0;            // Frenesí: robo de vida con la Furia llena
+  // daño de un golpe normal contra e, con todo lo que lo sube (es la base de las habilidades: mult 4 = 400 %)
+  const kitBase=(P,h,e)=>dmgF(h.atk,e.df)*bossM(h)*buffMul('atk')*kitMul(P,e)*heroAtkMul();
+  // Ignición: quemaduras; con «spread» o más, cada quemadura nueva las contagia (hasta «spread») al siguiente enemigo que tenga menos
+  function addBurn(P,e,n,X){ if(e.dead) return; let c=stk(e,'burn').length;
+    for(let i=0;i<n;i++) c=addStack(e,'burn',P.pct*dmgF(X.h.atk,e.df),P.dur,P.max);
+    if(c>=P.spread){ const o=aliveE().find(x=>x!==e&&stk(x,'burn').length<P.spread);
+      if(o){ while(stk(o,'burn').length<P.spread) addStack(o,'burn',P.pct*dmgF(X.h.atk,o.df),P.dur,P.max); emit('fx',{k:'contagio',e:o}); } } }
+  // Esquirlas: con «need», estallido que congela (ignora parte de la defensa)
+  function addShards(P,e,n,X){ if(e.dead) return; e.shards=(e.shards||0)+n; if(e.shards<P.need) return; e.shards=0; const h=X.h;
+    const x=dmgF(h.atk,e.df*(1-P.ignoreDf))*P.mult*bossM(h)*buffMul('atk')*kitMul(P,e)*heroAtkMul(); if(!e.noCC) e.frozen=Math.max(e.frozen||0,B.t+P.freeze);
+    X.zap(e,x,{frost:true}); emit('fx',{k:'congelar',e}); }
+  function addBlades(P,n){ B.blades=(B.blades||[]).filter(u=>u>B.t); for(let i=0;i<n;i++) B.blades.push(B.t+P.dur); B.blades.sort((a,b)=>b-a); B.blades.length=Math.min(B.blades.length,P.max) }
+  // PvP: las espinas y la Onda de escudo hacen menos (× pvp.reflect); si no, el Guerrero A gana casi siempre
+  const pvpRefl=()=>B.kind==='pvp'?(CFG.pvp.reflect==null?1:CFG.pvp.reflect):1;
+  // Guardia: con Represalia, al llenarse lanza la Onda de escudo (según la defensa, en la escala antigua: ÷ dfK)
+  function addGuard(P,n,X){ B.guard=Math.min(P.max,(B.guard||0)+n); if(!P.wave||B.guard<P.max) return; B.guard=0; const h=X.h;
+    for(const o of nearE()) X.zap(o,dmgF(P.wave*h.df/h.dfK,o.df)*bossM(h)*pvpRefl(),{burst:true}); emit('fx',{k:'onda'}); }
+  // Gracia: al llenarse la Luz se cura y hace daño a todos (lo curado pasa a la escala antigua: ÷ hpK)
+  // (PvP: la vida va × B.hpM para que el duelo dure; el daño sale de la vida normal, sin ese extra)
+  function addLuz(P,n,X){ B.luz=(B.luz||0)+n; if(B.luz<P.max) return; B.luz=0; const h=X.h, x=P.heal*h.hp; X.heal(x);
+    for(const o of nearE()) X.zap(o,x/((B.kind==='pvp'&&B.hpM)||1)*P.dmg/h.hpK,{burst:true}); emit('fx',{k:'gracia'}); }
+  // Ritmo: cada disparo al mismo enemigo suma; el que llega al tope pega más (Letal: también crítico) y vuelve a 0
+  function rhythm(P,e){ e.rhy=(e.rhy||0)+1; if(e.rhy<P.max) return null; e.rhy=0; return {m:P.mul,crit:!!P.crit} }
+  // después de un golpe normal que ha hecho d
+  function kitOnHit(P,tg,d,crit,X){ if(!P) return;
+    if(P.id==='ignicion') addBurn(P,tg,1,X);
+    else if(P.id==='esquirlas') addShards(P,tg,1,X);
+    else if(P.id==='veneno'&&!tg.dead) addStack(tg,'poison',P.pct*d,P.dur,P.max);
+    else if(P.id==='corrupcion'&&!tg.dead) addStack(tg,'shadow',P.pct*d,P.dur,P.max);
+    else if(P.id==='cuchillas'&&crit) addBlades(P,1); }
+  // después de recibir un golpe (d0: el daño antes de los escudos)
+  function kitOnHurt(P,e,d0,X){ if(!P) return; const h=X.h;
+    if(P.id==='guardia'){ const os=nearE(); if(d0>0) for(const o of os) X.zap(o,d0*P.thorns/h.hpK/os.length*pvpRefl(),{thorns:true}); addGuard(P,1,X); }   // espinas repartidas entre todos
+    else if(P.id==='furia') B.rage=Math.min(P.max,(B.rage||0)+1);
+    else if(P.id==='gracia') addLuz(P,1,X); }
+  // cada paso: quemaduras, veneno, sangrado y Sombras (que curan), cuchillas, Terremoto y lo que llega más tarde (B.kq)
+  function kitTick(P,dt,X){ const h=X.h;
+    for(const e of B.enemies){ if(e.dead) continue; let d=0, sh=0;
+      for(const k of ['burn','poison','bleed','shadow']){ if(!e[k]||!e[k].length) continue; const s=stk(e,k).reduce((a,x)=>a+x.dps,0)*dt; d+=s; if(k==='shadow') sh+=s; if(k==='burn') B.burnDmg=(B.burnDmg||0)+s; }
+      if(d>0){ e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(sh) X.heal(sh*h.hpK*((P&&P.healK)||1)); if(e.hp<=0) X.kill(e); } }   // Sombras: curan como robo de vida (healK)
+    const area=(per,tag)=>{ for(const e of nearE()){ const d=kitBase(P,h,e)*per*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); B[tag]=(B[tag]||0)+d; if(e.hp<=0) X.kill(e); } };
+    if(P&&P.id==='cuchillas'&&B.blades&&B.blades.length){ B.blades=B.blades.filter(u=>u>B.t); if(B.blades.length) area(B.blades.length*P.pct,'bladeDmg'); }
+    if(B.quake&&B.t<B.quake.until) area(B.quake.dps,'quakeDmg');
+    if(B.kq&&B.kq.length){ const now=B.kq.filter(q=>q.at<=B.t); if(now.length){ B.kq=B.kq.filter(q=>q.at>B.t); for(const q of now) q.f(); } } }
+  // las que gastan cargas esperan a tenerlas (como mucho 3 s más; si no, se lanzan igual)
+  function kitReady(sk){ const P=heroPassive(), f=aliveE()[0]; if(!f) return true;
+    switch(sk.id){
+      case 'remate': return (f.rhy||0)>=2;
+      case 'envenenar': return !!P&&stk(f,'poison').length>=P.max;
+      case 'estallido': case 'devorar': return !!P&&stk(f,'shadow').length>=P.max;
+      case 'triple': return !!P&&(B.rage||0)>=P.max;
+      case 'ejecutar': return aliveE().some(e=>e.hp<sk.low*e.max);
+    } return true }
+  // lanza una habilidad del kit (k: su hueco). false si no es del kit (las de la Torre van aparte)
+  function kitCast(sk,k,X){ const h=X.h, P=heroPassive(), A=aliveE, first=()=>aliveE()[0];
+    const base=e=>kitBase(P,h,e), hit=(e,m)=>{ if(e&&!e.dead) X.zap(e,base(e)*m,{skill:k}); return !e||e.dead };   // hit: true si ya no queda (o acaba de morir)
+    const later=(s,f)=>{ if(s<=0) f(); else (B.kq=B.kq||[]).push({at:B.t+s,f}) };
+    const bleed=e=>addStack(e,'bleed',CFG.bleed.pct*base(e),CFG.bleed.dur,CFG.bleed.max);
+    const poison=e=>{ if(P&&P.id==='veneno') addStack(e,'poison',P.pct*base(e),P.dur,P.max) };
+    const shadow=e=>{ if(P&&P.id==='corrupcion') addStack(e,'shadow',P.pct*base(e),P.dur,P.max) };
+    switch(sk.id){
+      // un objetivo, sin más
+      case 'tajo': case 'disparo': case 'punalada': hit(first(),sk.mult); break;
+      // Guerrero
+      case 'escudazo': { hit(first(),sk.mult); let n=0; for(const e of A()){ X.zap(e,dmgF(sk.def*h.df/h.dfK,e.df)*bossM(h),{skill:k}); n++; }
+        if(sk.guard&&P&&P.id==='guardia'&&n) addGuard(P,sk.guard*n,X); break; }
+      case 'provocar': for(const e of A()) hit(e,sk.mult); BUF.list.push({until:CT+sk.dur,taken:sk.taken}); if(sk.shield) X.addShield(sk.shield*h.hp); break;
+      case 'terremoto': for(const e of A()) hit(e,sk.mult); B.quake={until:B.t+sk.dur,dps:sk.dot}; B.eslow=B.t+sk.dur; B.eslowM=sk.slow; break;
+      case 'desgarro': { const e=first(); if(!e) break; const m=sk.mult*(sk.low&&e.hp<sk.low*e.max?sk.lowMul:1); if(!hit(e,m)) for(let i=0;i<sk.bleed;i++) bleed(e); break; }
+      case 'triple': { const r=B.rage||0; B.rage=0; for(let i=0;i<sk.hits;i++){ const e=first(); if(!e) break; if(!hit(e,sk.mult+sk.perRage*r)&&sk.bleed) bleed(e); } break; }
+      case 'ejecutar': { const os=A(), low=os.find(e=>e.hp<sk.low*e.max), e=low||os[0]; if(e) hit(e,low?sk.lowMult:sk.mult); break; }
+      // Mago (las quemaduras y esquirlas solo si su pasiva es la de ese camino)
+      case 'misil': for(let i=0;i<sk.hits;i++) hit(first(),sk.mult); break;
+      case 'llama': case 'explosion': for(const e of sk.targets?A().slice(0,sk.targets):A()){ const nb=stk(e,'burn').length; if(!hit(e,sk.mult+(sk.perBurn||0)*nb)&&P&&P.id==='ignicion') addBurn(P,e,sk.burn,X); } break;
+      case 'meteoros': for(let i=0;i<sk.n;i++) later(i*sk.over/Math.max(1,sk.n-1),()=>{ for(const e of A()) hit(e,sk.mult+(sk.perBurn||0)*stk(e,'burn').length) }); break;
+      case 'escarcha': { const e=first(); if(!e||hit(e,sk.mult)) break; if(!e.noCC) e.frozen=Math.max(e.frozen||0,B.t+sk.freeze); emit('fx',{k:'congelar',e}); if(sk.shards&&P&&P.id==='esquirlas') addShards(P,e,sk.shards,X); break; }
+      case 'lanza': case 'cometa': { const e=first(); if(e) hit(e,sk.mult*(e.frozen>B.t?sk.frozenMul:1)); break; }
+      // Arquero
+      case 'multidisparo': for(let r=0;r<(sk.times||1);r++) later(r*0.3,()=>{ for(const e of A().slice(0,sk.targets)) hit(e,sk.mult) }); break;
+      case 'lluvia': { const n=sk.waves+(sk.perConc&&P&&P.id==='doble'?sk.perConc*Math.min(P.max,B.conc||0):0); for(let i=0;i<n;i++) later(i*sk.over/Math.max(1,n-1),()=>{ for(const e of A()) hit(e,sk.mult) }); break; }
+      case 'perforar': for(const e of A()) hit(e,sk.mult); break;
+      case 'apuntar': later(sk.charge,()=>hit(first(),sk.mult)); break;
+      case 'rafaga': for(let i=0;i<sk.hits;i++){ const e=first(); if(!e) break; const r=sk.rhythm&&P&&P.id==='ritmo'?rhythm(P,e):null; hit(e,sk.mult*(r?r.m*(r.crit?1+h.cd:1):1)); } break;
+      case 'remate': { const e=first(); if(!e) break; const n=e.rhy||0; e.rhy=0; hit(e,sk.mult+sk.perStack*n); break; }
+      // Asesino
+      case 'giro': for(const e of nearE().slice(0,sk.targets)) hit(e,sk.mult); if(sk.blades&&P&&P.id==='cuchillas') addBlades(P,sk.blades); break;
+      case 'abanico': for(const e of A()) hit(e,sk.mult); if(sk.fill&&P&&P.id==='cuchillas') addBlades(P,P.max); break;
+      case 'torbellino': for(let t=0;t<sk.dur-1e-9;t+=sk.every) later(t,()=>{ for(const e of A()) hit(e,sk.mult) }); break;
+      case 'mutilar': for(let i=0;i<sk.hits;i++){ const e=first(); if(!e) break; if(!hit(e,sk.mult+(sk.perStack||0)*stk(e,'poison').length)) poison(e); } break;
+      case 'envenenar': { const e=first(); if(!e) break; const n=stk(e,'poison').length; e.poison=[]; hit(e,sk.mult+sk.perStack*n); break; }
+      case 'milcortes': for(let i=0;i<sk.hits;i++){ const e=first(); if(!e) break; if(!hit(e,sk.mult)) poison(e); } break;
+      // Clérigo
+      case 'luz': { for(let i=0;i<sk.hits;i++) hit(first(),sk.mult);   // golpes encadenados al mismo objetivo (si muere, siguen con el siguiente)
+        BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
+      case 'cadena': for(let i=0;i<sk.jumps;i++){ const os=A(); if(!os.length) break; hit(os[i%os.length],sk.mult); X.heal(sk.heal*h.hp);   // salta de uno a otro
+        if(sk.luzEvery&&(i+1)%sk.luzEvery===0&&P&&P.id==='gracia') addLuz(P,1,X); } break;
+      case 'consagrar': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps}; break;
+      case 'juicio': { let n=0; for(const e of A()){ hit(e,sk.mult); n++; } X.heal(sk.healPer*n*h.hp); break; }
+      case 'sombra': { const e=first(); if(!e) break; if(!hit(e,sk.mult+(sk.perStack||0)*stk(e,'shadow').length)) for(let i=0;i<sk.stacks;i++) shadow(e); break; }
+      case 'estallido': { const e=first(); if(e) hit(e,sk.mult+sk.perStack*stk(e,'shadow').length); break; }
+      case 'devorar': { let any=false; for(const e of A()){ const n=stk(e,'shadow').length; if(!n) continue; any=true; e.shadow=[]; const d=base(e)*sk.perStack*n; X.zap(e,d,{skill:k}); X.heal(d*h.hpK*((P&&P.healK)||1));
+          if(!e.dead) for(let i=0;i<sk.reapply;i++) shadow(e); }
+        if(!any){ const e=first(); if(e) for(let i=0;i<sk.reapply;i++) shadow(e); } break; }
+      default: return false;
+    } return true }
   /* ---------- fases de la campaña: oro y experiencia, ganar y perder ---------- */
   const goldPer=f=>CFG.econ.gold*Math.pow(CFG.econ.goldG,10*Math.floor((f-1)/10));
   const goldAt=f=>goldPer(effF(f))*(modeCfg().gold||1), xpAt=f=>xpPer(effF(f)); // oro y experiencia de la fase f del modo actual
@@ -463,11 +562,11 @@ function createGame(opts){
     addXp(xpAt(S.fase)*m*heroStats().xpMult);
   }
   // DPS medido: en oleadas normales (sin jefe ni evento) se compara el daño real (golpes, quemaduras, aura…) con el de la
-  // fórmula. La proporción (media móvil) se usa en el cálculo sin conexión y sustituye a la aproximación evoDps.
+  // fórmula. La proporción (media móvil) se usa en el cálculo sin conexión (hasta tenerla, 1).
   function measureWave(){ if(!B||B.boss||B.event||!(B.mB>0)) return; const M=S.dpsM=S.dpsM||{d:0,b:0}, k=0.98;
     M.d=M.d*k+B.mD; M.b=M.b*k+B.mB;
     if(!hordeOn()&&!B.enemies.some(e=>e.wander)){ const tf=waveTimeF(S.fase,S.wave,heroStats()); if(tf>0){ const T=S.wtS=S.wtS||{r:0,f:0}; T.r=T.r*0.97+B.t; T.f=T.f*0.97+tf; S.wtM=Math.min(3,T.r/T.f); } } }   // lo que tardan de verdad / lo que dice la fórmula (sumando oleadas)
-  const dpsK=h=>{ const M=S.dpsM; return M&&M.b>=CFG.offlineMinMeasure*heroStats().atk?Math.max(0.5,Math.min(3,M.d/M.b)):evoDps(h) };
+  const dpsK=h=>{ const M=S.dpsM; return M&&M.b>=CFG.offlineMinMeasure*heroStats().atk?Math.max(0.5,Math.min(3,M.d/M.b)):1 };
   function waveClear(){ measureWave(); if(!B.event) addXp(xpAt(S.fase)*(CFG.econ.waveXp||0)*heroStats().xpMult);   // experiencia por oleada ganada
     if(S.wave<10){S.wave++;endWave(CFG.delays.wave);return} faseClear() }
   function faseClear(){
@@ -495,21 +594,15 @@ function createGame(opts){
   function setAuto(v){ S.autoPush=v; if(B&&B.event){ emit('change'); return } if(v&&S.fase!==top()){S.push=top()>S.best;S.fase=top();S.wave=1;startWave()} emit('change') }
   function goFase(f){ if(B&&B.event) return; f=Math.max(1,Math.min(top(),f|0)); if(f===S.best+1) S.push=true; else S.push=false; S.fase=f;S.wave=1;startWave(); emit('change') }
   /* ---------- evolución ---------- */
-  // pasiva de la clase evolucionada (null si aún no ha evolucionado)
   // extra de estadísticas de las evoluciones hechas (multiplicativo): tier.bonus={hp,atk}
-  // la pasiva de clase mejorada por las evoluciones hechas (p. ej. Piel dura 5 % → 7,5 %)
-  function evoBase(){ const o={}; if(S&&S.evo) evoTiers().slice(0,S.evo).forEach((t,i)=>Object.assign(o,(tierCls(t,i)||{}).base||{})); return o }
   function evoBonus(k){ let m=1; if(S&&S.evo) for(const t of evoTiers().slice(0,S.evo)) m*=1+((t.bonus||{})[k]||0); return m }
-  // pasivas acumuladas de las evoluciones hechas (la última da el nombre)
-  let EP=null, EPk=''; // caché de la pasiva (se llama en cada paso del combate)
-  const tierCls=(t,i)=>i===0&&S.path==='B'&&t.alt?{...t.alt[S.cls],grim:undefined}:t.classes[S.cls];   // la 1.ª evolución depende del camino
-  function evoP(){ if(!S.evo) return null; const k=S.cls+S.evo+(S.path||''); if(EPk===k) return EP; const o={}; evoTiers().slice(0,S.evo).forEach((t,i)=>Object.assign(o,tierCls(t,i))); EP=o; EPk=k; return o }
-  // cuánto sube el daño medio por la pasiva: estimación que solo se usa hasta tener DPS medido (dpsK)
-  function evoDps(h){ const P=evoP(); if(!P) return 1; let m=1;
-    if(P.double) m*=1+P.double; if(P.critNext) m*=1+h.cr*P.critNext; if(P.rage) m*=1+P.rageCap*0.5;
-    if(P.burnPct) m*=1+P.burnPct*Math.min(P.burnMax,h.spd*P.burnDur)/h.spd;
-    if(P.dblBuff&&P.double) m*=1+P.dblBuff*Math.min(P.dblMax,P.double*h.spd*P.dblDur); if(P.defDmg) m*=1+P.defDmg*h.df/h.dfK/h.atk;
-    if(P.critStack) m*=(1+Math.min(1,h.cr+P.critStack*1.5)*h.cd)/(1+h.cr*h.cd); return m }
+  // lo que ve la pantalla de una etapa del kit: nombre, pasiva (texto) y habilidades
+  const stageInfo=st=>{ const K=kitOf(S.cls,st); return K?{stage:st,name:K.name,pname:K.passive&&K.passive.name,pdesc:K.passive&&K.passive.desc,passive:K.passive?K.passive.name+': '+K.passive.desc:'',skills:K.skills||[]}:null };
+  // la etapa actual (null si aún no ha evolucionado)
+  const evoP=()=>S.evo?stageInfo(kitStage()):null;
+  // los 2 caminos de la 1.ª evolución y la próxima evolución de tu camino (en la 1.ª se elige)
+  const evoPaths=()=>({A:stageInfo('A1'),B:stageInfo('B1')});
+  const nextEvoInfo=()=>{ const t=nextEvo(); return t&&S.evo>0?stageInfo((S.path==='B'?'B':'A')+(S.evo+1)):null };
   // Coste de la próxima evolución: esencias del modo del tier (evo 1 = Esencia de Normal, evo 2 = de Pesadilla), oro y material del evento
   function evoCost(){ const t=nextEvo(); if(!t||!t.cost) return null; const i=evoTiers().indexOf(t); return {ess:t.cost.ess||0,essMode:i,gold:t.cost.gold||0,tokens:t.cost.tokens||0,ev:t.cost.ev||0} }
   function evoMissing(){ const c=evoCost(); if(!c) return {}; const o={};
@@ -521,9 +614,12 @@ function createGame(opts){
     if(!canEvolve()||inEvent()) return {ok:false};
     if(S.evo===0){ if(path!=='A'&&path!=='B') path='A'; S.path=path; }     // 1.ª evolución: se elige camino
     const c=evoCost(); if(c){ if(c.ess) S.mats[c.essMode]-=c.ess; S.gold-=c.gold; spend(c.tokens); S.evm-=c.ev; }
-    S.evo++; S.dpsM=null; statsDirty(); save();                 // con la nueva pasiva se vuelve a medir el DPS
+    S.evo++; S.dpsM=null; statsDirty(); save();                 // con el kit nuevo se vuelve a medir el DPS
     emit('evolve',{evo:S.evo,name:evoP().name}); emit('change'); return {ok:true};
   }
+  // cambiar de camino (tras evolucionar): cuesta tokens
+  function pathSwitch(){ if(!(S.evo>=1)) return {ok:false,why:'evo'}; if(inEvent()) return {ok:false,why:'event'}; if(!spend(CFG.grimoire.switchCost)) return {ok:false,why:'tokens'};
+    S.path=S.path==='B'?'A':'B'; S.dpsM=null; statsDirty(); track('path',{path:S.path}); save(); emit('change'); return {ok:true,path:S.path} }
   /* ---------- modos ---------- */
   // Esencia del modo: todos los jefes pueden soltarla; la probabilidad y la cantidad máxima suben con la fase
   // (matDrop: fase 'from' → c0 de probabilidad y 1..max0; fase 'to' → c1 y 1..max1; lineal entre medias)
@@ -660,10 +756,20 @@ function createGame(opts){
   function pvpFight(){ const P=pvpState(), r=P.rival; if(!r||inEvent()||!modeOpen('pvp')||!pvpCanFight()) return false;
     const g=ghostOf(r.save); if(!g) return false; if(pvpFreeLeft()>0) P.used++; else S.pvpTickets--;
     P.fight={name:r.name,cls:r.cls,bot:r.bot,rating:r.rating,id:r.id,match:r.match};   // si se cierra la app a mitad, cuenta como derrota
-    const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.hpMul?CFG.pvp.hpMul:CFG.pvp.ttk*(dps(a,b)+dps(b,a))/(a.hp+b.hp);   // vida en PvP: × hpMul (igual para los dos)
+    const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.hpMul?CFG.pvp.hpMul:pvpTtk(S.evo,g.S.evo)*(dps(a,b)*pvpK2(S,g.S)+dps(b,a)*pvpK2(g.S,S))/(a.hp+b.hp);   // (con la fuerza de cada clase: todos los duelos duran parecido)   // vida en PvP: × hpMul (igual para los dos)
     const gs=g.duelEnter({...a,name:S.name,cls:S.cls},M), ms=duelEnter({...b,name:r.name,cls:r.cls},M); GH=g;
     Object.assign(B.enemies[0],{hp:gs.hp,max:gs.hp}); Object.assign(g.B.enemies[0],{hp:ms.hp,max:ms.hp});
     save(); emit('eventStart',B); emit('change'); return true }
+  // fuerza en PvP (multiplica el daño que hace): CFG.pvp.cls[clase] = número, o por etapa del kit {base, A1, B1, A2, B2}
+  const pvpStage=st=>!(st.evo>=1)?'base':(st.path==='B'?'B':'A')+Math.min(2,st.evo);
+  const pvpClsK=st=>{ const v=(CFG.pvp.cls||{})[st.cls]; return typeof v==='number'?v:v?v[pvpStage(st)]||1:1 };
+  // ajuste por pareja (pvp.vs, calculado con simulaciones): 'Clase·etapa|Clase·etapa' (en orden alfabético) = cuánto más daño hace el
+  // primero contra el segundo (el segundo, 1/eso). Con el mismo equipo cada pareja queda cerca del 50 %: sin contras, decide el equipo
+  const pvpPair=(a,b)=>{ const ka=a.cls+'·'+pvpStage(a), kb=b.cls+'·'+pvpStage(b); if(ka===kb) return 1; const V=CFG.pvp.vs||{};
+    return ka<kb?(V[ka+'|'+kb]||1):1/(V[kb+'|'+ka]||1) };
+  const pvpK2=(a,b)=>pvpClsK(a)*pvpPair(a,b);   // fuerza de a contra b
+  // duración buscada (ttk): un número, o una por evolución [sin evolucionar, 1.ª, 2.ª] (media de los dos)
+  const pvpTtk=(ea,eb)=>{ const T=CFG.pvp.ttk; if(typeof T==='number') return T; const f=e=>T[Math.max(0,Math.min(T.length-1,e||0))]; return (f(ea)+f(eb))/2 };
   // el duelo se acelera: a los rt segundos reales el juego va a ×(1 + speedUp·rt); B.rt cuenta el tiempo real (límite maxT)
   const duelSpeed=()=>1+(CFG.pvp.speedUp||0)*((B&&B.rt)||0);
   function duelStep(dt){ const V=CFG.pvp;
@@ -671,9 +777,11 @@ function createGame(opts){
       const gb=GH.B, me=B.enemies[0], them=gb.enemies[0], m0=me.hp, t0=them.hp;
       stepCore(s); GH.step(s);
       const out=Math.max(0,m0-me.hp), back=Math.max(0,t0-them.hp), gh=GH.heroStats(), h=heroStats();
-      const cp=c=>((CFG.pvp.cls||{})[c]||1);   // fuerza de cada clase en PvP (solo el daño que hace)
-      if(out>0) gb.inc.push({d:out*cp(S.cls),a:h.atk}); if(back>0) B.inc.push({d:back*cp(GH.S.cls),a:gh.atk});   // se aplica en el siguiente paso, con sus defensas
-      if(me.frozen>B.t) gb.stun=Math.max(gb.stun||0,me.frozen); if(them.frozen>gb.t) B.stun=Math.max(B.stun||0,them.frozen);   // congelar = no puede atacar
+      if(out>0) gb.inc.push({d:out*pvpK2(S,GH.S),a:h.atk}); if(back>0) B.inc.push({d:back*pvpK2(GH.S,S),a:gh.atk});   // fuerza de cada clase y camino en PvP (solo el daño que hace)   // se aplica en el siguiente paso, con sus defensas
+      // congelar = no puede atacar (en PvP dura × pvp.freeze; si no, el que congela primero encadena y el equipo no cuenta)
+      const fz=CFG.pvp.freeze==null?1:CFG.pvp.freeze;
+      if(me.frozen>B.t&&me.frozen!==me.fz0){ me.fz0=me.frozen; gb.stun=Math.max(gb.stun||0,gb.t+(me.frozen-B.t)*fz); }   // (una vez por congelado: el doble sigue congelado para Lanza y Destrozar)
+      if(them.frozen>gb.t&&them.frozen!==them.fz0){ them.fz0=them.frozen; B.stun=Math.max(B.stun||0,B.t+(them.frozen-gb.t)*fz); }
       Object.assign(me,{hp:gb.hp,max:gh.hp,df:gh.df,dead:false}); Object.assign(them,{hp:B.hp,max:h.hp,df:h.df,dead:false});
       if(B.hp<=0||gb.hp<=0||B.rt>=V.maxT){ pvpFightEnd(); return } } }
   function pvpFightEnd(){ const P=S.pvp, r=P.rival, h=heroStats(), gh=GH?GH.heroStats():null, gb=GH?GH.B:null;
@@ -687,23 +795,19 @@ function createGame(opts){
     P.hist.unshift({name:r.name,cls:r.cls,bot:r.bot,win,draw:!!draw,d,rating:r.rating}); P.hist=P.hist.slice(0,10);
     return {win,draw:!!draw,d,rating:P.rating,rival:{name:r.name,cls:r.cls,bot:r.bot,id:r.id,match:r.match}} }
   const pvpLoss=r=>({...pvpResult(r,false),quit:true});
-  /* ---------- rasgos de élite y mecánicas de JEFE ---------- */
-  // Élite y JEFE fuera de la Torre (campaña, errante, Sala): el élite lleva rasgos fijos de su fase (1, o 2 desde la 101) y
-  // el JEFE la mecánica de jefe de la Torre según su fase (50 invocador, 100 enfurecido, 150 fases). Esbirros: enemigos normales de la fase.
-  function mechSetup(e,f,mode,jefe,rnd){ const C=CFG.mechs, TR=CFG.tower.traits, M=CFG.tower.bossMech; if(!C) return;
-    B.mechOn=true; const m=enemyStats(f,1,false,mode); B.minion={hp:m.hp,atk:m.atk,df:m.df,spd:eSpd(f)};
-    if(jefe){ e.mech=M.order[(Math.max(1,Math.floor(f/50))-1)%M.order.length]; if(e.mech==='fases') e.phases=M.fases.at.slice(); B.mech=e.mech; e.hpSeen=e.hp; return }
-    const pool=C.traits.slice(), n=f>C.twoFrom?2:1; let x=(f*2654435761+mode*40503)>>>0; e.traits=[];
-    for(let i=0;i<n&&pool.length;i++){ const j=rnd?Math.floor(rand()*pool.length):(x=(x*1103515245+12345)>>>0)%pool.length; e.traits.push(pool.splice(j,1)[0]); }
-    traitApply(e,TR); e.hpSeen=e.hp }
+  /* ---------- rasgos de élite y mecánicas de JEFE de la Torre; defensa de los enemigos con mecánicas ---------- */
+  // (los élites y JEFES de zona, con su pasiva y sus habilidades, van en enemigos/zonas.js)
   function traitApply(e,TR){ for(const t of e.traits){
       if(t==='rapido') e.spd*=TR.rapido.spd; if(t==='gigante'){ e.hp*=TR.gigante.hp; e.max=e.hp; e.spd*=TR.gigante.spd; }
       if(t==='regenera') e.regen=TR.regenera.regen; if(t==='espinas') e.thorns=TR.espinas.reflect; if(t==='furioso') e.fur=true; }
     if(e.traits.includes('escudo')) e.sh=TR.escudo.shield*e.max; }
-  // Torre: guarda de los enemigos (escudo de élite e invulnerabilidad de jefe) — devuelve true si el enemigo no muere
+  // guarda de los enemigos con mecánicas (Torre y zonas): invulnerable o caído, reducción de daño (e.dm), escudos y muertes
+  // especiales (Rearmarse, Reencarnación, Desmembrarse) — devuelve true si el enemigo no muere
   function towerGuard(e){ const seen=e.hpSeen==null?e.max:e.hpSeen, dealt=seen-e.hp; if(!(dealt>0)) return e.hp>0;
-    if(e.inv>B.t){ e.hp=seen; return true }
-    if(e.sh>0){ const a=Math.min(e.sh,dealt); e.sh-=a; e.hp+=a; }
+    if(e.inv>B.t||e.down||e.batU>B.t){ e.hp=seen; return true }
+    let x=dealt*(e.dm==null?1:e.dm); e.hp=seen-x;
+    if(e.sh>0){ const a=Math.min(e.sh,x); e.sh-=a; e.hp+=a; }
+    if(!(e.hp>0)&&zoneLethal(e)) return true;
     e.hpSeen=e.hp; return e.hp>0 }
   // Torre, cada paso: rasgos de élite y mecánicas de jefe. Devuelve true si el héroe cae (Espinas)
   function towerTick(h,dt){ const T=CFG.tower, TR=T.traits, M=T.bossMech, TW=B.kind==='tower';
@@ -721,14 +825,233 @@ function createGame(opts){
         if(B.t>0.5) emit('bossPhase',{k:'summon'}); }
       e.hpSeen=e.hp; }
     return false }
+  /* ---------- zonas: élites y JEFES con su pasiva y sus habilidades (CFG.zones) ---------- */
+  // Fase f de un modo → zona floor((f-1)/30). Fase 10 de la zona: élite 1 · 20: élite 2 · 30: JEFE (30, 60, 90, 120 y 150).
+  // Cada élite/JEFE lleva: e.zone (su zona), e.role ('e1', 'e2' o 'jefe'), e.zp (pasiva), e.zs (habilidades con su próxima vez),
+  // e.am (multiplica su ataque), e.dm (multiplica el daño que recibe), e.sm (multiplica su velocidad) y e.amK (extra que se queda).
+  // Estados en el héroe: B.hs (cargas de veneno/sangrado/quemadura, infección, pudrición, burla, locura, defensa rota, sin curar…).
+  const ZL=()=>(CFG.zones&&CFG.zones.list)||[];
+  const zoneIdx=f=>Math.max(0,Math.min(4,Math.floor((Math.max(1,f)-1)/30)));
+  const zoneAt=(m,f)=>{ const L=ZL(), M=L[Math.max(0,Math.min(L.length-1,m||0))]; return M&&M[zoneIdx(f)]||null };
+  const bossRole=f=>{ const r=f%30; return r===10?'e1':r===20?'e2':r===0?'jefe':null };   // qué sale en una fase múltiplo de 10
+  const zoneFoe=(Z,role)=>Z&&Z[role]?{name:Z[role].name,title:Z[role].title||'',p:Z[role].p,zone:Z.id,role}:null;   // para la pantalla
+  const hsOf=()=>B.hs||(B.hs={dots:[],inf:0,rot:0,burla:0,mad:0,def:[]});
+  const zAlive=id=>!!B&&B.enemies.some(e=>!e.dead&&!e.down&&e.zp&&e.zp.id===id);
+  const eFrac=e=>e.immortal?Math.max(0,1-B.t/CFG.wboss.dur):e.hp/e.max;   // Jefe semanal: el minuto cuenta como su vida
+  const EM=e=>e.immortal?(e.refMax||1):e.max;   // vida de referencia (el Jefe semanal no tiene)
+  const canTarget=e=>!e.dead&&!e.down&&!(e.untarget>B.t);
+  // ---- lo que cambia en el héroe (lo usa el bucle del combate) ----
+  const heroDfMul=()=>{ if(!B||!B.hs) return 1; const D=B.hs.def=B.hs.def.filter(x=>x.until>B.t); return Math.max(0.1,1-D.reduce((a,x)=>a+x.pct,0)) };
+  const heroAtkMul=()=>B&&B.hs&&B.hs.burla?1-B.hs.burla*B.hs.burlaPer:1;                     // Burla: te roba ataque
+  const heroSpdMul=()=>B&&B.dream&&B.dream.k==='lento'&&B.dream.until>B.t?B.dream.slow:1;      // Cambio de sueño: atacas más lento
+  const heroNoSkills=()=>!!B&&(B.stun>B.t||!!(B.hs&&B.hs.noSkill>B.t));                       // aturdido o sin arma
+  const cdMul=()=>B&&zAlive('estatica')?1+zPass('estatica').cd:1;                              // Estática: recargas más lentas
+  const zPass=id=>{ const e=B.enemies.find(x=>!x.dead&&x.zp&&x.zp.id===id); return e?e.zp:{} };
+  const heroCap=h=>B&&B.hs&&B.hs.rot?h.hp*(1-B.hs.rot*B.hs.rotPer):h.hp;                      // Pudrición: menos vida máxima
+  // Hambre de luz: el Devorador se come parte de lo que te curas o de tu escudo, y se cura lo mismo
+  function zEat(x,h){ const dv=B.mechOn&&B.enemies.find(e=>!e.dead&&!e.down&&e.zp&&e.zp.id==='hambreLuz'); if(!dv||!(x>0)) return x;
+    const s=x*dv.zp.pct; dv.hp=Math.min(dv.max,dv.hp+s/h.hp*dv.max); dv.hpSeen=dv.hp; return x-s }
+  // curación que de verdad llega (sin curar, infección, Hambre de luz) y escudo que de verdad llega
+  function zoneHeal(x,h){ if(!B) return x; const H=B.hs; if(H){ if(H.noHeal>B.t) return 0; if(H.inf) x*=1-H.inf*H.infPer; } return zEat(x,h) }
+  const zoneShield=(x,h)=>B?zEat(x,h):x;
+  // Locura: atacas a uno al azar
+  const zoneTarget=cand=>B.hs&&B.hs.madU>B.t&&cand.length>1?cand[Math.floor(rand()*cand.length)]:null;
+  function addHeroDot(k,n,o){ const H=hsOf(), D=(CFG.heroDot||{})[k]||{pct:0.01,dur:6,max:3}; o=o||{};
+    for(let i=0;i<n;i++){ H.dots.push({k,until:B.t+(o.dur||D.dur),pct:o.pct||D.pct}); const mine=H.dots.filter(x=>x.k===k&&x.until>B.t); if(mine.length>(D.max||3)) H.dots.splice(H.dots.indexOf(mine[0]),1); }
+    emit('fx',{k:'heroDot',dot:k}) }
+  const addMad=(n,P)=>{ const H=hsOf(); H.mad+=n; if(H.mad>=(P.max||3)){ H.mad=0; H.madU=B.t+(P.dur||2); emit('fx',{k:'locura'}); } };
+  // ---- preparar un élite o JEFE de zona ----
+  // o: {zone (zona fija), keepMinion (no cambia B.minion), hpM/atkM (copias), noEscort}
+  function zoneSetup(e,f,mode,role,o){ o=o||{}; const Z=o.zone||zoneAt(mode,f), D=Z&&Z[role]; if(!D) return null; B.mechOn=true;
+    if(!o.keepMinion){ const m=enemyStats(f,1,false,mode); B.minion={hp:m.hp,atk:m.atk,df:m.df,spd:eSpd(f)}; }
+    const K=D.k||{}; if(K.hp&&!e.immortal){ e.hp*=K.hp; e.max*=K.hp; } e.atkK=K.atk||1; e.atk*=e.atkK;   // k: ajuste propio de vida y ataque (equilibrio)
+    Object.assign(e,{zone:Z,role,name:D.name,title:D.title||'',zp:D.p,am:1,dm:1,sm:1,amK:1,hpSeen:e.hp,df0:e.df,hitN:0});
+    const first=(e.arrive||0)+((CFG.zones||{}).first||3);
+    e.zs=(role==='jefe'?[D.own,D.s1,D.s2]:[D.s]).filter(s=>s&&s.cd).map((s,i)=>({...s,next:first+i*1.7}));
+    e.zsAll=(role==='jefe'?[D.own,D.s1,D.s2]:[D.s]).filter(Boolean);
+    const P=D.p;
+    if(P.id==='inquebrantable'){ e.noCC=true; e.spd=(e.spd||1)*P.spd; e.amK*=P.atk; e.smallRes=P; }
+    if(P.id==='cabezaDura') e.critRes=P.crit;
+    if(P.id==='dotGolpe'&&P.ranged){ e.ranged=true; e.next=Math.min(e.next,(e.spawn||0)+0.6); }   // ataca antes de llegar
+    if(P.id==='armaduraHueso'){ e.sh=P.sh*EM(e); e.shAt=B.t+P.every; }
+    if(P.id==='caja') e.boxAt=first+P.every*0.5;
+    if(P.id==='division') e.divLeft=P.at.slice();
+    if(P.id==='formas') e.form=1;
+    if(P.id==='totem'&&!o.noEscort) zSpawn(1,{hp:P.hp*EM(e),atk:0,x:{totem:true,next:Infinity,heals:P.heal}});
+    if(D.escort&&!o.noEscort) zSpawn(D.escort,{walk:(e.walk||1)*0.8,x:{escort:true}});
+    return e }
+  // sacar monstruos normales de la zona (o lo que diga o): esbirros del jefe
+  // (los que llaman los jefes, sin vida o ataque propios: un poco más flojos que un monstruo normal, zones.minion)
+  function zSpawn(n,o){ o=o||{}; const m=B.minion||{hp:1,atk:0,df:0,spd:1}, K=(CFG.zones||{}).minion||{}, out=[];
+    for(let i=0;i<n;i++){ const w=(o.walk!=null?o.walk:0.6)+i*0.3, at=B.t+w, hp=o.hp!=null?o.hp:m.hp*(K.hp||1);
+      const x={hp,max:hp,atk:o.atk!=null?o.atk:m.atk*(K.atk||1),df:o.df!=null?o.df:m.df,spawn:B.t,walk:w,arrive:at,next:at,first:false,dead:false,minion:true,spd:o.spd||m.spd||1,...(o.x||{})};
+      B.enemies.push(x); out.push(x); }
+    return out }
+  // un élite de otra zona (Tu peor miedo, copias del Cambio de sueño): con su pasiva y su habilidad
+  function zSpawnElite(Z,role,hp,atk){ const x=zSpawn(1,{hp,atk})[0]; x.minion=false; x.summoned=true; zoneSetup(x,1,0,role,{zone:Z,keepMinion:true,noEscort:true}); return x }
+  // ---- golpes del enemigo al héroe ----
+  // multiplicador del golpe normal (Acecho: el primero) y lo que pasa después de un golpe normal
+  function zoneAtkMul(e){ const P=e.zp; if(P&&P.id==='acecho'&&!e.ambushed){ e.ambushed=true; e.ambushNow=true; return P.mult } return 1 }
+  function zoneAfterAttack(e){ const P=e.zp, H=hsOf();
+    if(e.ambushNow){ e.ambushNow=false; B.stun=Math.max(B.stun||0,B.t+P.stun); emit('fx',{k:'aturdido'}); }
+    const rotP=e.rotBy||(P&&P.id==='pudricion'?P:null); if(rotP){ H.rotPer=rotP.per; H.rot=Math.min(rotP.max,H.rot+1); }   // Pudrición real (también sus zombis)
+    if(!P) return;
+    switch(P.id){
+      case 'dotGolpe': addHeroDot(P.dot,1); break;
+      case 'infecta': H.infPer=P.per; H.inf=Math.min(P.max,H.inf+1); break;
+      case 'burla': H.burlaPer=P.per; H.burla=Math.min(P.max,H.burla+1); break;
+      case 'locura': addMad(1,P); break;
+      case 'ansia': e.ansia=Math.min(P.max,(e.ansia||0)+1); break;
+      case 'beso': { const h=heroStats(), x=P.pct*h.hp; B.hp=Math.max(0,B.hp-x); emit('heroHit',{d:x}); e.hp=Math.min(e.max,e.hp+P.pct*e.max); e.hpSeen=e.hp; break; }
+    } }
+  // después de cualquier daño al héroe (golpes y habilidades): robo de vida de los enemigos y Festín de dolor
+  function zoneOnHurt(e,d){ if(!B.mechOn||!(d>0)) return; const h=heroStats(), fr=d/h.hp;
+    if(e&&e.zp){ const P=e.zp; let st=e.skillHeal||0;
+      if(P.id==='robaVida'||P.id==='senorSangre') st+=P.pct;
+      if(P.id==='formas'&&e.form===3) st+=P.steal;
+      if(B.dream&&B.dream.k==='roban'&&B.dream.until>B.t) st+=B.dream.steal;
+      if(st>0&&!e.immortal){ const x=Math.min(e.max-e.hp,st*fr*e.max); e.hp+=x; e.hpSeen=e.hp; if(P.id==='senorSangre') e.sang=(e.sang||0)+x/e.max; } }
+    zFeast(fr) }
+  function zFeast(fr){ for(const v of B.enemies) if(!v.dead&&!v.down&&v.zp&&v.zp.id==='festinDolor'){ v.hp=Math.min(v.max,v.hp+v.zp.pct*fr*v.max); v.hpSeen=v.hp; } }   // Festín de dolor
+  // ---- muertes especiales: Rearmarse, Reencarnación y Desmembrarse (devuelve true si aún no muere) ----
+  function zoneLethal(e){ const P=e.zp, own=e.role==='jefe'&&e.zsAll&&e.zsAll[0];
+    const down=(t,hp)=>{ e.down=B.t+t; e.upHp=hp; e.hp=e.hpSeen=e.max*1e-6; emit('fx',{k:'caido',e}); return true };
+    if(P&&P.id==='rearmarse'&&!e.rearmed){ e.rearmed=true; return down(P.after,P.hp) }
+    if(e.rearm&&!e.rearmed){ e.rearmed=true; return down(e.rearm.after,e.rearm.hp) }                                       // esqueletos del Ejército eterno
+    if(own&&own.id==='reencarnacion'&&!e.reinc){ e.reinc=true; B.reincU=B.t+own.after; for(const m of B.enemies) if(m.minion&&!m.dead){ m.amK=(m.amK||1)*(1+own.buff); m.reincBuff=true; } return down(own.after,own.hp) }   // (solo los que hay ahora: al acabar se les quita a ellos)
+    if(P&&P.id==='desmembrarse'&&!e.dism){ e.dism=true; const ps=zSpawn(P.n,{hp:EM(e)*0.15,atk:e.atk*0.3,walk:0.2}); for(const x of ps) x.pieceOf=e;
+      e.reAt=B.t+P.after; down(Infinity,P.hp); return true }
+    return false }
+  // al morir (de verdad): Hermandad, ¡Waaagh!, Puerta cerrada, Gases (revienta)
+  function zoneOnDeath(e){ if(!B||!B.mechOn) return; const P=e.zp;
+    if(P&&P.id==='hermandad'&&!e.brother){ const x=zSpawnElite(e.zone,e.role,P.hp*EM(e),e.atk); x.brother=true; emit('fx',{k:'hermandad',e:x}); }
+    if(P&&P.id==='gases') (B.zq=B.zq||[]).push({at:B.t,boom:P.boom,src:e});
+    if(e.minion||e.escort) for(const o of B.enemies){ if(o.dead||o.down||!o.zp) continue;
+      if(o.zp.id==='waaagh'&&(o.waaagh||0)<o.zp.max){ o.waaagh=(o.waaagh||0)+1; o.amK*=1+o.zp.per; const k=1+o.zp.per; o.max*=k; o.hp*=k; o.hpSeen=o.hp; }
+      if(o.zp.id==='puerta'&&(o.door||0)<o.zp.max){ o.door=(o.door||0)+1; o.df=o.df0*(1+o.zp.per*o.door); } } }
+  // ---- habilidades de los enemigos ----
+  function zCast(e,s,Y){ const H=hsOf(), h=Y.h;
+    e.skillHeal=s.heal||0;
+    const hit=m=>{ if(m>0) Y.hit(e,m*(s.low&&B.hp<s.low.below*h.hp?s.low.mul:1)) };
+    switch(s.id){
+      case 'llamar': { const xs=zSpawn(s.n,{}); const P=e.zp; for(const x of xs){ if(P.id==='pudricion') x.rotBy=P; if(P.id==='festin') x.eatAt=B.t+P.eat; } emit('bossPhase',{k:'summon'}); break; }
+      case 'clon': zSpawn(1,{hp:s.pct*EM(e)*0.25,atk:e.atk*s.pct*1.5,x:{heroClone:true}}); emit('bossPhase',{k:'summon'}); break;
+      case 'peorMiedo': { const L=ZL()[1]||[], Z=L[Math.floor(rand()*L.length)], r=rand()<0.5?'e1':'e2'; if(Z) zSpawnElite(Z,r,s.hp*EM(e)/2,e.atk*0.5); emit('bossPhase',{k:'summon'}); break; }
+      case 'encierro': B.stun=Math.max(B.stun||0,B.t+s.dur); H.cage={until:B.t+s.dur,pct:s.pct}; emit('fx',{k:'encierro'}); break;
+      case 'murcielagos': e.batU=B.t+s.dur; for(let t=0;t<s.dur-1e-9;t+=s.every) (e.pend=e.pend||[]).push({at:B.t+t,mult:s.mult,heal:1}); break;
+      case 'imitar': hit((B.lastSkMult||3)*s.mul); break;
+      default:
+        if(s.dur&&s.every){ for(let t=0;t<s.dur-1e-9;t+=s.every) (e.pend=e.pend||[]).push({at:B.t+t,mult:s.mult,heal:s.heal}); break; }   // golpes seguidos (Rabieta, Giro brutal)
+        if(s.windup){ (e.pend=e.pend||[]).push({at:B.t+s.windup,mult:s.mult}); e.windU=B.t+s.windup; emit('fx',{k:'cargando',e}); break; }   // Golpe partecielos
+        if(s.hits) for(let i=0;i<s.hits;i++) hit(s.mult);
+        else hit((s.mult||0)+(s.perStitch||0)*(e.stitch||0));
+    }
+    e.skillHeal=0;
+    if(s.stun){ B.stun=Math.max(B.stun||0,B.t+s.stun); emit('fx',{k:'aturdido'}); }
+    if(s.noAttack){ B.stun=Math.max(B.stun||0,B.t+s.noAttack); emit('fx',{k:'hipnosis'}); }
+    if(s.noSkills){ H.noSkill=Math.max(H.noSkill||0,B.t+s.noSkills); emit('fx',{k:'desarmado'}); }
+    if(s.noHeal) H.noHeal=Math.max(H.noHeal||0,B.t+s.noHeal);
+    if(s.charm) e.untarget=B.t+s.charm;
+    if(s.dot) addHeroDot(s.dot.k,s.dot.n,s.dot);
+    if(s.dotX) H.dotX={until:B.t+s.dotX.dur,mul:s.dotX.mul};
+    if(s.defDown) H.def.push({until:B.t+s.defDown.dur,pct:s.defDown.pct});
+    if(s.madness) addMad(s.madness,(e.zp&&e.zp.id==='locura'?e.zp:{max:3,dur:2}));
+    if(s.shieldBreak){ BUF.shield=0; BUF.gshield=0; }
+    if(s.acecho){ Y.hit(e,(e.zone&&e.zone.e2&&e.zone.e2.p.mult)||3); B.stun=Math.max(B.stun||0,B.t+1); }
+    emit('fx',{k:'eskill',e,name:s.name}) }
+  // ---- cada paso: pasivas, habilidades y estados del héroe. Devuelve true si el héroe cae ----
+  function zoneTick(h,dt,Y){ const H=B.hs, cap=heroCap(h);
+    if(B.hp>cap) B.hp=cap;
+    // estados del héroe: cargas (veneno, sangrado, quemadura), encierro, Ardiente, Lago de lava, Cambio de sueño y Tres formas
+    let loss=0;
+    if(H){ H.dots=H.dots.filter(x=>x.until>B.t); for(const x of H.dots) loss+=x.pct*(x.k==='veneno'&&H.dotX&&H.dotX.until>B.t?H.dotX.mul:1);
+      if(H.cage&&H.cage.until>B.t) loss+=H.cage.pct; }
+    for(const e of B.enemies){ if(e.dead||e.down||!e.zp||e.arrive>B.t) continue; const P=e.zp;
+      if(P.id==='ardiente') loss+=P.pct; if(P.id==='lago') loss+=P.per*(e.lago||0); if(P.id==='formas'&&e.form===2) loss+=P.burn; }
+    if(B.dream&&B.dream.k==='arde'&&B.dream.until>B.t) loss+=B.dream.burn;
+    if(loss>0){ const x=loss*h.hp*dt; B.hp-=x; zFeast(x/h.hp); if(B.hp<=0) return true; }
+    // cola: lo que revienta al morir (Gases)
+    if(B.zq&&B.zq.length){ const q=B.zq; B.zq=[]; for(const x of q) Y.hit(x.src,x.boom); if(B.hp<=0) return true; }
+    for(const e of B.enemies.slice()){
+      if(e.dead) continue;
+      if(e.reAt){ const ps=B.enemies.filter(x=>x.pieceOf===e&&!x.dead);   // Desmembrarse: si matas los trozos, muere; si no, a los 8 s se vuelve a montar
+        if(!ps.length){ e.reAt=0; e.down=0; e.hp=e.hpSeen=0; Y.kill(e); continue; }
+        if(B.t>=e.reAt){ e.reAt=0; for(const x of ps){ x.dead=true; x.deadAt=B.t; x.eaten=true; } e.down=B.t; } }
+      if(e.down){ if(B.t>=e.down){ e.down=0; e.hp=e.hpSeen=e.upHp*e.max; emit('fx',{k:'levanta',e}); } else continue; }   // se levanta
+      if(e.totem&&e.arrive<=B.t){ for(const o of B.enemies) if(!o.dead&&!o.down&&o!==e&&!o.totem){ o.hp=Math.min(o.max,o.hp+e.heals*o.max*dt); o.hpSeen=o.hp; } continue; }   // Tótem: cura a los goblins
+      if(e.eatAt&&B.t>=e.eatAt){ e.eatAt=0; const w=B.enemies.find(o=>!o.dead&&!o.down&&o.zp&&o.zp.id==='festin');   // Festín de guerra: se come a los que sigan vivos
+        if(w&&(w.eaten||0)<w.zp.eatMax){ w.eaten=(w.eaten||0)+1; const k=1+w.zp.eatPer; w.max*=k; w.hp=Math.min(w.max,w.hp*k+e.hp); w.hpSeen=w.hp; w.amK*=k; e.dead=true; e.deadAt=B.t; e.eaten=true; emit('fx',{k:'devora',e:w}); continue; } }
+      if(!e.zp||e.arrive>B.t) continue;
+      const P=e.zp, fr=eFrac(e); let am=e.amK||1, dm=1, sm=1;
+      switch(P.id){
+        case 'dividirse': if(!e.split&&fr<P.at){ e.split=true; zSpawn(P.n,{hp:P.hp*EM(e),atk:e.atk*0.5,walk:0.3}); emit('bossPhase',{k:'summon'}); } break;
+        case 'division': { const own=e.zsAll[0]; while(e.divLeft.length&&fr<e.divLeft[0]){ e.divLeft.shift(); const xs=zSpawn(P.n,{hp:P.hp*EM(e),atk:e.atk*0.3,walk:0.3}); for(const x of xs){ x.absorbAt=B.t+own.after; x.absorbBy=e; } emit('bossPhase',{k:'summon'}); }
+          for(const x of B.enemies) if(x.absorbBy===e&&!x.dead&&B.t>=x.absorbAt){ x.dead=true; x.deadAt=B.t; x.eaten=true; e.max+=x.hp; e.hp+=x.hp; e.hpSeen=e.hp; e.atk+=x.atk; e.grow=(e.grow||1)+own.grow; emit('fx',{k:'devora',e}); } break; }   // Absorber
+        case 'alfa': if(B.t>=(e.callAt||(e.callAt=B.t+P.every))){ e.callAt=B.t+P.every; zSpawn(P.n,{}); emit('bossPhase',{k:'summon'}); }
+          am*=1+P.per*Math.min(P.max,B.enemies.filter(x=>x.minion&&!x.dead).length); break;
+        case 'llamada': if(B.t>=(e.callAt||(e.callAt=B.t+P.every))){ e.callAt=B.t+P.every; zSpawn(P.n,{}); emit('bossPhase',{k:'summon'}); }
+          dm*=1-P.dr*Math.min(P.max,B.enemies.filter(x=>x.minion&&!x.dead).length); break;
+        case 'armaduraHueso': if(B.t>=e.shAt){ e.sh=P.sh*EM(e); e.shAt=B.t+P.every; } break;
+        case 'ejercito': if(B.t>=(e.callAt||(e.callAt=B.t+P.every))){ e.callAt=B.t+P.every; for(const x of zSpawn(P.n,{})) x.rearm={after:3,hp:0.5}; emit('bossPhase',{k:'summon'}); } break;
+        case 'ansia': sm*=1+P.per*(e.ansia||0); break;
+        case 'festin': am*=1+Math.min(P.max,Math.floor((e.hitN||0)/P.hits)*P.per);
+          if(B.t>=(e.callAt||(e.callAt=B.t+P.every))){ e.callAt=B.t+P.every; for(const x of zSpawn(P.n,{})) x.eatAt=B.t+P.eat; emit('bossPhase',{k:'summon'}); } break;
+        case 'gases': if(e.hpSeenG!=null&&e.hp<e.hpSeenG&&B.t>=(e.gasAt||0)){ e.gasAt=B.t+1; const H2=hsOf(); H2.infPer=P.per; H2.inf=Math.min(P.max,H2.inf+1); } e.hpSeenG=e.hp; break;
+        case 'caja': if(!e.boxIn&&B.t>=e.boxAt){ e.boxIn=true; e.boxOut=B.t+P.hide; emit('fx',{k:'caja',e}); }
+          else if(e.boxIn&&B.t>=e.boxOut){ e.boxIn=false; e.boxAt=B.t+P.every; const s=e.zsAll.find(x=>x.id==='sorpresa'); if(s) zCast(e,s,Y); }
+          if(e.boxIn) dm*=1-P.dr; break;
+        case 'hilos': if(B.t>=(e.callAt||(e.callAt=B.t+1))){ e.callAt=B.t+P.every; zSpawn(P.n,{x:{puppet:true}}); emit('bossPhase',{k:'summon'}); }
+          if(B.enemies.some(x=>x.puppet&&!x.dead)) dm*=1-P.dr; break;
+        case 'descosido': { const n=Math.min(P.max,Math.floor((1-fr)/P.step)); while((e.stitch||0)<n){ e.stitch=(e.stitch||0)+1; zSpawn(1,{hp:EM(e)*0.06,atk:e.atk*0.4,walk:0.2}); emit('bossPhase',{k:'summon'}); }
+          am*=1+P.dmg*(e.stitch||0); break; }
+        case 'sed': if(B.hp<P.below*h.hp) sm*=P.spd; break;
+        case 'senorSangre': am*=1+P.per*Math.min(P.max,Math.floor((e.sang||0)/P.step)); break;
+        case 'sueno': if(B.t>=(e.dreamAt||(e.dreamAt=B.t+P.every))){ e.dreamAt=B.t+P.every; const K=['arde','lento','roban','copias'], k=K[Math.floor(rand()*K.length)];
+            B.dream={k,until:B.t+P.dur,burn:P.burn,slow:P.slow,steal:P.steal}; emit('fx',{k:'sueno',rule:k});
+            if(k==='copias'){ const L=ZL()[1]||[], Z=L[Math.floor(rand()*L.length)], r=rand()<0.5?'e1':'e2'; if(Z) for(let i=0;i<P.copies;i++) zSpawnElite(Z,r,EM(e)*0.1,e.atk*0.4); } } break;
+        case 'invisible': if(B.t>=(e.invAt||(e.invAt=B.t+P.every))){ e.invAt=B.t+P.every; e.untarget=B.t+P.dur; emit('fx',{k:'invisible',e}); } break;
+        case 'puerta': if(B.t>=(e.callAt||(e.callAt=B.t+P.every))){ e.callAt=B.t+P.every; zSpawn(P.n,{}); emit('bossPhase',{k:'summon'}); } break;
+        case 'armaduraInf': e.df=e.df0*(1+P.per*Math.min(P.max,Math.floor((e.hitN||0)/P.hits))); break;
+        case 'festinDolor': if(B.hp<P.below*h.hp) am*=1+P.dmg; break;
+        case 'montura': if(!e.dismount&&fr<P.at){ e.dismount=true; zSpawn(1,{hp:P.hp*EM(e),atk:e.atk*0.6,walk:0.2,x:{beast:true}}); emit('bossPhase',{k:'summon'}); } break;
+        case 'forja': if(B.t>=(e.forjaAt||(e.forjaAt=B.t+P.every))){ e.forjaAt=B.t+P.every; e.forja=Math.min(P.max,(e.forja||0)+1); } am*=1+P.per*(e.forja||0); break;
+        case 'lago': if(B.t>=(e.lagoAt||(e.lagoAt=B.t+P.every))){ e.lagoAt=B.t+P.every; e.lago=Math.min(P.max,(e.lago||0)+1); } break;
+        case 'escudoLuz': if(B.t>=(e.shAt||(e.shAt=B.t+P.every))){ e.shAt=B.t+P.every; for(const o of B.enemies) if(!o.dead&&!o.down) o.sh=(o.sh||0)+P.sh*EM(o); emit('fx',{k:'escudoLuz'}); } break;
+        case 'formas': { const f2=fr<P.at[1]?3:fr<P.at[0]?2:1; if(f2!==e.form){ e.form=f2; e.inv=B.t+P.inv; e.grow=1+0.15*(f2-1); emit('bossPhase',{k:'shield'}); }
+          if(e.form===1) dm*=1-P.dr; if(e.form===2) sm*=P.spd; if(e.form===3) am*=1+P.dmg; break; }
+      }
+      const own=e.role==='jefe'&&e.zsAll[0];
+      if(own&&own.id==='lunaLlena'&&!e.moon&&fr<own.at){ e.moon=true; e.hp=Math.min(e.max,e.hp+own.heal*e.max); e.hpSeen=e.hp; e.amK*=1+own.dmg; am*=1+own.dmg; e.grow=(e.grow||1)+own.grow; emit('bossPhase',{k:'rage'}); }
+      if(e.batU>B.t) dm=0;   // Forma de murciélagos: no recibe daño
+      e.am=am; e.dm=dm; e.sm=sm;
+      if(e.windU>B.t||e.boxIn) continue;   // cargando el golpe o escondido: no lanza nada más
+      // golpes pendientes (Rabieta, Giro brutal, Golpe partecielos, murciélagos)
+      if(e.pend&&e.pend.length){ const now=e.pend.filter(q=>q.at<=B.t); if(now.length){ e.pend=e.pend.filter(q=>q.at>B.t); for(const q of now){ e.skillHeal=q.heal||0; Y.hit(e,q.mult); e.skillHeal=0; } if(B.hp<=0) return true; } }
+      // habilidades con recarga (× cdK)
+      for(const s of e.zs){ if(B.t<s.next) continue; s.next=B.t+s.cd*((CFG.zones||{}).cdK||1); zCast(e,s,Y); if(B.hp<=0) return true; break; }
+    }
+    // los esbirros del Rey Esqueleto pegan +50 % mientras se levanta; al terminar, vuelven a lo normal
+    if(B.reincU&&B.t>=B.reincU){ B.reincU=0; const own=B.enemies.find(x=>x.role==='jefe'&&x.zsAll&&x.zsAll[0].id==='reencarnacion'); for(const m of B.enemies) if(m.reincBuff){ m.reincBuff=false; m.amK=(m.amK||1)/(1+((own&&own.zsAll[0].buff)||0.5)); } }
+    for(const m of B.enemies) if(m.minion&&m.amK&&!m.zp) m.am=m.amK;
+    return B.hp<=0 }
+  // estados del héroe para los iconos de la pantalla: {k, n, max} (cargas) o {k, left} (segundos)
+  function heroDebuffs(){ if(!B) return []; const H=B.hs||{}, o=[], left=u=>u>B.t?u-B.t:0, D=CFG.heroDot||{};
+    for(const k of ['veneno','sangrado','quemadura']){ const n=(H.dots||[]).filter(x=>x.k===k&&x.until>B.t).length; if(n) o.push({k:'h_'+k,n,max:(D[k]||{}).max||3}); }
+    if(left(B.stun)) o.push({k:'h_stun',left:left(B.stun)}); if(left(H.noSkill)) o.push({k:'h_noskill',left:left(H.noSkill)}); if(left(H.noHeal)) o.push({k:'h_noheal',left:left(H.noHeal)});
+    if(H.inf) o.push({k:'h_inf',n:H.inf,max:3}); if(H.rot) o.push({k:'h_rot',n:H.rot,max:5}); if(H.burla) o.push({k:'h_burla',n:H.burla,max:3});
+    if(left(H.madU)) o.push({k:'h_locura',left:left(H.madU)}); else if(H.mad) o.push({k:'h_mad',n:H.mad,max:3});
+    const dd=(H.def||[]).filter(x=>x.until>B.t); if(dd.length) o.push({k:'h_def',left:Math.max(...dd.map(x=>x.until))-B.t});
+    if(B.dream&&left(B.dream.until)) o.push({k:'h_sueno_'+B.dream.k,left:left(B.dream.until)});
+    return o }
+
   /* ---------- Torre (roguelike) ---------- */
   function towerState(){ const T=S.tower=S.tower||{best:0,run:null,got:0};
     if(T.run&&(T.run.boons||[]).some(b=>b.t!=='c'&&b.t!=='g')) T.run=null;   // partida de la Torre antigua (otras mejoras): se cierra
     if(T.reach==null) T.reach=T.best?Math.min(CFG.tower.maxFloor,T.best+1):0;
     return T }
   // run.hp: fracción de vida que te queda en la partida (no se cura entre combates; al perder una vida vuelves con la vida llena)
-  function towerStart(){ if(inEvent()||!modeOpen('tower')) return false; const T=towerState(), L=CFG.tower.look||1, map=[];
-    T.run={seed:Math.floor(rand()*1e6),floor:1,lives:CFG.tower.lives,hp:1,boons:[],map,from:null,pick:null,souls:0,curses:[],ev:null,unk:null}; for(let i=0;i<L;i++) map.push(towerRow(1+i));
+  function towerStart(){ if(inEvent()||!modeOpen('tower')) return false; const T=towerState(), map=[];
+    T.run={seed:Math.floor(rand()*1e6),floor:1,lives:CFG.tower.lives,hp:1,boons:[],map,from:null,pick:null,souls:0,curses:[],ev:null,unk:null}; towerMapFill(T.run);   // el mapa entero de los pisos 1-10
     T.run.nodes=map[0].n; save(); emit('change'); return true }
   function towerAbandon(){ const T=towerState(); if(inEvent()) return false; T.run=null; save(); emit('change'); return true }
   // elegir camino: combate (normal/élite/jefe), cofre (1 grimorio al azar), tienda, evento, altar u hoguera
@@ -754,7 +1077,7 @@ function createGame(opts){
   function towerNext(){ const T=towerState(), run=T.run; run.floor++; const f=run.floor-1;
     if(run.floor>(T.reach||0)) T.reach=run.floor;   // piso más alto al que has llegado (ranking)
     let got=null; if(f>T.best){ T.best=f; for(const r of CFG.tower.rewards) if(f%r.every===0){ got=r.b; giveBundle(r.b); break } }
-    const map=towerMap(); map.shift(); while(map.length<(CFG.tower.look||1)&&run.floor+map.length<=CFG.tower.maxFloor) map.push(towerRow(run.floor+map.length)); run.nodes=map[0].n;
+    const map=run.map=run.map||[]; map.shift(); towerMapFill(run); run.nodes=map[0].n;   // (no towerMap(): ya con el piso nuevo, rellenaría antes de quitar el de atrás)   // tras el jefe (piso 10, 20…) el mapa se queda vacío y se hace el del tramo nuevo
     save(); if(got) emit('towerReward',{floor:f,b:got}); emit('change') }
   function towerBuyLife(){ const run=S.tower&&S.tower.run; if(!run) return false; const c=CFG.tower.lifeCost; if(!spend(c)) return false; run.lives++; save(); emit('change'); return true }
   /* ---------- Torre: mapa de 3 caminos ---------- */
@@ -789,10 +1112,14 @@ function createGame(opts){
   // caminos de la fila A (piso f) a la B (piso f+1): con 3 caminos, recto salvo en los pisos de cruce (vecinos); si no, vecinos (y si no hay, todos)
   function towerLinks(A,B,f){ const fk=CFG.tower.route.fork||1, E=CFG.tower.boss.every, fork=!(A.c.length===3&&B.c.length===3)||(f%E)%fk===0, L=[];
     A.c.forEach((ca,i)=>{ let t=B.c.map((cb,j)=>(fork?Math.abs(ca-cb)<=1:ca===cb)?j:-1).filter(j=>j>=0); if(!t.length) t=B.c.map((_,j)=>j); t.forEach(j=>L.push([i,j])) }); return L }
-  // mapa: los pisos que se ven (el primero es el actual), cada uno {n: tipos, c: columnas}
+  // mapa: los pisos que se ven (el primero es el actual, el último el jefe del tramo), cada uno {n: tipos, c: columnas}
+  // último piso del mapa (tramo de 10) en el que está el piso f: el del jefe
+  const towerMapEnd=f=>{ const E=CFG.tower.boss.every; return Math.min(CFG.tower.maxFloor,Math.ceil(f/E)*E) };
+  // mapa: del piso actual hasta el jefe de su tramo (como en StS, el mapa de los 10 pisos se ve entero; al vencer al jefe, mapa nuevo)
+  function towerMapFill(run){ const map=run.map; while(run.floor+map.length<=towerMapEnd(run.floor)) map.push(towerRow(run.floor+map.length)); return map }
   function towerMap(){ const run=S.tower&&S.tower.run; if(!run) return []; if(!run.map||!run.map[0]||!run.map[0].n) run.map=[{n:run.nodes,c:run.nodes.map((_,i)=>run.nodes.length===1?1:i)}];
     if(run.map[0].n!==run.nodes&&JSON.stringify(run.map[0].n)===JSON.stringify(run.nodes)) run.nodes=run.map[0].n;   // al cargar la partida (JSON) se vuelve a enlazar
-    return run.map }
+    return towerMapFill(run) }   // (partidas guardadas con el mapa de 3 pisos: se completa)
   // ¿se puede ir al camino i del piso actual? (unido a la casilla de la que vienes, según towerLinks)
   function towerCanGo(i){ const run=S.tower&&S.tower.run; if(!run) return false; const m=towerMap()[0]; if(!m||m.n!==run.nodes||run.from==null) return true;
     const p=(run.trail||[]).find(t=>t.f===run.floor-1); if(!p) return true; return towerLinks(p.row,m,p.f).some(([a,b])=>a===p.i&&b===i) }
@@ -862,6 +1189,10 @@ function createGame(opts){
   // enemigo base de la Torre: fijo, a la medida del héroe único (no depende de tu cuenta ni de tus mejoras)
   function towerFoe(){ const T=CFG.tower, H=T.hero, df=T.foeDf, hit=dmgF(H.atk,df)*(1+H.cr*H.cd)*H.spd, want=T.hitPct*H.hp, d=H.df;
     return {hp:hit*T.tKill, atk:(want+Math.sqrt(want*want+4*want*d))/2, df} }
+  // zona de Normal según el piso (20 pisos cada una): slimes, lobos, goblins, no muertos y orcos
+  // los élites y JEFES de zona en la Torre: su propio ajuste de vida y ataque (tower.zoneK), porque sus habilidades ya pegan
+  function towerZoneK(e,k){ const K=(CFG.tower.zoneK||{})[k]||{}; if(K.hp){ e.hp*=K.hp; e.max*=K.hp; } if(K.atk) e.atk*=K.atk; e.hpSeen=e.hp }
+  const towerZone=f=>(ZL()[0]||[])[Math.min(4,Math.floor(f/20))]||null;
   function towerFight(k){ const T=CFG.tower, run=S.tower.run, f=run.floor, c=towerFoe();
     const Hd=T.hard||{}, jump=Hd.jumpEvery?Math.pow(Hd.jump,Math.floor(f/Hd.jumpEvery)):1, eUp=(k==='elite'||(k==='boss'&&Hd.bossUp))&&Hd.eliteFrom&&f>=Hd.eliteFrom?Math.pow(k==='boss'?Hd.bossUp:Hd.eliteUp,1+Math.floor((f-Hd.eliteFrom)/Hd.eliteEvery)):1;
     const cv=towerCurve(f), hm=T.hp0*cv.hp*jump*eUp*(1+T.curses.vida.hp*(run.curses||[]).filter(x=>x==='vida').length), am=T.atk0*cv.atk*jump*Math.sqrt(eUp), h=heroStats();   // saltos: cada 25 pisos y élites reforzados (hard)
@@ -871,12 +1202,13 @@ function createGame(opts){
       B.enemies.push({hp,max:hp,atk:c.atk*am*atkM,df:c.df,spawn:B.t,walk:at,arrive:at,next:at,first:false,dead:false,spd:boss?1:1+Math.min(0.3,f*0.01)}); } };
     B.minion={hp:c.hp*hm/(eUp||1),atk:c.atk*am/Math.sqrt(eUp||1),df:c.df,spd:1+Math.min(0.3,f*0.01)};   // esbirros del jefe invocador (como un enemigo normal del piso)
     if(k==='boss'&&f>=T.maxFloor){ add(1,1,T.boss.atk*T.final.atk,true); const e=B.enemies[0]; e.inf=true; e.hp=e.max=1e30; e.hpSeen=e.hp; B.final=true; B.mech='final'; }   // jefe final: vida infinita
-    else if(k==='boss'){ add(1,T.boss.hp*nF,T.boss.atk,true); const e=B.enemies[0], O=T.bossMech.order;
-      e.mech=O[(Math.max(1,Math.floor(f/T.boss.every))-1)%O.length]; if(e.mech==='fases') e.phases=T.bossMech.fases.at.slice(); B.mech=e.mech; }
+    else if(k==='boss'){ add(1,T.boss.hp*nF,T.boss.atk,true); const e=B.enemies[0];   // el JEFE de la zona de Normal de su piso, con su mecánica de zona
+      zoneSetup(e,1,0,'jefe',{zone:towerZone(f),keepMinion:true,noEscort:true}); towerZoneK(e,'boss'); }
     else if(k==='elite'){ add(T.elite.n,T.elite.hp*nF/T.elite.n,T.elite.atk); const TR=T.traits, K=Object.keys(TR), extra=(run.curses||[]).filter(x=>x==='rasgo').length;   // vida total del grupo = elite.hp × la de un combate normal
       for(const e of B.enemies){ const n=Math.min(K.length,1+(rand()<0.5?1:0)+extra), pool=K.slice(); e.traits=[];
         for(let i=0;i<n;i++) e.traits.push(pool.splice(Math.floor(rand()*pool.length),1)[0]);
-        traitApply(e,TR); e.hpSeen=e.hp; } }
+        traitApply(e,TR); e.hpSeen=e.hp; }
+      zoneSetup(B.enemies[0],1,0,rand()<0.5?'e1':'e2',{zone:towerZone(f),keepMinion:true,noEscort:true}); towerZoneK(B.enemies[0],'elite'); }   // el primero es un élite de su zona (con sus rasgos)
     else add(nF,1,1);
     statsDirty(); HS=null; const H=heroStats(), G=T.grims; B.hp=H.hp*Math.max(0.01,run.hp==null?1:run.hp);
     BUF.shield=run.shield||0; run.shield=0; BUF.sang=0; B.regAt=CT+T.cards.escudoReg.every;   // Barricada: el escudo que traías
@@ -903,20 +1235,20 @@ function createGame(opts){
     else { run.lives--; run.hp=0; res={won:false,floor:run.floor,lives:run.lives,canRevive:!run.adRev,final:fin,dmg:run.finalDmg} }
     save(); emit('towerEnd',res); startWave(); emit('change'); return res }
   /* ---------- Sala de jefes ---------- */
-  // Cada jefe de campaña vencido (fases 10, 20… 150 de cada modo) entra en la sala. 3 intentos al día para todos. 3 estrellas por jefe.
+  // Cada JEFE de campaña vencido (fases 30, 60, 90, 120 y 150 de cada modo) entra en la sala. 3 intentos al día para todos. 3 estrellas por jefe.
   const hallId=(m,f)=>m*1000+f;
   function hallState(){ const d=dayKey(); S.hall=S.hall&&S.hall.clr?S.hall:{d,used:0,clr:{}}; if(S.hall.d!==d){ S.hall.d=d; S.hall.used=0; } return S.hall }
   const hallTriesLeft=()=>Math.max(0,CFG.hall.tries-hallState().used);
   function hallBosses(){ const out=[], C=hallState().clr; for(let m=0;m<MODES().length;m++){ if(MODES()[m].locked) break;
-      for(let f=CFG.hall.every;f<=CAP();f+=CFG.hall.every){ const beaten=S.mode>m||(S.mode===m&&S.best>=f); out.push({id:hallId(m,f),m,f,elite:f%50===0,beaten,stars:C[hallId(m,f)]||0}) } } return out }
+      for(let f=CFG.hall.every;f<=CAP();f+=CFG.hall.every){ const beaten=S.mode>m||(S.mode===m&&S.best>=f); out.push({id:hallId(m,f),m,f,elite:f%30===0,beaten,stars:C[hallId(m,f)]||0,foe:zoneFoe(zoneAt(m,f),'jefe')}) } } return out }
   function hallReward(b,star,first){ const H=CFG.hall; if(first) return {...H.first[star-1]};
     const R=H.repeat[star-1], c=CFG.econ.bossScrap; return {gold:R.gold,scrap:Math.round((c.base+Math.floor(b.f/10)*c.per10)*(b.m+1)*R.scrap)} }
   function hallStart(id,star){ const b=hallBosses().find(x=>x.id===id); if(!S||inEvent()||!b||!b.beaten||!(star>=1&&star<=3)||star>b.stars+1||!hallTriesLeft()) return false;
     hallState().used++; const h=heroStats(), M=CFG.hall.stars[star-1], e=enemyStats(b.f,10,true,b.m), W=CFG.event.walk;
     B={intro:CFG.encounter.intro,event:true,kind:'hall',t:0,boss:true,elite:b.elite,count:1,spawned:1,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,groups:b.f,hall:{id,m:b.m,f:b.f,star}};
     B.enemies.push({hp:e.hp*M.hp,max:e.hp*M.hp,atk:e.atk*M.atk,df:e.df,spawn:0,walk:W,arrive:W,next:W,first:true,dead:false,f:b.f,spd:1});
-    mechSetup(B.enemies[0],b.f,b.m,true); track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
-  function hallEnd(){ const X=B.hall, won=B.hp>0&&B.enemies.every(e=>e.dead), C=hallState().clr, b={...X,elite:X.f%50===0}, first=won&&X.star>(C[X.id]||0);
+    zoneSetup(B.enemies[0],b.f,b.m,'jefe'); track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
+  function hallEnd(){ const X=B.hall, won=B.hp>0&&B.enemies.every(e=>e.dead), C=hallState().clr, b={...X,elite:X.f%30===0}, first=won&&X.star>(C[X.id]||0);
     let rw=null; if(won){ rw=hallReward(b,X.star,first); if(first) C[X.id]=X.star; if(rw.scrap) S.scrap+=rw.scrap; giveBundle(rw); }
     const res={kind:'hall',won,first,star:X.star,f:X.f,m:X.m,rw,t:B.t}; B=null; save(); emit('hallEnd',res); startWave(); emit('change'); return res }
   /* ---------- jefe semanal ---------- */
@@ -929,16 +1261,13 @@ function createGame(opts){
   function wbPhase(t){ const W=CFG.wboss; return 1+(W.rampTo-1)*Math.min(1,t/W.dur) }
   function wbStats(n){ n=Math.max(1,Math.round(n)); const m=Math.min(MODES().length-1,Math.floor((n-1)/CAP())), c=modeCurve(m,n-m*CAP());
     return {atk:c.atk*CFG.wboss.atkMult, df:c.df, hp:c.hp} }
-  // jefe de la semana (rota cada semana, igual para todos)
-  const wbBoss=w=>{ const L=CFG.wboss.bosses||[]; if(!L.length) return null; const k=w==null?wbShownWeek():w; return L[((k%L.length)+L.length)%L.length] };
-  function wbUpdate(h,dt){ const e=B.enemies[0]; if(!e) return; const s=wbStats(wbPhase(B.t)), W=B.wb||{}; e.atk=s.atk; e.df=s.df;
-    if(W.armor){ const A=W.armor; e.broken=(B.t%A.every)>=A.every-A.open; }   // Coloso: armadura rota unos segundos (ver addDmg)
-    if(W.frenzy) e.spd=1+(W.frenzy-1)*Math.min(1,B.t/CFG.wboss.dur);                                       // Bestia: cada vez más rápido
-    if(W.summon&&B.t>=(B.sumAt||(B.sumAt=W.summon.every))){ const M=W.summon; B.sumAt+=M.every;              // Enjambre: esbirros
-      for(let i=0;i<M.n;i++){ const at=B.t+CFG.event.walk+i*0.3; B.enemies.push({hp:s.hp*M.hp,max:s.hp*M.hp,atk:s.atk*M.atk,df:s.df,spawn:B.t,walk:CFG.event.walk,arrive:at,next:at,first:false,dead:false,minion:true,spd:1}); B.spawned++; } }
-    if(W.burn&&h&&B.hp>0) B.hp-=W.burn*h.hp*dt; }                                                           // Dragón: quema
-  function addDmg(d){ const A=B.wb&&B.wb.armor; if(A) d*=B.enemies[0]&&B.enemies[0].broken?A.hit:A.block;   // Coloso: con armadura recibe menos; rota, más
-    B.dmg+=d; if(S.wbRun) S.wbRun.dmg=B.dmg; }
+  // jefe de la semana: rota cada semana entre los 5 JEFES de tu modo (igual para todos los de tu modo)
+  const wbBoss=w=>{ const L=ZL()[Math.min(ZL().length-1,S?S.mode||0:0)]||[]; if(!L.length) return null; const k=w==null?wbShownWeek():w, Z=L[((k%L.length)+L.length)%L.length], J=Z.jefe;
+    return {id:Z.id,name:J.title?J.name+', '+J.title:J.name,desc:J.p.name+': '+J.p.desc,zone:Z,score:CFG.wboss.score||1} };
+  // cada paso: pega como el jefe de ese momento; sus esbirros, como los de entonces
+  function wbUpdate(){ const e=B.enemies[0]; if(!e) return; const s=wbStats(wbPhase(B.t)), M=CFG.wboss.minion||{hp:0.6,atk:0.4}; e.atk=s.atk*(e.atkK||1); e.df=s.df; e.refMax=s.hp*10;
+    B.minion={hp:s.hp*M.hp,atk:s.atk*M.atk,df:s.df,spd:1}; }
+  function addDmg(d){ B.dmg+=d; if(S.wbRun) S.wbRun.dmg=B.dmg; }
   // Entrada gratis: 1 a la semana (wbFree guarda la semana en que se usó). Las demás, con Ticket Jefe.
   const wbFreeLeft=()=>S.wbFree!==weekKey()?1:0;
   function wbStart(){
@@ -948,6 +1277,7 @@ function createGame(opts){
     S.wbRun={week:weekKey(),dmg:0};
     B={intro:CFG.encounter.intro,event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:wbBoss(weekKey())};
     B.enemies.push({hp:Infinity,max:Infinity,atk:s.atk,df:s.df,spawn:0,walk:V.walk,arrive:V.walk,next:V.walk,first:false,dead:false,immortal:true});
+    wbUpdate(); if(B.wb) zoneSetup(B.enemies[0],1,S.mode,'jefe',{zone:B.wb.zone,keepMinion:true,noEscort:true});   // con su pasiva y sus habilidades
     save(); emit('eventStart',B); emit('change'); return true;
   }
   function wbFinish(dmg,died){
@@ -1243,13 +1573,6 @@ function createGame(opts){
   function grimXp(secs){ const G=S&&S.grim; if(!G||!G.lvl||G.lvl>=GC().levels) return; const u=GC().up[G.lvl-1]; G.xp=Math.min(u.secs,G.xp+secs) }
   function grimUp(){ const u=grimUpInfo(); if(!u) return {ok:false,why:'max'}; if(!u.ready) return {ok:false,why:'xp'}; if(Object.keys(u.missing).length) return {ok:false,why:'cost'};
     S.gold-=u.cost.gold; S.mats[0]-=u.cost.ess; S.evm-=u.cost.ev; const G=grimState(); G.lvl++; G.xp=0; track('grimoire',{how:'nivel',lvl:G.lvl}); save(); emit('change'); return {ok:true,lvl:G.lvl} }
-  // pasiva de grimorio en combate: la del camino B, si se eligió
-  function grimFx(){ if(!S||!(S.evo>=1)||S.path!=='B') return null; const a=(evoTiers()[0].alt||{})[S.cls]; return a&&a.grim||null }
-  // los 2 caminos de la 1.ª evolución
-  function evoPaths(){ const t=evoTiers()[0]; return {A:t.classes[S.cls],B:(t.alt||{})[S.cls]} }
-  // cambiar de camino (tras evolucionar): cuesta tokens
-  function pathSwitch(){ if(!(S.evo>=1)) return {ok:false,why:'evo'}; if(inEvent()) return {ok:false,why:'event'}; if(!spend(GC().switchCost)) return {ok:false,why:'tokens'};
-    S.path=S.path==='B'?'A':'B'; S.dpsM=null; EPk=''; statsDirty(); track('path',{path:S.path}); save(); emit('change'); return {ok:true,path:S.path} }
   /* ---------- premios del servidor (referidos) ---------- */
   // El servidor manda premios pendientes: 'silver' = cofres de plata, 'won' = tokens ganados (retirables)
   function applyRewards(list){ const out=[]; if(!S||!Array.isArray(list)) return out;
@@ -1348,9 +1671,11 @@ function createGame(opts){
     heroShield:()=>B?(BUF.shield||0)+(BUF.gshield||0):0,   // escudo del héroe ahora (para la barra azul)
     // efectos activos sobre el héroe ahora (para los iconos bajo su barra): {k, left} en segundos (null = mientras dure)
     heroBuffs:()=>{ if(!B) return []; const o=[]; for(const b of BUF.list) if(b.until>CT){ const k=b.reflect||b.df?'baluarte':b.atk1?'atk1':b.atk?'atk':b.spd?'spd':b.ls?'ls':b.taken?'taken':null; if(k&&!o.some(x=>x.k===k)) o.push({k,left:b.until-CT}); }
-      if(BUF.sang>0) o.push({k:'sang',n:BUF.sang}); if(CT<(BUF.combust||0)) o.push({k:'combust',left:BUF.combust-CT}); if(BUF.clone&&CT<BUF.clone.until) o.push({k:'clone',left:BUF.clone.until-CT});
-      if(BUF.aura&&CT<BUF.aura.until) o.push({k:'aura',left:BUF.aura.until-CT}); if(CT<(BUF.iceArmor||0)) o.push({k:'ice',left:BUF.iceArmor-CT}); if(BUF.cloud&&CT<BUF.cloud.until) o.push({k:'cloud',left:BUF.cloud.until-CT});
+      if(BUF.sang>0) o.push({k:'sang',n:BUF.sang}); if(BUF.aura&&CT<BUF.aura.until) o.push({k:'aura',left:BUF.aura.until-CT});
+      const P=heroPassive(), ch={guardia:'guard',furia:'rage',doble:'conc',gracia:'luz'}[P&&P.id];   // cargas del kit: n de max
+      if(ch&&B[ch]>0) o.push({k:ch,n:Math.min(P.max,B[ch]),max:P.max}); if(P&&P.id==='cuchillas'&&B.blades){ const n=B.blades.filter(u=>u>B.t).length; if(n) o.push({k:'blades',n,max:P.max}); }
       return o },
+    heroDebuffs, zoneAt, zoneIdx, bossRole, zoneFoe,
     hasCard, hasVip, equipped, weaponMain, heroStats, dpsK, computeStats, statsDirty, enemyStats, xpReq, upCost, upgradeGain, farmRate,
     // combate
     step, setAuto, goFase,
@@ -1359,8 +1684,8 @@ function createGame(opts){
     // evento
     claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerLinks, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
-    canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, lvlCap,
+    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerLinks, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, nextEvoInfo, kitStage, heroPassive, lvlCap,
     // armas
     findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,
     // cofres y tienda

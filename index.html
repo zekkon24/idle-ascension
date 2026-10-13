@@ -358,7 +358,7 @@ input[type=number]{width:64px}
 .tfull .tfhead{grid-template-columns:repeat(4,1fr)}.tfxb{font:inherit;color:inherit;cursor:pointer;background:var(--panel2);border:1px solid var(--gold);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
 .tfull .tmapbox{margin-inline:-16px;border-radius:0;border-inline:0;height:auto;max-height:max(320px,calc(100dvh - 252px - var(--safe-top,0px)));display:flex;flex-direction:column;
   background:radial-gradient(ellipse at 50% 40%,#211b33,#0b0a14 75%)}
-.tfull .tmapsvg{margin-top:auto;max-width:none}
+.tfull .tmapsvg{margin-top:auto;max-width:none;flex-shrink:0}   /* el mapa de 10 pisos no se encoge: se desliza (como en StS) */
 .tmapbox{max-height:min(62vh,460px);overflow-y:auto;margin-top:4px;border-radius:16px;border:1px solid #2f2a40;box-shadow:inset 0 0 40px rgba(0,0,0,.8);background:#0b0a14}
 .tmapsvg{display:block;margin:0 auto;max-width:440px}
 .tml{fill:none;stroke:#6b6488;stroke-width:3;stroke-linecap:round;stroke-dasharray:1 7;opacity:.75}.tml.off{opacity:.1}
@@ -391,6 +391,13 @@ input[type=number]{width:64px}
 .skmode{font-size:10px;font-weight:800;color:var(--muted);background:rgba(0,0,0,.45);padding:2px 6px;border-radius:6px;margin-bottom:2px}
 button.skmode{border:1px solid var(--line);cursor:pointer;padding:4px 8px}
 button.skmode.on{color:var(--gold);border-color:var(--gold)}
+/* mapa nuevo (tras vencer a un jefe): cartel que aparece y se va solo */
+.tmapbox{position:relative}
+.tnewmap{position:sticky;top:40%;z-index:3;height:0;display:flex;flex-direction:column;align-items:center;pointer-events:none;animation:tnewmap 2.6s ease forwards}
+.tnewmap b,.tnewmap span{background:rgba(11,10,20,.88);padding:4px 18px;border:1px solid var(--gold);color:var(--gold)}
+.tnewmap b{font-size:22px;letter-spacing:2px;border-radius:12px 12px 0 0;border-bottom:0;padding-top:8px}.tnewmap span{font-size:13px;font-weight:800;color:var(--ink);border-radius:0 0 12px 12px;border-top:0;padding-bottom:8px}
+@keyframes tnewmap{0%{opacity:0;transform:scale(.9)}12%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0}}
+
 .fasetxt.top{top:84px;bottom:auto;left:10px;right:auto;font-size:12px;padding:2px 8px}
 .foetxt{position:absolute;top:48px;right:10px;z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:3px}   /* Torre: rasgos del élite o mecánica del jefe (uno por línea) */
 .foetxt.cur{top:auto;right:auto;left:50%;transform:translateX(-50%);bottom:78px;flex-direction:row;flex-wrap:wrap;justify-content:center;max-width:70%}   /* maldiciones: abajo en el centro */
@@ -416,9 +423,13 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .banner:hover{background:linear-gradient(90deg,rgba(232,176,74,.32),rgba(232,176,74,.1))}
 .calbtn{position:absolute;right:10px;top:8px;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.45);color:var(--gold);display:flex;align-items:center;justify-content:center;padding:0}
 .better{color:var(--good);font-size:12px}
-.sidebtns{position:absolute;right:10px;top:auto;bottom:17px;z-index:4;display:flex;flex-direction:row;align-items:center;gap:8px}
-#grimBtn{order:1}#boostBtn{order:2}#dailyBtn{order:3}   /* grimorio, premios diarios y potenciadores: en fila abajo a la derecha (a mano del pulgar) */
-.sidebtns .calbtn{position:relative;right:auto;top:auto;width:44px;height:44px}
+.sidebtns{position:absolute;right:8px;top:52px;bottom:auto;z-index:4;display:flex;flex-direction:column;align-items:center;gap:6px}
+#boostBtn{order:1}#dailyBtn{order:2}   /* potenciadores y premios diarios: columnita arriba a la derecha, sobre el cielo (no tapan las habilidades) */
+.sidebtns .calbtn{position:relative;right:auto;top:auto;width:34px;height:34px;border-radius:9px}.sidebtns .calbtn svg{width:22px;height:22px}
+.sidebtns .boosttime{left:auto;right:calc(100% + 5px);top:50%;transform:translateY(-50%)}   /* el tiempo del potenciador, a su izquierda */
+.evobtn{position:absolute;left:50%;top:58px;transform:translateX(-50%);z-index:4;display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:999px;border:2px solid #fff3c4;background:linear-gradient(#ffd66b,#e8a83a);color:#2a1a08;font-weight:900;font-size:14px;white-space:nowrap;box-shadow:0 0 16px rgba(255,214,107,.7),0 3px 0 #a8741e;animation:evoPulse 1.6s ease-in-out infinite}
+.evobtn[hidden]{display:none}
+@keyframes evoPulse{50%{box-shadow:0 0 26px rgba(255,214,107,.95),0 3px 0 #a8741e}}
 .calbtn.on{border-color:var(--gold);background:rgba(232,176,74,.25);box-shadow:0 0 10px rgba(232,176,74,.5)}
 .lootn{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;font-style:normal;line-height:16px;text-align:center}
 .boostbtn.on{border-color:var(--gold);background:rgba(232,176,74,.18)}
@@ -478,19 +489,19 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .mtile .mn{font-size:11px;color:var(--muted);line-height:1.2}
 
 /* Barra de mejoras */
-.upstrip{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:42px repeat(4,1fr);gap:5px;padding:5px;border-radius:14px;background:rgba(18,20,28,.92);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45)}
-.upt{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px 5px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);opacity:.55;min-width:0}
+.upstrip{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:36px repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;background:rgba(18,20,28,.92);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.upt{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;column-gap:4px;row-gap:1px;padding:4px 2px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);opacity:.55;min-width:0}
 .upt.ok{opacity:1;border-color:var(--gold);box-shadow:inset 0 -2px 0 rgba(232,176,74,.35)}
 .upt:active{transform:scale(.96)}
 .upt .un{font-size:10px;color:var(--muted);font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:374px){.upt .un{font-size:9px;letter-spacing:-.2px}.scrhd b{font-size:15px;letter-spacing:1.5px}}
-.upt b{font-size:14px;font-variant-numeric:tabular-nums}
-.upt .uc{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
+.upt b{font-size:12px;font-variant-numeric:tabular-nums}
+.upt .uc{width:100%;display:flex;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
 .upt .uc .dot{width:8px;height:8px}
 .upx{border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:11px;font-weight:800;color:var(--gold);padding:0}
 .upx.lv{display:flex;flex-direction:column;align-items:center;justify-content:center;border-color:var(--gold);background:radial-gradient(circle at 50% 30%,#2b2f40,var(--panel))}
-.upx.lv small{font-size:10px;color:var(--muted);font-weight:800}.upx.lv b{font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
-.app.home .battle{padding-bottom:78px}
+.upx.lv small{font-size:9px;color:var(--muted);font-weight:800}.upx.lv b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.app.home .battle{padding-bottom:62px}   /* barra de mejoras compacta: nombre y valor en una línea, el precio debajo */
 
 /* Retrato, cabeceras de pantalla, Forja con marco, cabecera del Inventario y tarjetas de Modos */
 .av{flex:none;width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);background:#1b1e2a no-repeat;background-size:230%;background-position:41% 22%;box-shadow:0 0 0 2px #0b0c10}
@@ -678,7 +689,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610121634-2a25609';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610131357-f2b5950';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
