@@ -464,7 +464,7 @@ const CFG = {
     maxAlive:30, // como mucho 30 monstruos vivos a la vez (el siguiente grupo espera): el móvil va fluido y aguantar más no da más muertes si no limpias
     ticketCost:100, // ticket extra en la tienda (tokens); las muertes de varios intentos del día se suman
     mat:'Emblema', pauseH:1, // pausa de 00:00 a 01:00 UTC: se terminan los intentos a medias y a la 01:00 se reparten los premios
-    rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.84, // prob. de que un rival haga un 2º y un 3er intento; rivalBase ajusta la curva para que el jugador medio quede hacia el puesto 50
+    rivals:99, spread:0.35, rivalExtra:[0.2,0.06], rivalBase:0.5, // prob. de que un rival haga un 2º y un 3er intento; rivalBase: rivales al 50 % de la curva, así el jugador medio queda hacia el puesto 10-20 (emblemas para evolucionar hacia el día 11-12, como antes de la Mazmorra nueva)
                           // rivales simulados: jugador medio de tus mismos días × dispersión
     curve:[[1,40],[2,299],[3,367],[5,401],[7,482],[10,479],[13,389],[15,356],[17,380],[20,469],[25,512],[30,443],[35,344],[40,429],[45,484],[50,532],[60,649]], // [días de juego, muertes del jugador medio] (simulaciones de ritmo: 5 clases × A/B × 5 semillas; media de 6 días, que es lo que tardan en rotar los modificadores; baja un poco al cambiar de modo, porque la Mazmorra empieza por tu récord del modo nuevo)
     // modificador del día (rota cada día, igual para todos): cambia las reglas con algo a cambio. score: cuánto mueve las muertes
@@ -537,7 +537,7 @@ const CFG = {
       'Clerigo·base|Guerrero·base':0.977,'Clerigo·base|Mago·base':1.024,'Guerrero·A1|Guerrero·B1':1.206,'Guerrero·A1|Mago·A1':0.925,'Guerrero·A1|Mago·B1':0.688,
       'Guerrero·A2|Guerrero·B2':0.473,'Guerrero·A2|Mago·A2':0.394,'Guerrero·A2|Mago·B2':0.325,'Guerrero·B1|Mago·A1':1.018,'Guerrero·B1|Mago·B1':1.454,'Guerrero·B2|Mago·B2':4.472,
       'Guerrero·base|Mago·base':1.066,'Mago·A1|Mago·B1':0.773,'Mago·A2|Mago·B2':0.688},
-    cls:{Guerrero:{base:0.601,A1:0.357,B1:1.434,A2:0.05,B2:2.228},Mago:{base:1.26,A1:3.587,B1:0.26,A2:7.599,B2:0.369},Arquero:{base:1.425,A1:3.266,B1:2.564,A2:7.456,B2:6.431},Asesino:{base:1.403,A1:4.328,B1:2.583,A2:9.339,B2:6.481},Clerigo:{base:0.649,A1:2.039,B1:1.988,A2:3.857,B2:3.72}}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+    cls:{Guerrero:{base:0.601,A1:0.357,B1:1.434,A2:0.05,B2:2.228},Mago:{base:1.26,A1:3.587,B1:0.26,A2:7.599,B2:0.369},Arquero:{base:1.425,A1:3.266,B1:2.564,A2:7.456,B2:6.431},Asesino:{base:1.403,A1:4.328,B1:2.583,A2:9.339,B2:6.481},Clerigo:{base:0.701,A1:2.039,B1:1.988,A2:3.857,B2:3.72}}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // ---------- Torre (trozo de la lista CFG) ----------
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
