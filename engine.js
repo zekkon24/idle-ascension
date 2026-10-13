@@ -281,7 +281,8 @@ function createGame(opts){
   function step(dt){ if(B&&B.kind==='pvp'&&GH) return duelStep(dt); if(B&&B.event&&!B.kind) return labStep(dt); stepCore(dt) }
   // Mazmorra: B.rt cuenta el tiempo real (límite maxDur); desde speedFrom s se acelera: ×(1 + speedUp·(rt − speedFrom))
   const labSpeed=()=>{ const V=CFG.event, rt=(B&&B.rt)||0; return 1+(V.speedUp||0)*Math.max(0,rt-(V.speedFrom||0)) };
-  function labStep(dt){ while(dt>1e-9&&B&&B.event&&!B.kind){ const sp=labSpeed(), r=Math.min(dt,0.05/sp); dt-=r; B.rt=(B.rt||0)+r; stepCore(r*sp); } if(dt>1e-9) stepCore(dt) }
+  // (si la Mazmorra acaba a mitad de paso, el tiempo que sobra se descarta: no lo juega la campaña)
+  function labStep(dt){ while(dt>1e-9&&B&&B.event&&!B.kind){ const sp=labSpeed(), r=Math.min(dt,0.05/sp); dt-=r; B.rt=(B.rt||0)+r; stepCore(r*sp); } }
   function stepCore(dt){
     if(!S||!B) return;
     if(B.over){ B.wait-=dt; if(B.wait<=0) startWave(); return }
@@ -373,7 +374,7 @@ function createGame(opts){
         emit('fx',{k:'skill',slot:k,id:sk.look||sk.id,sid:sk.id,name:sk.name}); } }
     if(BUF.lightBack&&BUF.lightBack.length){ const back=BUF.lightBack.filter(x=>CT>=x.at); if(back.length){ BUF.lightBack=BUF.lightBack.filter(x=>CT<x.at); for(const x of back) heal(x.heal*h.hp); emit('fx',{k:'luzVuelve',n:back.length}); } }
     if(BUF.aura&&CT<BUF.aura.until){ heal(BUF.aura.heal*h.hp*dt);                              // Consagrar: cura y quema a los cercanos
-      for(const e of B.enemies){ if(e.dead||e.arrive>B.t+0.5) continue; const d=kitBase(P,h,e)*BUF.aura.dps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); } }
+      for(const e of upTo(nearE(),BUF.aura.n)){ const d=kitBase(P,h,e)*BUF.aura.dps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); } }
     if(B.stun>B.t) B.th=Math.max(B.th==null?B.t:B.th,B.stun);   // PvP: congelado por el rival
     if(B.enemies.some(canHit)){
       if(B.th===null) B.th=B.t;
@@ -434,6 +435,10 @@ function createGame(opts){
   // e.burn quemaduras, e.poison veneno, e.bleed sangrado, e.shadow Sombras ({until, dps}), e.shards esquirlas y e.rhy Ritmo.
   const aliveE=()=>B.enemies.filter(canTarget).sort((a,b)=>a.arrive-b.arrive);   // (zonas: ni caídos ni invisibles)
   const nearE=()=>aliveE().filter(e=>e.arrive<=B.t+0.5);   // los cercanos (ya han llegado o están a punto)
+  // tope de enemigos de un golpe de área: los n primeros en llegar (targets de cada habilidad o pasiva: 3 si es fuerte, 4 medio, 5 flojo o continuo)
+  const upTo=(a,n)=>n?a.slice(0,n):a;
+  // los n primeros cercanos sin ordenar toda la lista (salen en orden de llegada): para lo que salta en cada golpe recibido
+  const nearN=n=>{ const o=[]; for(const e of B.enemies){ if(canTarget(e)&&e.arrive<=B.t+0.5){ o.push(e); if(o.length>=n) break; } } return o };
   const stk=(e,k)=>(e[k]=(e[k]||[]).filter(x=>x.until>B.t));   // cargas vivas de un enemigo
   function addStack(e,k,dps,dur,max){ const a=stk(e,k); a.push({until:B.t+dur,dps}); while(a.length>max) a.shift(); return a.length }
   const bossM=h=>B.boss?1+h.bd:1;
@@ -459,13 +464,13 @@ function createGame(opts){
   function addBlades(P,n){ B.blades=(B.blades||[]).filter(u=>u>B.t); for(let i=0;i<n;i++) B.blades.push(B.t+P.dur); B.blades.sort((a,b)=>b-a); B.blades.length=Math.min(B.blades.length,P.max) }
   // PvP: las espinas y la Onda de escudo hacen menos (× pvp.reflect); si no, el Guerrero A gana casi siempre
   const pvpRefl=()=>B.kind==='pvp'?(CFG.pvp.reflect==null?1:CFG.pvp.reflect):1;
-  // Guardia: con Represalia, al llenarse lanza la Onda de escudo (según la defensa, en la escala antigua: ÷ dfK)
-  function addGuard(P,n,X){ B.guard=Math.min(P.max,(B.guard||0)+n); if(!P.wave||B.guard<P.max) return; B.guard=0; const h=X.h;
-    for(const o of nearE()) X.zap(o,dmgF(P.wave*h.df/h.dfK,o.df)*bossM(h)*pvpRefl(),{burst:true}); emit('fx',{k:'onda'}); }
-  // Gracia: al llenarse la Luz se cura y hace daño a todos (lo curado pasa a la escala antigua: ÷ hpK)
-  // (PvP: la vida va × B.hpM para que el duelo dure; el daño sale de la vida normal, sin ese extra)
-  function addLuz(P,n,X){ B.luz=(B.luz||0)+n; if(B.luz<P.max) return; B.luz=0; const h=X.h, x=P.heal*h.hp; X.heal(x);
-    for(const o of nearE()) X.zap(o,x/((B.kind==='pvp'&&B.hpM)||1)*P.dmg/h.hpK,{burst:true}); emit('fx',{k:'gracia'}); }
+  // Guardia: con Represalia, al llenarse lanza la Onda de escudo (según la defensa, en la escala antigua: ÷ dfK), como mucho una vez cada cd s
+  // (mientras espera, la Guardia se queda llena)
+  function addGuard(P,n,X){ B.guard=Math.min(P.max,(B.guard||0)+n); if(!P.wave||B.guard<P.max||B.t<(B.ondaAt||0)) return; B.guard=0; B.ondaAt=B.t+(P.cd||0); const h=X.h;
+    for(const o of upTo(nearE(),P.targets)) X.zap(o,dmgF(P.wave*h.df/h.dfK,o.df)*bossM(h)*pvpRefl(),{burst:true}); emit('fx',{k:'onda'}); }
+  // Gracia: al llenarse la Luz se cura (heal: % de su vida) y hace P.hit × su daño a todos los cercanos (según su ataque, no su vida); después, cd s sin cargar
+  function addLuz(P,n,X){ if(B.t<(B.luzAt||0)) return; B.luz=(B.luz||0)+n; if(B.luz<P.max) return; B.luz=0; B.luzAt=B.t+(P.cd||0); const h=X.h; X.heal(P.heal*h.hp);   // (cd: como mucho una vez cada cd s)
+    for(const o of upTo(nearE(),P.targets)) X.zap(o,kitBase(P,h,o)*P.hit,{burst:true}); emit('fx',{k:'gracia'}); }
   // Ritmo: cada disparo al mismo enemigo suma; el que llega al tope pega más (Letal: también crítico) y vuelve a 0
   function rhythm(P,e){ e.rhy=(e.rhy||0)+1; if(e.rhy<P.max) return null; e.rhy=0; return {m:P.mul,crit:!!P.crit} }
   // después de un golpe normal que ha hecho d
@@ -477,7 +482,7 @@ function createGame(opts){
     else if(P.id==='cuchillas'&&crit) addBlades(P,1); }
   // después de recibir un golpe (d0: el daño antes de los escudos)
   function kitOnHurt(P,e,d0,X){ if(!P) return; const h=X.h;
-    if(P.id==='guardia'){ const os=nearE(); if(d0>0) for(const o of os) X.zap(o,d0*P.thorns/h.hpK/os.length*pvpRefl(),{thorns:true}); addGuard(P,1,X); }   // espinas repartidas entre todos
+    if(P.id==='guardia'){ if(d0>0){ const os=nearN(5); for(const o of os) X.zap(o,d0*P.thorns/h.hpK/os.length*pvpRefl(),{thorns:true}); } addGuard(P,1,X); }   // espinas repartidas entre los 5 primeros
     else if(P.id==='furia') B.rage=Math.min(P.max,(B.rage||0)+1);
     else if(P.id==='gracia') addLuz(P,1,X); }
   // cada paso: quemaduras, veneno, sangrado y Sombras (que curan), cuchillas, Terremoto y lo que llega más tarde (B.kq)
@@ -485,9 +490,9 @@ function createGame(opts){
     for(const e of B.enemies){ if(e.dead) continue; let d=0, sh=0;
       for(const k of ['burn','poison','bleed','shadow']){ if(!e[k]||!e[k].length) continue; const s=stk(e,k).reduce((a,x)=>a+x.dps,0)*dt; d+=s; if(k==='shadow') sh+=s; if(k==='burn') B.burnDmg=(B.burnDmg||0)+s; }
       if(d>0){ e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(sh) X.heal(sh*h.hpK*((P&&P.healK)||1)); if(e.hp<=0) X.kill(e); } }   // Sombras: curan como robo de vida (healK)
-    const area=(per,tag)=>{ for(const e of nearE()){ const d=kitBase(P,h,e)*per*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); B[tag]=(B[tag]||0)+d; if(e.hp<=0) X.kill(e); } };
-    if(P&&P.id==='cuchillas'&&B.blades&&B.blades.length){ B.blades=B.blades.filter(u=>u>B.t); if(B.blades.length) area(B.blades.length*P.pct,'bladeDmg'); }
-    if(B.quake&&B.t<B.quake.until) area(B.quake.dps,'quakeDmg');
+    const area=(per,tag,n)=>{ for(const e of upTo(nearE(),n)){ const d=kitBase(P,h,e)*per*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); B[tag]=(B[tag]||0)+d; if(e.hp<=0) X.kill(e); } };
+    if(P&&P.id==='cuchillas'&&B.blades&&B.blades.length){ B.blades=B.blades.filter(u=>u>B.t); if(B.blades.length) area(B.blades.length*P.pct,'bladeDmg',P.targets); }
+    if(B.quake&&B.t<B.quake.until) area(B.quake.dps,'quakeDmg',B.quake.n);
     if(B.kq&&B.kq.length){ const now=B.kq.filter(q=>q.at<=B.t); if(now.length){ B.kq=B.kq.filter(q=>q.at>B.t); for(const q of now) q.f(); } } }
   // las que gastan cargas esperan a tenerlas (como mucho 3 s más; si no, se lanzan igual)
   function kitReady(sk){ const P=heroPassive(), f=aliveE()[0]; if(!f) return true;
@@ -499,8 +504,9 @@ function createGame(opts){
       case 'ejecutar': return aliveE().some(e=>e.hp<sk.low*e.max);
     } return true }
   // lanza una habilidad del kit (k: su hueco). false si no es del kit (las de la Torre van aparte)
-  function kitCast(sk,k,X){ const h=X.h, P=heroPassive(), A=aliveE, first=()=>aliveE()[0];
-    const base=e=>kitBase(P,h,e), hit=(e,m)=>{ if(e&&!e.dead) X.zap(e,base(e)*m,{skill:k}); return !e||e.dead };   // hit: true si ya no queda (o acaba de morir)
+  function kitCast(sk,k,X){ const h=X.h, P=heroPassive(), A=()=>upTo(aliveE(),sk.targets), first=()=>aliveE()[0];   // A: los que alcanza (todos, o hasta sk.targets)
+    const pk=B.kind==='pvp'?((CFG.pvp.skill||{})[S.cls]||{})[kitStage()]||1:1;   // PvP: daño de las habilidades × pvp.skill[clase][etapa]
+    const base=e=>kitBase(P,h,e)*pk, hit=(e,m)=>{ if(e&&!e.dead) X.zap(e,base(e)*m,{skill:k}); return !e||e.dead };   // hit: true si ya no queda (o acaba de morir)
     const later=(s,f)=>{ if(s<=0) f(); else (B.kq=B.kq||[]).push({at:B.t+s,f}) };
     const bleed=e=>addStack(e,'bleed',CFG.bleed.pct*base(e),CFG.bleed.dur,CFG.bleed.max);
     const poison=e=>{ if(P&&P.id==='veneno') addStack(e,'poison',P.pct*base(e),P.dur,P.max) };
@@ -512,18 +518,18 @@ function createGame(opts){
       case 'escudazo': { hit(first(),sk.mult); let n=0; for(const e of A()){ X.zap(e,dmgF(sk.def*h.df/h.dfK,e.df)*bossM(h),{skill:k}); n++; }
         if(sk.guard&&P&&P.id==='guardia'&&n) addGuard(P,sk.guard*n,X); break; }
       case 'provocar': for(const e of A()) hit(e,sk.mult); BUF.list.push({until:CT+sk.dur,taken:sk.taken}); if(sk.shield) X.addShield(sk.shield*h.hp); break;
-      case 'terremoto': for(const e of A()) hit(e,sk.mult); B.quake={until:B.t+sk.dur,dps:sk.dot}; B.eslow=B.t+sk.dur; B.eslowM=sk.slow; break;
+      case 'terremoto': for(const e of A()) hit(e,sk.mult); B.quake={until:B.t+sk.dur,dps:sk.dot,n:sk.targets}; B.eslow=B.t+sk.dur; B.eslowM=sk.slow; break;
       case 'desgarro': { const e=first(); if(!e) break; const m=sk.mult*(sk.low&&e.hp<sk.low*e.max?sk.lowMul:1); if(!hit(e,m)) for(let i=0;i<sk.bleed;i++) bleed(e); break; }
       case 'triple': { const r=B.rage||0; B.rage=0; for(let i=0;i<sk.hits;i++){ const e=first(); if(!e) break; if(!hit(e,sk.mult+sk.perRage*r)&&sk.bleed) bleed(e); } break; }
       case 'ejecutar': { const os=A(), low=os.find(e=>e.hp<sk.low*e.max), e=low||os[0]; if(e) hit(e,low?sk.lowMult:sk.mult); break; }
       // Mago (las quemaduras y esquirlas solo si su pasiva es la de ese camino)
       case 'misil': for(let i=0;i<sk.hits;i++) hit(first(),sk.mult); break;
-      case 'llama': case 'explosion': for(const e of sk.targets?A().slice(0,sk.targets):A()){ const nb=stk(e,'burn').length; if(!hit(e,sk.mult+(sk.perBurn||0)*nb)&&P&&P.id==='ignicion') addBurn(P,e,sk.burn,X); } break;
+      case 'llama': case 'explosion': for(const e of A()){ const nb=stk(e,'burn').length; if(!hit(e,sk.mult+(sk.perBurn||0)*nb)&&P&&P.id==='ignicion') addBurn(P,e,sk.burn,X); } break;
       case 'meteoros': for(let i=0;i<sk.n;i++) later(i*sk.over/Math.max(1,sk.n-1),()=>{ for(const e of A()) hit(e,sk.mult+(sk.perBurn||0)*stk(e,'burn').length) }); break;
       case 'escarcha': { const e=first(); if(!e||hit(e,sk.mult)) break; if(!e.noCC) e.frozen=Math.max(e.frozen||0,B.t+sk.freeze); emit('fx',{k:'congelar',e}); if(sk.shards&&P&&P.id==='esquirlas') addShards(P,e,sk.shards,X); break; }
       case 'lanza': case 'cometa': { const e=first(); if(e) hit(e,sk.mult*(e.frozen>B.t?sk.frozenMul:1)); break; }
       // Arquero
-      case 'multidisparo': for(let r=0;r<(sk.times||1);r++) later(r*0.3,()=>{ for(const e of A().slice(0,sk.targets)) hit(e,sk.mult) }); break;
+      case 'multidisparo': for(let r=0;r<(sk.times||1);r++) later(r*0.3,()=>{ for(const e of A()) hit(e,sk.mult) }); break;
       case 'lluvia': { const n=sk.waves+(sk.perConc&&P&&P.id==='doble'?sk.perConc*Math.min(P.max,B.conc||0):0); for(let i=0;i<n;i++) later(i*sk.over/Math.max(1,n-1),()=>{ for(const e of A()) hit(e,sk.mult) }); break; }
       case 'perforar': for(const e of A()) hit(e,sk.mult); break;
       case 'apuntar': later(sk.charge,()=>hit(first(),sk.mult)); break;
@@ -541,7 +547,7 @@ function createGame(opts){
         BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
       case 'cadena': for(let i=0;i<sk.jumps;i++){ const os=A(); if(!os.length) break; hit(os[i%os.length],sk.mult); X.heal(sk.heal*h.hp);   // salta de uno a otro
         if(sk.luzEvery&&(i+1)%sk.luzEvery===0&&P&&P.id==='gracia') addLuz(P,1,X); } break;
-      case 'consagrar': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps}; break;
+      case 'consagrar': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps,n:sk.targets}; break;
       case 'juicio': { let n=0; for(const e of A()){ hit(e,sk.mult); n++; } X.heal(sk.healPer*n*h.hp); break; }
       case 'sombra': { const e=first(); if(!e) break; if(!hit(e,sk.mult+(sk.perStack||0)*stk(e,'shadow').length)) for(let i=0;i<sk.stacks;i++) shadow(e); break; }
       case 'estallido': { const e=first(); if(e) hit(e,sk.mult+sk.perStack*stk(e,'shadow').length); break; }
@@ -640,8 +646,8 @@ function createGame(opts){
   function advanceMode(){ if(!canAdvanceMode()||(B&&B.event)) return false; S.mode++; S.best=0; S.fase=1; S.wave=1; S.push=true; S.farmClears=0;
     statsDirty(); startWave(); emit('mode',{mode:S.mode,name:modeCfg().name}); emit('change'); return true }
   /* ---------- Mazmorra (evento diario) ---------- */
-  // Mazmorra infinita: monstruos sin parar hasta morir; el monstruo n es el de la fase n (1-150 de Normal, luego sigue con Pesadilla e Infierno).
-  // Iguales para todos los jugadores: no dependen de tu modo ni de tu récord.
+  // Mazmorra infinita: monstruos sin parar hasta morir. Empieza event.back fases por debajo de tu récord en tu modo y cada grupo es una fase más
+  // (sigue en el modo siguiente): los monstruos van a tu altura, así cuenta matar rápido (y en área), no solo aguantar.
   // Salen en grupos de 'group' monstruos (con groupHp × su vida): un grupo cada spawnEvery segundos, o al momento si no
   // queda ninguno vivo. El grupo n es el enemigo de la fase n. Puntúa por muertes (cada monstruo cuenta 1). 1 entrada gratis al día; las demás, 1 ticket.
   // Mazmorra infinita: cada ramp.every segundos los grupos son más grandes, salen antes, andan y pegan más rápido
@@ -653,10 +659,14 @@ function createGame(opts){
   const evAffix=d=>{ const L=CFG.event.affixes||[]; if(!L.length) return null; const k=d==null?evShownDay():d; return L[((k%L.length)+L.length)%L.length] };
   function evSpawn(){ const V=CFG.event, alive=B.enemies.some(e=>!e.dead), A=B.aff||{};
     if(alive&&B.t<B.nextSpawn) return;
-    const n=B.groups=(B.groups||0)+1, m=Math.min(MODES().length-1,Math.floor((n-1)/CAP())), c=modeCurve(m,n-m*CAP()), hp=c.hp*(V.groupHp||1)*(A.hp||1), R=evRamp();
+    if(V.maxAlive&&B.enemies.reduce((n,e)=>n+(e.dead?0:1),0)>=V.maxAlive) return;   // como mucho maxAlive vivos a la vez: el siguiente grupo espera
+    // el grupo n es una fase más que el anterior, empezando unas fases (event.back) por debajo de tu récord en tu modo: monstruos a tu altura
+    // (su vida, de esa fase; su ataque, de event.atkBack fases antes: aguantas, y lo que cuenta es limpiar a tiempo)
+    const at=i=>{ i=Math.max(0,i); const m=Math.min(MODES().length-1,Math.floor(i/CAP())); return modeCurve(m,i-m*CAP()+1) };
+    const n=B.groups=(B.groups||0)+1, i=(B.start||0)+n-1, c=at(i), ca=at(i-(V.atkBack||0)), hp=c.hp*(V.groupHp||1)*(A.hp||1), R=evRamp();
     const grp=Math.max(1,R.group+(A.group||0)), walk=R.walk*(A.walk||1);
     for(let i=0;i<grp;i++){ const at=B.t+walk+i*(V.groupGap||0);  // llegan escalonados
-      B.enemies.push({hp,max:hp,atk:c.atk*(V.groupAtk||1)*(A.atk||1),df:c.df,spawn:B.t,walk,arrive:at,next:at,first:false,dead:false,f:n,spd:R.spd*(A.spd||1)}); B.spawned++; }
+      B.enemies.push({hp,max:hp,atk:ca.atk*(V.groupAtk||1)*(A.atk||1),df:c.df,spawn:B.t,walk,arrive:at,next:at,first:false,dead:false,f:n,spd:R.spd*(A.spd||1)}); B.spawned++; }
     B.nextSpawn=B.t+R.every; }
   const evPhase=()=>B&&B.event?B.groups||0:0; // fase del último grupo que ha salido
   const inEvent=()=>!!(B&&B.event);
@@ -667,12 +677,14 @@ function createGame(opts){
   const evShownDay=()=>evPaused()?dayKey()-1:dayKey();        // durante la pausa se sigue viendo el ranking de ayer, que se está cerrando
   // Entrada gratis: 1 al día (evFree guarda el día en que se usó). Las demás, con ticket (se compra con tokens).
   const evFreeLeft=()=>S.evFree!==dayKey()?1:0;
+  // dónde empieza la Mazmorra: event.back fases por debajo de tu récord en tu modo (fase 1 de Normal al principio)
+  const evStart=()=>S.mode*CAP()+Math.max(0,(S.best||0)-(CFG.event.back==null?30:CFG.event.back));
   function startEvent(){
     if(!S||inEvent()||!modeOpen('lab')||(S.tickets<1&&!evFreeLeft())||evPaused()) return false;
     if(evPending()) claimEvent();                         // cobra antes el premio de un día anterior
     if(evFreeLeft()) S.evFree=dayKey(); else S.tickets--; const h=heroStats();
     S.evRun={day:dayKey(),kills:0};                       // el intento se guarda: si se cierra la app, cuenta lo que llevaba
-    B={event:true,t:0,boss:false,count:0,spawned:0,kills:0,nextSpawn:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,aff:evAffix(dayKey())};
+    B={event:true,t:0,boss:false,count:0,spawned:0,kills:0,nextSpawn:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,aff:evAffix(dayKey()),start:evStart()};
     save(); emit('eventStart',B); emit('change'); return true;
   }
   // Apunta las muertes de un intento en el día en que EMPEZÓ (un intento puede acabar pasada la medianoche)

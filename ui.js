@@ -1836,7 +1836,8 @@ function draw(dt){
     if(e._row==null) e._row=big?0:idx%2;
     const r=(big?(B.elite?26:21):13)*grow*(e._row?0.86:1)*(e.zp&&!big?1.25:1), y=gy-e._row*3; e._r=r;   // (élites llamados: algo más grandes)
     let x=e.dead?e.x:spawnX-(spawnX-cx)*p; if(!e.dead&&p>=1){x+=q*24;q++}
-    e.x=x; drawQ.push(()=>{
+    e.x=x; if(x>W+60) continue;   // fuera de la pantalla (cola larga de la Mazmorra): no se dibuja
+    drawQ.push(()=>{
     if(e.dead&&!e._burst){ e._burst=1; if(anim) ART.burst(x,gy-r,'#d9d2c0',8); }
     ART.monster(g,x,y,{kind:e._k,r,hue:e._hue,boss:big,elite:!!(B.elite||B.node==='boss'),t:anim?T+(e.spawn||0):0,walk:p<1&&anim?T:0,atk:pulse(e._atkAt,300),hit:anim&&e._hitAt&&now-e._hitAt<100?1-(now-e._hitAt)/100:0,die:Math.max(0,dieK,e.down||e.untarget>B.t||e.batU>B.t||e.boxIn?0.55:0)});   // caído, invisible, en murciélagos o en la caja: medio transparente
     if(anim&&!e.dead) ART.status(g,x,gy,r,{frozen:e.frozen>B.t,burn:(e.burn&&e.burn.some(u=>u.until>B.t))||(e.dot>B.t&&e.dotKind==='fuego'),poison:e.poison&&e.poison.some(p=>p.until>B.t),mark:e.mark>B.t},T);
@@ -1897,7 +1898,7 @@ const ST_ICO={life:['❤️','Vida','Si caes, pierdes una vida (sin vidas, la pa
   h_def:['🪓','Defensa rota','Tienes menos defensa',1],h_sueno_arde:['🔥','Sueño: el suelo arde','Pierdes vida cada segundo',1],h_sueno_lento:['🐌','Sueño: lento','Atacas más lento',1],
   h_sueno_roban:['🩸','Sueño: roban vida','Los enemigos se curan con lo que te hacen',1],h_sueno_copias:['👥','Sueño: copias','Han aparecido copias de un élite',1],
   sang:['🗡️','Sangría','Tus próximos golpes hacen +100 %'],aura:['✨','Consagrar','Te curas y dañas a los cercanos'],
-  guard:['🛡️','Guardia','Cada carga: −5 % de daño recibido'],rage:['😤','Furia','Cada carga: más daño'],conc:['🎯','Concentración','Cada carga: +5 % de daño'],luz:['🌟','Luz','Al llenarse, te curas y dañas a todos'],blades:['🌀','Cuchillas','Giran a tu alrededor y cortan a los cercanos'],
+  guard:['🛡️','Guardia','Cada carga: −5 % de daño recibido'],rage:['😤','Furia','Cada carga: más daño'],conc:['🎯','Concentración','Cada carga: +5 % de daño'],luz:['🌟','Luz','Al llenarse, te curas y dañas a los cercanos (hasta 3)'],blades:['🌀','Cuchillas','Giran a tu alrededor y cortan a los cercanos'],
   c_vida:['💪','Enemigos más fuertes','Maldición: los enemigos tienen +20 % de vida',1],c_fragil:['💔','Frágil','Maldición: −15 % de vida máxima',1],c_rasgo:['☠️','Élites temibles','Maldición: los élites traen un rasgo más',1],
   t_rapido:['⚡'],t_regenera:['💚'],t_escudo:['🛡️'],t_espinas:['🌵'],t_furioso:['😡'],t_gigante:['🗿'],
   m_invocador:['👥'],m_enfurecido:['💢'],m_fases:['🔰'],m_final:['♾️'],p_rage:['💢','Enfurecido','Pega y ataca más rápido'],p_summon:['👥','Refuerzos','Ha llamado ayudantes']};
