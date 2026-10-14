@@ -464,10 +464,10 @@ function createGame(opts){
   function addBlades(P,n){ B.blades=(B.blades||[]).filter(u=>u>B.t); for(let i=0;i<n;i++) B.blades.push(B.t+P.dur); B.blades.sort((a,b)=>b-a); B.blades.length=Math.min(B.blades.length,P.max) }
   // PvP: las espinas y la Onda de escudo hacen menos (× pvp.reflect); si no, el Guerrero A gana casi siempre
   const pvpRefl=()=>B.kind==='pvp'?(CFG.pvp.reflect==null?1:CFG.pvp.reflect):1;
-  // Guardia: con Represalia, al llenarse lanza la Onda de escudo (según la defensa, en la escala antigua: ÷ dfK), como mucho una vez cada cd s
+  // Guardia: con Represalia, al llenarse lanza la Onda de escudo (P.wave × su daño), como mucho una vez cada cd s
   // (mientras espera, la Guardia se queda llena)
   function addGuard(P,n,X){ B.guard=Math.min(P.max,(B.guard||0)+n); if(!P.wave||B.guard<P.max||B.t<(B.ondaAt||0)) return; B.guard=0; B.ondaAt=B.t+(P.cd||0); const h=X.h;
-    for(const o of upTo(nearE(),P.targets)) X.zap(o,dmgF(P.wave*h.df/h.dfK,o.df)*bossM(h)*pvpRefl(),{burst:true}); emit('fx',{k:'onda'}); }
+    for(const o of upTo(nearE(),P.targets)) X.zap(o,kitBase(P,h,o)*P.wave*pvpRefl(),{burst:true}); emit('fx',{k:'onda'}); }
   // Gracia: al llenarse la Luz se cura (heal: % de su vida) y hace P.hit × su daño a todos los cercanos (según su ataque, no su vida); después, cd s sin cargar
   function addLuz(P,n,X){ if(B.t<(B.luzAt||0)) return; B.luz=(B.luz||0)+n; if(B.luz<P.max) return; B.luz=0; B.luzAt=B.t+(P.cd||0); const h=X.h; X.heal(P.heal*h.hp);   // (cd: como mucho una vez cada cd s)
     for(const o of upTo(nearE(),P.targets)) X.zap(o,kitBase(P,h,o)*P.hit,{burst:true}); emit('fx',{k:'gracia'}); }
@@ -482,7 +482,8 @@ function createGame(opts){
     else if(P.id==='cuchillas'&&crit) addBlades(P,1); }
   // después de recibir un golpe (d0: el daño antes de los escudos)
   function kitOnHurt(P,e,d0,X){ if(!P) return; const h=X.h;
-    if(P.id==='guardia'){ if(d0>0){ const os=nearN(5); for(const o of os) X.zap(o,d0*P.thorns/h.hpK/os.length*pvpRefl(),{thorns:true}); } addGuard(P,1,X); }   // espinas repartidas entre los 5 primeros
+    if(P.id==='guardia'){ if(d0>0){ const os=nearN(5); for(const o of os) X.zap(o,d0*P.thorns/(B.kind==='pvp'?1:h.hpK)/os.length*pvpRefl(),{thorns:true}); } addGuard(P,1,X); }   // espinas repartidas entre los 5 primeros
+    // (en campaña ÷ hpK: los monstruos pegan en la escala pequeña de vida; en PvP el golpe del otro héroe ya es de su escala: el % de la descripción)
     else if(P.id==='furia') B.rage=Math.min(P.max,(B.rage||0)+1);
     else if(P.id==='gracia') addLuz(P,1,X); }
   // cada paso: quemaduras, veneno, sangrado y Sombras (que curan), cuchillas, Terremoto y lo que llega más tarde (B.kq)
@@ -515,9 +516,9 @@ function createGame(opts){
       // un objetivo, sin más
       case 'tajo': case 'disparo': case 'punalada': hit(first(),sk.mult); break;
       // Guerrero
-      case 'escudazo': { hit(first(),sk.mult); let n=0; for(const e of A()){ X.zap(e,dmgF(sk.def*h.df/h.dfK,e.df)*bossM(h),{skill:k}); n++; }
+      case 'escudazo': { hit(first(),sk.mult); let n=0; for(const e of A()){ hit(e,sk.area); n++; }   // mult al primero y area (con su daño, como todas) a los de alrededor
         if(sk.guard&&P&&P.id==='guardia'&&n) addGuard(P,sk.guard*n,X); break; }
-      case 'provocar': for(const e of A()) hit(e,sk.mult); BUF.list.push({until:CT+sk.dur,taken:sk.taken}); if(sk.shield) X.addShield(sk.shield*h.hp); break;
+      case 'provocar': for(const e of A()) hit(e,sk.mult); if(sk.taken) BUF.list.push({until:CT+sk.dur,taken:sk.taken}); if(sk.shield) X.addShield(sk.shield*h.hp); break;
       case 'terremoto': for(const e of A()) hit(e,sk.mult); B.quake={until:B.t+sk.dur,dps:sk.dot,n:sk.targets}; B.eslow=B.t+sk.dur; B.eslowM=sk.slow; break;
       case 'desgarro': { const e=first(); if(!e) break; const m=sk.mult*(sk.low&&e.hp<sk.low*e.max?sk.lowMul:1); if(!hit(e,m)) for(let i=0;i<sk.bleed;i++) bleed(e); break; }
       case 'triple': { const r=B.rage||0; B.rage=0; for(let i=0;i<sk.hits;i++){ const e=first(); if(!e) break; if(!hit(e,sk.mult+sk.perRage*r)&&sk.bleed) bleed(e); } break; }
@@ -770,6 +771,7 @@ function createGame(opts){
     P.fight={name:r.name,cls:r.cls,bot:r.bot,rating:r.rating,id:r.id,match:r.match};   // si se cierra la app a mitad, cuenta como derrota
     const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.hpMul?CFG.pvp.hpMul:pvpTtk(S.evo,g.S.evo)*(dps(a,b)*pvpK2(S,g.S)+dps(b,a)*pvpK2(g.S,S))/(a.hp+b.hp);   // (con la fuerza de cada clase: todos los duelos duran parecido)   // vida en PvP: × hpMul (igual para los dos)
     const gs=g.duelEnter({...a,name:S.name,cls:S.cls},M), ms=duelEnter({...b,name:r.name,cls:r.cls},M); GH=g;
+    const F=CFG.pvp.forma||0; B.forma=1+(rand()*2-1)*F; g.B.forma=1+(rand()*2-1)*F;   // «el día» de cada uno: su daño en este duelo × 1 ± forma (que un 5 % de ventaja no gane siempre)
     Object.assign(B.enemies[0],{hp:gs.hp,max:gs.hp}); Object.assign(g.B.enemies[0],{hp:ms.hp,max:ms.hp});
     save(); emit('eventStart',B); emit('change'); return true }
   // fuerza en PvP (multiplica el daño que hace): CFG.pvp.cls[clase] = número, o por etapa del kit {base, A1, B1, A2, B2}
@@ -789,11 +791,12 @@ function createGame(opts){
       const gb=GH.B, me=B.enemies[0], them=gb.enemies[0], m0=me.hp, t0=them.hp;
       stepCore(s); GH.step(s);
       const out=Math.max(0,m0-me.hp), back=Math.max(0,t0-them.hp), gh=GH.heroStats(), h=heroStats();
-      if(out>0) gb.inc.push({d:out*pvpK2(S,GH.S),a:h.atk}); if(back>0) B.inc.push({d:back*pvpK2(GH.S,S),a:gh.atk});   // fuerza de cada clase y camino en PvP (solo el daño que hace)   // se aplica en el siguiente paso, con sus defensas
+      if(out>0) gb.inc.push({d:out*pvpK2(S,GH.S)*(B.forma||1),a:h.atk}); if(back>0) B.inc.push({d:back*pvpK2(GH.S,S)*(gb.forma||1),a:gh.atk});   // fuerza de cada clase y camino en PvP (solo el daño que hace)   // se aplica en el siguiente paso, con sus defensas
       // congelar = no puede atacar (en PvP dura × pvp.freeze; si no, el que congela primero encadena y el equipo no cuenta)
       const fz=CFG.pvp.freeze==null?1:CFG.pvp.freeze;
-      if(me.frozen>B.t&&me.frozen!==me.fz0){ me.fz0=me.frozen; gb.stun=Math.max(gb.stun||0,gb.t+(me.frozen-B.t)*fz); }   // (una vez por congelado: el doble sigue congelado para Lanza y Destrozar)
-      if(them.frozen>gb.t&&them.frozen!==them.fz0){ them.fz0=them.frozen; B.stun=Math.max(B.stun||0,B.t+(them.frozen-gb.t)*fz); }
+      // (una vez por congelado, y también para los bonus contra congelados: Lanza, Cometa, Destrozar)
+      if(me.frozen>B.t&&me.frozen!==me.fz0){ me.frozen=B.t+(me.frozen-B.t)*fz; me.fz0=me.frozen; gb.stun=Math.max(gb.stun||0,gb.t+(me.frozen-B.t)); }
+      if(them.frozen>gb.t&&them.frozen!==them.fz0){ them.frozen=gb.t+(them.frozen-gb.t)*fz; them.fz0=them.frozen; B.stun=Math.max(B.stun||0,B.t+(them.frozen-gb.t)); }
       Object.assign(me,{hp:gb.hp,max:gh.hp,df:gh.df,dead:false}); Object.assign(them,{hp:B.hp,max:h.hp,df:h.df,dead:false});
       if(B.hp<=0||gb.hp<=0||B.rt>=V.maxT){ pvpFightEnd(); return } } }
   function pvpFightEnd(){ const P=S.pvp, r=P.rival, h=heroStats(), gh=GH?GH.heroStats():null, gb=GH?GH.B:null;
