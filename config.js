@@ -488,14 +488,15 @@ const CFG = {
       {to:25,em:2,ch:'silver',n:1},{to:50,em:1,ch:'wood',n:2},{to:100,em:1,ch:'wood',n:1}],
   },
   wboss:{ // Jefe semanal: 1 min contra un jefe inmortal; ranking semanal por daño (se suman los intentos); 1 entrada gratis a la semana, las demás con Ticket Jefe
-    dur:60, rampTo:300, atkMult:2,                // golpea como un jefe de la fase n (n sube de 1 a rampTo durante el minuto) × atkMult
+    dur:60, rampTo:300, atkMult:2,                // es como un jefe de la fase n (n sube de 1 a rampTo durante el minuto: su defensa sube) × atkMult
+    noHurt:true,                                  // no te pega (ni él ni sus esbirros; sus mecánicas no te quitan vida): es un reto de daño de 1 minuto, siempre llegas al final
     ticketCost:150,                               // Ticket Jefe en la tienda: 150 tokens
     // jefe de la semana: rota cada semana entre los 5 JEFES de tu modo (CFG.zones), con su pasiva y sus habilidades. Como no
     // muere, lo que salta al bajar de vida salta con el tiempo (a los 30 s es como si estuviera al 50 %). minion: sus esbirros
     // (vida y ataque × los del jefe de ese momento). score: cuánto mueve el daño (1 hasta medirlo con simulaciones)
     minion:{hp:0.6,atk:0.4}, score:1,
     rivals:99, spread:0.4, rivalExtra:[0.15,0.05], rivalBase:0.75, // rivales medidos a mitad de semana; así el jugador medio queda hacia el puesto 50
-    curve:[[1,2200],[2,6000],[3,13600],[5,32400],[7,70300],[10,127200],[13,191000],[15,288500],[17,458500],[20,958600],[25,1959000],[30,3131500],[35,4433500],[40,5820900],[45,7041000]], // [días de juego, daño del jugador medio en una pelea] (simulaciones F2P, 4 semillas × 5 clases)
+    curve:[[1,12400],[2,21300],[3,39400],[5,95800],[7,198400],[10,467900],[13,2481400],[15,4744600],[17,7758200],[20,12726900],[25,31385500],[30,132422100],[35,361353800],[40,1259918800],[45,2222640200]], // [días de juego, daño del jugador medio en una pelea] (tests/pace.js con WBCAL: 5 clases × A/B × 2 semillas, media de los días d−1 a d+1; medida con el jefe sin daño)
     rewards:[                                     // premio según tu puesto de la semana (lunes 01:00 UTC)
       // ×3 del premio diario de la Mazmorra en el mismo puesto (solo hay uno por semana); los cofres de madera
       // se cambian por plata de valor parecido (2 de madera ≈ 1 de plata) para que el premio luzca

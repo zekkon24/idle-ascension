@@ -405,7 +405,7 @@ function createGame(opts){
     for(const e of B.enemies){
       if(!e.dead&&e.frozen>B.t&&!e.noCC){ if(e.arrive>B.t){ e.spawn+=dt; e.arrive+=dt; } e.next=Math.max(e.next,e.frozen); continue; }   // congelado
       if(e.dead||e.down||(e.arrive>B.t&&!e.ranged)) continue;   // (Fuego infernal: ataca antes de llegar)
-      if(e.boxIn||e.windU>B.t||e.batU>B.t){ e.next=Math.max(e.next,B.t); continue; }   // escondido, cargando el golpe o en murciélagos
+      if(e.boxIn||e.windU>B.t||e.batU>B.t||B.noHurt){ e.next=Math.max(e.next,B.t); continue; }   // escondido, cargando el golpe o en murciélagos (noHurt: Jefe semanal, no pegan)
       while(B.t>=e.next){
         takeHit(e,()=>{ let d=dmgF(e.atk*(e.am||1),h.df*buffMul('df')*heroDfMul())*zoneAtkMul(e); if(e.cr&&rand()<e.cr) d*=1+e.cd; return d });
         if(B.hp>0&&B.mechOn) zoneAfterAttack(e);   // zonas: veneno, infección, burla, locura…
@@ -415,7 +415,7 @@ function createGame(opts){
         if(e.dead) break;
       }
     }
-    const Y={h,kill,hit:(e,m)=>takeHit(e,()=>m*dmgF(e.atk*(e.am||1),h.df*buffMul('df')*heroDfMul()))};   // golpes de las habilidades de los enemigos
+    const Y={h,kill,hit:(e,m)=>B.noHurt?false:takeHit(e,()=>m*dmgF(e.atk*(e.am||1),h.df*buffMul('df')*heroDfMul()))};   // golpes de las habilidades de los enemigos
     if(B.mechOn&&B.kind!=='tower'){ towerTick(h,dt); if(zoneTick(h,dt,Y)){ B.hp=0; if(B.event) endEvent(); else lose(); return } }   // élites y JEFES de zona: pasivas y habilidades
     if(B.kind==='tower'){
       if(towerTick(h,dt)||(B.mechOn&&zoneTick(h,dt,Y))){ endEvent(); return }   // rasgos de los élites, mecánicas de los jefes y lo de su zona
@@ -833,6 +833,7 @@ function createGame(opts){
       towerGuard(e);
       if(e.regen&&e.hp<e.max) e.hp=Math.min(e.max,e.hp+e.regen*e.max*dt);
       if(e.fur&&!e.furOn&&e.hp<TR.furioso.below*e.max){ e.furOn=true; e.atk*=TR.furioso.atk; emit('fx',{k:'furia',e}); }
+      if(e.thN&&B.noHurt) e.thN=0;
       if(e.thN){ const d=e.thN*e.thorns*dmgF(e.atk,h.df*buffMul('df'))*h.dmgTaken; e.thN=0; B.hp-=d; emit('heroHit',{d}); if(B.hp<=0) return true; }
       if(e.mech==='enfurecido'&&!e.rage&&e.hp<M.enfurecido.below*e.max){ e.rage=true; e.atk*=M.enfurecido.atk; e.spd=(e.spd||1)*M.enfurecido.spd; emit('bossPhase',{k:'rage'}); }
       if(e.mech==='fases'&&e.phases&&e.phases.length&&e.hp<e.phases[0]*e.max){ e.phases.shift(); e.inv=B.t+M.fases.inv; e.hp=Math.min(e.max,e.hp+M.fases.heal*e.max); emit('bossPhase',{k:'shield'}); }
@@ -872,7 +873,7 @@ function createGame(opts){
   const zoneShield=(x,h)=>B?zEat(x,h):x;
   // Locura: atacas a uno al azar
   const zoneTarget=cand=>B.hs&&B.hs.madU>B.t&&cand.length>1?cand[Math.floor(rand()*cand.length)]:null;
-  function addHeroDot(k,n,o){ const H=hsOf(), D=(CFG.heroDot||{})[k]||{pct:0.01,dur:6,max:3}; o=o||{};
+  function addHeroDot(k,n,o){ if(B&&B.noHurt) return; const H=hsOf(), D=(CFG.heroDot||{})[k]||{pct:0.01,dur:6,max:3}; o=o||{};
     for(let i=0;i<n;i++){ H.dots.push({k,until:B.t+(o.dur||D.dur),pct:o.pct||D.pct}); const mine=H.dots.filter(x=>x.k===k&&x.until>B.t); if(mine.length>(D.max||3)) H.dots.splice(H.dots.indexOf(mine[0]),1); }
     emit('fx',{k:'heroDot',dot:k}) }
   const addMad=(n,P)=>{ const H=hsOf(); H.mad+=n; if(H.mad>=(P.max||3)){ H.mad=0; H.madU=B.t+(P.dur||2); emit('fx',{k:'locura'}); } };
@@ -918,7 +919,7 @@ function createGame(opts){
       case 'burla': H.burlaPer=P.per; H.burla=Math.min(P.max,H.burla+1); break;
       case 'locura': addMad(1,P); break;
       case 'ansia': e.ansia=Math.min(P.max,(e.ansia||0)+1); break;
-      case 'beso': { const h=heroStats(), x=P.pct*h.hp; B.hp=Math.max(0,B.hp-x); emit('heroHit',{d:x}); e.hp=Math.min(e.max,e.hp+P.pct*e.max); e.hpSeen=e.hp; break; }
+      case 'beso': { const h=heroStats(), x=P.pct*h.hp; if(!B.noHurt){ B.hp=Math.max(0,B.hp-x); emit('heroHit',{d:x}); } e.hp=Math.min(e.max,e.hp+P.pct*e.max); e.hpSeen=e.hp; break; }
     } }
   // después de cualquier daño al héroe (golpes y habilidades): robo de vida de los enemigos y Festín de dolor
   function zoneOnHurt(e,d){ if(!B.mechOn||!(d>0)) return; const h=heroStats(), fr=d/h.hp;
@@ -985,7 +986,7 @@ function createGame(opts){
     for(const e of B.enemies){ if(e.dead||e.down||!e.zp||e.arrive>B.t) continue; const P=e.zp;
       if(P.id==='ardiente') loss+=P.pct; if(P.id==='lago') loss+=P.per*(e.lago||0); if(P.id==='formas'&&e.form===2) loss+=P.burn; }
     if(B.dream&&B.dream.k==='arde'&&B.dream.until>B.t) loss+=B.dream.burn;
-    if(loss>0){ const x=loss*h.hp*dt; B.hp-=x; zFeast(x/h.hp); if(B.hp<=0) return true; }
+    if(loss>0&&!B.noHurt){ const x=loss*h.hp*dt; B.hp-=x; zFeast(x/h.hp); if(B.hp<=0) return true; }
     // cola: lo que revienta al morir (Gases)
     if(B.zq&&B.zq.length){ const q=B.zq; B.zq=[]; for(const x of q) Y.hit(x.src,x.boom); if(B.hp<=0) return true; }
     for(const e of B.enemies.slice()){
@@ -1291,7 +1292,7 @@ function createGame(opts){
     if(wbPending()) wbClaim();
     if(wbFreeLeft()) S.wbFree=weekKey(); else S.bossTickets--; const h=heroStats(), s=wbStats(1), V=CFG.event;
     S.wbRun={week:weekKey(),dmg:0};
-    B={intro:CFG.encounter.intro,event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:wbBoss(weekKey())};
+    B={intro:CFG.encounter.intro,event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:wbBoss(weekKey()),noHurt:!!CFG.wboss.noHurt};   // noHurt: no te pega (reto de daño)
     B.enemies.push({hp:Infinity,max:Infinity,atk:s.atk,df:s.df,spawn:0,walk:V.walk,arrive:V.walk,next:V.walk,first:false,dead:false,immortal:true});
     wbUpdate(); if(B.wb) zoneSetup(B.enemies[0],1,S.mode,'jefe',{zone:B.wb.zone,keepMinion:true,noEscort:true});   // con su pasiva y sus habilidades
     save(); emit('eventStart',B); emit('change'); return true;
