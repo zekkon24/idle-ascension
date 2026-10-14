@@ -528,7 +528,8 @@ const CFG = {
     // vs (ajuste por pareja) y skill (daño de las habilidades por clase) ya no hacen falta con los héroes iguales: vacíos.
     skill:{},
     vs:{},
-    cls:{Guerrero:{base:0.984,A1:0.609,B1:0.803,A2:0.734,B2:0.943},Mago:{base:1.096,A1:1.206,B1:1.304,A2:1.236,B2:1.128},Arquero:{base:1.056,A1:1.173,B1:0.97,A2:1.208,B2:1.025},Asesino:{base:1.056,A1:1.389,B1:0.89,A2:1.364,B2:0.878},Clerigo:{base:0.832,A1:0.911,B1:1.014,A2:0.757,B2:0.924}}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+    // (Asesino base, B1 y B2: ×1,02 a mano sobre lo que calculó ajustar-pvp.js, para que no queden a media tabla; si se vuelve a calcular, repetirlo)
+    cls:{Guerrero:{base:0.984,A1:0.609,B1:0.803,A2:0.734,B2:0.943},Mago:{base:1.096,A1:1.206,B1:1.304,A2:1.236,B2:1.128},Arquero:{base:1.056,A1:1.173,B1:0.97,A2:1.208,B2:1.025},Asesino:{base:1.077,A1:1.389,B1:0.908,A2:1.364,B2:0.896},Clerigo:{base:0.832,A1:0.911,B1:1.014,A2:0.757,B2:0.924}}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
   // ---------- Torre (trozo de la lista CFG) ----------
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord
