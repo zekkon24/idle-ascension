@@ -367,7 +367,7 @@ G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
     gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
 /* ---------- avisos generales del motor -> pantalla ---------- */
 G.on('mode',({name})=>{ showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves a la fase 1. Los enemigos son mucho más fuertes, dan más oro y los jefes sueltan ${G.modeCfg().mat}.</p><button class="btn gold" data-act="close">Continuar</button>`) });
-G.on('defeat',({fase,kind})=>{ toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase); const k=G.offerCheck(); if(k) offerModal(k); });   // tras X derrotas contra el mismo jefe: Rompe el muro
+G.on('defeat',({fase,kind,time})=>{ toast((time?'¡Se acabó el tiempo! ':'')+(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase)); const k=G.offerCheck(); if(k) offerModal(k); });   // tras X derrotas contra el mismo jefe: Rompe el muro
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡Se enfurece!':k==='shield'?'¡Escudo de fases!':'¡Llama refuerzos!'); });
@@ -503,7 +503,7 @@ function updateHUD(){
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   $('#faseTxt').classList.add('top');   // debajo de tu barra de vida (los iconos de abajo a la derecha quedan libres)
   setHTML($('#faseTxt'),ev&&B.kind==='pvp'?`⏱ ${Math.ceil(Math.max(0,CFG.pvp.maxT-(B.rt||0)))} s · ×${G.duelSpeed().toLocaleString('es-ES',{maximumFractionDigits:1})}`:ev&&B.kind==='hall'?`⏱ ${mmss(B.t*1000)}${B.hallRage?` · 🔥 Furia ${B.hallRage}`:''}`:ev&&B.kind==='tower'?(B.final?`Daño ${fmt((G.towerState().run.finalDmg||0)+B.mD)}`:''):ev&&B.kind==='boss'?`⏱ ${mmss(Math.max(0,CFG.wboss.dur-B.t)*1000)} · Daño ${fmt(B.dmg)}`
-    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-(B.rt||0))*1000)}${G.labSpeed()>1.05?` · ×${G.labSpeed().toLocaleString('es-ES',{maximumFractionDigits:1})}`:''} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:G.streak().mul>1?`<span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:'');   // campaña: la fase ya va en el emblema de arriba
+    :ev?`⏱ ${mmss(Math.max(0,CFG.event.maxDur-(B.rt||0))*1000)}${G.labSpeed()>1.05?` · ×${G.labSpeed().toLocaleString('es-ES',{maximumFractionDigits:1})}`:''} · Nv ${(G.evRamp()||{r:0}).r+1} · ☠ ${B.kills}`:B&&B.boss&&CFG.encounter.bossTime?`⏱ ${mmss(Math.max(0,CFG.encounter.bossTime-B.t)*1000)}`:G.streak().mul>1?`<span class="stk">🔥 +${Math.round((G.streak().mul-1)*100)} %</span>`:'');   // campaña: la fase ya va en el emblema de arriba
   { const f=$('#faseTxt'); f.hidden=!f.innerHTML; }
   setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span>`);   // solo el nombre: la clase ya se ve en el retrato
   avatar();   // nombre y, debajo, la clase

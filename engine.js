@@ -273,7 +273,7 @@ function createGame(opts){
   function spawnEnemy(late){   // late: sale un poco después (los del mismo grupo llegan escalonados)
     const e=enemyStats(S.fase,S.wave,B.boss), W=walkT()+(late||0); // (enemyStats ya aplica el modo)
     B.enemies.push({hp:e.hp,max:e.hp,atk:e.atk,df:e.df,spawn:B.t,walk:W,arrive:B.t+W,next:B.t+W,first:true,dead:false,spd:B.boss?1:eSpd(S.fase)});
-    if(B.boss) zoneSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,bossRole(S.fase));   // élite o JEFE de su zona
+    if(B.boss) zoneSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,bossRole(S.fase),{muro:true});   // élite o JEFE de su zona (con su fuerza de muro de la campaña)
     B.spawned++;
   }
   function endWave(delay){ B.over=true; B.wait=delay }
@@ -294,7 +294,7 @@ function createGame(opts){
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); if(B.hp<=0){ endEvent(); return } }
-    if(!B.event) surpriseTick();
+    if(!B.event){ if(B.boss&&CFG.encounter.bossTime&&B.t>=CFG.encounter.bossTime){ lose(true); return } surpriseTick(); }   // élite y JEFE de la campaña: si no cae a tiempo, cuenta como derrota
     else if(!B.kind){ if((CFG.event.dur&&B.t>=CFG.event.dur)||(B.rt||0)>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // solo la Mazmorra (no tiene kind): un intento de ayer se cierra al acabar la pausa
     // curación (ls: viene del robo de vida)
     // (zonas: infección, sin curar, pudrición… · PvP: × pvp.heal)
@@ -593,11 +593,11 @@ function createGame(opts){
     }
     emit('fase',f); emit('change'); endWave(CFG.delays.fase);
   }
-  function lose(){
+  function lose(time){   // time: se acabó el tiempo contra el élite/JEFE
     if(B&&B.boss&&!B.event&&S.fase===S.best+1){ const k=S.mode*1000+S.fase; S.bossTry={k,n:S.bossTry&&S.bossTry.k===k?S.bossTry.n+1:1}; }   // derrotas seguidas contra el élite/JEFE que empujas (oferta 'Rompe el muro')
     let msg;
     if(S.fase===S.best+1){S.push=false;S.fase=Math.max(1,S.best);msg='farm'} else {S.fase=Math.max(1,S.fase-1);msg='retreat'}
-    S.wave=1; emit('defeat',{fase:S.fase,kind:msg}); endWave(CFG.delays.defeat);
+    S.wave=1; emit('defeat',{fase:S.fase,kind:msg,time:!!time}); endWave(CFG.delays.defeat);
   }
   function setAuto(v){ S.autoPush=v; if(B&&B.event){ emit('change'); return } if(v&&S.fase!==top()){S.push=top()>S.best;S.fase=top();S.wave=1;startWave()} emit('change') }
   function goFase(f){ if(B&&B.event) return; f=Math.max(1,Math.min(top(),f|0)); if(f===S.best+1) S.push=true; else S.push=false; S.fase=f;S.wave=1;startWave(); emit('change') }
@@ -880,7 +880,7 @@ function createGame(opts){
   // o: {zone (zona fija), keepMinion (no cambia B.minion), hpM/atkM (copias), noEscort}
   function zoneSetup(e,f,mode,role,o){ o=o||{}; const Z=o.zone||zoneAt(mode,f), D=Z&&Z[role]; if(!D) return null; B.mechOn=true;
     if(!o.keepMinion){ const m=enemyStats(f,1,false,mode); B.minion={hp:m.hp,atk:m.atk,df:m.df,spd:eSpd(f)}; }
-    const K=D.k||{}; if(K.hp&&!e.immortal){ e.hp*=K.hp; e.max*=K.hp; } e.atkK=K.atk||1; e.atk*=e.atkK;   // k: ajuste propio de vida y ataque (equilibrio)
+    const K=D.k||{}, W=o.muro&&D.muro||1, kh=(K.hp||1)*W; if(kh!==1&&!e.immortal){ e.hp*=kh; e.max*=kh; } e.atkK=(K.atk||1)*W; e.atk*=e.atkK;   // k: ajuste propio de vida y ataque (equilibrio) · muro: × vida y ataque solo en la campaña (o.muro)
     Object.assign(e,{zone:Z,role,name:D.name,title:D.title||'',zp:D.p,am:1,dm:1,sm:1,amK:1,hpSeen:e.hp,df0:e.df,hitN:0});
     const first=(e.arrive||0)+((CFG.zones||{}).first||3);
     e.zs=(role==='jefe'?[D.own,D.s1,D.s2]:[D.s]).filter(s=>s&&s.cd).map((s,i)=>({...s,next:first+i*1.7}));
