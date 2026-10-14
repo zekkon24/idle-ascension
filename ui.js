@@ -415,7 +415,7 @@ function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pan
    Igual en la campaña, la Sala de jefes, el Jefe semanal y la Torre. */
 // el élite o JEFE de zona del combate (el primero que tenga pasiva) y lo que sale en su cartel
 const encFoe=B=>B.enemies.find(e=>e.zp&&!e.summoned);
-const encSkills=e=>(e.zsAll||[]).map(s=>s.name);
+const encSkills=e=>(e.acor?['🛡 Acorazado: defensa '+fmt(e.df)]:[]).concat((e.zsAll||[]).map(s=>s.name));   // (acorazado: su defensa, la primera)
 const encSub=e=>(e.title?e.title+' · ':'')+e.zp.name+': '+e.zp.desc;
 function encInfo(B,ev){ if(!B) return null; const fmtN=n=>n.toLocaleString('es-ES');
   if(B.kind==='tower'){
@@ -536,7 +536,7 @@ function updateHUD(){
   if(G.towerRewardPending()&&!modalOpen()) towerPickModal();   // la recompensa de la pelea no se puede saltar
   const on=!ev&&G.canAdvanceMode(); if(on&&modeReady===false) toast(`¡${CFG.modes[S.mode+1].name} desbloqueado! Míralo en Modos → Campaña`); modeReady=on;
   // habilidades: solo las desbloqueadas; la recarga se ve con el reloj gris (sin números). En los eventos, botón Auto/Manual
-  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?true:inEv&&!!(S.opt&&S.opt.evAuto), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false), key=L.map(x=>x.slot+x.id).join()+inEv+on;
+  const sb=$('#skBar'); if(sb){ const L=G.skills().filter(x=>!x.locked), inEv=G.inEvent(), pvp=G.pvpOn(), auto=pvp?true:inEv&&!(S.opt&&S.opt.evAuto===false), on=inEv?auto:!(S.opt&&S.opt.autoSkills===false), key=L.map(x=>x.slot+x.id).join()+inEv+on;
     // al final de las habilidades, un círculo AUTO/MAN (se lanzan solas o a mano)
     sb.hidden=G.autoOnly();   // PvP, Torre y Mazmorra: siempre automáticas, sin botones
     if(sb.dataset.k!==key){ sb.dataset.k=key; sb.classList.toggle('many',L.length>4); sb.innerHTML=L.map(x=>`<button class="skb" data-act="skill" data-k="${x.slot}" aria-label="${esc(x.name||'')}">${skIcon(SKI[x.id]?x.id:x.look||x.id)}<i class="skcd"></i></button>`).join('')
@@ -557,7 +557,7 @@ acts({
     const r=G.useSkill(k); if(r.ok) haptic('medium'); else if(r.why==='cd') toast(`${x.name}: ${Math.ceil(r.left)} s`); else if(r.why==='nofight') toast('Espera a que empiece el combate'); else if(r.why==='auto') toast('Aquí las habilidades son automáticas') },
   // botón Auto/Manual del combate: en los eventos cambia opt.evAuto; en la campaña, opt.autoSkills
   skAuto:()=>{ if(G.autoOnly()){ toast('Aquí las habilidades son siempre automáticas'); }
-    else if(G.inEvent()){ G.setOpt('evAuto',!(S.opt&&S.opt.evAuto)); toast(S.opt.evAuto?'Habilidades automáticas en el evento':'Habilidades a mano en el evento'); }
+    else if(G.inEvent()){ G.setOpt('evAuto',S.opt&&S.opt.evAuto===false); toast(S.opt.evAuto?'Habilidades automáticas en el evento':'Habilidades a mano en el evento'); }   // (por defecto, automáticas)
     else { G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); } updateHUD(); if(tab==='dev') renderTab() },
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
 });
@@ -1933,6 +1933,7 @@ function vsHud(B,h){ const el=$('#vsHud'); if(!el) return; el.hidden=!B; if(!B) 
   const foes=[]; if(run){ if(B.mech) foes.push(['m_'+B.mech]); if(B.node==='elite') for(const t of new Set(B.enemies.flatMap(e=>e.traits||[]))) foes.push(['t_'+t]); }
   for(const e of B.enemies) if(!e.dead&&e.phase&&!foes.some(f=>f[0]==='p_'+e.phase)) foes.push(['p_'+e.phase]);
   for(const e of B.enemies) if(!e.dead&&e.zp){ const k='z_'+e.zp.id+'_'+e.zp.name; if(!ST_ICO[k]) ST_ICO[k]=[ZICO[e.zp.id]||'✦',e.name+' · '+e.zp.name,e.zp.desc,1]; if(!foes.some(f=>f[0]===k)) foes.push([k]); }   // pasivas de los élites y JEFES de zona
+  for(const e of B.enemies) if(!e.dead&&e.acor){ const k='acor_'+e.acor; if(!ST_ICO[k]) ST_ICO[k]=['🛡️','Acorazado','×'+e.acor+' de defensa: tus golpes le hacen menos (y tiene menos vida). Cuanto más daño tengas, menos te para; lo que ignora defensa lo atraviesa.',1]; if(!foes.some(f=>f[0]===k)) foes.push([k]); }   // élites acorazados
   for(const [k] of foes){ if(k[0]==='t'&&!ST_ICO[k][1]){ const t=TT.traits[k.slice(2)]; ST_ICO[k][1]=t.name; ST_ICO[k][2]=t.desc; } if(k[0]==='m'&&!ST_ICO[k][1]){ ST_ICO[k][1]=MECH[k.slice(2)]; ST_ICO[k][2]=TT.bossMech.desc[k.slice(2)]; } }
   const put=(id,list)=>{ const x=$(id), hh=stIcons(list.map(([k,e])=>[k,e&&e.replace(/\d+ s$/,'')])); if(x&&x.dataset.h!==hh){ x.dataset.h=hh; x.innerHTML=stIcons(list); } };
   put('#stMe',mine); put('#stFoe',foes); }

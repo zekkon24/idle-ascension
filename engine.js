@@ -100,10 +100,9 @@ function createGame(opts){
   // efecto del arma equipada si es Legendaria o Mítica (el de su clase)
   function legendFx(){ const w=S&&equipped(); return w&&CFG.weapon.legend&&R.indexOf(w.r)>=R.indexOf('L')?CFG.weapon.legend[w.cls]||null:null }
   const heroStats=()=>HS||(HS=computeStats());
-  // curva por nivel de cada clase: los niveles ganados después de cada evolución valen grow[i] × lo de antes en daño (gatk)
-  // y growHp[i] en vida y defensa (ghp, gdf). Calculada con simulaciones para que todas las clases tarden lo mismo.
-  function lvlGain(k){ const L=S.lvl-1, T=evoTiers(), c=CFG.classes[S.cls]||{}, G=(k==='atk'?c.grow:c.growHp)||[]; let v=0, from=0;
-    for(let i=0;i<=Math.min(S.evo,T.length);i++){ const to=i<S.evo&&T[i]?T[i].lvl-1:Infinity, n=Math.max(0,Math.min(L,to)-from);
+  // niveles ganados (contando lo que valen): los de después de cada evolución valen grow[i] × lo de antes (en vida, daño y defensa)
+  function lvlGain(lvl,evo,cls){ const L=lvl-1, T=evoTiers(), G=(CFG.classes[cls]||{}).grow||[]; let v=0, from=0;
+    for(let i=0;i<=Math.min(evo,T.length);i++){ const to=i<evo&&T[i]?T[i].lvl-1:Infinity, n=Math.max(0,Math.min(L,to)-from);
       v+=n*(i===0?1:G[i-1]||1); from=Math.max(from,to); if(L<=to) break; }
     return v }
   function computeStats(){
@@ -111,13 +110,11 @@ function createGame(opts){
     const c=CFG.classes[S.cls], u=S.up, U=CFG.upgrades, w=equipped(), A=S.absorb||{}, KS=(kitNow()||{}).stat||{};   // KS: ajuste de daño de la etapa del kit (equilibrio)
     const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}; let wd=0,ws=0;
     if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
+    const lg=lvlGain(S.lvl,S.evo,S.cls);
     return {
-      // hpK/dfK: cuánto más pequeñas son la vida y la defensa que con el crecimiento antiguo (ref). El robo de vida
-      // y lo que depende de la vida o la defensa (espinas, Onda de escudo, Gracia…) se escalan con ellas para que sigan valiendo lo mismo.
-      hpK:Math.pow(U.hp.mult/(U.hp.ref||U.hp.mult),u.hp), dfK:Math.pow(U.df.mult/(U.df.ref||U.df.mult),u.df),
-      hp:(c.hp+(A.hp||0)+c.ghp*lvlGain('hp'))*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*(pvpOn()&&B.hpM||1),
-      atk:(c.atk+(A.atk||0)+c.gatk*lvlGain('atk'))*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(KS.atk||1),
-      df:(c.df+(A.df||0)+c.gdf*lvlGain('df'))*Math.pow(U.df.mult,u.df)*(1+sec.dfp),
+      hp:(c.hp+(A.hp||0)+c.ghp*lg)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*(pvpOn()&&B.hpM||1),
+      atk:(c.atk+(A.atk||0)+c.gatk*lg)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(KS.atk||1),
+      df:(c.df+(A.df||0)+c.gdf*lg)*Math.pow(U.df.mult,u.df)*(1+sec.dfp)*evoBonus('df'),
       spd:c.spd*Math.pow(U.spd.mult,u.spd)*(1+ws),
       cr:Math.min(CFG.caps.cr,c.cr+sec.cr), cd:c.cd+sec.cd,
       ls:Math.min(CFG.caps.ls,sec.ls), bd:sec.bd, ranged:c.ranged,
@@ -130,7 +127,7 @@ function createGame(opts){
   function towerStats(){ const H=CFG.tower.hero, run=S.tower.run, X={atk:0,hp:0,spd:0,cr:0,cd:0,df:0,ls:0,regen:0,refl:0,dbl:0};
     for(const b of run.boons){ const d=boonDef(b); if(!d||(d.type!=='stat'&&b.id!=='segador')) continue; for(const k of ['atk','hp','spd','cr','cd','df','ls','regen']) X[k]+=d[k]||0; X.refl+=d.reflect||0; X.dbl+=d.dbl||0; }
     const spd=H.spd*(1+X.spd), crT=H.cr+X.cr;
-    return { hpK:1, dfK:1,
+    return {
       hp:H.hp*Math.max(0.2,1+X.hp+(run.hpBonus||0)+CFG.tower.curses.fragil.hp*tcurse('fragil')), atk:H.atk*(1+X.atk), df:H.df*(1+X.df), spd,
       cr:Math.min(1,crT), cd:H.cd+X.cd+Math.max(0,crT-1)+(tgH('furiaCiega')?X.spd:0),
       ls:Math.min(1,X.ls), bd:0, ranged:false, regen:X.regen, refl:X.refl, dbl:X.dbl,
@@ -142,22 +139,20 @@ function createGame(opts){
   const CAP=()=>CFG.phaseCap||Infinity;                   // tope de fases de cada modo
   const effF=f=>f+(modeCfg().off||0);
   const top=()=>Math.min(S.best+1,CAP());                 // la fase más alta a la que se puede ir
-  // Curva de enemigos del modo Normal. Crecimiento por tramos: hasta earlyTo usa hpG0/atkG0, luego hpG/atkG y después hpBands=[[desde, hpG, atkG], ...]
-  function normalCurve(f){ const E=CFG.enemy;
-    const seg=[[1,E.hpG0||E.hpG,E.atkG0||E.atkG],[E.earlyTo||1,E.hpG,E.atkG],...(E.hpBands||[])];
-    let hp=E.hp, atk=E.atk, df=E.df*Math.pow(E.dfG,f-1);
-    for(let i=0;i<seg.length;i++){ const [a,gh,ga]=seg[i], nx=seg[i+1]?seg[i+1][0]:Infinity, n=Math.max(0,Math.min(f,nx)-a); hp*=Math.pow(gh,n); atk*=Math.pow(ga,n); }
-    return {hp,atk:atk*atkShrink(f),df} }
-  // Números pequeños: el ataque enemigo se reduce igual que la vida/defensa del héroe con el nivel medio de mejoras de esa fase
-  function atkShrink(f){ const P=CFG.enemy.atkShrink, U=CFG.upgrades.hp; if(!P||!U.ref) return 1;
-    let u=P[P.length-1][1]; for(let i=1;i<P.length;i++) if(f<=P[i][0]){ const [a,x]=P[i-1], [b,y]=P[i]; u=x+(y-x)*Math.max(0,f-a)/(b-a); break; }
-    return Math.pow(U.mult/U.ref,u) }
-  // Cada modo empieza en el enemigo de la fase 150 del modo anterior × start y crece a su propio ritmo (hpG/atkG)
-  function modeCurve(m,f){ if(!m) return normalCurve(f); const M=MODES()[m], b=modeCurve(m-1,CAP());
-    const k=CFG.upgrades.hp.ref?Math.pow(CFG.upgrades.hp.mult/CFG.upgrades.hp.ref,(M.upPer||0)*(f-1)):1;   // números pequeños (ver atkShrink)
-    return {hp:b.hp*M.hpStart*zoneGrow(M,f), atk:b.atk*M.atkStart*Math.pow(M.atkG,f-1)*k, df:b.df*Math.pow(CFG.enemy.dfG,f-1)} }
-  // crecimiento de la vida hasta la fase f del modo: zoneHp[z] por fase dentro de cada zona de 30 (o hpG si no hay)
-  function zoneGrow(M,f){ const Z=M.zoneHp; if(!Z) return Math.pow(M.hpG,f-1); let v=1; for(let i=2;i<=f;i++) v*=Z[Math.min(Z.length-1,Math.floor((i-1)/30))]; return v }
+  // Enemigos a partir del héroe de referencia: lo que tiene un jugador típico al llegar a la fase f del modo m (modes[m].ref, simulado).
+  // Su defensa = enemy.dfK × su daño; su vida = lo que le quita cada golpe de ese héroe × golpes (modes[m].golpes); y su ataque, el que le
+  // quita la vida en modes[m].aguante golpes (según la fase) con su defensa. Así las tres crecen a su ritmo y el ritmo de la campaña no cambia.
+  // valor en la fase f de una tabla [[fase, …], …] (columna j), en línea recta entre puntos (log: en escala log). Antes del primero y
+  // después del último punto se queda en su valor.
+  function lerpP(P,f,j,log){ if(P.length===1||f<=P[0][0]) return P[0][j]; if(f>=P[P.length-1][0]) return P[P.length-1][j];
+    let i=1; while(f>P[i][0]) i++; const a=P[i-1], b=P[i], t=(f-a[0])/(b[0]-a[0]);
+    return log?Math.exp(Math.log(a[j])+(Math.log(b[j])-Math.log(a[j]))*t):a[j]+(b[j]-a[j])*t }
+  // héroe de referencia en la fase f del modo m: [mejoras, nivel, +daño del arma]; su evolución, la del modo (Normal 0, Pesadilla 1, Infierno 2)
+  function refHero(m,f){ const P=MODES()[m].ref, u=lerpP(P,f,1), lvl=lerpP(P,f,2), wd=lerpP(P,f,3), U=CFG.upgrades, cls=Object.keys(CFG.classes)[0], c=CFG.classes[cls];   // (las 5 clases tienen los mismos números)
+    const lg=lvlGain(lvl,m,cls), e=k=>evoBonus(k,m);
+    return {atk:(c.atk+c.gatk*lg)*Math.pow(U.atk.mult,u)*(1+wd)*e('atk'), hp:(c.hp+c.ghp*lg)*Math.pow(U.hp.mult,u)*e('hp'), df:(c.df+c.gdf*lg)*Math.pow(U.df.mult,u)*e('df')} }
+  function modeCurve(m,f){ const M=MODES()[m], R=refHero(m,f), df=CFG.enemy.dfK*R.atk;
+    return {hp:dmgF(R.atk,df)*lerpP(M.golpes,f,1,true), atk:atkFor(R.hp/lerpP(M.aguante,f,1),R.df), df} }
   function enemyStats(f,w,boss,mode){
     const md=mode==null?(S?S.mode||0:0):mode, E=CFG.enemy, mc=modeCurve(md,f);
     let hp=mc.hp*(1+E.waveHp*(w-1)), atk=mc.atk, df=mc.df;
@@ -169,7 +164,12 @@ function createGame(opts){
   }
   // jefe normal según el tramo de fases: bossBands=[[desde, vida, ataque], ...] (en oleadas)
   function bossBand(f){ const E=CFG.enemy; let m={hp:E.bossHp,atk:E.bossAtk}; for(const [a,hp,atk] of (E.bossBands||[])) if(f>=a) m={hp,atk}; return m }
-  const dmgF=(a,d)=>a*a/(a+d);
+  // Daño de un golpe (fórmula del TFG, igual para héroes y enemigos): si la defensa no pasa del ataque, resta la mitad de su valor
+  // (a − d/2); si lo pasa, divide (a² / 2d). Con las dos iguales, la mitad; nunca llega a 0. Con tu defensa por encima de su
+  // ataque, +1 % de defensa vale lo mismo que +1 % de vida (y nunca más).
+  const dmgF=(a,d)=>a<=0?0:d<=a?a-d/2:a*a/(2*d);
+  // el ataque que hace `want` de daño contra esa defensa (lo contrario de dmgF)
+  const atkFor=(want,d)=>want>=d/2?want+d/2:Math.sqrt(2*d*want);
   // Oleadas progresivas (enemy.waves): según sube la fase hay más enemigos por oleada, salen varios a la vez y andan y pegan
   // más rápido. La vida de la oleada entera no cambia (cada enemigo tiene su parte): perOld es el reparto antiguo (3-5).
   const perOld=f=>3+Math.floor((f-1)/CFG.enemy.extraEvery);
@@ -219,10 +219,10 @@ function createGame(opts){
     if(CT<GCD) return {ok:false,why:'gap',left:GCD-CT};   // aún no ha pasado la espera desde la anterior
     if(heroNoSkills()) return {ok:false,why:'stun'};      // aturdido o sin arma (enemigos de zona)
     GCD=CT+(CFG.skillGap||0); CD[k]=CT+d.cd*cdMul(); (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
-  // en los eventos se usan a mano, salvo que el jugador ponga «Auto» (opt.evAuto); en la campaña, solas (opt.autoSkills)
+  // por defecto se lanzan solas en todos los modos; en los eventos se pueden poner a mano (opt.evAuto=false) y en la campaña también (opt.autoSkills=false)
   // en PvP, la Torre y la Mazmorra, siempre solas (sin botones)
   const autoOnly=()=>!!(B&&(B.kind==='pvp'||B.kind==='tower'||(B.event&&!B.kind)));
-  const autoOpt=()=>autoOnly()?true:B&&B.event?!!(S.opt&&S.opt.evAuto):!(S.opt&&S.opt.autoSkills===false);
+  const autoOpt=()=>autoOnly()?true:B&&B.event?!(S.opt&&S.opt.evAuto===false):!(S.opt&&S.opt.autoSkills===false);
   const skillsAuto=autoOpt;
   const manualSkills=()=>!!(B&&B.event&&!autoOpt());
   /* ---------- qué cuenta en el combate actual: cartas y grimorios de la Torre, pasivas, efectos de arma ---------- */
@@ -337,7 +337,7 @@ function createGame(opts){
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
       if(forced||(rh&&rh.crit)||rand()<h.cr){ d*=1+h.cd; crit=true; if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE); if(tg.critRes) d*=1-tg.critRes; }   // Filo del vacío: el crítico ignora la defensa · Cabeza dura
       if(tg.smallRes&&d<tg.smallRes.small*tg.max) d*=1-tg.smallRes.dr; tg.hitN=(tg.hitN||0)+1;   // Inquebrantable
-      tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls')+kitLs(P))*h.hpK,true); if(B.kind==='boss') addDmg(d);   // robo de vida: cura la misma parte de tu vida máxima que antes
+      tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls')+kitLs(P)),true); if(B.kind==='boss') addDmg(d);   // robo de vida
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
       kitOnHit(P,tg,d,crit,X);                                                  // kit: quemaduras, esquirlas, veneno, Sombras, cuchillas
       if(LS.llamarada&&(B.flare=(B.flare||0)+1)%LS.llamarada.every===0) for(const e of B.enemies){ if(e.dead) continue; e.dot=B.t+LS.llamarada.dur; e.dotDps=LS.llamarada.pct*(LS.llamarada.n||1)*d; e.dotKind='fuego'; }   // Llamarada solar
@@ -397,11 +397,11 @@ function createGame(opts){
           if(BUF.shield>0){ const a=Math.min(BUF.shield,d); BUF.shield-=a; d-=a; }      // escudo de habilidad (y de la Torre)
           if(BUF.gshield>0){ const a=Math.min(BUF.gshield,d); BUF.gshield-=a; d-=a; }    // escudo del Grimorio de la Luz
           B.hp-=d; emit('heroHit',{d}); zoneOnHurt(e,d); if(!B.event&&STK.n){ STK.n=0; emit('streak',{n:0}); } if(!(B.hp>0)){ B.hp=0; return } onLoss(d);   // si caes, ya no devuelves daño
-          { const rf=buffAdd('reflect')+(TW?h.refl:0); if(rf>0) zap(e,(TW&&tgH('corazaPuas')?d0:d)*rf/h.hpK,{thorns:true}); }   // Baluarte y Púas: devuelven daño (Coraza de púas: también lo que para el escudo)
+          { const rf=buffAdd('reflect')+(TW?h.refl:0); if(rf>0) zap(e,(TW&&tgH('corazaPuas')?d0:d)*rf,{thorns:true}); }   // Baluarte y Púas: devuelven daño (Coraza de púas: también lo que para el escudo)
           { const ne=TW?tcN('erizo'):0; if(ne) for(const o of B.enemies) if(!o.dead&&o.arrive<=B.t+0.5) zap(o,dmgF(h.atk,o.df)*TC.erizo.pct*ne*tMul(o),{thorns:true}); }   // Erizo
           kitOnHurt(P,e,d0,X); };   // kit: Guardia y espinas, Furia, Luz
     // PvP: daño del otro héroe (ya con tu defensa base; aquí se añaden tus mejoras de defensa, escudos…)
-    if(B.kind==='pvp'&&B.inc&&B.inc.length){ const e=B.enemies[0], inc=B.inc; B.inc=[]; for(const x of inc) takeHit(e,()=>x.d*(x.a+h.df)/(x.a+h.df*buffMul('df'))); if(B.hp<=0) return; }
+    if(B.kind==='pvp'&&B.inc&&B.inc.length){ const e=B.enemies[0], inc=B.inc; B.inc=[]; for(const x of inc) takeHit(e,()=>x.d*dmgF(x.a,h.df*buffMul('df'))/dmgF(x.a,h.df)); if(B.hp<=0) return; }
     for(const e of B.enemies){
       if(!e.dead&&e.frozen>B.t&&!e.noCC){ if(e.arrive>B.t){ e.spawn+=dt; e.arrive+=dt; } e.next=Math.max(e.next,e.frozen); continue; }   // congelado
       if(e.dead||e.down||(e.arrive>B.t&&!e.ranged)) continue;   // (Fuego infernal: ataca antes de llegar)
@@ -482,15 +482,14 @@ function createGame(opts){
     else if(P.id==='cuchillas'&&crit) addBlades(P,1); }
   // después de recibir un golpe (d0: el daño antes de los escudos)
   function kitOnHurt(P,e,d0,X){ if(!P) return; const h=X.h;
-    if(P.id==='guardia'){ if(d0>0){ const os=nearN(5); for(const o of os) X.zap(o,d0*P.thorns/(B.kind==='pvp'?1:h.hpK)/os.length*pvpRefl(),{thorns:true}); } addGuard(P,1,X); }   // espinas repartidas entre los 5 primeros
-    // (en campaña ÷ hpK: los monstruos pegan en la escala pequeña de vida; en PvP el golpe del otro héroe ya es de su escala: el % de la descripción)
+    if(P.id==='guardia'){ if(d0>0){ const os=nearN(5); for(const o of os) X.zap(o,d0*P.thorns/os.length*pvpRefl(),{thorns:true}); } addGuard(P,1,X); }   // espinas repartidas entre los 5 primeros
     else if(P.id==='furia') B.rage=Math.min(P.max,(B.rage||0)+1);
     else if(P.id==='gracia') addLuz(P,1,X); }
   // cada paso: quemaduras, veneno, sangrado y Sombras (que curan), cuchillas, Terremoto y lo que llega más tarde (B.kq)
   function kitTick(P,dt,X){ const h=X.h;
     for(const e of B.enemies){ if(e.dead) continue; let d=0, sh=0;
       for(const k of ['burn','poison','bleed','shadow']){ if(!e[k]||!e[k].length) continue; const s=stk(e,k).reduce((a,x)=>a+x.dps,0)*dt; d+=s; if(k==='shadow') sh+=s; if(k==='burn') B.burnDmg=(B.burnDmg||0)+s; }
-      if(d>0){ e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(sh) X.heal(sh*h.hpK*((P&&P.healK)||1)); if(e.hp<=0) X.kill(e); } }   // Sombras: curan como robo de vida (healK)
+      if(d>0){ e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(sh) X.heal(sh*((P&&P.healK)||1)); if(e.hp<=0) X.kill(e); } }   // Sombras: curan como robo de vida (healK)
     const area=(per,tag,n)=>{ for(const e of upTo(nearE(),n)){ const d=kitBase(P,h,e)*per*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); B[tag]=(B[tag]||0)+d; if(e.hp<=0) X.kill(e); } };
     if(P&&P.id==='cuchillas'&&B.blades&&B.blades.length){ B.blades=B.blades.filter(u=>u>B.t); if(B.blades.length) area(B.blades.length*P.pct,'bladeDmg',P.targets); }
     if(B.quake&&B.t<B.quake.until) area(B.quake.dps,'quakeDmg',B.quake.n);
@@ -552,7 +551,7 @@ function createGame(opts){
       case 'juicio': { let n=0; for(const e of A()){ hit(e,sk.mult); n++; } X.heal(sk.healPer*n*h.hp); break; }
       case 'sombra': { const e=first(); if(!e) break; if(!hit(e,sk.mult+(sk.perStack||0)*stk(e,'shadow').length)) for(let i=0;i<sk.stacks;i++) shadow(e); break; }
       case 'estallido': { const e=first(); if(e) hit(e,sk.mult+sk.perStack*stk(e,'shadow').length); break; }
-      case 'devorar': { let any=false; for(const e of A()){ const n=stk(e,'shadow').length; if(!n) continue; any=true; e.shadow=[]; const d=base(e)*sk.perStack*n; X.zap(e,d,{skill:k}); X.heal(d*h.hpK*((P&&P.healK)||1));
+      case 'devorar': { let any=false; for(const e of A()){ const n=stk(e,'shadow').length; if(!n) continue; any=true; e.shadow=[]; const d=base(e)*sk.perStack*n; X.zap(e,d,{skill:k}); X.heal(d*((P&&P.healK)||1));
           if(!e.dead) for(let i=0;i<sk.reapply;i++) shadow(e); }
         if(!any){ const e=first(); if(e) for(let i=0;i<sk.reapply;i++) shadow(e); } break; }
       default: return false;
@@ -602,8 +601,8 @@ function createGame(opts){
   function setAuto(v){ S.autoPush=v; if(B&&B.event){ emit('change'); return } if(v&&S.fase!==top()){S.push=top()>S.best;S.fase=top();S.wave=1;startWave()} emit('change') }
   function goFase(f){ if(B&&B.event) return; f=Math.max(1,Math.min(top(),f|0)); if(f===S.best+1) S.push=true; else S.push=false; S.fase=f;S.wave=1;startWave(); emit('change') }
   /* ---------- evolución ---------- */
-  // extra de estadísticas de las evoluciones hechas (multiplicativo): tier.bonus={hp,atk}
-  function evoBonus(k){ let m=1; if(S&&S.evo) for(const t of evoTiers().slice(0,S.evo)) m*=1+((t.bonus||{})[k]||0); return m }
+  // extra de estadísticas de las evoluciones hechas (multiplicativo): tier.bonus={hp,atk,df} · evo: las de otro héroe (si no, las tuyas)
+  function evoBonus(k,evo){ evo=evo==null?S&&S.evo:evo; let m=1; if(evo) for(const t of evoTiers().slice(0,evo)) m*=1+((t.bonus||{})[k]||0); return m }
   // lo que ve la pantalla de una etapa del kit: nombre, pasiva (texto) y habilidades
   const stageInfo=st=>{ const K=kitOf(S.cls,st); return K?{stage:st,name:K.name,pname:K.passive&&K.passive.name,pdesc:K.passive&&K.passive.desc,passive:K.passive?K.passive.name+': '+K.passive.desc:'',skills:K.skills||[]}:null };
   // la etapa actual (null si aún no ha evolucionado)
@@ -881,7 +880,9 @@ function createGame(opts){
   // o: {zone (zona fija), keepMinion (no cambia B.minion), hpM/atkM (copias), noEscort}
   function zoneSetup(e,f,mode,role,o){ o=o||{}; const Z=o.zone||zoneAt(mode,f), D=Z&&Z[role]; if(!D) return null; B.mechOn=true;
     if(!o.keepMinion){ const m=enemyStats(f,1,false,mode); B.minion={hp:m.hp,atk:m.atk,df:m.df,spd:eSpd(f)}; }
-    const K=D.k||{}, W=o.muro&&D.muro||1, kh=(K.hp||1)*W; if(kh!==1&&!e.immortal){ e.hp*=kh; e.max*=kh; } e.atkK=(K.atk||1)*W; e.atk*=e.atkK;   // k: ajuste propio de vida y ataque (equilibrio) · muro: × vida y ataque solo en la campaña (o.muro)
+    const K=D.k||{}, W=o.muro&&D.muro||1; let kh=(K.hp||1)*W;   // k: ajuste propio de vida y ataque (equilibrio) · muro: × vida y ataque solo en la campaña (o.muro)
+    if(D.def&&e.df>0){ const a=towerOn()?CFG.tower.hero.atk:refHero(mode,f).atk; kh*=dmgF(a,e.df*D.def)/dmgF(a,e.df); e.df*=D.def; e.acor=D.def; }   // acorazado: ×def de defensa y, para que al héroe típico le cueste lo mismo, menos vida
+    if(kh!==1&&!e.immortal&&!o.keepHp){ e.hp*=kh; e.max*=kh; } e.atkK=(K.atk||1)*W; e.atk*=e.atkK;
     Object.assign(e,{zone:Z,role,name:D.name,title:D.title||'',zp:D.p,am:1,dm:1,sm:1,amK:1,hpSeen:e.hp,df0:e.df,hitN:0});
     const first=(e.arrive||0)+((CFG.zones||{}).first||3);
     e.zs=(role==='jefe'?[D.own,D.s1,D.s2]:[D.s]).filter(s=>s&&s.cd).map((s,i)=>({...s,next:first+i*1.7}));
@@ -905,7 +906,7 @@ function createGame(opts){
       B.enemies.push(x); out.push(x); }
     return out }
   // un élite de otra zona (Tu peor miedo, copias del Cambio de sueño): con su pasiva y su habilidad
-  function zSpawnElite(Z,role,hp,atk){ const x=zSpawn(1,{hp,atk})[0]; x.minion=false; x.summoned=true; zoneSetup(x,1,0,role,{zone:Z,keepMinion:true,noEscort:true}); return x }
+  function zSpawnElite(Z,role,hp,atk){ const x=zSpawn(1,{hp,atk})[0]; x.minion=false; x.summoned=true; zoneSetup(x,1,0,role,{zone:Z,keepMinion:true,noEscort:true,keepHp:true}); return x }   // keepHp: ya trae su vida (no se vuelve a ajustar)
   // ---- golpes del enemigo al héroe ----
   // multiplicador del golpe normal (Acecho: el primero) y lo que pasa después de un golpe normal
   function zoneAtkMul(e){ const P=e.zp; if(P&&P.id==='acecho'&&!e.ambushed){ e.ambushed=true; e.ambushNow=true; return P.mult } return 1 }
@@ -1028,7 +1029,7 @@ function createGame(opts){
             if(k==='copias'){ const L=ZL()[1]||[], Z=L[Math.floor(rand()*L.length)], r=rand()<0.5?'e1':'e2'; if(Z) for(let i=0;i<P.copies;i++) zSpawnElite(Z,r,EM(e)*0.1,e.atk*0.4); } } break;
         case 'invisible': if(B.t>=(e.invAt||(e.invAt=B.t+P.every))){ e.invAt=B.t+P.every; e.untarget=B.t+P.dur; emit('fx',{k:'invisible',e}); } break;
         case 'puerta': if(B.t>=(e.callAt||(e.callAt=B.t+P.every))){ e.callAt=B.t+P.every; zSpawn(P.n,{}); emit('bossPhase',{k:'summon'}); } break;
-        case 'armaduraInf': e.df=e.df0*(1+P.per*Math.min(P.max,Math.floor((e.hitN||0)/P.hits))); break;
+        case 'armaduraInf': e.df=e.df0*(1+P.per*Math.min(P.max,Math.floor((e.hitN||0)/P.hits))); break;   // +per de defensa cada hits golpes
         case 'festinDolor': if(B.hp<P.below*h.hp) am*=1+P.dmg; break;
         case 'montura': if(!e.dismount&&fr<P.at){ e.dismount=true; zSpawn(1,{hp:P.hp*EM(e),atk:e.atk*0.6,walk:0.2,x:{beast:true}}); emit('bossPhase',{k:'summon'}); } break;
         case 'forja': if(B.t>=(e.forjaAt||(e.forjaAt=B.t+P.every))){ e.forjaAt=B.t+P.every; e.forja=Math.min(P.max,(e.forja||0)+1); } am*=1+P.per*(e.forja||0); break;
@@ -1205,7 +1206,7 @@ function createGame(opts){
   function towerCurve(f){ let hp=1, atk=1; const C=CFG.tower.curve; for(let i=0;i<C.length;i++){ const [a,gh,ga]=C[i], nx=C[i+1]?C[i+1][0]:Infinity, n=Math.max(0,Math.min(f,nx)-a); hp*=Math.pow(gh,n); atk*=Math.pow(ga,n); } return {hp,atk} }
   // enemigo base de la Torre: fijo, a la medida del héroe único (no depende de tu cuenta ni de tus mejoras)
   function towerFoe(){ const T=CFG.tower, H=T.hero, df=T.foeDf, hit=dmgF(H.atk,df)*(1+H.cr*H.cd)*H.spd, want=T.hitPct*H.hp, d=H.df;
-    return {hp:hit*T.tKill, atk:(want+Math.sqrt(want*want+4*want*d))/2, df} }
+    return {hp:hit*T.tKill, atk:atkFor(want,d), df} }
   // zona de Normal según el piso (20 pisos cada una): slimes, lobos, goblins, no muertos y orcos
   // los élites y JEFES de zona en la Torre: su propio ajuste de vida y ataque (tower.zoneK), porque sus habilidades ya pegan
   function towerZoneK(e,k){ const K=(CFG.tower.zoneK||{})[k]||{}; if(K.hp){ e.hp*=K.hp; e.max*=K.hp; } if(K.atk) e.atk*=K.atk; e.hpSeen=e.hp }
@@ -1693,7 +1694,7 @@ function createGame(opts){
       if(ch&&B[ch]>0) o.push({k:ch,n:Math.min(P.max,B[ch]),max:P.max}); if(P&&P.id==='cuchillas'&&B.blades){ const n=B.blades.filter(u=>u>B.t).length; if(n) o.push({k:'blades',n,max:P.max}); }
       return o },
     heroDebuffs, zoneAt, zoneIdx, bossRole, zoneFoe,
-    hasCard, hasVip, equipped, weaponMain, heroStats, dpsK, computeStats, statsDirty, enemyStats, xpReq, upCost, upgradeGain, farmRate,
+    hasCard, hasVip, equipped, weaponMain, heroStats, dpsK, computeStats, statsDirty, enemyStats, modeCurve, refHero, xpReq, upCost, upgradeGain, farmRate,
     // combate
     step, setAuto, goFase,
     // mejoras
