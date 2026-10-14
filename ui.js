@@ -367,7 +367,7 @@ G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
     gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
 /* ---------- avisos generales del motor -> pantalla ---------- */
 G.on('mode',({name})=>{ showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves a la fase 1. Los enemigos son mucho más fuertes, dan más oro y los jefes sueltan ${G.modeCfg().mat}.</p><button class="btn gold" data-act="close">Continuar</button>`) });
-G.on('defeat',({fase,kind})=>toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase));
+G.on('defeat',({fase,kind})=>{ toast(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase); const k=G.offerCheck(); if(k) offerModal(k); });   // tras X derrotas contra el mismo jefe: Rompe el muro
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡Se enfurece!':k==='shield'?'¡Escudo de fases!':'¡Llama refuerzos!'); });
@@ -980,10 +980,15 @@ const offerTxt=o=>o.k==='inv'?`${o.inv} huecos más de inventario para siempre`:
 const hleft=ms=>{ const h=Math.floor(ms/3600e3), m=Math.floor(ms%3600e3/60e3); return h?h+' h '+m+' min':m+' min' };
 function offerRows(){ return G.activeOffers().map(o=>`<div class="chest offer"><div><div class="cn">${o.t}</div><div class="s">${offerTxt(o)} · quedan ${hleft(o.left)}</div></div>
   <div class="acts">${payBtn('offer_'+o.k,o.stars,`data-act="devOffer" data-k="${o.k}"`)}</div></div>`).join('') }
+// Rompe el muro: quién te gana (el élite/JEFE de la campaña que empujas) y, además del pack, consejos gratis para hacerte más fuerte
+function wallWhy(){ const T=S.bossTry; if(!T) return '¿Atascado? Rompe el muro con más cofres.'; const f=T.k%1000, F=G.zoneFoe(G.zoneAt(Math.floor(T.k/1000),f),G.bossRole(f));
+  return `${F?F.name:'El jefe'} (fase ${fmt(f)}) te ha ganado ${T.n} veces seguidas. Rompe el muro con más cofres.` }
+const wallTips=()=>`<p class="hint">O gratis: sube tus mejoras o tu arma. Mientras, farmeas la fase anterior y lo vuelves a intentar solo.</p>
+  <div class="ctrl"><button class="btn sm" data-act="wallGo" data-k="up">Mejora tu héroe</button><button class="btn sm" data-act="wallGo" data-k="armas">Mira tu arma</button></div>`;
 function offerModal(k){ const o=G.activeOffers().find(x=>x.k===k); if(!o) return;
-  const why={wall:'¿Atascado? Rompe el muro con más cofres.',evo:'Te faltan materiales para evolucionar.',inv:'Tu inventario está lleno.'}[k];
+  const why={wall:wallWhy(),evo:'Te faltan materiales para evolucionar.',inv:'Tu inventario está lleno.'}[k];
   later(()=>showModal(`<h3>${o.t}</h3><p class="hint">${why}</p><div class="chest offer"><div><div class="cn">${offerTxt(o)}</div><div class="s">Oferta por ${CFG.offers.dur} h</div></div>
-    <div class="acts">${payBtn('offer_'+k,o.stars,`data-act="devOffer" data-k="${k}"`)}</div></div><button class="btn" data-act="close">Ahora no</button>`)) }
+    <div class="acts">${payBtn('offer_'+k,o.stars,`data-act="devOffer" data-k="${k}"`)}</div></div>${k==='wall'?wallTips():''}<button class="btn" data-act="close">Ahora no</button>`)) }
 // Oferta de bienvenida: una sola vez
 function firstOfferRow(){ const F=CFG.stars.first; if(S.firstBuy) return '';
   return `<div class="chest offer"><div><div class="cn">Oferta de bienvenida</div><div class="s">Arma ${CFG.rarName[F.r]} de tu clase + ${F.tokens} tokens + ${F.silver} cofres de plata · solo una vez</div></div>
@@ -1051,6 +1056,7 @@ acts({
   starBuy:(b,k)=>{ b.disabled=true; Telemetry.buyStars(CFG,k,st=>{ b.disabled=false;
       if(st==='paid') toast('¡Pago hecho! Recibiendo tu compra…'); else if(st==='done') toast('Ya lo compraste'); else if(st==='error') toast('No se pudo abrir el pago. Prueba otra vez.'); }) },
   devOffer:(b,k)=>{ if(!CFG.devTools) return; closeModal(); G.applyRewards([{kind:'offer_'+k,amount:1,reason:'stars:offer_'+k}]); toast('Oferta (prueba)'); renderTab() },
+  wallGo:(b,k)=>{ closeModal(); if(k==='armas'){ tab='inv'; invView='armas' } else tab='up'; renderTab(); window.scrollTo({top:0}) },   // consejos gratis de Rompe el muro (las mejoras están en la barra fija de Inicio)
   devFirst:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'first',amount:1,reason:'stars:first'}]); toast('Oferta de bienvenida (prueba)'); renderTab() },
   payCoin:b=>{ payCoin=b.dataset.v; renderTab() },
   cryptoBuy:(b,k)=>{ const coin=payCoin; b.disabled=true;

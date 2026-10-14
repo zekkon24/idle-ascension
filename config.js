@@ -396,9 +396,9 @@ const CFG = {
     first:{stars:50, r:'U', tokens:150, silver:5},   // oferta de bienvenida: una sola vez
     pass:{stars:250}},
   // Ofertas en el momento justo (se pagan con Stars; duran 'dur' horas y no vuelven a salir hasta pasadas 'cool' horas)
-  //  wall: llevas 'hours' horas sin superar tu récord · evo: tienes el nivel para evolucionar pero te faltan materiales · inv: inventario lleno
+  //  wall: el mismo élite/JEFE de la campaña te ha ganado 'deaths' veces seguidas · evo: tienes el nivel para evolucionar pero te faltan materiales · inv: inventario lleno
   offers:{dur:24, cool:72,
-    wall:{stars:100, t:'Rompe el muro', b:{mode:3,silver:10}, hours:4},
+    wall:{stars:100, t:'Rompe el muro', b:{mode:3,silver:10}, deaths:5},
     evo:{stars:100, t:'Pack de evolución', b:{ess:3,ev:12}},
     inv:{stars:100, t:'Inventario +25', inv:25, max:2}},
   shopTab:true, // pestaña Tienda en la barra de abajo

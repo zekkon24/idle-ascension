@@ -579,8 +579,8 @@ function createGame(opts){
   function faseClear(){
     const f=S.fase; S.wave=1;
     if(f===S.best+1){
-      S.best=f; S.bestAt=nowFn();   // para la oferta 'rompe el muro'
-      if(f%10===0){ addLoot({wood:1,scrap:bossScrap(f,false)});                  // los jefes ya no dan tokens (los tokens son dinero)
+      S.best=f;
+      if(f%10===0){ S.bossTry=null; addLoot({wood:1,scrap:bossScrap(f,false)});                  // los jefes ya no dan tokens (los tokens son dinero)
         if(!S.mode&&CFG.matDrop&&(CFG.matDrop.sure||[]).includes(f)) addLoot({mat:1}); // élite 50 y 100: 1 esencia segura
         const mat=rollMat(f);
         emit('boss',{f,elite:f%50===0,mat,mode:S.mode}); }
@@ -594,6 +594,7 @@ function createGame(opts){
     emit('fase',f); emit('change'); endWave(CFG.delays.fase);
   }
   function lose(){
+    if(B&&B.boss&&!B.event&&S.fase===S.best+1){ const k=S.mode*1000+S.fase; S.bossTry={k,n:S.bossTry&&S.bossTry.k===k?S.bossTry.n+1:1}; }   // derrotas seguidas contra el élite/JEFE que empujas (oferta 'Rompe el muro')
     let msg;
     if(S.fase===S.best+1){S.push=false;S.fase=Math.max(1,S.best);msg='farm'} else {S.fase=Math.max(1,S.fase-1);msg='retreat'}
     S.wave=1; emit('defeat',{fase:S.fase,kind:msg}); endWave(CFG.delays.defeat);
@@ -1665,8 +1666,8 @@ function createGame(opts){
     const nw=open.filter(k=>!S.unl.includes(k)); if(nw.length){ S.unl.push(...nw); save(); } return nw }
   /* ---------- ofertas en el momento justo ---------- */
   // offerCheck(): mira si toca una oferta nueva (la activa 24 h) y la devuelve para que la pantalla la enseñe
-  function offerCheck(){ if(!S||(B&&B.event)) return null; const O=CFG.offers, t=nowFn(); S.offers=S.offers||{}; if(!S.bestAt) S.bestAt=t;
-    const want={ wall:t-S.bestAt>O.wall.hours*3600e3, evo:evoLvlOk()&&!canEvolve(), inv:invFree()===0&&(S.invBonus||0)<O.inv.inv*O.inv.max };
+  function offerCheck(){ if(!S||(B&&B.event)) return null; const O=CFG.offers, t=nowFn(); S.offers=S.offers||{};
+    const want={ wall:!!(S.bossTry&&S.bossTry.n>=O.wall.deaths), evo:evoLvlOk()&&!canEvolve(), inv:invFree()===0&&(S.invBonus||0)<O.inv.inv*O.inv.max };
     for(const k in want){ const o=S.offers[k]||{}; if(want[k]&&!(o.until>t)&&!(o.next>t)){ S.offers[k]={until:t+O.dur*3600e3,next:t+O.cool*3600e3}; save(); track('offer',{k}); return k } }
     return null }
   const activeOffers=()=>{ const t=nowFn(); return Object.entries(S&&S.offers||{}).filter(([k,o])=>o.until>t).map(([k,o])=>({k,left:o.until-t,...CFG.offers[k]})) };
