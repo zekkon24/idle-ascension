@@ -17,7 +17,7 @@ const G=createGame({cfg:window.CFG,storage,now:()=>Date.now()+clockOff});
 if(window.CFG.devTools) window.G=G; // solo en local (herramientas de prueba): en la versión publicada no se puede tocar desde la consola
 if(window.Telemetry) Telemetry.attach(G); // envío a la base de datos (solo dentro de Telegram y con servidor)
 if(window.Control) Control.attach(G);     // mantenimiento y actualizaciones obligatorias (solo en la versión publicada)
-const CFG=G.CFG, R=G.R;
+const CFG=G.CFG;
 let S=null; // alias de G.S (se actualiza al cargar, crear o borrar partida)
 const syncS=()=>{S=G.S};
 
@@ -32,25 +32,17 @@ function fmt(n){ if(n===undefined||n===null||isNaN(n))return '0'; const a=Math.a
 const fmtG=n=>{ const a=Math.abs(n||0); if(a<1000) return fmt(n); let s=''; for(const [k,v] of [['K',1e3],['M',1e6],['B',1e9]]) if(a>=v) s=String(+(n/v).toFixed(n/v<10?2:n/v<100?1:0))+k; return s };
 const pct=v=>(Math.round(v*1000)/10).toLocaleString('es-ES')+' %';
 const clsLabel=c=>CFG.classes[c].label||c;
-const wName=it=>CFG.names[it.cls][R.indexOf(it.r)];
-// efecto de arma Legendaria/Mítica (línea para la tarjeta)
-const legendLine=it=>{ const L=R.indexOf(it.r)>=R.indexOf('L')&&CFG.weapon.legend&&CFG.weapon.legend[it.cls]; return L?`<div class="s" style="color:var(--rL)">✦ <b>${L.name}</b>: ${L.desc}</div>`:'' };
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const battery=()=>!!(S&&S.opt&&S.opt.battery); // Modo batería: sin barras, números, proyectiles ni parpadeo
-const CHEST_TYPES=['wood','silver','mode'];
-const chestTotal=()=>CHEST_TYPES.reduce((a,k)=>a+G.chestCount(k),0);
 
 // botones: cada pantalla añade los suyos con acts({nombre: (botón, data-k, data-id) => …}); un nombre repetido es un error
 const ACT={}; const acts=o=>{ for(const k in o){ if(k in ACT) throw new Error('Botón repetido: '+k); ACT[k]=o[k] } };
 /* ---------- estado de la interfaz ---------- */
-let tab='up', invView='main', shopView='cofres', evView=null, modView=null;
-let chestSel=null; const CHEST_RAR={wood:'C',silver:'R',mode:'E'};   // cofre elegido en Inventario → Cofres y color de rareza de cada cofre
-let expandedId=null, forgeId=null, lockSel=[], forjaBack='armas'; // forjaBack: adónde vuelve "← Volver" desde la Forja
-let pendingName='', pendingReforge=null, pendingDis=null, pendingSpin=null, buyCtx=null, modeReady=null;
+let tab='up', invView='main', shopView='recursos', evView=null, modView=null;
+let pendingName='', buyCtx=null, modeReady=null;
 const reduceMotion=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 // escribe HTML solo si cambia (evita rehacer botones mientras se tocan)
 const setHTML=(el,h)=>{ if(el&&el.__h!==h){ el.__h=h; el.innerHTML=nbsp(h); } };
-const F={rar:'all',stat:'any',min:'',max:''};
 const fx={shots:[],floats:[],flash:0};
 /* ---------- iconos de las habilidades ---------- */
 // Habilidades: el botón solo lleva su dibujo; manteniéndolo pulsado se ve el nombre y qué hace (sin números)
@@ -145,25 +137,32 @@ const skTip=x=>`<b>${esc(x.name||'')}</b><br>${x.desc?esc(x.desc):(SKI[x.id]||[]
   // las que ya tenían uno que encaja: Perforar (perforante), Apuntar (marca) y Ráfaga (rápido)
   SKI.perforar=SKI.perforar||[SKI.perforante[0]]; SKI.apuntar=SKI.apuntar||[SKI.marca[0]]; SKI.rafaga=SKI.rafaga||[SKI.rapido[0]];
 }
-/* ---------- iconos: monedas, cofres, tickets y materiales ---------- */
-// iconos de las monedas de arriba: moneda de oro, token (rombo) y chatarra (engranaje)
+/* ---------- iconos: monedas, tickets y materiales ---------- */
+// iconos de las monedas de arriba: moneda de oro y token (rombo)
 const ICON={
   gold:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="#e8b04a" stroke="#140f1c" stroke-width="3.5"/><path d="M47.6 16.4A22 22 0 0 1 16.4 47.6" fill="none" stroke="#a8741e" stroke-width="5" opacity=".55"/><circle cx="32" cy="32" r="16" fill="none" stroke="#a8741e" stroke-width="3"/><path d="M32 21l3 7 7.5.6-5.7 4.9 1.8 7.3L32 37l-6.6 3.8 1.8-7.3-5.7-4.9L29 28z" fill="#a8741e"/><path d="M16 22a18 18 0 0 1 10-8" fill="none" stroke="#ffe08a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M32 6a26 26 0 1 0 .1 0Z" fill="none" stroke="#140f1c" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/></svg>',
   tok:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4L57 25L32 60L7 25Z" fill="#7fc8e8"/><path d="M7 25L19 10H45L57 25Z" fill="#bfe6f7"/><path d="M32 60L57 25H42Z" fill="#3f86b8" opacity="0.7"/><path d="M32 60L22 25H7Z" fill="#5aa6d6" opacity="0.6"/><path d="M7 25H57M22 25L32 10L42 25M22 25L32 60L42 25" fill="none" stroke="#140f1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/><path d="M15 19l5-6" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/><path d="M32 4L57 25L32 60L7 25Z" fill="none" stroke="#140f1c" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/></svg>',
-  scrap:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M57.5 26.8L57.5 37.2L50.0 38.0L49.0 40.5L53.7 46.4L46.4 53.7L40.5 49.0L38.0 50.0L37.2 57.5L26.8 57.5L26.0 50.0L23.5 49.0L17.6 53.7L10.3 46.4L15.0 40.5L14.0 38.0L6.5 37.2L6.5 26.8L14.0 26.0L15.0 23.5L10.3 17.6L17.6 10.3L23.5 15.0L26.0 14.0L26.8 6.5L37.2 6.5L38.0 14.0L40.5 15.0L46.4 10.3L53.7 17.6L49.0 23.5L50.0 26.0Z" fill="#c9a27e"/><path d="M32 32L58 32A26 26 0 0 1 32 58Z" fill="#7a5536" opacity="0.45"/><path d="M57.5 26.8L57.5 37.2L50.0 38.0L49.0 40.5L53.7 46.4L46.4 53.7L40.5 49.0L38.0 50.0L37.2 57.5L26.8 57.5L26.0 50.0L23.5 49.0L17.6 53.7L10.3 46.4L15.0 40.5L14.0 38.0L6.5 37.2L6.5 26.8L14.0 26.0L15.0 23.5L10.3 17.6L17.6 10.3L23.5 15.0L26.0 14.0L26.8 6.5L37.2 6.5L38.0 14.0L40.5 15.0L46.4 10.3L53.7 17.6L49.0 23.5L50.0 26.0Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="32" r="10" fill="#5c3b1e" stroke="#140f1c" stroke-width="3"/><circle cx="32" cy="32" r="4" fill="#140f1c"/><path d="M18 20a18 18 0 0 1 8-6" fill="none" stroke="#f2d3b2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/></svg>',
-  // cofres: madera (marrón), plata (gris) y modo (morado)
-  wood:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M7 30H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="#8a5a34"/><path d="M7 30H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M7 46H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="#4a2e16" opacity="0.55"/><path d="M7 30V25C7 16 14 10 23 10H41C50 10 57 16 57 25V30Z" fill="#a06a3e"/><path d="M7 30V25C7 16 14 10 23 10H41C50 10 57 16 57 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M13 18c3-3 7-4 11-4" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/><path d="M18 11V57M46 11V57" fill="none" stroke="#140f1c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 11V57M46 11V57" fill="none" stroke="#e8b04a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 24H38V39H26Z" fill="#e8b04a"/><path d="M26 24H38V39H26Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M30 29h4v6h-4z" fill="#140f1c"/><path d="M27 25.5h10" fill="none" stroke="#ffe08a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/></svg>',
-  silver:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M7 30H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="#8a919e"/><path d="M7 30H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M7 46H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="#4a505e" opacity="0.55"/><path d="M7 30V25C7 16 14 10 23 10H41C50 10 57 16 57 25V30Z" fill="#b9c0cc"/><path d="M7 30V25C7 16 14 10 23 10H41C50 10 57 16 57 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M13 18c3-3 7-4 11-4" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/><path d="M18 11V57M46 11V57" fill="none" stroke="#140f1c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 11V57M46 11V57" fill="none" stroke="#eef2f8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 24H38V39H26Z" fill="#eef2f8"/><path d="M26 24H38V39H26Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M30 29h4v6h-4z" fill="#140f1c"/><path d="M27 25.5h10" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/></svg>',
-  mode:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M7 30H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="#7a4fc0"/><path d="M7 30H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M7 46H57V53A5 5 0 0 1 52 58H12A5 5 0 0 1 7 53Z" fill="#3b2a5e" opacity="0.55"/><path d="M7 30V25C7 16 14 10 23 10H41C50 10 57 16 57 25V30Z" fill="#9b6ad6"/><path d="M7 30V25C7 16 14 10 23 10H41C50 10 57 16 57 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M13 18c3-3 7-4 11-4" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/><path d="M18 11V57M46 11V57" fill="none" stroke="#140f1c" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 11V57M46 11V57" fill="none" stroke="#e8b04a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 24H38V39H26Z" fill="#e8b04a"/><path d="M26 24H38V39H26Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M30 29h4v6h-4z" fill="#140f1c"/><path d="M27 25.5h10" fill="none" stroke="#ffe08a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/></svg>',
   // tickets (Mazmorra naranja, Jefe rojo con calavera, PvP azul), esencia (gota morada) y emblema (escudo dorado con estrella)
   ticket:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M5 16H59V26A6 6 0 0 0 59 38V48H5V38A6 6 0 0 0 5 26Z" fill="#e8964a"/><path d="M5 38A6 6 0 0 0 5 26V16H59V26A6 6 0 0 0 59 38V48H5Z" fill="#e8964a"/><path d="M5 40H59V48H5Z" fill="#a85a1e" opacity="0.5"/><path d="M44 19V45" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/><path d="M44 19V45" stroke="#fff" stroke-width="1.4" stroke-dasharray="2.5 3" opacity=".5"/><path d="M5 16H59V26A6 6 0 0 0 59 38V48H5V38A6 6 0 0 0 5 26Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M20 24a7 7 0 0 1 14 0v14H20z" fill="#5c3b1e"/><path d="M20 24a7 7 0 0 1 14 0v14H20z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M23 38V25a4 4 0 0 1 8 0v13z" fill="#140f1c"/><circle cx="27" cy="31" r="1.3" fill="#ffe08a"/></svg>',
   bossTicket:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M5 16H59V26A6 6 0 0 0 59 38V48H5V38A6 6 0 0 0 5 26Z" fill="#d9534f"/><path d="M5 38A6 6 0 0 0 5 26V16H59V26A6 6 0 0 0 59 38V48H5Z" fill="#d9534f"/><path d="M5 40H59V48H5Z" fill="#7a1e26" opacity="0.5"/><path d="M44 19V45" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/><path d="M44 19V45" stroke="#fff" stroke-width="1.4" stroke-dasharray="2.5 3" opacity=".5"/><path d="M5 16H59V26A6 6 0 0 0 59 38V48H5V38A6 6 0 0 0 5 26Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="25" cy="29" r="8.5" fill="#e9dfc8" stroke="#140f1c" stroke-width="2.5"/><path d="M20 35h10v5H20z" fill="#e9dfc8"/><path d="M20 35h10v5H20z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="22" cy="28.5" r="2.3" fill="#140f1c"/><circle cx="28" cy="28.5" r="2.3" fill="#140f1c"/></svg>',
   pvp:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M5 16H59V26A6 6 0 0 0 59 38V48H5V38A6 6 0 0 0 5 26Z" fill="#4f8fd9"/><path d="M5 38A6 6 0 0 0 5 26V16H59V26A6 6 0 0 0 59 38V48H5Z" fill="#4f8fd9"/><path d="M5 40H59V48H5Z" fill="#1f3f6e" opacity="0.5"/><path d="M44 19V45" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/><path d="M44 19V45" stroke="#fff" stroke-width="1.4" stroke-dasharray="2.5 3" opacity=".5"/><path d="M5 16H59V26A6 6 0 0 0 59 38V48H5V38A6 6 0 0 0 5 26Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M16 39L34 21M34 39L16 21" fill="none" stroke="#140f1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 39L34 21M34 39L16 21" fill="none" stroke="#eef2f8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 37l4 4M36 37l-4 4" fill="none" stroke="#140f1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 37l4 4M36 37l-4 4" fill="none" stroke="#e8b04a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   ess:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="36" r="24" fill="#b066e8" opacity="0.18"/><path d="M32 4C41 18 51 28 51 41A19 19 0 0 1 13 41C13 28 23 18 32 4Z" fill="#9b6ad6"/><path d="M32 4C41 18 51 28 51 41A19 19 0 0 1 32 60Z" fill="#5a3a86" opacity="0.6"/><path d="M32 50c-7 0-11-5-9-10 2-4 8-3 8 1" fill="none" stroke="#d6b8ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 22c-3 5-4 9-4 13" fill="none" stroke="#d6b8ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/><path d="M32 4C41 18 51 28 51 41A19 19 0 0 1 13 41C13 28 23 18 32 4Z" fill="none" stroke="#140f1c" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M48 8l2 4.5 4.5 2-4.5 2L48 21l-2-4.5-4.5-2 4.5-2z" fill="#fff3c4"/><path d="M48 8l2 4.5 4.5 2-4.5 2L48 21l-2-4.5-4.5-2 4.5-2z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+  box:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5L56 19V45L32 59L8 45V19Z" fill="#6a5acd"/><path d="M32 5L56 19L32 33L8 19Z" fill="#a99cff"/><path d="M32 33V59L8 45V19Z" fill="#4d3fb0"/><path d="M32 5L56 19V45L32 59L8 45V19Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round"/><path d="M32 33V59M8 19L32 33L56 19" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round"/><path d="M18 18l9-5" stroke="#fff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></svg>',
   ev:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4L55 12V30C55 45 45 54 32 60C19 54 9 45 9 30V12Z" fill="#e8b04a"/><path d="M32 4L55 12V30C55 45 45 54 32 60Z" fill="#a8741e" opacity="0.55"/><path d="M32 11L48 17V30C48 41 41 48 32 53C23 48 16 41 16 30V17Z" fill="#7a5414"/><path d="M32 11L48 17V30C48 41 41 48 32 53C23 48 16 41 16 30V17Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M32 18l3.6 7.4 8.1 1.1-5.9 5.7 1.4 8L32 36.4l-7.2 3.8 1.4-8-5.9-5.7 8.1-1.1z" fill="#ffe08a"/><path d="M32 18l3.6 7.4 8.1 1.1-5.9 5.7 1.4 8L32 36.4l-7.2 3.8 1.4-8-5.9-5.7 8.1-1.1z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 15l8-3" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/><path d="M32 4L55 12V30C55 45 45 54 32 60C19 54 9 45 9 30V12Z" fill="none" stroke="#140f1c" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/></svg>'
 };
 // material (esencia) que vuela del jefe al inventario
 const MATI='<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="24" fill="#b066e8" opacity="0.18"/><path d="M32 4L50 22L32 60L14 22Z" fill="#c86bff"/><path d="M32 4L50 22L32 60Z" fill="#7a3fb0" opacity="0.55"/><path d="M14 22H50M32 4L26 22L32 60L38 22Z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/><path d="M22 15l5-6" fill="none" stroke="#f2dcff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/><path d="M32 4L50 22L32 60L14 22Z" fill="none" stroke="#140f1c" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+/* ---------- icono del arma de cada clase ---------- */
+// arma de cada clase espada, bastón, arco, daga y maza (el dibujo de cada clase)
+const WSVG={Guerrero:'<path d="M27 33L51 6L59 5L58 13L31 38Z" fill="#b9c0cc"/><path d="M31 38L58 13L59 5L55 7L29 36Z" fill="#6f7785" opacity="0.55"/><path d="M52 10L33 32" fill="none" stroke="#eef2f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 33L51 6L59 5L58 13L31 38Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M22 28L38 44" fill="none" stroke="#140f1c" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 28L38 44" fill="none" stroke="#e8b04a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 39L15 51" fill="none" stroke="#140f1c" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 39L15 51" fill="none" stroke="#8a5a34" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="53" r="5" fill="#e8b04a" stroke="#140f1c" stroke-width="2.5"/>',Mago:'<path d="M14 58L42 22" fill="none" stroke="#140f1c" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 58L42 22" fill="none" stroke="#8a5a34" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 60l4-4" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 60l4-4" fill="none" stroke="#e8b04a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M38 26l-5-5 7-7 6 6z" fill="#e8b04a"/><path d="M38 26l-5-5 7-7 6 6z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="49" cy="14" r="13" fill="#b066e8" opacity="0.25"/><circle cx="48" cy="15" r="8.5" fill="#9b6ad6" stroke="#140f1c" stroke-width="3"/><circle cx="46" cy="13" r="3" fill="#d6b8ff"/><path d="M48 15a8.5 8.5 0 0 0 8.5-1A8.5 8.5 0 0 1 48 23.5Z" fill="#5a3a86" opacity="0.6"/>',Arquero:'<path d="M14 7c27 3 43 20 43 44" fill="none" stroke="#140f1c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 7c27 3 43 20 43 44" fill="none" stroke="#8a5a34" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 7L57 51" fill="none" stroke="#e9dfc8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 55L43 21" fill="none" stroke="#140f1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 55L43 21" fill="none" stroke="#c9ced8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M49 15l-11 2 9 9z" fill="#b9c0cc"/><path d="M49 15l-11 2 9 9z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M9 55l2-10 6 4z" fill="#e2605a"/><path d="M9 55l2-10 6 4z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M9 55l10-2-4-6z" fill="#b8323a"/><path d="M9 55l10-2-4-6z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',Asesino:'<path d="M53 7C50 19 42 28 31 34L27 30C33 19 42 11 53 7Z" fill="#b9c0cc"/><path d="M53 7C50 19 42 28 31 34L29 32C39 25 47 17 53 7Z" fill="#6f7785" opacity="0.6"/><path d="M50 11C44 18 39 23 33 29" fill="none" stroke="#eef2f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M53 7C50 19 42 28 31 34L27 30C33 19 42 11 53 7Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M21 28L35 42" fill="none" stroke="#140f1c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 28L35 42" fill="none" stroke="#e8b04a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 38L14 50" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 38L14 50" fill="none" stroke="#3b2a5e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="53" r="4.5" fill="#b8323a" stroke="#140f1c" stroke-width="2.5"/>',Clerigo:'<path d="M12 58L34 34" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 58L34 34" fill="none" stroke="#8a5a34" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 60l5-5" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 60l5-5" fill="none" stroke="#e8b04a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 6l4 7 7-3-2 8 8 2-6 5 6 5-8 2 2 8-7-3-4 7-4-7-7 3 2-8-8-2 6-5-6-5 8-2-2-8 7 3z" fill="#9aa1ad"/><path d="M42 6l4 7 7-3-2 8 8 2-6 5 6 5-8 2 2 8-7-3-4 7-4-7-7 3 2-8-8-2 6-5-6-5 8-2-2-8 7 3z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="42" cy="22" r="9" fill="#c9ced8" stroke="#140f1c" stroke-width="2.5"/><circle cx="42" cy="22" r="4" fill="#e8b04a" stroke="#140f1c" stroke-width="2"/><circle cx="39" cy="19" r="2" fill="#ffffff" opacity="0.8"/>'};
+const wIcon=(cls,sz=38)=>`<svg viewBox="0 0 64 64" width="${sz}" height="${sz}" aria-hidden="true">${WSVG[cls]||WSVG.Guerrero}</svg>`;
+/* ---------- iconos de la Armadura, el Anillo y el Amuleto (el del Arma, el de cada clase: iconos/arma.js) ---------- */
+const GSVG={
+  armadura:'<path d="M18 13l9-5h10l9 5 9 7-5 12-6-2v20q-11 7-24 0V30l-6 2-5-12z" fill="#b9c0cc"/><path d="M32 10v44" stroke="#6f7785" stroke-width="2.5"/><path d="M23 44h18" stroke="#e8b04a" stroke-width="4" stroke-linecap="round"/><path d="M26 8q6 7 12 0" fill="none" stroke="#140f1c" stroke-width="3" stroke-linecap="round"/><path d="M18 13l9-5h10l9 5 9 7-5 12-6-2v20q-11 7-24 0V30l-6 2-5-12z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round"/>',
+  anillo:'<circle cx="32" cy="38" r="16" fill="none" stroke="#140f1c" stroke-width="10"/><circle cx="32" cy="38" r="16" fill="none" stroke="#e8b04a" stroke-width="6"/><path d="M26 30a10 10 0 0 1 12 0" fill="none" stroke="#fff3c4" stroke-width="2" stroke-linecap="round" opacity=".8"/><path d="M23 14l9-9 9 9-9 11z" fill="#5fd0ff"/><path d="M23 14l9-9 9 9-9 11z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round"/><path d="M28 13l4-4" stroke="#e8fbff" stroke-width="2" stroke-linecap="round"/>',
+  amuleto:'<path d="M13 6q19 28 38 0" fill="none" stroke="#140f1c" stroke-width="5" stroke-linecap="round"/><path d="M13 6q19 28 38 0" fill="none" stroke="#c9ced8" stroke-width="2.5" stroke-linecap="round"/><circle cx="32" cy="40" r="14" fill="#e8b04a" stroke="#140f1c" stroke-width="3"/><circle cx="32" cy="40" r="7" fill="#b066e8" stroke="#140f1c" stroke-width="2.5"/><circle cx="29" cy="37" r="2" fill="#fff" opacity=".8"/>'};
+// icono de una pieza: el arma, el de tu clase; los demás huecos, el suyo
+const gIcon=(slot,cls,sz=38)=>slot==='arma'||!GSVG[slot]?wIcon(cls,sz):`<svg viewBox="0 0 64 64" width="${sz}" height="${sz}" aria-hidden="true">${GSVG[slot]}</svg>`;
 /* ---------- iconos: barra de abajo, categorías y Torre ---------- */
 // iconos de la barra de abajo y de las categorías (trazo del color del texto)
 const IC=(d,sz=20)=>`<svg class="ico" viewBox="0 0 24 24" width="${sz}" height="${sz}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -181,8 +180,6 @@ const ICONS={
   eventos:'<path d="M12 3a7 7 0 0 0-7 7c0 2.5 1.3 4 3 5v3h8v-3c1.7-1 3-2.5 3-5a7 7 0 0 0-7-7z"/><circle cx="9.5" cy="10.5" r="1.3"/><circle cx="14.5" cy="10.5" r="1.3"/><path d="M10.5 18v2M13.5 18v2"/>',
   torre:'<path d="M7 21V9h10v12"/><path d="M6 9V4h2.5v2h2V4h3v2h2V4H18v5"/><path d="M10 21v-4h4v4"/>',
   pvp:'<path d="M5 3l12 12M19 3L7 15"/><path d="M14 18l4-4M10 18l-4-4"/><path d="M16 16l3 3M8 16l-3 3"/>',
-  armas:'<path d="M20 4L9 15"/><path d="M20 4h-4.5M20 4v4.5"/><path d="M7 13l4 4"/><path d="M8 16l-4 4"/>',
-  cofres:'<path d="M3 10a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v9H3z"/><path d="M3 12h18M11 12v3h2v-3"/>',
   mat:'<path d="M6 4h12l3 5-9 11L3 9z"/><path d="M3 9h18M12 20L9 9l3-5 3 5z"/>'};
 /* ---------- Telegram: colores, vibración y botón atrás ---------- */
 const TG=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData?Telegram.WebApp:null;
@@ -193,16 +190,15 @@ if(TG){ try{ TG.ready(); TG.expand(); if(TG.disableVerticalSwipes) TG.disableVer
 const fsMark=()=>{ try{ document.documentElement.classList.toggle('tgfs',!!(TG&&TG.isFullscreen)) }catch(e){} };
 if(TG){ fsMark(); try{ TG.onEvent('fullscreenChanged',fsMark) }catch(e){} }
 if(TG){ try{ TG.setHeaderColor('#12141c'); TG.setBackgroundColor('#12141c'); if(TG.setBottomBarColor) TG.setBottomBarColor('#1b1e2a'); }catch(e){} }
-// vibración corta (jefe vencido, cofres, evolución); no en modo batería
-function haptic(kind){ if(kind==='ok') sfx('ok');   // (y su sonido: cofres, compras, evoluciones…)
+// vibración corta (jefe vencido, evolución); no en modo batería
+function haptic(kind){ if(kind==='ok') sfx('ok');   // (y su sonido: compras, evoluciones…)
   if(!TG||!TG.HapticFeedback||battery()) return; try{ kind==='ok'?TG.HapticFeedback.notificationOccurred('success'):TG.HapticFeedback.impactOccurred(kind||'light') }catch(e){} }
 // Botón atrás de Telegram: cierra la ventana abierta o vuelve a la pantalla anterior (en Inicio sin ventanas, se oculta y atrás cierra el juego)
-function canGoBack(){ if(!S) return false; if(modalOpen()) return !pendingSpin&&!adTimerOn()&&!($('#nameIn')&&!S.name);
+function canGoBack(){ if(!S) return false; if(modalOpen()) return !adTimerOn()&&!($('#nameIn')&&!S.name);
   return tab!=='up'||false }
 function goBack(){ if(modalOpen()){ if(canGoBack()) ACT.close(); return }
   if(tab==='ev'&&evView){ evView=null; return renderTab() }
   if(tab==='ev'&&modView){ modView=null; return renderTab() }
-  if(tab==='inv'&&invView==='forja'){ invView=forjaBack; return renderTab() }
   if(tab==='inv'&&invView!=='main'){ invView='main'; return renderTab() }
   tab='up'; renderTab() }
 let backShown=null;
@@ -211,7 +207,7 @@ if(TG&&TG.BackButton) try{ TG.BackButton.onClick(goBack) }catch(e){}
 
 /* ---------- sonido: efectos y música hechos con WebAudio (estilo retro suave, sin archivos) ----------
    Efectos: golpes, críticos, golpes recibidos, habilidades (según su tipo), habilidades enemigas, nivel, jefes, victoria,
-   derrota, cofres y botones. Música: un bucle tranquilo por modo (Normal, Pesadilla, Infierno) y otro más tenso en los
+   derrota y botones. Música: un bucle tranquilo por modo (Normal, Pesadilla, Infierno) y otro más tenso en los
    JEFES. Se enciende con el primer toque (los navegadores no dejan sonar antes). Ajustes: opt.music y opt.sfx (encendidos
    si no se han apagado), a volumen bajo. Sin pestaña visible, se calla. */
 const SND={ac:null,out:null,sfx:null,mus:null,noise:null,last:{},theme:null,next:0,step:0,timer:null};
@@ -313,11 +309,11 @@ G.on('defeat',()=>sfx('lose'));
 G.on('evolve',()=>sfx('evolve'));
 G.on('hallEnd',r=>sfx(r.won?'win':'lose'));
 /* ---------- premios en texto y con iconos ---------- */
-const RN={silver:'cofre de plata',wood:'cofre de madera',mode:'cofre de modo',ess:'esencia',ev:'emblema',ticket:'ticket Mazmorra',bossTicket:'ticket Jefe'};
-const bundleTxt=b=>Object.entries(b).map(([k,v])=>k==='gold'?`oro de ${v} min`:k==='tok'?`${v} tokens`:k==='item'?`arma ${CFG.rarName[v]}`:RN[k]+(v>1?' ×'+v:'')).join(' + ');
+const RN={box:'ticket de invocación',ess:'esencia',ev:'emblema',ticket:'ticket Mazmorra',bossTicket:'ticket Jefe'};
+const bundleTxt=b=>Object.entries(b).map(([k,v])=>k==='gold'?`oro de ${v} min`:k==='tok'?`${v} tokens`:RN[k]+(v>1?' ×'+v:'')).join(' + ');
 const rw=(ic,t)=>`<span class="rw">${ic}${t}</span>`;
 const bundleHTML=b=>Object.entries(b).map(([k,v])=>k==='gold'?rw(ICON.gold,v+' min'):k==='tok'?rw(ICON.tok,v):ICON[k]?rw(ICON[k],'×'+v)
-  :k==='item'?`<span class="rw" style="color:var(--r${v})">Arma ${CFG.rarName[v]}</span>`:`<span class="rw">${RN[k]}${v>1?' ×'+v:''}</span>`).join(' ');
+  :`<span class="rw">${RN[k]}${v>1?' ×'+v:''}</span>`).join(' ');
 /* ---------- efectos del combate: golpes, números de daño y habilidades ---------- */
 // números de daño: suben sin parar; si llega otro golpe al mismo objetivo en menos de 0,3 s se suma al último número (no se amontonan)
 function pushFloat(f){ const last=fx.floats.filter(o=>(f.hero?o.hero:o.e===f.e)&&!o.crit===!f.crit&&o.v!=null&&f.v!=null).pop();
@@ -331,8 +327,8 @@ function pushFloat(f){ const last=fx.floats.filter(o=>(f.hero?o.hero:o.e===f.e)&
 const PROJ={Mago:'fire',Arquero:'arrow',Clerigo:'holy'};
 function attackFx(cls,side,e,crit){ const k=PROJ[cls]; if(k) ART.addFx('proj',{kind:k,side,e,color:k==='holy'?'#ffe38a':null}); else ART.addFx('slash',{side,e,crit,color:crit?'#ffd35a':ART.shade(CFG.classes[cls].color,1.4)});
   if(crit){ ART.addFx('crit',{side,e}); ART.shake(2) } }
-G.on('hit',({e,d,crit,ranged,thorns,clone,skill,frost,burst,bolt,cleave})=>{ if(e) e._hitAt=performance.now(); if(!thorns&&!clone) fx.atkAt=performance.now(); if(battery()||tab!=='up') return; if(e&&e.rival) fx.rflash=0.12;
-  if(!skill&&!thorns&&!clone&&!frost&&!burst&&!bolt&&!cleave) attackFx(S.cls,'hero',e,crit);
+G.on('hit',({e,d,crit,ranged,thorns,clone,skill,frost,burst,bolt,cleave,wfx})=>{ if(e) e._hitAt=performance.now(); if(!thorns&&!clone) fx.atkAt=performance.now(); if(battery()||tab!=='up') return; if(e&&e.rival) fx.rflash=0.12;
+  if(!skill&&!thorns&&!clone&&!frost&&!burst&&!bolt&&!cleave&&!wfx) attackFx(S.cls,'hero',e,crit);
   if(d>=0.5) pushFloat({e,v:d,txt:fmt(d),crit,life:0.9}) });   // (sin «0» de golpes que no hacen daño)
 G.on('heroHit',({d})=>{ const B=G.B, f=B&&B.enemies.find(e=>!e.dead&&e.arrive<=B.t); if(f) f._atkAt=performance.now(); fx.ratkAt=performance.now(); if(battery()||tab!=='up') return; fx.flash=0.15; if(d>0.08*G.heroStats().hp) ART.shake(3); if(d>=0.5) pushFloat({hero:true,v:d,txt:'-'+fmt(d),life:0.8}) });
 G.on('level',l=>{ if(tab==='up'&&!battery()){ ART.addFx('levelup',{text:'¡Nivel '+l+'!'}); haptic('light') } else toast('¡Nivel '+l+'!') });
@@ -344,6 +340,8 @@ const ZFX={contagio:['ering','#ff7a1a',1],furia:['ering','#ff3b3b'],devora:['eri
   invisible:['ering','#9aa0aa',1],hermandad:['ering','#9aa0aa',1],onda:['ola','#7fb6ff'],gracia:['ola','#ffe066'],ultimo:['hring','#ffe066'],
   aturdido:['hring','#ffd35a',1],hipnosis:['hring','#c86bff',1],locura:['hring','#c86bff',1],desarmado:['hring','#b9c0cc'],encierro:['hring','#8a5a34'],sueno:['hring','#7f8cff',1]};
 const DOTC={quemadura:'#ff7a1a',veneno:'#6cc47a',sangrado:'#e5484d'};
+// efecto del arma (Épica y Legendaria) → su dibujo (el Reflejo, el clon de sombra: el de Giro)
+const WFXA={tajo:'wTajo',orbe:'wOrbe',halcon:'wHalcon',llama:'wLlama',reflejo:'clon',reflejoSkill:'clon'};
 const eTop=e=>(e&&e._r||13)*3.9+14;   // altura de un monstruo en el dibujo (para poner cosas encima)
 function skillFx(ev,side,eng){ if(battery()) return;
   if(ev.k==='skill'){ const d=eng.skillDef(ev.slot)||{}, id=ev.id, kf=KFX[ev.sid];
@@ -352,6 +350,7 @@ function skillFx(ev,side,eng){ if(battery()) return;
     else ART.addFx(id,{side});
     if(id==='combustion'&&!kf) ART.addFx('combustionHit',{side});
     if(ev.sid==='terremoto'||ev.sid==='meteoros') ART.shake(3); else if(id==='ejecutar'||id==='bola') ART.shake(id==='ejecutar'?4:2); }
+  else if(ev.k==='wfx'){ const t=WFXA[ev.id]; if(!t) return; ART.addFx(t,{side,e:ev.e,dur:ev.id==='reflejo'?ev.dur:ev.id==='reflejoSkill'?0.6:0}); if(ev.id==='tajo') ART.shake(2); }   // efecto del arma Épica o Legendaria
   else if(ev.k==='congelar') ART.addFx('congelar',{side,e:ev.e});
   else if(ev.k==='luzVuelve') ART.addFx('luzVuelve',{side,n:ev.n});
   else if(ev.k==='reloj') ART.addFx('reloj',{side});
@@ -364,10 +363,10 @@ G.on('fx',ev=>skillFx(ev,'hero',G));
 G.on('eventStart',()=>{ fx.floats.length=0; ART.clearFx();
   const gh=G.pvpOn()&&G.ghost(); if(gh){   // PvP: el fantasma también lanza sus habilidades y dispara
     gh.on('fx',ev=>skillFx(ev,'rival',gh));
-    gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
+    gh.on('hit',({crit,skill,thorns,clone,frost,burst,bolt,cleave,wfx})=>{ if(battery()||tab!=='up'||skill||thorns||clone||frost||burst||bolt||cleave||wfx) return; attackFx(gh.S.cls,'rival',null,crit) }); } });
 /* ---------- avisos generales del motor -> pantalla ---------- */
 G.on('mode',({name})=>{ showModal(`<h3>Modo ${name}</h3><p class="hint">Vuelves a la fase 1. Los enemigos son mucho más fuertes, dan más oro y los jefes sueltan ${G.modeCfg().mat}.</p><button class="btn gold" data-act="close">Continuar</button>`) });
-G.on('defeat',({fase,kind,time})=>{ toast((time?'¡Se acabó el tiempo! ':'')+(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase)); const k=G.offerCheck(); if(k) offerModal(k); });   // tras X derrotas contra el mismo jefe: Rompe el muro
+G.on('defeat',({fase,kind,time})=>{ toast((time?'¡Se acabó el tiempo! ':'')+(kind==='farm'?'Derrota: farmeando la fase '+fase:'Retrocedes a la fase '+fase)); const k=G.offerCheck(); if(k) offerModal(k); });
 G.on('fase',()=>refreshTabIfStatic());
 G.on('wave',()=>{});
 G.on('bossPhase',({k})=>{ haptic('medium'); toast(k==='rage'?'¡Se enfurece!':k==='shield'?'¡Escudo de fases!':'¡Llama refuerzos!'); });
@@ -375,17 +374,6 @@ G.on('surprise',({k,reward})=>{
   if(k==='horde'||k==='wander') haptic('medium');   // el cartel y la barra del combate ya lo cuentan (encHUD)
   else if(/Win$/.test(k)){ haptic('ok'); toast({wanderWin:'¡Errante vencido! '}[k]+bundleTxt(reward)); updateHUD(); }
   else if(k==='wanderFled') toast('El errante huyó'); });
-/* ---------- fichas de stats y lista de botín ---------- */
-// r (rareza): muestra también el máximo posible de cada stat para saber si aún se puede mejorar
-function chips(list,lockable,r){
-  return list.map((s,i)=>{ const mx=r?CFG.sec[s.k][r][1]:null, top=mx!=null&&s.v>=mx;
-    return `<span class="chip${lockable&&lockSel.includes(i)?' lock':''}${top?' top':''}" ${lockable?`data-act="lock" data-i="${i}" role="button" tabindex="0"`:''}>${CFG.sec[s.k].n} +${s.v.toLocaleString('es-ES')} %${mx!=null?` <small>/ ${mx.toLocaleString('es-ES')}</small>`:''}</span>` }).join('');
-}
-function lootHTML(list){
-  const sorted=[...list].sort((a,b)=>R.indexOf(b.r)-R.indexOf(a.r)||(a.cls===S.cls?-1:1));
-  return `<div class="loot reveal">${sorted.map(x=>`<div><span style="color:var(--r${x.r})">${wName(x)}</span><span class="s">${x.autoEq?'equipada':''}${x.auto?' · desmontada (+'+x.auto+')':''}</span></div>`).join('')}</div>`;
-}
-
 /* ---------- estructura ---------- */
 // dibujo del grimorio (su casilla en Inventario)
 const GRIMSVG='<svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="#5a3a86"/><path d="M12 8H21V50H12Z" fill="#3b2a5e"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="#e9dfc8"/><path d="M18 50H54V56H18A3 3 0 0 1 18 50Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="11" fill="#b066e8" opacity="0.35"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="#ffd66b"/><path d="M28 28Q37 20 46 28Q37 36 28 28Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="37" cy="28" r="2.8" fill="#140f1c"/><path d="M45 8H54V17Z" fill="#e8b04a"/><path d="M45 8H54V17Z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 8H48A6 6 0 0 1 54 14V56H18A6 6 0 0 1 12 50Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>';
@@ -397,12 +385,11 @@ function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pan
   $('#app').innerHTML=`
   <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><div class="uname" id="uName"></div><b class="sttl" id="scrT"></b>
     <div class="res"><span title="Oro" aria-label="Oro">${ICON.gold}<b id="rGold"></b></span>
-    <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span>
-    <span title="Chatarra" aria-label="Chatarra">${ICON.scrap}<b id="rScrap"></b></span></div><button class="gear" data-tab="dev" aria-label="Ajustes" title="Ajustes">${IC(ICONS.dev)}</button></div>
+    <span title="Tokens (comprados + ganados)" aria-label="Tokens">${ICON.tok}<b id="rTok"></b></span></div><button class="gear" data-tab="dev" aria-label="Ajustes" title="Ajustes">${IC(ICONS.dev)}</button></div>
   <div id="battle" class="battle">
   <div class="hero"><div id="evoSlot"></div>
     </div>
-  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="enc" id="enc" aria-hidden="true"></div><div class="vshud" id="vsHud" hidden><div class="vsw me"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gMe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe2a9"/><stop offset=".45" stop-color="#6cc47a"/><stop offset="1" stop-color="#3d8a4b"/></linearGradient><clipPath id="cpMe"><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z"/></clipPath></defs><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="trk"/><g clip-path="url(#cpMe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><i class="vssh"></i><div class="vsst" id="stMe"></div></div><div class="vsc" id="vsC"><small></small><b></b></div><div class="vsw foe"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gFoe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f29a93"/><stop offset=".45" stop-color="#e2605a"/><stop offset="1" stop-color="#9b3a35"/></linearGradient><clipPath id="cpFoe"><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z"/></clipPath></defs><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="trk"/><g clip-path="url(#cpFoe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><div class="vsst" id="stFoe"></div></div></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><button class="evobtn" id="evoBtn" data-act="evoOpen" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Evolucionar</button><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#8a5a34"/><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 46H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#5c3b1e" opacity="0.6"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="#a06a3e"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 18c3-3 7-4 11-4" fill="none" stroke="#ffe08a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/><path d="M19 12V57M45 12V57" fill="none" stroke="#140f1c" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 12V57M45 12V57" fill="none" stroke="#e8b04a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 25H37V38H27Z" fill="#e8b04a"/><path d="M27 25H37V38H27Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="31" r="1.8" fill="#140f1c"/><circle cx="32" cy="6" r="3" fill="#ffe08a" opacity="0.9"/><circle cx="24" cy="5" r="2" fill="#ffe08a" opacity="0.7"/><circle cx="41" cy="5" r="2" fill="#ffe08a" opacity="0.7"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="#2b2f40"/><path d="M13 39C21 35 43 43 51 39A19 19 0 0 1 13 39Z" fill="#e8b04a"/><path d="M14 44C24 46 40 48 50 44A19 19 0 0 1 14 44Z" fill="#a8741e" opacity="0.55"/><circle cx="26" cy="46" r="2.4" fill="#ffe08a"/><circle cx="36" cy="50" r="1.8" fill="#ffe08a"/><circle cx="31" cy="42" r="1.5" fill="#fff3c4"/><path d="M19 29c-3 3-4 7-4 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M23 3H41V10H23Z" fill="#8a5a34"/><path d="M23 3H41V10H23Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="boosttime" id="boostTime" hidden></span></button></div></div>
+  <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="enc" id="enc" aria-hidden="true"></div><div class="vshud" id="vsHud" hidden><div class="vsw me"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gMe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe2a9"/><stop offset=".45" stop-color="#6cc47a"/><stop offset="1" stop-color="#3d8a4b"/></linearGradient><clipPath id="cpMe"><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z"/></clipPath></defs><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="trk"/><g clip-path="url(#cpMe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><i class="vssh"></i><div class="vsst" id="stMe"></div></div><div class="vsc" id="vsC"><small></small><b></b></div><div class="vsw foe"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gFoe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f29a93"/><stop offset=".45" stop-color="#e2605a"/><stop offset="1" stop-color="#9b3a35"/></linearGradient><clipPath id="cpFoe"><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z"/></clipPath></defs><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="trk"/><g clip-path="url(#cpFoe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><div class="vsst" id="stFoe"></div></div></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><button class="evobtn" id="evoBtn" data-act="evoOpen" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Evolucionar</button><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#8a5a34"/><path d="M8 30H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 46H56V54A4 4 0 0 1 52 58H12A4 4 0 0 1 8 54Z" fill="#5c3b1e" opacity="0.6"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="#a06a3e"/><path d="M8 30V25C8 16 15 11 24 11H40C49 11 56 16 56 25V30Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 18c3-3 7-4 11-4" fill="none" stroke="#ffe08a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/><path d="M19 12V57M45 12V57" fill="none" stroke="#140f1c" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 12V57M45 12V57" fill="none" stroke="#e8b04a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 25H37V38H27Z" fill="#e8b04a"/><path d="M27 25H37V38H27Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="31" r="1.8" fill="#140f1c"/><circle cx="32" cy="6" r="3" fill="#ffe08a" opacity="0.9"/><circle cx="24" cy="5" r="2" fill="#ffe08a" opacity="0.7"/><circle cx="41" cy="5" r="2" fill="#ffe08a" opacity="0.7"/></svg><i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="#2b2f40"/><path d="M13 39C21 35 43 43 51 39A19 19 0 0 1 13 39Z" fill="#e8b04a"/><path d="M14 44C24 46 40 48 50 44A19 19 0 0 1 14 44Z" fill="#a8741e" opacity="0.55"/><circle cx="26" cy="46" r="2.4" fill="#ffe08a"/><circle cx="36" cy="50" r="1.8" fill="#ffe08a"/><circle cx="31" cy="42" r="1.5" fill="#fff3c4"/><path d="M19 29c-3 3-4 7-4 10" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/><path d="M26 8H38V19C47 22 52 30 52 39A20 20 0 0 1 12 39C12 30 17 22 26 19Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M23 3H41V10H23Z" fill="#8a5a34"/><path d="M23 3H41V10H23Z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg><span class="boosttime" id="boostTime" hidden></span></button><button class="calbtn repbtn" id="repBtn" data-act="repeatFase" aria-label="Repetir fase" aria-pressed="false" title="Repetir fase"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><path d="M13 33A19 19 0 0 1 45 19M51 31A19 19 0 0 1 19 45" fill="none" stroke="#140f1c" stroke-width="12" stroke-linecap="round"/><path d="M13 33A19 19 0 0 1 45 19M51 31A19 19 0 0 1 19 45" fill="none" stroke="#e8b04a" stroke-width="6" stroke-linecap="round"/><path d="M39 9L54 16L42 28Z" fill="#e8b04a" stroke="#140f1c" stroke-width="3" stroke-linejoin="round"/><path d="M25 55L10 48L22 36Z" fill="#e8b04a" stroke="#140f1c" stroke-width="3" stroke-linejoin="round"/><path d="M17 28A16 16 0 0 1 30 17" fill="none" stroke="#fff3c4" stroke-width="2" stroke-linecap="round" opacity="0.6"/></svg></button></div></div>
   </div>
   <div id="tab"></div>`;
   for(const k in NAVL) if(k!=='dev') navSet(k,0);
@@ -454,8 +441,7 @@ function encHUD(B,ev){ const st=$('.stage'), box=$('#enc'); if(!st||!box) return
 // nombres de las mecánicas de JEFE (iconos de estado)
 const MECH={invocador:'Invocador',enfurecido:'Enfurecido',fases:'Escudo de fases',final:'Jefe final'};
 /* ---------- botín de jefe: vuela al inventario ---------- */
-// Jefes: sin ventana; el botín va a la bolsa (icono de cofre) y el icono da un pequeño salto
-// Botín de jefe: el cofre y los materiales salen del jefe y vuelan a Inventario, donde entran solos (los monstruos normales no sueltan nada)
+// Botín de jefe: los materiales salen del jefe y vuelan a Inventario, donde entran solos (los monstruos normales no sueltan nada)
 const stageXY=e=>{ const cv=$('#cv'); if(!cv||!e||e.x==null||!fx.sc) return null; const r=cv.getBoundingClientRect(); return {x:r.left+e.x*fx.sc,y:r.top+(fx.gy-30)*fx.sc} };
 function flyLoot(items){ const B=G.B, boss=B&&B.enemies.find(e=>e.x!=null), from=stageXY(boss), to=document.querySelector('.nav [data-tab="inv"]');
   if(!from||!to||tab!=='up'||battery()||reduceMotion()) return false;
@@ -465,15 +451,20 @@ function flyLoot(items){ const B=G.B, boss=B&&B.enemies.find(e=>e.x!=null), from
     el.animate([{transform:`translate(${from.x-12}px,${from.y-12}px) scale(.4)`,opacity:0},{transform:`translate(${from.x-12+dx}px,${from.y-12+up}px) scale(1.3)`,opacity:1,offset:.35},
       {transform:`translate(${from.x-12+dx}px,${from.y-12+up+8}px) scale(1.1)`,offset:.55},{transform:`translate(${tx-12}px,${ty-12}px) scale(.6)`,opacity:.9}],{duration:1100+i*120,easing:'cubic-bezier(.3,.7,.4,1)'})
       .onfinish=()=>{ el.remove(); to.animate([{transform:'scale(1)'},{transform:'scale(1.3)'},{transform:'scale(1)'}],{duration:300}) } }); return true }
-function bossLoot(mat,chest){ const b=document.querySelector('.nav [data-tab="inv"]'); updateHUD(); const items=[...(chest?[ICON.wood]:[]),ICON.scrap,...Array(Math.min(3,mat||0)).fill(MATI)];
+function bossLoot(mat){ if(!mat) return; const b=document.querySelector('.nav [data-tab="inv"]'); updateHUD(); const items=Array(Math.min(3,mat)).fill(MATI);
   if(!flyLoot(items)&&b&&!reduceMotion()) b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:450}) }
-G.on('boss',({mat})=>{ haptic('medium'); bossLoot(mat,true) });
-G.on('bossFarm',({mat})=>{ if(mat) bossLoot(mat,false) });
+G.on('boss',({mat,tix})=>{ haptic('medium'); bossLoot(mat); if(tix) toast(`+${tix} ${tix===1?'ticket':'tickets'} de invocación`) });
+// pieza de equipo que suelta un élite o JEFE repetido: vuela al inventario con el color de su rareza y un aviso
+G.on('gearDrop',x=>{ haptic(x.r>=2?'ok':'light'); updateHUD(); const html=`<span class="flyg" style="--rc:var(--r${x.id})">${gIcon(x.slot,S.cls,22)}</span>`;
+  if(!flyLoot([html])){ const b=document.querySelector('.nav [data-tab="inv"]'); if(b&&!reduceMotion()) b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:450}) }
+  toast(`¡Botín! ${x.piece} (${x.name})${x.fresh?' · ¡nueva!':x.up?' · +'+x.lvl:''}`) });
+G.on('slotOpen',({name,tickets})=>{ haptic('ok'); toast(`¡Nuevo hueco: ${name}! Pieza Común de regalo${tickets?` y +${tickets} tickets de invocación`:''}`) });
+G.on('bossFarm',({mat})=>{ if(mat) bossLoot(mat) });
 /* ---------- minitutorial (solo partidas nuevas): 5 pasos señalando dónde está cada cosa ---------- */
 const TUT=[['#upFab','Mejora tu héroe con el oro que ganas. Mantén pulsado para comprar seguido.'],
   ['#skBar .skb','Tus habilidades se lanzan solas. También puedes tocarlas para usarlas antes.'],
   ['#dailyBtn','Premios diarios: calendario y ruleta gratis cada día.'],
-  ['.nav [data-tab="inv"]','Los élites y JEFES sueltan cofres. Ábrelos en Inventario y equipa mejores armas.'],
+  ['.nav [data-tab="inv"]','Aquí ves a tu héroe, su arma, su grimorio y tus materiales.'],
   ['.nav [data-tab="ev"]','En Modos están la Sala de jefes, los eventos, el PvP y la Torre.']];
 let tutI=-1;
 function tutCheck(){ if(tutI>=0){ tutPlace(); return } if(!S||(S.opt&&S.opt.tut)) return; if(S.lvl>5){ G.setOpt('tut',true); return }   // partidas ya avanzadas: sin tutorial
@@ -508,7 +499,7 @@ function updateHUD(){
   setHTML($('#uName'),`<span class="nt">${esc(S.name||'')}</span>`);   // solo el nombre: la clase ya se ve en el retrato
   avatar();   // nombre y, debajo, la clase
 
-  $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens()); $('#rScrap').textContent=fmt(S.scrap);
+  $('#rGold').textContent=fmtG(S.gold); $('#rTok').textContent=fmt(G.tokens());
   // emblema del centro (entre las dos barras): dónde estás y si es jefe o élite
   { const sp=!ev&&G.surpriseState(), run=ev&&B&&B.kind==='tower'?G.towerState().run:null;
     // mismos colores que el borde del combate: JEFE rojo · élite morado · horda naranja · errante azul · PvP: VS en azul
@@ -523,6 +514,7 @@ function updateHUD(){
   const eb=$('#evoBtn'); if(eb) eb.hidden=ev||!(G.evoKeyOk()&&G.evoLvlOk());
   const es=$('#evoSlot'); if(es){ const soon=G.nextEvo()&&G.nextEvo().pending&&S.lvl>=G.lvlCap(); setHTML(es,soon&&!ev?'<span class="pill">Evolución: próximamente</span>':''); }
   const sbs=document.querySelector('.sidebtns'); if(sbs) sbs.hidden=ev;   // en los eventos no se ven los iconos del combate
+  { const rb=$('#repBtn'); if(rb){ const on=!!S.repF; if(rb.classList.contains('on')!==on){ rb.classList.toggle('on',on); rb.setAttribute('aria-pressed',on); rb.title=on?`Repitiendo la fase ${S.repF}`:'Repetir fase'; } } }   // «Repetir fase»: dorado mientras está activo
   const db=$('#dailyBtn'); if(db){ db.hidden=ev; $('#dailyN').hidden=!(G.calState().can||G.wheelState().free); }   // premios diarios: calendario y ruleta
 
   const hs=$('#hStats'); if(hs) hs.innerHTML=`<div class="sl">
@@ -546,10 +538,8 @@ function updateHUD(){
       b.querySelector('.skcd').style.background=p?`conic-gradient(rgba(0,0,0,.65) ${p*360}deg, transparent 0)`:'none'; }); }
   { const n=misBadge(); navSet('mis',n); if(tab==='mis'&&misKeyNow()!==misKey) renderTab(); }
   document.querySelectorAll('[data-need]').forEach(b=>{const [k,v]=b.dataset.need.split(':');b.disabled=(S[k]<+v)});
-  const nc=chestTotal();
   { const prize=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0), play=(G.evPaused()?0:(G.modeOpen('lab')?G.evFreeLeft():0)+(G.modeOpen('boss')?G.wbFreeLeft():0))+(G.modeOpen('pvp')?G.pvpFreeLeft():0)+G.hallTriesLeft();
     navSet('ev',prize||play,prize?'':'gold'); }   // premio de un ranking por recoger: número rojo; si no, punto dorado si quedan entradas gratis
-  navSet('inv',nc?1:0,'red');   // cofres por abrir: punto rojo (el número ya se ve dentro)
 }
 // botones de esta pantalla (data-act)
 acts({
@@ -559,6 +549,8 @@ acts({
   skAuto:()=>{ if(G.autoOnly()){ toast('Aquí las habilidades son siempre automáticas'); }
     else if(G.inEvent()){ G.setOpt('evAuto',S.opt&&S.opt.evAuto===false); toast(S.opt.evAuto?'Habilidades automáticas en el evento':'Habilidades a mano en el evento'); }   // (por defecto, automáticas)
     else { G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); } updateHUD(); if(tab==='dev') renderTab() },
+  // «Repetir fase»: se queda en la fase de ahora (farmear su élite/JEFE, oro…) o vuelve a subir
+  repeatFase:()=>{ if(G.inEvent()) return; const on=!S.repF; G.setRepeat(on); haptic('light'); toast(on?`Repitiendo la fase ${S.repF}`:'Vuelves a subir de fase'); updateHUD() },
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
 });
 /* ---------- pestañas: dibujar la pantalla abierta ---------- */
@@ -575,9 +567,9 @@ function renderTab(){
   const bt=$('#battle'); if(bt) bt.hidden=tab!=='up'; $('#app').classList.toggle('home',tab==='up'); // el combate sigue funcionando por detrás
   if(tab==='up') el.innerHTML='';
   const fab=$('#upFab'); if(fab) fab.hidden=tab!=='up'||G.inEvent();
-  // Inventario: pantalla principal (Equipo + Cofres/Materiales); Armas y Grimorio se abren desde el Equipo, a pantalla propia
+  // Inventario: el héroe y sus materiales; el Grimorio se abre desde el héroe, a pantalla propia
   if(tab==='inv'){ const back=(v,t)=>`<button class="back" data-act="invview" data-v="${v}">← ${t}</button>`;
-    el.innerHTML=nbsp((invView==='forja'?'':invView==='grim'?back('main','Volver al inventario'):invBanner())+tabInv()); if(invView==='armas'||invView==='main') renderList(); fitSheet(); }
+    el.innerHTML=nbsp((invView==='grim'?back('main','Volver al inventario'):invBanner())+tabInv()); }
   if(tab==='shop') el.innerHTML=nbsp(tabShop());
   if(tab==='ev'){ el.innerHTML=nbsp(tabEv()); towerMapScroll(); }   // (Torre: el mapa se coloca en tu piso)
   if(tab==='dev') el.innerHTML=nbsp(tabDev());
@@ -587,7 +579,7 @@ function renderTab(){
     window.scrollTo(0,y); }
   updateHUD();
 }
-function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev'||(tab==='inv'&&invView==='cofres')) renderTab(); else updateHUD(); }
+function refreshTabIfStatic(){ if(tab==='shop'||tab==='ev') renderTab(); else updateHUD(); }
 
 /* ---------- Inicio: mejoras y niveles ---------- */
 // Barra de mejoras fija sobre la barra de abajo: un toque compra 1 nivel (o todos los posibles en MÁX)
@@ -633,15 +625,15 @@ function tabHall(){ const H=CFG.hall, L=G.hallBosses(), left=G.hallTriesLeft();
     const sb=[1,2,3].map(i=>`<button class="hsb${i===st?' on':''}${i<=sel.stars?' done':''}" data-act="hallStar" data-v="${i}" ${i>sel.stars+1?'disabled':''}>${'★'.repeat(i)}${i<=sel.stars?' ✓':''}</button>`).join('');
     sheet=`<div class="hsheet"><div class="ctrl" style="justify-content:space-between"><b>${sel.foe?sel.foe.name+(sel.foe.title?', '+sel.foe.title:''):'JEFE'} · fase ${sel.f}</b><span class="hst big">${starsHTML(sel.stars)}</span></div>
       <div class="hsbs">${sb}</div>
-      <div class="loot"><div><span>${first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(rw)}${rw.scrap?` ${ICON.scrap}${fmt(rw.scrap)}`:''}</b></div></div>
+      <div class="loot"><div><span>${first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(rw)}</b></div></div>
       <button class="btn gold" data-act="hallGo" data-id="${sel.id}" data-v="${st}" ${left&&!G.inEvent()?'':'disabled'}>Luchar ${'★'.repeat(st)} · ${left}/${H.tries} intentos</button></div>`; }
   return `<section class="panel"><div class="ctrl" style="justify-content:space-between"><h3>Campaña · Jefes</h3><span class="pill">Intentos hoy <b>${left}/${H.tries}</b></span></div>
     ${chips}${status}${sheet}<div class="hgrid">${tiles}</div>
-    <p class="hint">Sin tiempo límite: desde el minuto 1, el jefe se enfurece cada 10 s · ★★ y ★★★ son más fuertes y dan más · repetir da oro y chatarra</p></section>` }
+    <p class="hint">Sin tiempo límite: desde el minuto 1, el jefe se enfurece cada 10 s · ★★ y ★★★ son más fuertes y dan más · repetir da oro</p></section>` }
 
 G.on('hallEnd',r=>{ tab='ev'; modView='campana'; renderTab(); haptic(r.won?'ok':'medium');
   later(()=>showModal(`<h3>${r.won?'¡Victoria!':'Derrota'} ${'★'.repeat(r.star)}</h3><p class="hint">${(f=>f?f.name:'JEFE')(G.zoneFoe(G.zoneAt(r.m,r.f),'jefe'))} · fase ${r.f} (${CFG.modes[r.m].name})${r.won?'':' · te ha derrotado'}</p>
-    ${r.rw?`<div class="loot"><div><span>${r.first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(r.rw)}${r.rw.scrap?` ${ICON.scrap}${fmt(r.rw.scrap)}`:''}</b></div></div>`:''}
+    ${r.rw?`<div class="loot"><div><span>${r.first?'1.ª victoria':'Repetir'}</span><b>${bundleHTML(r.rw)}</b></div></div>`:''}
     <p class="hint">Intentos hoy: ${G.hallTriesLeft()}/${CFG.hall.tries}</p><button class="btn gold" data-act="close">Continuar</button>`)) });
 // botones de esta pantalla (data-act)
 acts({
@@ -653,78 +645,7 @@ acts({
   hallStar:b=>{ hallStar=+b.dataset.v; renderTab() },
   hallGo:(b,k,id)=>{ if(G.hallStart(id,+b.dataset.v)){ tab='up'; renderTab(); } else toast(G.hallTriesLeft()?'No se puede luchar ahora':'Sin intentos hoy: vuelve mañana') },
 });
-/* ---------- Inventario ---------- */
-// ¿daño y velocidad base mejores que el arma equipada? (las armas ya no se equipan solas)
-function betterThanEquipped(it){ const e=G.equipped(); if(!e) return true; const a=G.weaponMain(it), b=G.weaponMain(e); return a.d+a.s*0.5>b.d+b.s*0.5 }
-// Forja: arriba el arma y Subir nivel; abajo Reforja siempre a la vista. Cada stat es una fila con su barra (mín → máx),
-// candado para fijarlo y ↑ para subir solo ese stat. Un solo botón Reforjar con el precio (sube si fijas stats).
-const LOCK_SVG=on=>`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="${on?'M8 11V7a4 4 0 0 1 8 0v4':'M8 11V7a4 4 0 0 1 7.5-2'}"/></svg>`;
-function statRow(it,x,i,opt){ const [lo,hi]=CFG.sec[x.k][it.r], top=x.v>=hi, w=hi>lo?Math.max(4,(x.v-lo)/(hi-lo)*100):100, lk=opt.lock&&lockSel.includes(i);
-  return `<div class="rstat${lk?' lock':''}${top?' top':''}">
-    ${opt.lock?`<button class="rlock" data-act="lock" data-i="${i}" aria-pressed="${lk}" aria-label="${lk?'Soltar':'Fijar'} ${CFG.sec[x.k].n}">${LOCK_SVG(lk)}</button>`:''}
-    <div class="rinfo"><div class="rtop"><span>${CFG.sec[x.k].n}</span><b>+${x.v.toLocaleString('es-ES')} %${opt.diff!=null&&opt.diff!==0?` <em class="${opt.diff>0?'up':'dn'}">${opt.diff>0?'▲':'▼'}</em>`:''} <small>/ ${hi.toLocaleString('es-ES')}</small></b></div>
-      <div class="rbar"><i style="width:${w}%;background:var(--${top?'good':'r'+it.r})"></i></div></div>
-    ${opt.imp?(top?'<span class="rmax">MÁX</span>':`<button class="btn sm rup" data-act="impAsk" data-id="${it.id}" data-k="${i}" aria-label="Subir ${CFG.sec[x.k].n}">↑</button>`):''}
-  </div>` }
-let forjaTab='lvl', fdetOpen=false;   // fdetOpen: el panel «Filtros y desmontar» sigue como lo dejaste
-// Forja: el arma en un marco del color de su rareza, estrellas de nivel y dos pestañas, Subir nivel y Reforjar
-const ICSPD='<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>';
-function tabForja(){
-  const it=G.findItem(forgeId)||G.equipped();
-  if(!it) return `${scrHead('FORJA',forjaBack)}<section class="panel"><p class="hint">Vacío.</p></section>`;
-  forgeId=it.id;
-  const m=G.weaponMain(it), eq=it.id===S.equippedId, own=it.cls===S.cls, max=it.lvl>=CFG.weapon.maxLvl;
-  const n=G.lvlCostItems(it), sc=G.lvlCostScrap(it), have=G.fodderFor(it).length;
-  const mn=G.weaponMain({r:it.r,lvl:Math.min(CFG.weapon.maxLvl,it.lvl+1)});
-  const p=G.reforgePrice(it,lockSel.length,'scrap'), pt=lockSel.length===1&&tokOpen()?G.reforgePrice(it,1,'token'):null;
-  const stars=Array.from({length:CFG.weapon.maxLvl},(_,i)=>`<i class="${i<it.lvl?'on':''}">★</i>`).join('');
-  const row=(ic,k,a,b)=>`<div class="fgrow"><span class="fgi">${IC(ic,18)}</span><span class="fgk">${k}</span>${max?`<b>+${pct(a)}</b>`:`<s>+${pct(a)}</s><em>→</em><b class="up">+${pct(b)}</b>`}</div>`;
-  // material: Esencia (gota), Esencia de pesadilla e infernal (cristal); tienes / pide
-  const MATIC=[ICON.ess,MATI,MATI.replace('<svg class="ic"','<svg class="ic" style="filter:hue-rotate(-60deg) saturate(1.4)"')];
-  const matNeed=(mats,scrap)=>[scrap?`<span class="fgm" style="color:var(--${S.scrap>=scrap?'good':'bad'})">${ICON.scrap}${fmt(scrap)}</span>`:'',...(mats||[]).map((q,m)=>q?`<span class="fgm" style="color:var(--${(S.mats[m]||0)>=q?'good':'bad'})" title="${CFG.modes[m].mat}">${MATIC[m]}${fmt(S.mats[m]||0)}/${fmt(q)}</span>`:'')].join('');
-  const asc=max?G.ascendInfo(it.id):null, mc=!max&&have<n?G.lvlMatCost(it):null;
-  const ascBody=!asc||asc.top?'<p class="hint" style="text-align:center">Nivel y rareza máximos</p>':`
-      <p class="hint" style="text-align:center">Nivel máximo. <b>Ascender</b>: pasa a <b style="color:var(--r${asc.next})">${CFG.rarName[asc.next]}</b> al nivel ${CFG.weapon.ascend.lvl}, con sus stats mejorados${CFG.weapon[asc.next][2]>it.sec.length?' y un stat nuevo':''}.</p>
-      <div class="fgneed"><span>Otra ${CFG.rarName[it.r]} nv ${CFG.weapon.maxLvl} (se gasta)</span><b style="color:var(--${asc.partner?'good':'bad'})">${asc.partner?'✓':'0/1'}</b></div>
-      <div class="fgneed"><span>Coste</span><span class="fgms">${matNeed(asc.cost.mats,asc.cost.scrap)}</span></div>
-      <button class="fgcta asc" style="--rc:var(--r${asc.next})" data-act="ascAsk" data-id="${it.id}" ${asc.can?'':'disabled'}><b>ASCENDER A ${CFG.rarName[asc.next].toUpperCase()}</b><span>${asc.can?'Listo':!asc.partner?`Te falta otra ${CFG.rarName[it.r]} al nivel ${CFG.weapon.maxLvl}`:'Te faltan materiales'}</span></button>`;
-  const lvlBody=max?ascBody:`
-      ${row(ICONS.armas,'Daño',m.d,mn.d)}${row(ICSPD,'Velocidad',m.s,mn.s)}
-      <div class="fgneed"><span>Armas iguales</span><b style="color:var(--${have>=n?'good':'bad'})">${have}/${n}</b></div>
-      <button class="fgcta" data-act="lvl" data-id="${it.id}" ${have<n||S.scrap<sc?'disabled':''}><b>SUBIR A NIVEL ${it.lvl+1}</b><span>${sc?`${ICON.scrap} ${fmt(sc)} chatarra · `:''}${n} arma${n>1?'s':''} igual${n>1?'es':''}</span></button>
-      ${mc&&mc.miss?`<button class="btn fgalt" data-act="lvlMat" data-id="${it.id}" ${mc.lack||S.scrap<sc+mc.scrap?'disabled':''}>Pagar ${mc.miss===1?'la copia que falta':'las '+mc.miss+' copias que faltan'} con <span class="fgms">${matNeed(mc.mats,sc+mc.scrap)}</span></button>`:''}`;
-  const refBody=`${it.sec.map((x,i)=>statRow(it,x,i,{lock:true,imp:true})).join('')}
-      <button class="fgcta" data-act="ref" data-id="${it.id}" data-pay="scrap" ${S.scrap<p.scrap?'disabled':''}><b>REFORJAR</b><span>${ICON.scrap} ${fmt(p.scrap)} chatarra</span></button>
-      ${pt?`<button class="btn sm" data-act="ref" data-id="${it.id}" data-pay="token">O con token: ${fmt(pt.scrap)} chat. + ${pt.tokens} token</button>`:''}
-      <div class="rlegend"><span>${LOCK_SVG(true)} fija un stat (cuesta más)</span><span><b>↑</b> sube solo ese stat</span></div>`;
-  return `${scrHead('FORJA',forjaBack)}<section class="fgp">
-    <div class="fgframe" style="--rc:var(--r${it.r})">${wIcon(it,120)}
-      ${eq?'<span class="pill fgeq">Equipada</span>':own?`<button class="btn sm fgeq" data-act="equip" data-id="${it.id}">Equipar</button>`:''}</div>
-    <div class="fgname">${wName(it)}</div>
-    <div class="fgrar" style="--rc:var(--r${it.r})"><span>${CFG.rarName[it.r].toUpperCase()}</span><span class="fgst">${stars}</span></div>${legendLine(it)}
-    <div class="fgtabs"><button class="${forjaTab==='lvl'?'on':''}" data-act="forjaTab" data-v="lvl">Subir nivel</button><button class="${forjaTab==='ref'?'on':''}" data-act="forjaTab" data-v="ref">Reforjar <small>${lockSel.length}/${G.maxLocks(it)}</small></button></div>
-    <div class="fgbody">${forjaTab==='lvl'?lvlBody:refBody}</div>
-    ${!eq&&G.equipped()?`<button class="btn sm" data-act="forge" data-id="${S.equippedId}">Volver a mi arma equipada</button>`:''}
-    </section>`;
-}
-// botones de esta pantalla (data-act)
-acts({
-  impAsk:(b,k,id)=>impModal(id,+k),
-  lvlMat:(b,k,id)=>{ const it=G.findItem(id), r=G.levelUp(id,true); if(r.ok) toast(wName(it)+' sube a nivel '+r.lvl); else toast(r.why==='scrap'?'Te falta chatarra':'Te falta material'); renderTab() },
-  ascAsk:(b,k,id)=>{ const it=G.findItem(id), a=it&&G.ascendInfo(id); if(!a||!a.can) return;
-    showModal(`<h3>¿Ascender ${esc(wName(it))}?</h3><p class="hint">Pasa a <b style="color:var(--r${a.next})">${CFG.rarName[a.next]}</b> al nivel ${CFG.weapon.ascend.lvl}. Se gasta otra ${CFG.rarName[it.r]} nv ${CFG.weapon.maxLvl} (${esc(wName(a.partner))}) y el material.</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="ascYes" data-id="${id}">Ascender</button></div>`) },
-  ascYes:(b,k,id)=>{ closeModal(); const it=G.findItem(id), r=G.ascend(id); if(r.ok){ toast(`¡${wName(it)} asciende a ${CFG.rarName[r.r]}!`); haptic('ok'); } renderTab() },
-  lvl:(b,k,id)=>{const r=G.levelUp(id),it=G.findItem(id);
-    if(r.ok) toast(wName(it)+' sube a nivel '+r.lvl);
-    else if(r.why==='items') toast(`Necesitas ${r.need} ${wName(it)} más`);
-    else if(r.why==='scrap') toast('Te falta chatarra');
-    renderTab()},
-  forjaTab:(b)=>{forjaTab=b.dataset.v;renderTab()},
-  forge:(b,k,id)=>{forgeId=id;lockSel=[];forjaBack=b.dataset.from||'armas';tab='inv';invView='forja';renderTab();window.scrollTo({top:0})},
-  lock:b=>{const i=+b.dataset.i, it=G.findItem(forgeId); if(lockSel.includes(i)) lockSel=lockSel.filter(x=>x!==i); else if(it&&lockSel.length<G.maxLocks(it)) lockSel=[...lockSel,i]; else { toast('Máximo '+(it?G.maxLocks(it):0)+' fijado'+(it&&G.maxLocks(it)>1?'s':'')); return } renderTab()},
-  ref:(b,k,id)=>doReforge(id,b.dataset.pay),
-});
-/* ---------- Equipo: silueta de tu clase, arma equipada y Grimorio activo ---------- */
+/* ---------- Equipo: tu héroe, su arma, el Grimorio activo y los materiales ---------- */
 // Siluetas sencillas por clase (color de la clase): Guerrero con espada y escudo, Mago con sombrero y báculo,
 // Arquero con capucha y arco, Asesino con capa y dagas, Clérigo con mitra y maza
 function classSVG(cls){ const c=CFG.classes[cls].color, body=`<circle cx="50" cy="30" r="12"/><path d="M34 46h32l6 44H28z"/><path d="M36 90h11v38H36zM53 90h11v38H53z"/>`;
@@ -747,7 +668,6 @@ const sceneCache={};
 function sceneImg(zone,w,h){ const k=zone+'_'+w+'_'+h; if(!sceneCache[k]&&window.ART){ try{ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const g=cv.getContext('2d');
   ART.scene(g,w,h,Math.round(h*0.8),zone,0,0,0); sceneCache[k]=cv.toDataURL('image/jpeg',0.8) }catch(e){ sceneCache[k]='' } } return sceneCache[k]||'' }
 const zoneNow=()=>Math.floor(((Math.max(1,S.best)-1)%150)/30);
-const scrHead=(t,backV)=>`<div class="scrhd">${backV?`<button class="scrb" data-act="invview" data-v="${backV}" aria-label="Volver">‹</button>`:''}<b>${t}</b></div>`;
 // Inventario: el héroe con el mismo dibujo del combate (se pinta una vez y se guarda como imagen)
 const heroImgCache={};
 function heroImg(){ const c=CFG.classes[S.cls], k=[S.cls,S.evo,S.path].join();
@@ -757,67 +677,94 @@ function heroImg(){ const c=CFG.classes[S.cls], k=[S.cls,S.evo,S.path].join();
   return heroImgCache[k]?`<img class="silh" src="${heroImgCache[k]}" width="92" height="120" alt="">`:classSVG(S.cls) }
 // al cargar los sprites, el retrato y el héroe del inventario se vuelven a pintar con ellos
 if(window.ART) ART.onSprites(()=>{ for(const k in heroImgCache) delete heroImgCache[k]; avKey=null; if(!S) return; avatar(); const b=$('.ibart'); if(b) b.innerHTML=heroImg() });
-// Cabecera del inventario: el héroe grande sobre el escenario de su zona y sus huecos (arma y grimorio)
-function invBanner(){ const w=G.equipped(), bg=sceneImg(zoneNow(),390,190), gshown=G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1;
-  const ws=w?`<button class="ibslot" style="--rc:var(--r${w.r})" data-act="forge" data-id="${w.id}" data-from="main" aria-label="Arma: ${wName(w)}">${wIcon(w)}<span class="ibl">Nv ${w.lvl}</span></button>`:`<button class="ibslot empty" data-act="invview" data-v="armas" aria-label="Sin arma">—</button>`;
-  const gs=gshown?`<button class="ibslot" style="--rc:var(--rE)" data-act="grimOpen" aria-label="Grimorio">${GRIMSVG.replace(/width="\d+" height="\d+"/,'width="34" height="34"')}${G.grimOwned()?`<span class="ibl">Nv ${G.grimLevel()}</span>`:''}</button>`:`<span class="ibslot empty" aria-label="Grimorio bloqueado">🔒</span>`;
+// Cabecera del inventario: el héroe grande sobre el escenario de su zona y sus huecos (Arma, Armadura, Anillo, Amuleto y el Grimorio)
+// (un hueco aún cerrado: candado y la fase de Normal en que se abre)
+function gearSlotBtn(g){ if(!g.open) return `<span class="ibslot empty" aria-label="${g.slotName}: se abre en la fase ${g.openAt}">🔒<span class="ibl">F${g.openAt}</span></span>`;
+  return `<button class="ibslot" style="--rc:var(--r${g.has?g.rarId:'C'})" data-act="gearInfo" data-s="${g.slot}" aria-label="${g.slotName}: ${esc(g.has?g.name:'vacío')}">${gIcon(g.slot,S.cls)}${g.has?`<span class="ibl">+${g.lvl}</span>`:''}</button>` }
+function invBanner(){ const bg=sceneImg(zoneNow(),390,190), gshown=G.grimOwned()||S.lvl>=CFG.grimoire.showLvl||S.evo>=1;
+  const gs=gshown?`<button class="ibslot" style="--rc:var(--rE)" data-act="grimOpen" aria-label="Grimorio">${GRIMSVG.replace(/width="\d+" height="\d+"/,'width="30" height="30"')}${G.grimOwned()?`<span class="ibl">Nv ${G.grimLevel()}</span>`:''}</button>`:`<span class="ibslot empty" aria-label="Grimorio bloqueado">🔒</span>`;
   return `<section class="ibanner" style="background-image:linear-gradient(180deg,rgba(18,20,28,.1),rgba(18,20,28,.85)),url(${bg})">
     <div class="ibart">${heroImg()}</div>
     <div class="ibinfo"><b>${esc(S.name||'')}</b><span>${heroName().toUpperCase()}</span><small>Nivel ${S.lvl}</small></div>
-    <div class="ibslots">${ws}${gs}</div></section>` }
+    <div class="ibslots">${G.gearSlots().map(gearSlotBtn).join('')}${gs}</div></section>` }
+// texto de lo que da cada hueco con su valor (v; el Anillo, también el daño crítico)
+const pcE=d=>(Math.round(d*1000)/10).toLocaleString('es-ES')+' %';
+function gearStatTxt(slot,v,short){ const cd=v*(CFG.equip.anillo.cd||0);
+  return slot==='arma'?`+${pcE(v)}${short?'':' de daño'}`:slot==='armadura'?`+${pcE(v)}${short?'':' de vida y defensa'}`:slot==='anillo'?(short?`+${pcE(v)} crít.`:`+${pcE(v)} de crítico · +${pcE(cd)} de daño crítico`):`+${pcE(v)}${short?' hab.':' de daño de las habilidades'}` }
+const SETN=['común','poco común','raro','épico','legendario','mítico'];   // (el set: en masculino)
+// Colección y sets: una fila por hueco y una columna por rareza (lo que tienes y su +N), y los sets por rareza (piezas de esa rareza o mejor)
+function invSets(){ const gs=G.gearSlots(), I=G.setInfo(), C=CFG.sets, R=[0,1,2,3,4];
+  const cell=(g,i)=>{ const L=g.lines[i]; return `<span class="gcell${L.owned?' has':''}${g.has&&g.r===i?' eq':''}" style="--rc:var(--r${L.id})" title="${esc(L.name)}">${L.owned?'+'+L.lvl:''}</span>` };
+  const rows=gs.map(g=>`<div class="grow"><span class="gname">${g.slotName}</span>${g.open?R.map(i=>cell(g,i)).join(''):`<span class="glock">🔒 Se abre en la fase ${g.openAt} de Normal</span>`}</div>`).join('');
+  const sets=R.map(r=>{ const n=I.count[r], on2=I.r2===r, on4=I.r4===r, fx=C.fx[r];
+    return `<div class="gset${on2||on4?' on':''}" style="--rc:var(--r${CFG.rar[r].id})"><b>Set ${SETN[r]}</b> <small>${Math.min(4,n)}/4</small>
+      <p><span class="${on2?'act':''}">2 piezas: +${pcE(C.two[r])}</span> · <span class="${on4?'act':''}">4 piezas: +${pcE(C.four[r])}${fx?` y el efecto del arma ${fx.ch?'sale mucho más a menudo y da 1 carga más':'sale más a menudo'}`:''}</span> (vida, daño y defensa)</p></div>` }).join('');
+  return `<section class="panel gcol"><h3>Colección y sets</h3><div class="ghead"><span></span>${R.map(i=>`<span style="color:var(--r${CFG.rar[i].id})">${CFG.rar[i].name.slice(0,4)}.</span>`).join('')}</div>${rows}
+    <div class="gsets">${sets}</div><p class="hint">Un set cuenta las piezas equipadas de esa rareza o mejor; se suman el de 2 piezas y el de 4.</p></section>` }
 function tabInv(){
-  if(invView==='forja') return tabForja();
-  const nc=chestTotal(), nm=(S.scrap>0?1:0)+(S.tokens>0?1:0)+(S.won>0?1:0)+Object.values(S.mats||{}).filter(n=>n>0).length+(S.evm>0?1:0)+(S.tickets>0?1:0)+(S.bossTickets>0?1:0)+(S.pvpTickets>0?1:0);
-  // pantalla principal: solo las pestañas, sin nada abierto hasta que toques una
-  const cur=invView==='main'?'armas':invView;
-  const head=`<div class="utabs" role="tablist">
-    <button data-act="invview" data-v="armas" class="${cur==='armas'?'on':''}">Armas <small>${G.invCount()}/${G.invMax()}</small></button>
-    <button data-act="invview" data-v="cofres" class="${cur==='cofres'?'on':''}">Cofres <small>${nc}</small></button>
-    <button data-act="invview" data-v="mat" class="${cur==='mat'?'on':''}">Materiales <small>${nm}</small></button>
-</div>`;
   if(invView==='grim') return `<section class="panel">${tabGrim()}</section>`;
-  if(invView==='cofres'){
-    // Cofres en casillas como las armas (borde del color de su rareza); al tocar uno, su ficha tapa el héroe
-    const owned=CHEST_TYPES.filter(k=>G.chestCount(k)>0); if(!owned.includes(chestSel)) chestSel=null;
-    const tile=k=>`<button class="itile ctile${chestSel===k?' sel':''}" style="--rc:var(--r${CHEST_RAR[k]})" data-act="chestSel" data-k="${k}" aria-pressed="${chestSel===k}" aria-label="Cofre de ${CFG.chests[k].name.toLowerCase()}">${ICON[k]}<span class="tl">×${G.chestCount(k)}</span></button>`;
-    const sheet=k=>{ const n=G.chestCount(k), r=CHEST_RAR[k]; return `<div class="isheet fixed" style="--rc:var(--r${r})">
-      <div class="ishd"><div class="isart ctile">${ICON[k]}</div><div style="min-width:0;flex:1"><b class="isn">Cofre de ${CFG.chests[k].name.toLowerCase()}</b><span class="rar" style="color:var(--r${r})">${CFG.rarName[r].toUpperCase()}</span>
-        <div class="s">Tienes ${n} · ${CFG.chests[k].from}</div></div>
-        <button class="isx" data-act="chestSel" data-k="${k}" aria-label="Cerrar">✕</button></div>
-      <div class="isacts"><button class="btn" data-act="info" data-k="${k}">Info</button><button class="btn gold" data-act="open1" data-k="${k}">Abrir 1</button><button class="btn" data-act="openAll" data-k="${k}" ${n>1?'':'disabled'}>Abrir todos</button></div></div>` };
-    return `${head}<section class="panel">${chestSel?sheet(chestSel):''}${owned.length?`<div class="igrid">${owned.map(tile).join('')}</div>`:'<p class="hint">Vacío.</p>'}</section>`;
-  }
-  if(invView==='mat'){
-    const t=[], add=(n,c,name,ic)=>{ if(n>0) t.push(`<div class="mtile" style="--mc:${c}" title="${name}"><span class="mi">${IC(ic||ICONS.mat,26)}</span><b>${fmt(n)}</b><span class="mn">${name}</span></div>`) };
-    add(S.scrap,'var(--scrap)','Chatarra','<path d="M12 3l2.2 3.2 3.8-.6-.6 3.8L20.6 12l-3.2 2.2.6 3.8-3.8-.6L12 20.6l-2.2-3.2-3.8.6.6-3.8L3.4 12l3.2-2.2-.6-3.8 3.8.6z"/><circle cx="12" cy="12" r="3"/>');
-    for(const [m,n] of Object.entries(S.mats||{})) add(n,'var(--rE)',CFG.modes[m].mat);
-    add(S.evm,'var(--rL)',CFG.event.mat+'s','<path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/>');
-    add(S.tickets,'var(--rE)','Ticket Mazmorra','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
-    add(S.bossTickets,'var(--bad)','Ticket Jefe','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
-    add(S.pvpTickets,'var(--gold)','Ticket PvP','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
-    add(S.tokens,'var(--tok)','Tokens','<path d="M12 3l8 9-8 9-8-9z"/>');
-    add(S.won,'var(--good)','Tokens ganados','<path d="M12 3l8 9-8 9-8-9z"/>');
-    return `${head}<section class="panel">${t.length?`<div class="mgrid">${t.join('')}</div>`:'<p class="hint">Vacío.</p>'}</section>`;
-  }
-  // solo salen las opciones que tienes (rarezas, clases y stats de tus armas); si la elegida ya no existe, vuelve a "todas"
-  const have=S.items.filter(x=>x.id!==S.equippedId), hasStat=k=>have.some(x=>x.sec.some(y=>y.k===k));
-  if(F.rar!=='all'&&!have.some(x=>x.r===F.rar)) F.rar='all';
-  if(F.stat!=='any'&&!hasStat(F.stat)) F.stat='any';
-  const statOpts=Object.entries(CFG.sec).filter(([k])=>hasStat(k)).map(([k,s])=>`<option value="${k}" ${F.stat===k?'selected':''}>${s.n}</option>`).join('');
-  return `${head}<section class="panel">
-    <details class="fdet"${fdetOpen?' open':''}><summary>Filtros y desmontar</summary><div class="filters fpanel"><div class="ctrl" id="fHead">${fHead()}</div>
-      <div class="frow"><select id="fRar" aria-label="Rareza">${['all',...R.filter(r=>have.some(x=>x.r===r))].map(r=>`<option value="${r}" ${F.rar===r?'selected':''}>${r==='all'?'Rareza':CFG.rarName[r]}</option>`).join('')}</select>
-        <select id="fStat" aria-label="Stat"><option value="any">Cualquier stat</option>${statOpts}</select></div>
-      <div class="frow"><input type="number" id="fMin" aria-label="Mínimo %" inputmode="decimal" placeholder="mín" value="${esc(F.min)}">
-        <input type="number" id="fMax" aria-label="Máximo %" inputmode="decimal" placeholder="máx" value="${esc(F.max)}"></div>
-      <div id="bulk"></div>
-    </div></details>
-    <div id="invList" class="ilist"></div></section>`;
+  // materiales y monedas que tienes (los cofres y la forja se quitaron del juego; el arma se consigue en la caja de invocación de arriba)
+  const t=[], add=(n,c,name,ic)=>{ if(n>0) t.push(`<div class="mtile" style="--mc:${c}" title="${name}"><span class="mi">${IC(ic||ICONS.mat,26)}</span><b>${fmt(n)}</b><span class="mn">${name}</span></div>`) };
+  for(const [m,n] of Object.entries(S.mats||{})) add(n,'var(--rE)',CFG.modes[m].mat);
+  add(S.evm,'var(--rL)',CFG.event.mat+'s','<path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/>');
+  add(S.boxT,'var(--rE)','Ticket de invocación','<path d="M12 3l8 5v8l-8 5-8-5V8z"/>');
+  add(S.tickets,'var(--rE)','Ticket Mazmorra','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
+  add(S.bossTickets,'var(--bad)','Ticket Jefe','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
+  add(S.pvpTickets,'var(--gold)','Ticket PvP','<path d="M4 8h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z"/>');
+  add(S.tokens,'var(--tok)','Tokens','<path d="M12 3l8 9-8 9-8-9z"/>');
+  add(S.won,'var(--good)','Tokens ganados','<path d="M12 3l8 9-8 9-8-9z"/>');
+  return `${invBox()}${invSets()}<section class="panel"><h3>Materiales</h3>${t.length?`<div class="mgrid">${t.join('')}</div>`:'<p class="hint">Vacío.</p>'}</section>`;
 }
 // Grimorios: 2 por clase. Desbloquear con recursos o tokens; suben contigo; solo uno activo (cambiar cuesta tokens). Efecto desde el nivel 25 del grimorio.
 // botones de esta pantalla (data-act)
 acts({
-  invview:b=>{const v=b.dataset.v; if(v==='forja') forjaBack='armas'; invView=v; renderTab()}, // tocar la pestaña abierta la cierra
+  invview:b=>{ invView=b.dataset.v; renderTab() },
+  weaponInfo:()=>gearInfo('arma'),
+  gearInfo:b=>gearInfo(b.dataset.s),
+});
+// ventana de un hueco: la pieza equipada, lo que da, su extra y una línea por rareza (y, en el arma, el efecto de la Épica y la Legendaria)
+function gearInfo(slot){ const W=G.gear(slot); if(!W) return; const cur=W.has?W.r:-1, need=CFG.weapon.need;
+  const row=L=>`<div class="wline${L.r===cur?' eq':''}${L.owned?'':' no'}" style="--rc:var(--r${L.id})"><span class="wn"><b>${esc(L.name)}</b><small>${L.rar}${L.r===cur?' · equipada':''}</small></span><span class="wc">${L.owned?`+${L.lvl}`:'—'} <small>${L.copies}/${L.owned&&L.lvl<W.max?need[L.lvl+1]:L.owned?need[W.max]:need[0]}</small></span><b class="wd">${gearStatTxt(slot,L.v,true)}${L.extra?`<small>+${pcE(L.extra.v)} ${L.extra.name}</small>`:''}</b></div>`;
+  const head=W.has?`<h3>${esc(W.name)} <span class="pill">+${W.lvl}</span></h3>`:`<h3>${W.slotName} <span class="pill">vacío</span></h3>`;
+  const what={arma:'daño',armadura:'vida y defensa',anillo:'crítico y daño crítico',amuleto:'daño de las habilidades'}[slot];
+  showModal(`${head}<div class="ctrl" style="justify-content:center">${gIcon(slot,S.cls,64)}</div>
+    ${!W.open?`<p class="hint">Se abre en la fase ${W.openAt} de Normal (con su pieza Común de regalo).</p>`:W.has?`<div class="loot"><div><span>Rareza</span><b style="color:var(--r${W.rarId})">${W.rar}</b></div><div><span>Mejora</span><b>+${W.lvl} / +${W.max}</b></div><div><span>${W.slotName}</span><b>${gearStatTxt(slot,W.v)}</b></div>${W.extra?`<div><span>${W.extra.name}</span><b>+${pcE(W.extra.v)}</b></div>`:''}</div>
+    ${W.toNext?`<p class="hint">${W.toNext===1?'Falta':'Faltan'} ${W.toNext} ${W.toNext===1?'copia':'copias'} para el +${W.lvl+1} (${gearStatTxt(slot,W.nextV,true)}).</p>`:'<p class="hint">Mejora máxima de esta rareza.</p>'}`:''}
+    <div class="wlines">${W.lines.map(row).join('')}</div>
+    ${W.lines.filter(L=>L.fx).map(L=>`<div class="wfxbox${L.r===cur?' on':''}" style="--rc:var(--r${L.id})"><b>${esc(L.fx.name)}</b> <small>${L.rar}${L.r===cur?' · activo':L.owned?'':' · no la tienes'}</small><p>${esc(L.fx.desc)}</p></div>`).join('')}
+    <p class="hint">${W.slotName}: ${what}. Cada rareza es una pieza distinta: sus copias suben solo esa pieza y se equipa sola la mejor. Cada una trae además un extra fijo de su rareza, que no cambia al mejorarla${slot==='arma'?'; la Épica y la Legendaria, también un efecto':''}.</p>
+    <div class="ctrl"><button class="btn" data-act="close">Cerrar</button></div>`) }
+/* ---------- Invocar: la caja del equipo (eliges el hueco; tickets u oro), con su garantía a la vista ---------- */
+const RCOL=r=>`var(--r${CFG.rar[r].id})`;
+const pctTxt=p=>(Math.round(p*10)/10).toLocaleString('es-ES')+' %';
+let boxSlot='arma';   // el hueco que vas a invocar
+function invBox(){ const I=G.boxInfo(); if(!I) return ''; if(!I.slots.includes(boxSlot)) boxSlot='arma';
+  const tabs=G.gearSlots().map(g=>`<button class="btn sm${g.slot===boxSlot?' on':''}" data-act="boxSlot" data-s="${g.slot}" ${g.open?'':'disabled'}>${gIcon(g.slot,S.cls,18)} ${g.slotName}${g.open?'':' 🔒'}</button>`).join('');
+  const rates=I.rates.map(x=>`<span class="rt" style="--rc:${RCOL(x.r)}"><b>${x.name}</b> ${pctTxt(x.pct)}</span>`).join('');
+  const m=I.mid, t=I.top, g=I.gold, canG=g.left>0&&S.gold>=g.cost, soft=t.count+1>=t.soft;
+  const midTxt=`${m.name} garantizada en ${m.left} ${m.left===1?'tirada':'tiradas'}`;
+  const topTxt=soft?`${t.name}: ${pctTxt(t.pNext*100)} en la próxima · garantizada en ${t.left}`:`${t.name} garantizada en ${t.left} (la probabilidad sube desde la ${t.soft})`;
+  const sn=G.gear(boxSlot).slotName.toLowerCase();
+  return `<section class="panel invbox"><div class="ctrl" style="justify-content:space-between"><h3>Invocar</h3><span class="pill" title="Tickets de invocación">${ICON.box}<b>${fmt(I.tickets)}</b></span></div>
+    <div class="ctrl bslots">${tabs}</div>
+    <div class="rates">${rates}</div>
+    <div class="pity" style="--rc:${RCOL(m.r)}"><span>${midTxt}</span></div>
+    <div class="pity" style="--rc:${RCOL(t.r)}"><span>${topTxt}</span><div class="rbar"><i style="width:${Math.min(100,t.count/t.hard*100)}%;background:var(--rc)"></i></div></div>
+    <div class="ctrl"><button class="btn gold" data-act="pull" data-k="ticket" data-n="1" ${I.tickets>=1?'':'disabled'}>${ICON.box} ×1</button><button class="btn gold" data-act="pull" data-k="ticket" data-n="10" ${I.tickets>=10?'':'disabled'}>${ICON.box} ×10</button>
+      <button class="btn" data-act="pull" data-k="gold" data-n="1" ${canG?'':'disabled'}>${ICON.gold}${fmtG(g.cost)}</button></div>
+    <p class="hint">Cada tirada da una pieza de ${sn}. Se tira en cascada: primero la rareza más alta, con su % fijo; si falla, la siguiente. La garantía vale para todos los huecos. Con oro quedan ${g.left}/${g.limit} hoy (cada una cuesta un 10 % más). Los tickets salen de las misiones, de la primera vez que vences a cada élite y JEFE y al abrir un hueco.</p></section>` }
+// ventana con lo que ha salido: una casilla por tirada, con el color de su rareza
+function pullModal(res,k,n){ const best=Math.max(...res.map(x=>x.r)), slot=res[0].slot||'arma', W=G.gear(slot);
+  const tile=x=>`<div class="ptile${x.r>=2?' hi':''}${x.fresh?' new':''}" style="--rc:${RCOL(x.r)}">${gIcon(slot,S.cls,32)}<b>${x.name}</b>${x.fresh?'<small>¡Nueva!</small>':x.up?`<small>+${x.lvl}</small>`:'<small>&nbsp;</small>'}${x.equipped?'<small class="eq">Equipada</small>':''}</div>`;
+  showModal(`<h3>${res.length===1?'Resultado':'Resultados ×'+res.length}</h3><div class="pgrid${res.length===1?' one':''}">${res.map(tile).join('')}</div>
+    <div class="loot"><div><span>${W.slotName}</span><b style="color:var(--r${W.rarId})">${esc(W.name)} +${W.lvl}</b></div><div><span>Da</span><b>${gearStatTxt(slot,W.v,true)}</b></div></div>
+    <div class="ctrl"><button class="btn gold" data-act="pull" data-k="${k}" data-n="${n}">Otra vez</button><button class="btn" data-act="close">Cerrar</button></div>`);
+  if(best>=2||res.some(x=>x.equipped)) haptic('ok'); }
+acts({
+  boxSlot:b=>{ boxSlot=b.dataset.s; renderTab() },
+  pull:(b,k)=>{ const n=+b.dataset.n||1, r=G.pull(n,k,boxSlot);
+    if(!r.ok) return toast(r.why==='gold'?'Oro insuficiente':r.why==='limit'?'Ya hiciste las tiradas de oro de hoy':r.why==='closed'?'Ese hueco aún no está abierto':'No tienes tickets de invocación');
+    renderTab(); pullModal(r.res,k,n) },
 });
 // coste: si lo tienes, "124 ✓" en verde; si no, "tienes / pide" en rojo
 const costRow=(n,have,v)=>{ const f=n==='Oro'?fmtG:fmt; return `<div><span>${n}</span><b style="color:var(--${have>=v?'good':'bad'})">${have>=v?f(v)+' ✓':f(Math.floor(have))+' / '+f(v)}</b></div>` };
@@ -859,105 +806,9 @@ acts({
     showModal(`<h3>Cambiar a ${to.name}</h3><p class="hint">${to.passive}</p>${skList(to.skills)}<p class="hint">Cuesta ${CFG.grimoire.switchCost} tokens (tienes ${fmt(G.tokens())}).</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="pathGo" ${G.tokens()>=CFG.grimoire.switchCost?'':'disabled'}>Cambiar</button></div>`) },
   pathGo:()=>{ const r=G.pathSwitch(); closeModal(); toast(r.ok?'Ahora eres '+G.evoP().name:r.why==='event'?'Termina el evento primero':'Tokens insuficientes'); updateHUD(); renderTab() },
 });
-// Desmontar por rareza: un botón por rareza (con cuántas hay) y la casilla "Solo mi clase". Nunca la equipada ni las ★.
-function fHead(){ const active=(F.rar!=='all')+(F.stat!=='any');
-  return `<b>Filtros${active?' ('+active+')':''}</b>${active?'<button class="btn sm" data-act="fclear">Quitar filtros</button>':''}` }
-function filtered(){
-  const mn=F.min===''?-Infinity:+F.min, mx=F.max===''?Infinity:+F.max;
-  return S.items.filter(it=>{
-    if(it.id===S.equippedId) return false;                     // la equipada está en el Equipo, no en la lista
-    if(F.rar!=='all'&&it.r!==F.rar) return false;
-    if(F.stat!=='any'){const s=it.sec.find(x=>x.k===F.stat); if(!s||s.v<mn||s.v>mx) return false;}
-    return true;
-  }).sort((a,b)=>(b.id===S.equippedId)-(a.id===S.equippedId)||(a.cls===S.cls?0:1)-(b.cls===S.cls?0:1)||R.indexOf(b.r)-R.indexOf(a.r)||b.lvl-a.lvl);
-}
-// Inventario en cuadrícula: casilla con el color de rareza, nivel, ★ bloqueada y ▲ mejor que la equipada
-// arma de cada clase (así se distinguen de un vistazo las de otras clases): espada, bastón, arco, daga y maza
-const WSVG={Guerrero:'<path d="M27 33L51 6L59 5L58 13L31 38Z" fill="#b9c0cc"/><path d="M31 38L58 13L59 5L55 7L29 36Z" fill="#6f7785" opacity="0.55"/><path d="M52 10L33 32" fill="none" stroke="#eef2f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 33L51 6L59 5L58 13L31 38Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M22 28L38 44" fill="none" stroke="#140f1c" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 28L38 44" fill="none" stroke="#e8b04a" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 39L15 51" fill="none" stroke="#140f1c" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 39L15 51" fill="none" stroke="#8a5a34" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="53" r="5" fill="#e8b04a" stroke="#140f1c" stroke-width="2.5"/>',Mago:'<path d="M14 58L42 22" fill="none" stroke="#140f1c" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 58L42 22" fill="none" stroke="#8a5a34" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 60l4-4" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 60l4-4" fill="none" stroke="#e8b04a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M38 26l-5-5 7-7 6 6z" fill="#e8b04a"/><path d="M38 26l-5-5 7-7 6 6z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="49" cy="14" r="13" fill="#b066e8" opacity="0.25"/><circle cx="48" cy="15" r="8.5" fill="#9b6ad6" stroke="#140f1c" stroke-width="3"/><circle cx="46" cy="13" r="3" fill="#d6b8ff"/><path d="M48 15a8.5 8.5 0 0 0 8.5-1A8.5 8.5 0 0 1 48 23.5Z" fill="#5a3a86" opacity="0.6"/>',Arquero:'<path d="M14 7c27 3 43 20 43 44" fill="none" stroke="#140f1c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 7c27 3 43 20 43 44" fill="none" stroke="#8a5a34" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 7L57 51" fill="none" stroke="#e9dfc8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 55L43 21" fill="none" stroke="#140f1c" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 55L43 21" fill="none" stroke="#c9ced8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M49 15l-11 2 9 9z" fill="#b9c0cc"/><path d="M49 15l-11 2 9 9z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M9 55l2-10 6 4z" fill="#e2605a"/><path d="M9 55l2-10 6 4z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><path d="M9 55l10-2-4-6z" fill="#b8323a"/><path d="M9 55l10-2-4-6z" fill="none" stroke="#140f1c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',Asesino:'<path d="M53 7C50 19 42 28 31 34L27 30C33 19 42 11 53 7Z" fill="#b9c0cc"/><path d="M53 7C50 19 42 28 31 34L29 32C39 25 47 17 53 7Z" fill="#6f7785" opacity="0.6"/><path d="M50 11C44 18 39 23 33 29" fill="none" stroke="#eef2f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M53 7C50 19 42 28 31 34L27 30C33 19 42 11 53 7Z" fill="none" stroke="#140f1c" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M21 28L35 42" fill="none" stroke="#140f1c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 28L35 42" fill="none" stroke="#e8b04a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 38L14 50" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M26 38L14 50" fill="none" stroke="#3b2a5e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="53" r="4.5" fill="#b8323a" stroke="#140f1c" stroke-width="2.5"/>',Clerigo:'<path d="M12 58L34 34" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 58L34 34" fill="none" stroke="#8a5a34" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 60l5-5" fill="none" stroke="#140f1c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 60l5-5" fill="none" stroke="#e8b04a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 6l4 7 7-3-2 8 8 2-6 5 6 5-8 2 2 8-7-3-4 7-4-7-7 3 2-8-8-2 6-5-6-5 8-2-2-8 7 3z" fill="#9aa1ad"/><path d="M42 6l4 7 7-3-2 8 8 2-6 5 6 5-8 2 2 8-7-3-4 7-4-7-7 3 2-8-8-2 6-5-6-5 8-2-2-8 7 3z" fill="none" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="42" cy="22" r="9" fill="#c9ced8" stroke="#140f1c" stroke-width="2.5"/><circle cx="42" cy="22" r="4" fill="#e8b04a" stroke="#140f1c" stroke-width="2"/><circle cx="39" cy="19" r="2" fill="#ffffff" opacity="0.8"/>'};
-const wIcon=(it,sz=38)=>`<svg viewBox="0 0 64 64" width="${sz}" height="${sz}" aria-hidden="true">${WSVG[it&&it.cls]||WSVG.Guerrero}</svg>`;
-const RLET={C:'C',U:'PC',R:'R',E:'É',L:'L',M:'M'};   // inicial de la rareza (para no depender solo del color)
-function itemTile(it){ const eq=it.id===S.equippedId, own=it.cls===S.cls, up=own&&!eq&&betterThanEquipped(it), sel=expandedId===it.id;
-  return `<button class="itile${sel?' sel':''}${own?'':' other'}" style="--rc:var(--r${it.r})" data-act="expand" data-id="${it.id}" aria-pressed="${sel}" aria-label="${wName(it)} ${CFG.rarName[it.r]} nivel ${it.lvl}${own?'':' (otra clase)'}">
-    ${wIcon(it)}<span class="tl"><b>${RLET[it.r]||''}</b>Nv ${it.lvl}</span>${it.fav?'<span class="tf">★</span>':''}${up?'<span class="tu">▲</span>':''}<span class="td">+${Math.round(G.weaponMain(it).d*100)}%</span></button>` }
-function itemSheet(it){ const m=G.weaponMain(it), own=it.cls===S.cls;
-  return `<div class="isheet fixed" style="--rc:var(--r${it.r})">
-    <div class="ishd"><div class="isart">${wIcon(it)}</div><div style="min-width:0;flex:1"><b class="isn">${wName(it)}</b> <span class="rar" style="color:var(--r${it.r})">${CFG.rarName[it.r].toUpperCase()}</span>
-      <div class="s">Nv ${it.lvl} · Daño +${pct(m.d)} · Velocidad +${pct(m.s)}</div></div>
-      <button class="star${it.fav?' on':''}" data-act="fav" data-id="${it.id}" aria-label="${it.fav?'Quitar bloqueo':'Bloquear'}">★</button>
-      <button class="isx" data-act="expand" data-id="${it.id}" aria-label="Cerrar">✕</button></div>
-    ${legendLine(it)}<div class="sec">${chips(it.sec,false,it.r)}</div>
-    <div class="isacts"><button class="btn" data-act="dis1" data-id="${it.id}" ${it.fav?'disabled':''}>Desmontar</button>
-      <button class="btn" data-act="forge" data-id="${it.id}">Forjar</button>
-      <button class="btn gold" data-act="equip" data-id="${it.id}" ${own?'':'disabled'}>Equipar</button></div></div>` }
-function renderList(){
-  const el=$('#invList'); if(!el) return; setHTML($('#fHead'),fHead());
-  const list=filtered(), dis=list.filter(x=>x.id!==S.equippedId&&!x.fav);
-  const bulk=$('#bulk'); if(bulk) bulk.innerHTML=`<div class="ctrl"><span class="s">${list.length} de ${G.invCount()} armas</span><button class="btn sm" data-act="disAsk" ${dis.length?'':'disabled'}>Desmontar las filtradas (${dis.length})</button></div>`;
-  const sel=list.find(x=>x.id===expandedId);
-  const shown=list.slice(0,80), room=Math.max(0,Math.min(G.invMax()-G.invCount(),(4-shown.length%4)%4+4));
-  el.classList.toggle('has-sheet',!!sel);
-  el.innerHTML=nbsp(`${sel?itemSheet(sel):''}${list.length?`<div class="igrid">${shown.map(itemTile).join('')}${'<span class="itile empty"></span>'.repeat(F.rar==='all'&&F.stat==='any'?room:0)}</div>`:(G.invCount()?'<p class="hint">Sin resultados.</p>':'<p class="hint">Vacío.</p>')}
-    ${list.length>80?`<p class="hint">+${list.length-80} más</p>`:''}`);
-  fitSheet(); updateHUD();
-}
-// la ficha del arma tapa justo el recuadro del héroe (si se ve); si se ha bajado la página, queda arriba del todo
-function fitSheet(){ const sh=document.querySelector('.isheet.fixed'), bn=document.querySelector('.ibanner'); if(!sh||!bn) return;
-  const r=bn.getBoundingClientRect(), top=document.querySelector('.top').getBoundingClientRect().bottom+6;
-  Object.assign(sh.style,{left:r.left+'px',right:'auto',width:r.width+'px',maxWidth:'none',top:Math.max(top,r.top)+'px',minHeight:r.height+'px'}) }
-window.addEventListener('resize',fitSheet);
-function oddsModal(type){
-  const ch=CFG.chests[type], cur=G.chestProbs(type), rows=[];
-  ch.odds.forEach((tr,m)=>tr.forEach(([a,p],i)=>{ const nx=tr[i+1], name=CFG.modes[m].name+(tr.length>1?(nx?` ${a}–${nx[0]-1}`:` ${a}+`):'');
-    const here=m===S.mode&&p===cur; rows.push(`<tr class="${here?'here':''}"><td>${name}</td>${p.map(v=>`<td>${v?v.toLocaleString('es-ES'):'—'}</td>`).join('')}</tr>`) }));
-  showModal(`<h3>Cofre de ${ch.name.toLowerCase()}</h3>
-    <div class="tw"><table class="odds-t"><thead><tr><th>%</th>${R.map(r=>`<th style="color:var(--r${r})" title="${CFG.rarName[r]}">${RAR_S[r]}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>
-    <p class="hint">${R.map(r=>`<b style="color:var(--r${r})">${RAR_S[r]}</b> ${CFG.rarName[r]}`).join(' · ')}. ${type==='mode'?'El contenido depende del modo en que estés al abrirlo. ':''}Se usa el % de donde estés al abrirlo (resaltado). Siempre armas de tu clase.</p>
-    <button class="btn gold" data-act="close">Cerrar</button>`);
-}
-function impModal(id,i){ const it=G.findItem(id), x=it.sec[i], o=G.improveOdds(id,i);
-  // límites de gasto: lo esperado, el triple o toda la chatarra (siempre al menos un intento)
-  const lims=[...new Set([o.expSpend,o.expSpend*3,S.scrap].filter(Number.isFinite).map(v=>Math.max(o.cost,Math.min(S.scrap,v))))].sort((a,b)=>a-b);
-  showModal(`<h3>Subir ${CFG.sec[x.k].n}</h3>
-    ${statRow(it,x,i,{})}
-    <p class="hint">Se reforja solo este stat hasta que salga más alto. Cada intento: <b>${o.cost} chatarra</b> (≈${o.exp} intentos).</p>
-    <div class="s">Gastar como mucho:</div>
-    <div class="ctrl">${S.scrap<o.cost?'<span class="s">Te falta chatarra.</span>':lims.map(v=>`<button class="btn sm gold" data-act="impGo" data-id="${id}" data-k="${i}" data-v="${v}">${fmt(v)}</button>`).join('')}</div>
-    <div class="ctrl"><button class="btn" data-act="close">Cancelar</button></div>`) }
-function doReforge(id,pay){
-  const res=G.reforge(id,lockSel,pay);
-  if(!res.ok){ if(res.why==='scrap') toast('Te falta chatarra'); else if(res.why==='token') toast('Te falta 1 token'); else if(res.why==='locks') toast('Demasiados bloqueos'); return }
-  const it=G.findItem(id); pendingReforge={id,sec:res.sec};
-  const q=l=>G.secQuality(l,it.r), better=q(res.sec)>q(it.sec);
-  showModal(`<h3>Resultado</h3>
-    <div class="rcmp"><div><div class="s">Actual</div>${it.sec.map((x,i)=>statRow(it,x,i,{})).join('')}</div>
-      <div><div class="s">Nuevo</div>${res.sec.map((x,i)=>statRow(it,x,i,{diff:it.sec[i]&&it.sec[i].k===x.k?x.v-it.sec[i].v:null})).join('')}</div></div>
-    <div class="ctrl"><button class="btn${better?'':' gold'}" data-act="close">Mantener actual</button><button class="btn${better?' gold':''}" data-act="applyReforge">Quedarme el nuevo</button></div>`);
-  renderTab();
-}
-
-function disToast(r){ if(r.n) toast(`${r.n} arma${r.n>1?'s':''} desmontada${r.n>1?'s':''}: +${r.v} chatarra`) }
-// botones de esta pantalla (data-act)
-acts({
-  impGo:(b,k,id)=>{ const r=G.improveStat(id,+k,+b.dataset.v), n=CFG.sec[r.k]?CFG.sec[r.k].n:'';
-    showModal(r.ok?`<h3>¡${n} mejorado!</h3><p class="hint">+${r.old.toLocaleString('es-ES')} % → <b style="color:var(--good)">+${r.v.toLocaleString('es-ES')} %</b> en ${r.tries} intento${r.tries>1?'s':''} · −${fmt(r.spent)} chatarra</p><button class="btn gold" data-act="close">Genial</button>`
-      :`<h3>Sin mejora</h3><p class="hint">${r.why==='max'?'Ya está al máximo.':`${r.why==='limit'?'Llegaste al límite de gasto':'Te quedaste sin chatarra'} tras ${r.tries} intento${r.tries===1?'':'s'} (−${fmt(r.spent||0)}). El stat no cambia.`}</p><button class="btn gold" data-act="close">Vale</button>`); renderTab(); },
-  equip:(b,k,id)=>{if(G.equip(id))renderTab()},
-  fav:(b,k,id)=>{const f=G.toggleFav(id);if(f===null)return;toast(f?'Arma bloqueada: no se desmonta ni se usa para forjar':'Arma desbloqueada');if(tab==='inv'&&invView==='armas')renderList();else renderTab()},
-  dis1:(b,k,id)=>{ const it=G.findItem(id); if(!it) return; if(R.indexOf(it.r)>=2||it.lvl>1){ pendingDis=[id]; return showModal(`<h3>¿Desmontar ${esc(wName(it))}?</h3><p class="hint">${CFG.rarName[it.r]} nv ${it.lvl} · +${G.disValue(it)} chatarra</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`) } disToast(G.dismantle([id]));renderTab()},
-  disAsk:()=>{const ids=filtered().filter(x=>x.id!==S.equippedId&&!x.fav).map(x=>x.id);const v=ids.reduce((s,id)=>s+G.disValue(G.findItem(id)),0);
-    pendingDis=ids;showModal(`<h3>¿Desmontar ${ids.length} armas?</h3><p class="hint">+${v} chatarra · la equipada y las ★ se quedan</p><div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="disYes">Desmontar</button></div>`)},
-  disYes:()=>{closeModal();disToast(G.dismantle(pendingDis||[]));pendingDis=null;renderTab()},
-  invFull:()=>{ closeModal(); tab='inv'; invView='armas'; fdetOpen=true; renderTab() },   // inventario lleno: filtros abiertos para desmontar
-  expand:(b,k,id)=>{expandedId=expandedId===id?null:id;renderList()},
-  fclear:()=>{F.rar='all';F.stat='any';F.min='';F.max='';renderTab()},
-  applyReforge:()=>{if(pendingReforge)G.applyReforge(pendingReforge.id);pendingReforge=null;closeModal();renderTab()},
-  info:(b,k)=>oddsModal(k),
-});
 /* ---------- Tienda ---------- */
 // Todo se paga en tokens (100 tokens = 1 $). Los tokens se compran con dinero (simulado hasta que haya pasarela de pago).
 const SHOP={
-  silver:{name:'Cofre de plata',info:true},
-  mode:{name:'Cofre de modo',info:true},
   ticket:{name:'Ticket Mazmorra',desc:'Una entrada más a la Mazmorra, además de la gratis del día.'},
   pvp:{name:'Tickets PvP',desc:'Paquete de 3 tickets PvP: cada uno es un combate más, además de los 3 gratis del día.'},
   bossTicket:{name:'Ticket Jefe',desc:'Una entrada más al Jefe semanal, además de la gratis de la semana.'},
@@ -965,7 +816,7 @@ const SHOP={
   ev:{name:'Emblema',desc:'Se usa para la Evolución y para desbloquear Grimorios. También se gana en los premios de Mazmorra y Jefe semanal.'},
 };
 const usd=t=>(t/CFG.tokens.perUsd).toLocaleString('es-ES',{minimumFractionDigits:t%CFG.tokens.perUsd?2:0,maximumFractionDigits:2})+' $';
-const priceTxt=(k,n=1)=>k==='silver'?`${fmtG(G.silverCost(n))} oro`:`${fmt(G.shopPrice(k)*n)} tokens`;
+const priceTxt=(k,n=1)=>`${fmt(G.shopPrice(k)*n)} tokens`;
 // ¿Se puede pagar con tokens? Hasta tener Telegram Stars no se pueden comprar: los botones en tokens salen como "Próximamente"
 // (salvo en local con herramientas de prueba o si el jugador ya tiene tokens, p. ej. ganados)
 const tokOpen=()=>!!(CFG.devTools||CFG.tokens.open||G.tokens()>0);
@@ -976,35 +827,30 @@ const canPay=()=>!!(window.Telemetry&&Telemetry.canPay(CFG));
 function payBtn(item,stars,dev){ return canPay()?`<button class="btn sm gold" data-act="starBuy" data-k="${item}">${fmt(stars)} ⭐</button>`
   :CFG.devTools&&dev?`<button class="btn sm gold" ${dev}>${fmt(stars)} ⭐ (prueba)</button>`:'<span class="pill">Solo en Telegram</span>' }
 // Ofertas en el momento: qué incluye y cuánto le queda
-const offerTxt=o=>o.k==='inv'?`${o.inv} huecos más de inventario para siempre`:bundleHTML(o.b);
+const offerTxt=o=>bundleHTML(o.b);
 const hleft=ms=>{ const h=Math.floor(ms/3600e3), m=Math.floor(ms%3600e3/60e3); return h?h+' h '+m+' min':m+' min' };
 function offerRows(){ return G.activeOffers().map(o=>`<div class="chest offer"><div><div class="cn">${o.t}</div><div class="s">${offerTxt(o)} · quedan ${hleft(o.left)}</div></div>
   <div class="acts">${payBtn('offer_'+o.k,o.stars,`data-act="devOffer" data-k="${o.k}"`)}</div></div>`).join('') }
-// Rompe el muro: quién te gana (el élite/JEFE de la campaña que empujas) y, además del pack, consejos gratis para hacerte más fuerte
-function wallWhy(){ const T=S.bossTry; if(!T) return '¿Atascado? Rompe el muro con más cofres.'; const f=T.k%1000, F=G.zoneFoe(G.zoneAt(Math.floor(T.k/1000),f),G.bossRole(f));
-  return `${F?F.name:'El jefe'} (fase ${fmt(f)}) te ha ganado ${T.n} veces seguidas. Rompe el muro con más cofres.` }
-const wallTips=()=>`<p class="hint">O gratis: sube tus mejoras o tu arma. Mientras, farmeas la fase anterior y lo vuelves a intentar solo.</p>
-  <div class="ctrl"><button class="btn sm" data-act="wallGo" data-k="up">Mejora tu héroe</button><button class="btn sm" data-act="wallGo" data-k="armas">Mira tu arma</button></div>`;
 function offerModal(k){ const o=G.activeOffers().find(x=>x.k===k); if(!o) return;
-  const why={wall:wallWhy(),evo:'Te faltan materiales para evolucionar.',inv:'Tu inventario está lleno.'}[k];
+  const why={evo:'Te faltan materiales para evolucionar.'}[k];
   later(()=>showModal(`<h3>${o.t}</h3><p class="hint">${why}</p><div class="chest offer"><div><div class="cn">${offerTxt(o)}</div><div class="s">Oferta por ${CFG.offers.dur} h</div></div>
-    <div class="acts">${payBtn('offer_'+k,o.stars,`data-act="devOffer" data-k="${k}"`)}</div></div>${k==='wall'?wallTips():''}<button class="btn" data-act="close">Ahora no</button>`)) }
+    <div class="acts">${payBtn('offer_'+k,o.stars,`data-act="devOffer" data-k="${k}"`)}</div></div><button class="btn" data-act="close">Ahora no</button>`)) }
 // Oferta de bienvenida: una sola vez
 function firstOfferRow(){ const F=CFG.stars.first; if(S.firstBuy) return '';
-  return `<div class="chest offer"><div><div class="cn">Oferta de bienvenida</div><div class="s">Arma ${CFG.rarName[F.r]} de tu clase + ${F.tokens} tokens + ${F.silver} cofres de plata · solo una vez</div></div>
+  return `<div class="chest offer"><div><div class="cn">Oferta de bienvenida</div><div class="s">${F.tokens} tokens + ${F.gold} min de oro · solo una vez</div></div>
     <div class="acts">${payBtn('first',F.stars,'data-act="devFirst"')}</div></div>` }
 // Tienda en rejilla (como en los RPG de móvil): cada producto con su dibujo grande sobre un brillo de su color, nombre y botón de precio con la moneda
-const SHOPTONE={silver:'#b9c0cc',mode:'#9b6ad6',ticket:'#e8964a',bossTicket:'#d9534f',pvp:'#4f8fd9',ess:'#a46be0',ev:'#e8b04a'};
-const priceHTML=(k,n=1)=>k==='silver'?`${ICON.gold}${fmtG(G.silverCost(n))}`:`${ICON.tok}${fmt(G.shopPrice(k)*n)}`;
+const SHOPTONE={ticket:'#e8964a',bossTicket:'#d9534f',pvp:'#4f8fd9',ess:'#a46be0',ev:'#e8b04a'};
+const priceHTML=(k,n=1)=>`${ICON.tok}${fmt(G.shopPrice(k)*n)}`;
 function shopCard(k){ const it=SHOP[k];
-  return `<div class="scard" style="--tone:${SHOPTONE[k]||'var(--gold)'}"><button class="ibtn" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Info de ${it.name}">i</button>
-    <button class="sc-ic" data-act="${it.info?'info':'shopInfo'}" data-k="${k}" aria-label="Qué es ${it.name}">${ICON[k]||''}</button><div class="sc-n">${it.name}</div><div class="sc-s">${k==='silver'?silverNote():'&nbsp;'}</div>
-    ${k==='silver'||tokOpen()?`<button class="btn gold sc-buy" data-act="buyAsk" data-k="${k}">${priceHTML(k)}</button>`:soon}</div>` }
+  return `<div class="scard" style="--tone:${SHOPTONE[k]||'var(--gold)'}"><button class="ibtn" data-act="shopInfo" data-k="${k}" aria-label="Info de ${it.name}">i</button>
+    <button class="sc-ic" data-act="shopInfo" data-k="${k}" aria-label="Qué es ${it.name}">${ICON[k]||''}</button><div class="sc-n">${it.name}</div><div class="sc-s">&nbsp;</div>
+    ${tokOpen()?`<button class="btn gold sc-buy" data-act="buyAsk" data-k="${k}">${priceHTML(k)}</button>`:soon}</div>` }
 function tabShop(){
   const today=G.dayKey();
-  const head=`<div class="fchips" role="tablist">${[['cofres','Cofres'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
+  const head=`<div class="fchips" role="tablist">${[['recursos','Recursos'],['tokens','Tokens'],['subs','Suscripciones']].map(([v,l])=>`<button data-act="shopview" data-v="${v}" aria-pressed="${shopView===v}">${l}</button>`).join('')}</div>`;
   let body='';
-  if(shopView==='cofres') body=offerRows()+`<div class="sgrid">${['silver','mode','ticket','bossTicket','ess','ev'].map(shopCard).join('')}</div>`;
+  if(shopView==='recursos') body=offerRows()+`<div class="sgrid">${['ticket','bossTicket','ess','ev'].map(shopCard).join('')}</div>`;
   const crypto=window.TonPay&&TonPay.on(CFG); if(!crypto) payCoin='stars';
   if(shopView==='tokens') body=`<div class="loot"><div><span>Tus tokens</span><b>${fmt(G.tokens())}</b></div></div>
     ${crypto?`<div class="ctrl" style="justify-content:space-between"><span class="s">Pagar con</span><div class="fchips">${[['stars','⭐ Stars'],['TON','TON'],['USDT','USDT']].map(([v,l])=>`<button data-act="payCoin" data-v="${v}" aria-pressed="${payCoin===v}">${l}</button>`).join('')}</div></div>`:''}
@@ -1020,9 +866,7 @@ function tabShop(){
     <div class="chest"><div><div class="cn">VIP</div><div class="s">Combate ×${CFG.vipSpeed} · sin conexión hasta ${CFG.offlineVipH} h · 30 días${G.hasVip()?' · quedan '+(S.vipUntil-today)+' días':''}</div></div><div class="acts">${tokOpen()?`<button class="btn sm gold" data-act="sub" data-k="vip">${fmt(CFG.vipPrice)} tokens</button>`:soon}</div></div>`;
   return `<section class="panel">${head}${body}</section>`;
 }
-// plata: límite al día (si lo hay) o precio que sube con cada compra del día
-const silverNote=()=>Number.isFinite(G.silverLeft())?`Quedan ${G.silverLeft()} hoy`:CFG.chests.silver.step?`+${Math.round(CFG.chests.silver.step*100)} % por cada compra hoy`:'Sin límite';
-function maxBuy(k){ return k==='silver'?G.silverMax():Math.floor(G.tokens()/G.shopPrice(k)) }
+function maxBuy(k){ return Math.floor(G.tokens()/G.shopPrice(k)) }
 function buyModal(){
   const k=buyCtx.k, it=SHOP[k], n=buyCtx.n, mx=maxBuy(k), ok=n>=1&&n<=mx;
   showModal(`<h3>${it.name}</h3>
@@ -1030,14 +874,14 @@ function buyModal(){
       <input type="number" id="buyQty" aria-label="Cantidad" min="1" max="${mx}" value="${n}" style="width:80px;text-align:center;font-size:16px;padding:8px">
       <button class="btn" data-act="qty" data-v="1" aria-label="Uno más">+</button></div>
     <div class="ctrl">${[1,5,10].map(v=>`<button class="btn sm" data-act="qtyset" data-v="${v}">${v}</button>`).join('')}<button class="btn sm" data-act="qtyset" data-v="${Math.max(1,mx)}">Máx. (${mx})</button></div>
-    <div class="loot"><div><span>Total</span><b id="buyTotal">${priceTxt(k,n)}</b></div><div><span>Tienes</span><b>${k==='silver'?fmtG(S.gold)+' oro':fmt(G.tokens())+' tokens'}</b></div>${k==='silver'&&Number.isFinite(G.silverLeft())?`<div><span>Quedan hoy</span><b>${G.silverLeft()}</b></div>`:''}</div>
-    ${mx<1?`<p class="hint">${k==='silver'&&!G.silverLeft()?'Ya compraste los de hoy.':k==='silver'?'Oro insuficiente.':'Tokens insuficientes. <button class="btn sm gold" data-act="goTokens">Conseguir tokens</button>'}</p>`:''}
+    <div class="loot"><div><span>Total</span><b id="buyTotal">${priceTxt(k,n)}</b></div><div><span>Tienes</span><b>${fmt(G.tokens())+' tokens'}</b></div></div>
+    ${mx<1?`<p class="hint">Tokens insuficientes. <button class="btn sm gold" data-act="goTokens">Conseguir tokens</button></p>`:''}
     <div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" data-act="buyConfirm" id="buyOk" ${ok?'':'disabled'}>Comprar</button></div>`);
 }
 function doBuy(){
   const k=buyCtx.k, n=buyCtx.n; if(n<1||n>maxBuy(k)) return;
   if(!G.buy(k,n)) return;
-  closeModal(); toast(k==='pvp'?`+${n*CFG.pvp.pack} tickets PvP`:`+${n} ${SHOP[k].name.toLowerCase()}${n>1?' (x'+n+')':''} al inventario`); buyCtx=null; renderTab();
+  closeModal(); toast(k==='pvp'?`+${n*CFG.pvp.pack} tickets PvP`:`+${n} ${SHOP[k].name.toLowerCase()}${n>1?' (x'+n+')':''}`); buyCtx=null; renderTab();
 }
 function wdModal(){ const W=CFG.tokens.withdraw, n=S.won, fee=Math.ceil(n*W.fee);
   showModal(`<h3>Retirar tokens ganados</h3>
@@ -1056,7 +900,6 @@ acts({
   starBuy:(b,k)=>{ b.disabled=true; Telemetry.buyStars(CFG,k,st=>{ b.disabled=false;
       if(st==='paid') toast('¡Pago hecho! Recibiendo tu compra…'); else if(st==='done') toast('Ya lo compraste'); else if(st==='error') toast('No se pudo abrir el pago. Prueba otra vez.'); }) },
   devOffer:(b,k)=>{ if(!CFG.devTools) return; closeModal(); G.applyRewards([{kind:'offer_'+k,amount:1,reason:'stars:offer_'+k}]); toast('Oferta (prueba)'); renderTab() },
-  wallGo:(b,k)=>{ closeModal(); if(k==='armas'){ tab='inv'; invView='armas' } else tab='up'; renderTab(); window.scrollTo({top:0}) },   // consejos gratis de Rompe el muro (las mejoras están en la barra fija de Inicio)
   devFirst:()=>{ if(!CFG.devTools) return; G.applyRewards([{kind:'first',amount:1,reason:'stars:first'}]); toast('Oferta de bienvenida (prueba)'); renderTab() },
   payCoin:b=>{ payCoin=b.dataset.v; renderTab() },
   cryptoBuy:(b,k)=>{ const coin=payCoin; b.disabled=true;
@@ -1075,10 +918,8 @@ acts({
 });
 /* ---------- botín de jefes ---------- */
 /* ---------- Modos: Campaña, Eventos (Mazmorra, Jefe semanal) y PvP ---------- */
-const CH_N={wood:'madera',silver:'plata',mode:'modo'};
-const RAR_S={C:'Com',U:'PCom',R:'Rara',E:'Épi',L:'Leg',M:'Mít'}; // abreviaturas para tablas estrechas
-function evRewText(r){ return [r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.ch?rw(ICON[r.ch],'×'+(r.n||1)):''].filter(Boolean).join(' + ') }
-const evRewPlain=r=>[r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.ch?`${r.n||1} cofre${(r.n||1)>1?'s':''} de ${CH_N[r.ch]}`:''].filter(Boolean).join(' + ');
+function evRewText(r){ return [r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.gold?rw(ICON.gold,r.gold+' min'):''].filter(Boolean).join(' + ') }
+const evRewPlain=r=>[r.em?`${r.em} ${CFG.event.mat.toLowerCase()}${r.em>1?'s':''}`:'', r.gold?`oro de ${r.gold} min`:''].filter(Boolean).join(' + ');
 // Ranking: los 10 primeros y tu puesto con sus vecinos
 function rankHTML(riv,mine,pos,show){
   const list=riv.map(x=>({...x})); if(mine) list.splice(pos-1,0,{name:S.name||'Tú',score:mine,me:true});
@@ -1368,7 +1209,7 @@ function tabLab(){
     ${paused?pauseBox():''}
     ${(A=>A?`<div class="affx"><span class="affi">${AFFICO[A.id]||'✦'}</span><div><small>MODIFICADOR DE HOY</small><b>${A.name}</b><span>${A.desc}</span></div></div>`:'')(G.evAffix(d))}
     <div class="evhead"><div><span class="s">Entradas</span><b>${G.evFreeLeft()+S.tickets}</b></div><div><span class="s">${paused?'Total de ayer':'Total hoy'}</span><b>${best||'–'}</b></div><div><span class="s">Puesto</span><b>${pos||'–'}</b></div></div>
-    ${(M=>M&&!paused?`<div class="mbar evms"><span>${ICON[M.ch]} Próximo cofre</span><div class="rbar"><i style="width:${(best%M.every)/M.every*100}%"></i></div><span>${best%M.every}/${M.every}</span></div><p class="hint" style="margin-top:-4px">Cada ${M.every} muertes del día: 1 cofre de madera · cada ${M.big}: además 1 de plata</p>`:'')(V.milestones)}
+    ${(M=>M&&!paused?`<div class="mbar evms"><span>${ICON.gold} Próximo premio</span><div class="rbar"><i style="width:${(best%M.every)/M.every*100}%"></i></div><span>${best%M.every}/${M.every}</span></div><p class="hint" style="margin-top:-4px">Cada ${M.every} muertes del día: ${M.gold} min de oro · cada ${M.big}: además ${M.bigGold} min</p>`:'')(V.milestones)}
     <div class="ctrl"><button class="btn gold" style="flex:1" data-act="evGo" ${(S.tickets>0||G.evFreeLeft())&&!live&&!paused?'':'disabled'}>${live?'En curso…':paused?'En pausa':'Entrar'}</button>
     ${tokOpen()?`<button class="btn" data-act="buyAsk" data-k="ticket">+1 ticket · ${V.ticketCost} tok</button>`:''}</div>
     <p class="hint">Máx. ${V.maxDur/60} min · cuentan las muertes del día</p>
@@ -1463,7 +1304,7 @@ function misKeyNow(){ const P=G.passState(), badge=[G.missionsReady(),G.weeklyRe
     :misView==='pass'?[P.lvl,P.prem,Object.keys(P.cf).length,Object.keys(P.cp).length,P.xp]:[window.Telemetry&&Telemetry.refs];
   return misView+JSON.stringify([badge,v]) }
 // misiones: barra con el progreso, premios como iconos y, a la derecha, «Recoger» (brilla) si está completa o «Ir» (te lleva) si no
-const MISGO={event:'eventos',pvp:'pvp',chests:'cofres',upgrade:'up',kills:'up'};
+const MISGO={event:'eventos',pvp:'pvp',upgrade:'up',kills:'up'};
 const misBtn=(m,act)=>m.claimed?'<span class="mcheck" aria-label="Recogida">✓</span>':m.done?`<button class="btn sm gold mclaim" data-act="${act}" data-k="${m.k}">Recoger</button>`
   :MISGO[m.k]?`<button class="btn sm mgo" data-act="misGo" data-k="${m.k}">Ir</button>`:'';
 const misRank=m=>m.claimed?2:m.done?0:1, misRows=(L,act,M)=>[...L].sort((a,b)=>misRank(a)-misRank(b)).map(m=>`<div class="mrow${m.claimed?' done':m.done?' ready':''}"><div class="mi"><b>${m.t}</b>
@@ -1480,7 +1321,7 @@ function tabMis(){ const P=G.passState();
   if(misView==='sem') body=bonusRow('week','Bonus: completa todas las semanales')+misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
   if(misView==='pass') body=passView(P);
   if(misView==='soc'){ const R=CFG.referral, inv=inviteRow();
-    body=`<p class="hint">Invita a tus amigos: tu amigo recibe ${R.giftSilver} cofre de plata y tú ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}.</p>${inv||'<p class="hint">Para invitar, abre el juego desde Telegram.</p>'}`; }
+    body=`<p class="hint">Invita a tus amigos: tu amigo recibe ${R.giftSilver*5} min de oro y tú ${R.goalSilver*5} min de oro cuando llegue a la fase ${R.goalFase}.</p>${inv||'<p class="hint">Para invitar, abre el juego desde Telegram.</p>'}`; }
   return `<section class="panel">${chips}<div id="misBox" class="mlist">${body}</div></section>` }
 const misBadge=()=>G.missionsReady()+G.weeklyReady()+G.passReady();
 // botones de esta pantalla (data-act)
@@ -1490,7 +1331,7 @@ acts({
   weekClaim:(b,k)=>{ if(G.claimWeekly(k)){ haptic('light'); { const m=CFG.missions.weekly.list.find(x=>x.k===k); toast(bundleTxt(m.rew||{})+(Object.keys(m.rew||{}).length?' + ':'')+(m.xp||CFG.missions.weekly.xp)+' XP del pase'); } } renderTab() },
   misClaim:(b,k)=>{ if(G.claimMission(k)){ haptic('light'); toast(bundleTxt(CFG.missions.list.find(x=>x.k===k).rew||{})+(Object.keys(CFG.missions.list.find(x=>x.k===k).rew||{}).length?' + ':'')+CFG.missions.xp+' XP del pase'); } renderTab() },
   misGo:(b,k)=>{ const v=MISGO[k]; if(!v) return; closeModal();
-    if(v==='up'){ tab='up' } else if(v==='cofres'){ tab='inv'; invView='cofres' } else { tab='ev'; modView=v; evView=null; if(v==='pvp') pvpLoad() }
+    if(v==='up'){ tab='up' } else { tab='ev'; modView=v; evView=null; if(v==='pvp') pvpLoad() }
     renderTab(); window.scrollTo({top:0}) },
 });
 /* ---------- pase de temporada ---------- */
@@ -1614,67 +1455,6 @@ function offlineModal(off){
 acts({
   offAd:()=>playAd(()=>{ const g=G.claimOfflineBonus(); closeModal(); if(g) toast(`+${fmt(g)} oro`); }),
 });
-/* ---------- ruleta al abrir cofres ---------- */
-function tileHTML(x){return `<div class="tile" style="--rc:var(--r${x.r})"><span class="tr" style="color:var(--r${x.r})">${CFG.rarName[x.r]}</span><span class="tn">${wName(x)}</span></div>`}
-const CHEST_COL={wood:['#8a5a34','#5e3a1f'],silver:['#b9c0cc','#6f7787'],mode:['#c86bff','#6a2aa8']};
-// Las casillas de relleno son solo decoración: usan Math.random para no gastar el azar del motor.
-function fakePick(probs){const tot=probs.reduce((a,b)=>a+b,0);let x=Math.random()*tot;for(let i=0;i<probs.length;i++){x-=probs[i];if(x<0)return R[i]}return R[0]}
-function spin(type,loot,nc=1){
-  const best=[...loot].sort((a,b)=>R.indexOf(b.r)-R.indexOf(a.r)||((a.cls===S.cls)?-1:1))[0];
-  const probs=G.chestProbs(type), idx=42, tiles=[];
-  for(let i=0;i<52;i++) tiles.push(i===idx?best:{r:fakePick(probs),cls:S.cls});   // (los cofres solo dan armas de tu clase)
-  const title=nc===1?`Cofre de ${CFG.chests[type].name.toLowerCase()}`:`${nc} cofres de ${CFG.chests[type].name.toLowerCase()}`;
-  const [c1,c2]=CHEST_COL[type];
-  showModal(`<h3>${title}</h3>
-    <div class="cbox" id="cbox" style="--c1:${c1};--c2:${c2}"><div class="glow" id="cglow"></div><div class="lid" id="clid"></div><div class="base"><i></i></div></div>
-    <div class="rl" id="rl" hidden><div class="rl-mark"></div><div class="rl-strip" id="rlStrip">${tiles.map(tileHTML).join('')}</div></div>
-    <div id="rlOut"><button class="btn" data-act="rlskip">Saltar</button></div>`);
-  pendingSpin={loot,best,raf:null,timers:[]};
-  if(reduceMotion()) return spinDone();
-  const box=$('#cbox'), lid=$('#clid'), glow=$('#cglow');
-  // 1) el cofre tiembla  2) se abre con un destello  3) aparece la ruleta y gira
-  box.animate([{transform:'translateX(0) rotate(0)'},{transform:'translateX(-4px) rotate(-3deg)'},{transform:'translateX(4px) rotate(3deg)'},{transform:'translateX(-3px) rotate(-2deg)'},{transform:'translateX(3px) rotate(2deg)'},{transform:'translateX(0) rotate(0)'}],{duration:900,easing:'ease-in-out'});
-  pendingSpin.timers.push(setTimeout(()=>{
-    lid.animate([{transform:'translateY(0) rotate(0)'},{transform:'translateY(-26px) rotate(-18deg)'}],{duration:380,easing:'cubic-bezier(.2,1.6,.4,1)',fill:'forwards'});
-    glow.animate([{opacity:0,transform:'scale(.4)'},{opacity:1,transform:'scale(1.3)'},{opacity:0,transform:'scale(1.8)'}],{duration:700,easing:'ease-out',fill:'forwards'});
-  },900));
-  pendingSpin.timers.push(setTimeout(()=>{
-    if(!pendingSpin) return;
-    box.hidden=true; const rl=$('#rl'); rl.hidden=false;
-    const strip=$('#rlStrip'), vw=rl.clientWidth, tw=94, center=8+idx*tw+44, jitter=(Math.random()-0.5)*60;
-    const target=vw/2-center+jitter, start=vw/2-(8+44), dur=5200, t0=performance.now();
-    const ease=t=>1-Math.pow(1-t,4);
-    const frame=now=>{
-      if(!pendingSpin) return;
-      const t=Math.min(1,(now-t0)/dur); strip.style.transform=`translateX(${start+(target-start)*ease(t)}px)`;
-      if(t<1) pendingSpin.raf=requestAnimationFrame(frame); else spinDone();
-    };
-    pendingSpin.raf=requestAnimationFrame(frame);
-  },1500));
-}
-function stopSpin(){ if(pendingSpin){cancelAnimationFrame(pendingSpin.raf);pendingSpin.timers.forEach(clearTimeout)} pendingSpin=null }
-function spinDone(){
-  if(!pendingSpin) return; const {loot,best}=pendingSpin; stopSpin();
-  const out=$('#rlOut'); if(!out) return;
-  const rl=$('#rl'), box=$('#cbox'); if(box) box.hidden=true;
-  if(rl&&rl.hidden){rl.hidden=false;$('#rlStrip').style.transform=`translateX(${rl.clientWidth/2-(8+42*94+44)}px)`}
-  const tile=$('#rlStrip').children[42]; if(tile) tile.classList.add('win');
-  if(R.indexOf(best.r)>=R.indexOf('E')&&!reduceMotion()) haptic('ok');
-  out.innerHTML=`<div class="win-card${R.indexOf(best.r)>=R.indexOf('E')?' big':''}" style="--rc:var(--r${best.r})"><span class="rar" style="color:var(--r${best.r})">${CFG.rarName[best.r]}</span><b>${wName(best)}</b>${best.autoEq?'<span class="s">equipada</span>':''}</div>
-    ${loot.length>1?lootHTML(loot):''}
-    <button class="btn gold" data-act="close">Continuar</button>`;
-}
-
-function openChests(k,all){ const n0=G.chestCount(k), need=all?n0:Math.min(1,n0);
-  if(need>G.invFree()) return showModal(`<h3>Inventario lleno</h3><p class="hint">Para abrir ${need} cofre${need>1?'s':''} necesitas ${need} hueco${need>1?'s':''} libre${need>1?'s':''} y tienes ${G.invFree()} (${G.invCount()}/${G.invMax()} armas). Libera espacio desmontando armas.</p><div class="ctrl"><button class="btn" data-act="close">Cerrar</button><button class="btn gold" data-act="invFull">Ir a Armas</button></div>`);
-  const l=G.openChests(k,all); if(!l.length) return; haptic('medium'); renderTab(); spin(k,l,n0-G.chestCount(k)) }
-// botones de esta pantalla (data-act)
-acts({
-  rlskip:()=>spinDone(),
-  chestSel:(b,k)=>{ chestSel=chestSel===k?null:k; renderTab() },
-  open1:(b,k)=>openChests(k,false),
-  openAll:(b,k)=>openChests(k,true),
-});
 /* ---------- Ajustes ---------- */
 function tabDev(){
   const on=battery();
@@ -1683,18 +1463,18 @@ function tabDev(){
   
   ${CFG.devTools?`<section class="panel"><h3>Ajustes de prueba</h3>
   <div class="ctrl">Velocidad: ${[1,2,5,20].map(v=>`<button class="btn sm ${S.speed===v?'gold':''}" data-act="speed" data-v="${v}">×${v}</button>`).join('')}</div>
-  <div class="ctrl"><button class="btn sm" data-act="dev" data-k="gold">+ oro (1 h)</button><button class="btn sm" data-act="dev" data-k="tok">+100 tokens</button><button class="btn sm" data-act="dev" data-k="scrap">+100 chatarra</button><button class="btn sm" data-act="dev" data-k="wood">+10 cofres de madera</button><button class="btn sm" data-act="dev" data-k="day">Avanzar 1 día</button><button class="btn sm" data-act="dev" data-k="ticket">+1 ticket</button></div>
+  <div class="ctrl"><button class="btn sm" data-act="dev" data-k="gold">+ oro (1 h)</button><button class="btn sm" data-act="dev" data-k="tok">+100 tokens</button><button class="btn sm" data-act="dev" data-k="day">Avanzar 1 día</button><button class="btn sm" data-act="dev" data-k="ticket">+1 ticket</button></div>
   </section>`:''}
 `;
 }
 // Invitar amigos: solo dentro de Telegram (hace falta el id del jugador y el enlace de la mini app)
 function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG.referral; if(!link) return '';
-  return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">Tu amigo recibe ${R.giftSilver} cofre de plata. Tú, ${R.goalSilver} cofres cuando llegue a la fase ${R.goalFase}${R.buyPct?` y el ${Math.round(R.buyPct*100)} % de sus compras en tokens`:''}.</div></div>
+  return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">Tu amigo recibe ${R.giftSilver*5} min de oro. Tú, ${R.goalSilver*5} min de oro cuando llegue a la fase ${R.goalFase}${R.buyPct?` y el ${Math.round(R.buyPct*100)} % de sus compras en tokens`:''}.</div></div>
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
 const REW_T={'pvp:semana':'Ranking semanal de PvP',invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
 // premios del servidor: por invitar o compras con Stars
-const rewTxt=r=>r.kind==='silver'?rw(ICON.silver,'+'+fmt(r.amount)):r.kind==='tokens'||r.kind==='won'?rw(ICON.tok,'+'+fmt(r.amount))
-  :r.kind==='first'?bundleHTML({item:CFG.stars.first.r,tok:CFG.stars.first.tokens,silver:CFG.stars.first.silver}):r.kind==='pass'?'Pase de pago activado':r.kind==='pvp'?`Puesto ${r.amount}: ${(w=>w?evRewText(w):'sin premio')(G.pvpReward(r.amount))}`:'';
+const rewTxt=r=>r.kind==='silver'?rw(ICON.gold,'+'+fmt(5*r.amount)+' min'):r.kind==='tokens'||r.kind==='won'?rw(ICON.tok,'+'+fmt(r.amount))
+  :r.kind==='first'?bundleHTML({tok:CFG.stars.first.tokens,gold:CFG.stars.first.gold}):r.kind==='pass'?'Pase de pago activado':r.kind==='pvp'?`Puesto ${r.amount}: ${(w=>w?evRewText(w):'sin premio')(G.pvpReward(r.amount))}`:'';
 if(window.Telemetry) Telemetry.onReward=list=>{ const paid=list.some(r=>/^stars:/.test(r.reason||'')); if(paid) haptic('ok');
   const pvp=list.every(r=>r.kind==='pvp');
   later(()=>showModal(`<h3>${paid?'¡Compra recibida!':pvp?'¡Premio de la semana PvP!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
@@ -1723,7 +1503,7 @@ acts({
   battery:()=>{G.setOpt('battery',!battery());if(battery()){fx.floats.length=0;fx.flash=0;ART.clearFx();ART.clearParts()}renderTab()},
   speed:b=>{if(CFG.devTools){S.speed=+b.dataset.v;renderTab()}},
   dev:(b,k)=>{G.dev(k);renderTab()},
-  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='cofres';forgeId=null;lockSel=[];expandedId=null;F.rar='all';F.stat='any';F.min='';F.max='';modalQ.length=0;renderSelect()},
+  reset:()=>{closeModal();G.reset();syncS();tab='up';invView='main';shopView='recursos';modalQ.length=0;renderSelect()},
 });
 /* ---------- modal y avisos ---------- */
 // Ventanas: el botón "Cerrar" se cambia por una cruz arriba a la derecha (con la misma acción)
@@ -1769,20 +1549,15 @@ document.addEventListener('click',e=>{ const b=e.target.closest('.sti[data-tip]'
   t.classList.remove('up'); t.innerHTML=`<b>${n}</b><br>${d}`; t.hidden=false; clearTimeout(t._h); t._h=setTimeout(skTipHide,2500) });
 document.addEventListener('click',e=>{
   if(skSkip&&e.target.closest('.skb')){ skSkip=false; return } skSkip=false;
-  const b=e.target.closest('[data-act],[data-tab],[data-f]'); if(!b) return;
-  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ boostModalOpen=false;stopSpin();closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;lockSel=[];renderTab();return}
-  if(b.dataset.f){F[b.dataset.f]=b.dataset.v;document.querySelectorAll(`[data-f="${b.dataset.f}"]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===b.dataset.v));renderList();return}
+  const b=e.target.closest('[data-act],[data-tab]'); if(!b) return;
+  if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ boostModalOpen=false;closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;renderTab();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
-document.addEventListener('toggle',e=>{ if(e.target.classList&&e.target.classList.contains('fdet')) fdetOpen=e.target.open },true);
-document.addEventListener('change',e=>{ if(e.target.id==='fStat'){F.stat=e.target.value;renderList()} if(e.target.id==='fRar'){F.rar=e.target.value;$('#fHead').innerHTML=fHead();renderList()} });
 document.addEventListener('input',e=>{
   if(e.target.id==='buyQty'&&buyCtx){const n=Math.floor(+e.target.value||0);buyCtx.n=n;const mx=maxBuy(buyCtx.k);$('#buyTotal').textContent=priceTxt(buyCtx.k,Math.max(0,n));$('#buyOk').disabled=!(n>=1&&n<=mx)}
-  if(e.target.id==='fMin'){F.min=e.target.value;renderList()}
-  if(e.target.id==='fMax'){F.max=e.target.value;renderList()}
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='nameIn'){ ACT.nameSave(); return }
-  if(e.key==='Escape'&&modalOpen()&&!pendingSpin&&!adTimerOn()&&!($('#nameIn')&&!S.name)){ const x=$('#modal .xclose'); if(x) x.click(); else ACT.close(); return } if((e.key==='Enter'||e.key===' ')&&e.target.matches('.ihd[data-act],.chip[data-act]')){e.preventDefault();e.target.click()}});
+  if(e.key==='Escape'&&modalOpen()&&!adTimerOn()&&!($('#nameIn')&&!S.name)){ const x=$('#modal .xclose'); if(x) x.click(); else ACT.close(); return } if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-act][role="button"]')){e.preventDefault();e.target.click()}});
 document.addEventListener('visibilitychange',()=>{ if(!S) return;
   if(document.hidden) G.save();
   else { const off=G.applyOffline(); if(off) later(()=>offlineModal(off)); } }); // al volver a la app se cobra el tiempo fuera (el evento en curso lo pausa)
@@ -1790,7 +1565,7 @@ setInterval(()=>{ if(!document.hidden) G.save() },5000); // en segundo plano no 
 
 // botones de esta pantalla (data-act)
 acts({
-  close:()=>{stopSpin();boostModalOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
+  close:()=>{boostModalOpen=false;grimOpen=false;clearInterval(adTimer);adTimer=null;closeModal()},
 });
 /* ---------- dibujo ---------- */
 // tamaño del lienzo: se mide solo cuando cambia (ResizeObserver) y la resolución se limita a 2× (1× en modo batería)
@@ -1834,7 +1609,7 @@ function draw(dt){
   let q=0, idx=0; const drawQ=[];
   for(const e of B.enemies){ if(B.kind==='pvp') break;
     const dieK=e.dead?(B.t-(e.deadAt||0))/0.45:0; if(e.dead&&(dieK>=1||e.x===undefined)) continue;
-    if(!e._k){ const Z=e.zone||VZ.Z; e._k=(Z&&Z.art)||'slime'; e._hue=modeHue(e.zone?CFG.zones.list.findIndex(M=>M.includes(e.zone)):VZ.m); }   // dibujo de su zona, con el color del modo
+    if(!e._k){ const Z=e.zone||VZ.Z; e._k=((Z&&Z.art)||'slime')+(e.role==='e1'||e.role==='e2'?':'+e.role:''); e._hue=modeHue(e.zone?CFG.zones.list.findIndex(M=>M.includes(e.zone)):VZ.m); }   // dibujo de su zona, con el color del modo
     idx++;
     const p=Math.min(1,(B.t-e.spawn)/(e.walk||CFG.enemy.walk));
     const big=(B.boss||!!e.zp)&&!e.minion&&!e.summoned, grow=e.grow||1, cx=contact+((big?(B.elite?26:21):13)*grow-13)*2.4;   // (Absorber, Luna llena: crece)   // los esbirros del jefe, de tamaño normal y sin corona   // los grandes se paran más lejos (no tapan al héroe)
@@ -1885,7 +1660,7 @@ const ZICO={dividirse:'🫧',division:'🫧',dotGolpe:'☠️',alfa:'🐺',acech
   infecta:'🦠',gases:'💨',pudricion:'🪱',caja:'🎁',burla:'🎭',hilos:'🧵',robaVida:'🩸',desmembrarse:'🧩',descosido:'🪡',sed:'🦇',beso:'💋',senorSangre:'🧛',locura:'😵',estatica:'📺',sueno:'🌙',
   invisible:'👻',puerta:'🚪',armaduraInf:'🛡️',festinDolor:'⛓️',montura:'🐎',hermandad:'🤝',inquebrantable:'🗿',ardiente:'🔥',forja:'⚒️',lago:'🌋',escudoLuz:'✨',hambreLuz:'🕳️',formas:'💠'};
 // Desbloqueo de modos: nombre, qué es y qué falta («Fase 10 · vas por la 4», «Día 7 · faltan 3 días»)
-const UNL={lab:['Mazmorra','Aguanta oleadas sin fin: ranking diario y cofres por muertes','lab'],boss:['Jefe semanal','Un jefe distinto cada semana: ranking por daño','boss'],
+const UNL={lab:['Mazmorra','Aguanta oleadas sin fin: ranking diario y premios por muertes','lab'],boss:['Jefe semanal','Un jefe distinto cada semana: ranking por daño','boss'],
   pvp:['PvP','Duelos contra la partida de otros jugadores','pvp'],tower:['Torre','Roguelike: sube pisos eligiendo cartas y grimorios','torre']};
 const reqTxt=k=>{ const r=G.modeReq(k); return !r?'':r.fase?`Fase ${r.fase} · vas por la ${S.best}`:`Día ${r.day} de juego · falta${r.left>1?'n':''} ${r.left} día${r.left>1?'s':''}` };
 const lockBadge=k=>`<span class="mlock2">🔒 ${G.modeReq(k).fase?'FASE '+G.modeReq(k).fase:'DÍA '+G.modeReq(k).day}</span>`;
@@ -1899,7 +1674,7 @@ const VST={B:null,me:{cur:1,from:0,at:0},foe:{cur:1,from:0,at:0}};
 const ST_ICO={life:['❤️','Vida','Si caes, pierdes una vida (sin vidas, la partida termina)'],atk:['⚔️','Más daño','Tus golpes hacen más daño'],spd:['💨','Más velocidad','Atacas más rápido'],ls:['🩸','Robo de vida','Te curas con el daño que haces'],
   baluarte:['🛡️','Baluarte','Más defensa y devuelves el daño que recibes'],atk1:['👑','Contra jefes','Más daño a los jefes'],taken:['🧱','Protegido','Recibes menos daño'],
   h_veneno:['🧪','Veneno','Pierdes vida cada segundo',1],h_sangrado:['🩸','Sangrado','Pierdes vida cada segundo',1],h_quemadura:['🔥','Quemadura','Pierdes vida cada segundo',1],
-  h_stun:['💫','Aturdido','No atacas ni lanzas habilidades',1],h_noskill:['🚫','Sin arma','No puedes lanzar habilidades',1],h_noheal:['❌','Sin curación','No te puedes curar',1],
+  h_stun:['💫','Aturdido','No atacas ni lanzas habilidades',1],h_noskill:['🚫','Silenciado','No puedes lanzar habilidades',1],h_noheal:['❌','Sin curación','No te puedes curar',1],
   h_inf:['🦠','Infección','Te curas menos',1],h_rot:['🪱','Pudrición','Menos vida máxima',1],h_burla:['🎭','Burla','Haces menos daño',1],h_mad:['😵','Locura','Con 3, atacas a uno al azar',1],h_locura:['😵','¡Locura!','Atacas a un enemigo al azar',1],
   h_def:['🪓','Defensa rota','Tienes menos defensa',1],h_sueno_arde:['🔥','Sueño: el suelo arde','Pierdes vida cada segundo',1],h_sueno_lento:['🐌','Sueño: lento','Atacas más lento',1],
   h_sueno_roban:['🩸','Sueño: roban vida','Los enemigos se curan con lo que te hacen',1],h_sueno_copias:['👥','Sueño: copias','Han aparecido copias de un élite',1],

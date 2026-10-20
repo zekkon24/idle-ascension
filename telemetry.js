@@ -70,9 +70,9 @@ function attach(G){
     if(type==='level'){ const l=queue.find(e=>e.type==='level'); if(l){ l.to=data.to; return schedule(); } }
     queue.push({type,t,...data}); schedule(); }
   function schedule(){ if(!timer&&!api.syncing) timer=setTimeout(flush,every) }   // con la partida en el servidor, van con la subida
-  function snap(){ const S=G.S; if(!S) return null; const w=G.equipped(), st=S.stats||{}, d=G.dayKey();
-    return {name:S.name,cls:S.cls,evo:S.evo,lvl:S.lvl,mode:S.mode,best:S.best,fase:S.fase,gold:S.gold,tokens:S.tokens,won:S.won,scrap:S.scrap,
-      emblems:S.evm,up_atk:S.up.atk,up_hp:S.up.hp,up_df:S.up.df,up_spd:S.up.spd,weapon:w?w.r+w.lvl:null,kills:S.kills,
+  function snap(){ const S=G.S; if(!S) return null; const st=S.stats||{}, d=G.dayKey();
+    return {name:S.name,cls:S.cls,evo:S.evo,lvl:S.lvl,mode:S.mode,best:S.best,fase:S.fase,gold:S.gold,tokens:S.tokens,won:S.won,
+      emblems:S.evm,up_atk:S.up.atk,up_hp:S.up.hp,up_df:S.up.df,up_spd:S.up.spd,kills:S.kills,
       deposited_tokens:st.deposited,deposited_usd:(st.deposited||0)/CFG.tokens.perUsd,withdrawn_tokens:S.withdrawn,withdrawn_usd:st.withdrawNet,
       ads:st.ads,ad_gold:st.adGold,offline_gold:st.offGold,card_days:Math.max(0,S.cardUntil-d),vip_days:Math.max(0,S.vipUntil-d)} }
   // la subida de la partida (startSync) se lleva los eventos pendientes y procesa la respuesta

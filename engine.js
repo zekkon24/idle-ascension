@@ -1,6 +1,6 @@
 /* ARCHIVO GENERADO por tools/construir.js desde src/motor/ (orden en orden.json): no lo edites aquí. */
 /* Idle Ascension · MOTOR DEL JUEGO
-   Toda la lógica: estado, fórmulas, combate, economía, armas, cofres, eventos y tienda.
+   Toda la lógica: estado, fórmulas, combate, economía, eventos y tienda.
    No toca la pantalla (ni DOM ni canvas): la interfaz escucha sus eventos y llama a sus acciones.
    Funciona igual en el navegador y en Node (pruebas y, más adelante, el servidor).
 
@@ -19,7 +19,7 @@ function createGame(opts){
   const CFG=opts.cfg, storage=opts.storage||null, SAVE_KEY=opts.saveKey||'idleAscension2';
   const nowFn=opts.now||(()=>Date.now());
   const rand=opts.seed!=null?mulberry32(opts.seed):Math.random;
-  const R=CFG.rar, CLASSES=Object.keys(CFG.classes);
+  const CLASSES=Object.keys(CFG.classes);
   /* ---------- eventos ---------- */
   const handlers={};
   const on=(ev,fn)=>{(handlers[ev]=handlers[ev]||[]).push(fn)};
@@ -31,52 +31,49 @@ function createGame(opts){
   let S=null, B=null, HS=null;
   // Día de juego (cambia a las 00 UTC). Nunca retrocede: atrasar el reloj no vuelve a abrir anuncios, entradas gratis ni evento.
   const dayKey=()=>{ const d=Math.floor((nowFn()+(S&&CFG.devTools?S.devDays||0:0)*86400000)/86400000); if(!S) return d; if(!(S.maxDay>=d)) S.maxDay=d; return S.maxDay };
-  const pick=probs=>{const tot=probs.reduce((a,b)=>a+b,0);let x=rand()*tot;for(let i=0;i<probs.length;i++){x-=probs[i];if(x<0)return R[i]}return R[0]};
-  const rnd=(a,b)=>a+rand()*(b-a);
 
   function newState(cls,name){
-    return {v:3,cls,name:cleanName(name),lvl:1,xp:0,gold:0,tokens:0,won:0,withdrawn:0,scrap:0,up:{atk:0,hp:0,df:0,spd:0},
-      best:0,fase:1,wave:1,push:true,autoPush:true,farmClears:0,
-      items:[],nextId:1,equippedId:null,chestInv:{},opt:{},
+    return {v:3,cls,name:cleanName(name),lvl:1,xp:0,gold:0,tokens:0,won:0,withdrawn:0,up:{atk:0,hp:0,df:0,spd:0},
+      best:0,fase:1,wave:1,push:true,autoPush:true,farmClears:0,repF:null,   // repF: fase que se repite con el botón «Repetir fase» (null: sube sola)
+      gear:{arma:[1,0,0,0,0,0],armadura:[0,0,0,0,0,0],anillo:[0,0,0,0,0,0],amuleto:[0,0,0,0,0,0]},boxT:0,boxP:{free:{mid:0,top:0}},boxDay:null,   // gear: copias de cada rareza en cada hueco (la Común del arma es de regalo; las de los demás, al abrirse) · boxT: tickets de invocación · boxP: contadores de la garantía (pity) de la caja, una para todos los huecos
+      opt:{},legacy:null,   // legacy: lo que tenía una partida antigua de objetos (armas, cofres, chatarra), apartado sin borrarlo
       startDay:null,cardUntil:0,vipUntil:0,          // startDay: día en que empezó la partida (para los rivales simulados)
-      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,refPend:null,silverDay:null,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{lvl:0,xp:0},
+      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{lvl:0,xp:0},
       stats:{deposited:0,withdrawNet:0,adGold:0,ads:0,offGold:0}}; // registro para la base de datos: tokens comprados, $ retirados (neto), oro de anuncios, anuncios vistos, oro sin conexión
   }
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
     if(!st||!CFG.classes[st.cls]) return null;
     { const G=st.grim; if(G&&G.owned){ const had=Object.keys(G.owned).length>0; st.grim={lvl:had?((st.evo||0)>=1?5:1):0,xp:0}; } }   // grimorios antiguos → la llave
-    st.autoPush=true;   // siempre intenta subir de fase (ya no hay botón Auto Sí/No)
+    st.repF=st.repF>0?Math.min(st.repF|0,Math.max(1,(st.best|0)+1)):null; st.autoPush=!st.repF;   // sube sola de fase salvo con «Repetir fase»
     if((st.evo||0)>=1&&!st.path) st.path='A';                                                                              // evolución antigua = camino A
+    { const L={};   // los objetos y los cofres ya no existen: lo de las partidas antiguas se aparta en st.legacy (no se pierde) por si hay que compensarlo
+      if(Array.isArray(st.items)&&st.items.length) L.items=st.items; if(st.chestInv&&Object.keys(st.chestInv).length) L.chestInv=st.chestInv;
+      if(st.scrap) L.scrap=st.scrap; if(st.invBonus) L.invBonus=st.invBonus; if(st.equippedId!=null) L.equippedId=st.equippedId;
+      if(Object.keys(L).length) st.legacy={...(st.legacy||{}),...L};
+      for(const k of ['items','nextId','equippedId','chestInv','scrap','invBonus','refPend','silverDay']) delete st[k];
+      if(st.loot){ delete st.loot.wood; delete st.loot.scrap; } }
     const d=newState(st.cls);
     for(const k in d) if(st[k]===undefined) st[k]=d[k];
+    { const W=CFG.weapon, n=Math.max(0,Math.min(W.max,st.wlvl|0)); if(n&&st.gear&&st.gear.arma) st.gear.arma[0]=Math.max(st.gear.arma[0]||1,W.need[n]); delete st.wlvl;   // la mejora con oro de una versión de pruebas → copias de la Común
+      const g0=st.gear||{}; st.gear={}; for(const s of ['arma','armadura','anillo','amuleto']){ const a=g0[s]; st.gear[s]=W.base.map((_,i)=>Number.isFinite(a&&a[i])&&a[i]>0?Math.floor(a[i]):0); } if(!st.gear.arma[0]) st.gear.arma[0]=1;
+      st.boxP={...d.boxP,...(st.boxP||{})}; st.boxP.free={...d.boxP.free,...(st.boxP.free||{})}; st.boxT=Math.max(0,Math.floor(st.boxT)||0); }
     st.up={...d.up,...(st.up||{})}; st.stats={...d.stats,...(st.stats||{})}; for(const k in st.up) if(!Number.isFinite(st.up[k])) st.up[k]=0;
-    for(const k of ['gold','tokens','won','withdrawn','scrap','xp','lvl','best','fase','wave','tickets','bossTickets','evm','kills','boostMs','evo','mode','nextId','cardUntil','vipUntil'])
+    for(const k of ['gold','tokens','won','withdrawn','xp','lvl','best','fase','wave','tickets','bossTickets','evm','kills','boostMs','evo','mode','cardUntil','vipUntil'])
       if(!Number.isFinite(st[k])) st[k]=d[k];
     st.lvl=Math.max(1,st.lvl|0); st.fase=Math.max(1,st.fase|0); st.wave=Math.min(10,Math.max(1,st.wave|0));
-    st.chestInv=st.chestInv||{}; st.opt=st.opt||{}; st.items=Array.isArray(st.items)?st.items.map(unpackItem).filter(Boolean):[]; st.mats=st.mats||{};
-    { const other=st.items.filter(x=>x.cls!==st.cls&&x.id!==st.equippedId);   // armas de otras clases (ya no salen de los cofres): pasan a chatarra
-      if(other.length){ st.scrap=(st.scrap||0)+other.reduce((a,x)=>a+(CFG.weapon.scrapDis[x.r]||1)*(x.lvl||1),0); st.items=st.items.filter(x=>!other.includes(x)); } }
-    for(const it of st.items){ it.lvl=Math.max(1,it.lvl|0); it.sec=Array.isArray(it.sec)?it.sec:[]; it.refN=it.refN|0; it.invested=Number.isFinite(it.invested)?it.invested:0; it.fav=!!it.fav; }
-    st.nextId=Math.max(st.nextId|0, 1+st.items.reduce((a,x)=>Math.max(a,x.id|0),0));
-    for(const k of ['gold','diamond']) if(st.chestInv[k]){ st.chestInv.mode=(st.chestInv.mode||0)+st.chestInv[k]; delete st.chestInv[k]; }
-    for(const k of Object.keys(st.chestInv)) if(k.includes('|')){ const t=k.split('|')[0]; st.chestInv[t]=(st.chestInv[t]||0)+st.chestInv[k]; delete st.chestInv[k]; } // cofres: ya no guardan su calidad
+    st.opt=st.opt||{}; st.mats=st.mats||{};
     if(st.boostUntil!=null){ st.boostMs=Math.max(0,st.boostUntil-nowFn()); delete st.boostUntil; } st.boostMs=st.boostMs||0; st.evo=st.evo||0; st.absorb=st.absorb||{}; st.mode=st.mode||0; delete st.rare;
-    delete st.pity; delete st.firstDone; delete st.gps; delete st.xps; delete st.calLast; delete st.mis; delete st.week; // (calendario y misiones ya no existen)
+    delete st.pity; delete st.dropDay; delete st.firstDone; delete st.gps; delete st.xps; delete st.calLast; delete st.mis; delete st.week; // (calendario y misiones ya no existen)
     if(st.calStart!=null&&st.startDay==null) st.startDay=st.calStart; delete st.calStart;
     st.v=3; return st;
   }
   // lastSeen nunca retrocede: atrasar y adelantar el reloj no regala tiempo sin conexión
-  // Armas en formato compacto al guardar (≈5 veces menos): "id|clase|rareza|nivel|reforjas|invertido|favorita|stat:valor,…"
-  function packItem(it){ return [it.id,it.cls,it.r,it.lvl,it.refN||0,it.invested||0,it.fav?1:0,it.sec.map(x=>x.k+':'+x.v).join(',')].join('|') }
-  function unpackItem(x){ if(typeof x!=='string') return x&&typeof x==='object'?x:null;       // (partidas antiguas: objetos)
-    const [id,cls,r,lvl,refN,invested,fav,sec]=x.split('|'); if(!CFG.classes[cls]||!R.includes(r)) return null;
-    return {id:+id,cls,r,lvl:+lvl,sec:sec?sec.split(',').map(p=>{ const [k,v]=p.split(':'); return {k,v:+v} }):[],refN:+refN,invested:+invested,fav:fav==='1'} }
-  const packed=()=>S?{...S,items:S.items.map(packItem)}:null;       // la partida tal como se guarda (también en el servidor)
+  const packed=()=>S||null;       // la partida tal como se guarda (también en el servidor)
   function save(){ if(!S||!storage) return; S.lastSeen=Math.max(S.lastSeen||0,nowFn()); try{storage.set(SAVE_KEY,JSON.stringify(packed()))}catch(e){} }
   let autoLoot=null; // botín de jefes que quedó sin recoger al cerrar: al volver a entrar va directo al inventario
   let autoEvent=null; // intento del evento que quedó a medias al cerrar: se cuenta con las muertes que llevaba
-  function load(){ if(!storage) return null; try{const t=storage.get(SAVE_KEY); S=t?migrate(JSON.parse(t)):null}catch(e){S=null} HS=null; B=null;
-    autoLoot=S&&S.loot?claimLoot():null; autoEvent=S&&S.evRun?finishRun(S.evRun.kills,false):S&&S.wbRun?wbFinish(S.wbRun.dmg,false):null; if(S) S.refPend=null;
+  function load(){ if(!storage) return null; try{const t=storage.get(SAVE_KEY); S=t?migrate(JSON.parse(t)):null}catch(e){S=null} HS=null; B=null; if(S) gearOpenCheck();   // (huecos que ya tocaban)
+    autoLoot=S&&S.loot?claimLoot():null; autoEvent=S&&S.evRun?finishRun(S.evRun.kills,false):S&&S.wbRun?wbFinish(S.wbRun.dmg,false):null;
     autoQuit=S?quitFights():null; return S }
   // combate de la Torre o duelo PvP que quedó a medias al cerrar la app: cuenta como derrota (así cerrar no sirve para no perder)
   let autoQuit=null;
@@ -91,14 +88,10 @@ function createGame(opts){
   const validName=n=>cleanName(n).length>=3;
   // El nombre es permanente: solo se puede poner si la partida aún no tiene (partidas antiguas)
   function setName(n){ const c=cleanName(n); if(c.length<3||S.name) return false; S.name=c; save(); emit('change'); return true }
-  function newGame(cls,name){ S=newState(cls,name); HS=null; S.equippedId=newItem(cls,CFG.startWeapon||'C').id; S.startDay=dayKey(); startWave(); track('start',{cls,name:S.name}); emit('change'); return S }
+  function newGame(cls,name){ S=newState(cls,name); HS=null; S.startDay=dayKey(); S.boxT=CFG.box.welcome; startWave(); track('start',{cls,name:S.name}); emit('change'); return S }
   /* ---------- fórmulas ---------- */
   const hasCard=()=>dayKey()<S.cardUntil, hasVip=()=>dayKey()<S.vipUntil;
-  const equipped=()=>S.items.find(i=>i.id===S.equippedId)||null;
-  function weaponMain(w){const b=CFG.weapon[w.r];const m=1+CFG.weapon.lvlPct*(w.lvl-1);return {d:b[0]*m,s:b[1]*m}}
   const statsDirty=()=>{HS=null};
-  // efecto del arma equipada si es Legendaria o Mítica (el de su clase)
-  function legendFx(){ const w=S&&equipped(); return w&&CFG.weapon.legend&&R.indexOf(w.r)>=R.indexOf('L')?CFG.weapon.legend[w.cls]||null:null }
   const heroStats=()=>HS||(HS=computeStats());
   // niveles ganados (contando lo que valen): los de después de cada evolución valen grow[i] × lo de antes (en vida, daño y defensa)
   function lvlGain(lvl,evo,cls){ const L=lvl-1, T=evoTiers(), G=(CFG.classes[cls]||{}).grow||[]; let v=0, from=0;
@@ -107,18 +100,18 @@ function createGame(opts){
     return v }
   function computeStats(){
     if(towerOn()) return towerStats();
-    const c=CFG.classes[S.cls], u=S.up, U=CFG.upgrades, w=equipped(), A=S.absorb||{}, KS=(kitNow()||{}).stat||{};   // KS: ajuste de daño de la etapa del kit (equilibrio)
-    const sec={hpp:0,dfp:0,cr:0,cd:0,ls:0,bd:0}; let wd=0,ws=0;
-    if(w){const m=weaponMain(w);wd=m.d;ws=m.s;for(const s of w.sec) sec[s.k]+=s.v/100;}
-    const lg=lvlGain(S.lvl,S.evo,S.cls);
+    const c=CFG.classes[S.cls], u=S.up, U=CFG.upgrades, A=S.absorb||{}, KS=(kitNow()||{}).stat||{};   // KS: ajuste de daño de la etapa del kit (equilibrio)
+    // equipo (heroe/equipo.js): el Arma suma daño, la Armadura vida y defensa, el Anillo crítico y daño crítico, el Amuleto daño de las habilidades (sk); cada pieza, su
+    // extra fijo (vida, defensa, crítico o daño a jefes; no sube con el nivel); el set, vida, daño y defensa (ss)
+    const lg=lvlGain(S.lvl,S.evo,S.cls), ar=1+slotV('armadura'), ss=1+setInfo().st, ring=slotV('anillo');
     return {
-      hp:(c.hp+(A.hp||0)+c.ghp*lg)*Math.pow(U.hp.mult,u.hp)*(1+sec.hpp)*evoBonus('hp')*(pvpOn()&&B.hpM||1),
-      atk:(c.atk+(A.atk||0)+c.gatk*lg)*Math.pow(U.atk.mult,u.atk)*(1+wd)*evoBonus('atk')*(KS.atk||1),
-      df:(c.df+(A.df||0)+c.gdf*lg)*Math.pow(U.df.mult,u.df)*(1+sec.dfp)*evoBonus('df'),
-      spd:c.spd*Math.pow(U.spd.mult,u.spd)*(1+ws),
-      cr:Math.min(CFG.caps.cr,c.cr+sec.cr), cd:c.cd+sec.cd,
-      ls:Math.min(CFG.caps.ls,sec.ls), bd:sec.bd, ranged:c.ranged,
-      regen:c.regen||0, dmgTaken:c.dmgTaken||1, xpMult:1,
+      hp:(c.hp+(A.hp||0)+c.ghp*lg)*Math.pow(U.hp.mult,u.hp)*evoBonus('hp')*(1+extraOf('hp'))*ar*ss*(pvpOn()&&B.hpM||1),
+      atk:(c.atk+(A.atk||0)+c.gatk*lg)*Math.pow(U.atk.mult,u.atk)*evoBonus('atk')*(1+weaponBonus())*ss*(KS.atk||1),
+      df:(c.df+(A.df||0)+c.gdf*lg)*Math.pow(U.df.mult,u.df)*evoBonus('df')*(1+extraOf('df'))*ar*ss,
+      spd:c.spd*Math.pow(U.spd.mult,u.spd),
+      cr:Math.min(CFG.caps.cr,c.cr+extraOf('cr')+ring), cd:c.cd+extraOf('cd')+ring*(CFG.equip.anillo.cd||0), sk:slotV('amuleto'),
+      ls:Math.min(CFG.caps.ls,extraOf('ls')), bd:extraOf('bd'), ranged:c.ranged,
+      regen:c.regen||0, dmgTaken:c.dmgTaken||1, xpMult:1, fx:weaponFx(),   // fx: el efecto del arma Épica o Legendaria (combate/arma-efecto.js)
     };
   }
   // Torre: héroe único (CFG.tower.hero) + solo las cartas, grimorios y maldiciones de la partida.
@@ -131,7 +124,119 @@ function createGame(opts){
       hp:H.hp*Math.max(0.2,1+X.hp+(run.hpBonus||0)+CFG.tower.curses.fragil.hp*tcurse('fragil')), atk:H.atk*(1+X.atk), df:H.df*(1+X.df), spd,
       cr:Math.min(1,crT), cd:H.cd+X.cd+Math.max(0,crT-1)+(tgH('furiaCiega')?X.spd:0),
       ls:Math.min(1,X.ls), bd:0, ranged:false, regen:X.regen, refl:X.refl, dbl:X.dbl,
-      dmgTaken:Math.pow(1-CFG.tower.cards.talisman.taken,tcN('talisman')), xpMult:1 } }
+      dmgTaken:Math.pow(1-CFG.tower.cards.talisman.taken,tcN('talisman')), xpMult:1, fx:null, sk:0 } }
+  /* ---------- equipo: 4 huecos por copias, sets y la caja de invocación con garantía ---------- */
+  // Huecos (SLOTS): Arma (CFG.weapon) y Armadura, Anillo y Amuleto (CFG.equip), que se abren en la fase «open» de Normal con su Común de regalo. Cada rareza es una
+  // pieza distinta: se tiene con 1 copia (+0) y sube con 1, 2, 3, 4 y 5 copias más (16 en total); en cada hueco se equipa sola la mejor. Sets (CFG.sets): con 2 y 4
+  // piezas de una rareza o mejor. La caja (CFG.box) da una copia del hueco que elijas por tirada; tira en cascada (la rareza más alta primero, con su % fijo) y la
+  // garantía es una para todos los huecos. Se paga con tickets de invocación (boxT) o con oro (minutos de farmeo de tu récord, máximo 5 al día).
+  const SLOTS=['arma','armadura','anillo','amuleto'], SNAME={arma:'Arma',armadura:'Armadura',anillo:'Anillo',amuleto:'Amuleto'};
+  const slotCfg=s=>s==='arma'?CFG.weapon:CFG.equip[s];
+  const slotOpen=s=>s==='arma'||!!(S&&((S.mode||0)>0||(S.evo||0)>=1||(S.best||0)>=slotCfg(s).open));
+  const gearCopies=s=>S.gear[s||'arma'];
+  const gearLvl=n=>{ const need=CFG.weapon.need; let l=-1; for(let i=0;i<need.length;i++) if(n>=need[i]) l=i; return l };
+  const slotVal=(s,r,l)=>{ const C=slotCfg(s); return C.base[r]+C.step[r]*l };
+  const gearDmg=(r,l)=>slotVal('arma',r,l);
+  // la mejor pieza de un hueco (a igualdad, la de más rareza); -1 si no tiene ninguna (el arma, la Común)
+  function bestLine(c,s){ s=s||'arma'; c=c||gearCopies(s); let best=-1,bp=-1; for(let r=0;r<c.length;r++){ const l=gearLvl(c[r]); if(l<0) continue; const p=slotVal(s,r,l); if(p>=bp){ bp=p; best=r } } return best<0&&s==='arma'?0:best }
+  // la pieza equipada en un hueco: {r, l, v} (rareza, nivel y valor), o null (hueco cerrado o vacío)
+  function piece(s){ if(!S||!S.gear||!slotOpen(s)) return null; const c=gearCopies(s); if(!c) return null; const r=bestLine(c,s); if(r<0) return null; const l=gearLvl(c[r]); return l<0?null:{r,l,v:slotVal(s,r,l)} }
+  const slotV=s=>{ const p=piece(s); return p?p.v:0 };
+  // el extra fijo de cada pieza (el de su rareza, su hueco y tu clase): {s: estadística, v: valor}; no depende del nivel. Cuentan los de todas las piezas equipadas.
+  const slotExtra=(s,r)=>{ const e=S&&slotCfg(s).extra&&slotCfg(s).extra[S.cls]; return e&&e[r]&&typeof e[r]==='object'?e[r]:null };
+  const weaponExtra=(r)=>slotExtra('arma',r==null?bestLine():r);
+  const XNAME={hp:'Vida',df:'Defensa',cr:'Crítico',bd:'Daño a jefes'};
+  const extraOf=(st)=>{ let v=0; for(const s of SLOTS){ const p=piece(s), e=p&&slotExtra(s,p.r); if(e&&e.s===st) v+=e.v; } return v };
+  const weaponBonus=()=>{ if(!S||!S.gear) return CFG.weapon.base[0]; const p=piece('arma'); return p?p.v:CFG.weapon.base[0] };
+  // sets: las piezas equipadas de cada rareza o mejor; st: lo que suman a vida, daño y defensa (2 piezas + 4 piezas); fx: lo que cambian del efecto del arma
+  function setInfo(){ const C=CFG.sets, rs=SLOTS.map(piece).filter(Boolean).map(p=>p.r), n=r=>rs.filter(x=>x>=r).length;
+    const best=k=>{ for(let r=CFG.rar.length-1;r>=0;r--) if(n(r)>=k) return r; return -1 }, r2=best(2), r4=best(4);
+    return {pieces:rs.length,count:CFG.rar.map((_,r)=>n(r)),r2,r4,st:C?(r2>=0?C.two[r2]:0)+(r4>=0?C.four[r4]:0):0,fx:C&&r4>=0?C.fx[r4]:null} }
+  // el efecto de las armas Épica y Legendaria (CFG.weapon.fx; lo que hace, en combate/arma-efecto.js): {id, name, …números} de la rareza r (o de la equipada, con lo
+  // que le cambie el set), o null. Un número puede ser distinto por camino, {A, B} (sin evolucionar, el de A); ch (cargas por efecto) es 1 si no se dice
+  const wfxPick=(k,v,p)=>v&&typeof v==='object'&&!Array.isArray(v)?(v[p]!=null?v[p]:k==='ch'?1:v.A):v;
+  const weaponFx=(r)=>{ const F=S&&CFG.weapon.fx&&CFG.weapon.fx[S.cls], eq=r==null; if(eq) r=S&&S.gear?bestLine():0; const L=F&&(r===3?F.ep:r===4?F.lg:null); if(!L) return null;
+    const p=S.evo>=1&&S.path==='B'?'B':'A', o={id:F.id,name:F.name,r}; for(const [k,v] of Object.entries({ch:F.ch,...L})) if(v!=null) o[k]=wfxPick(k,v,p);
+    const f=eq&&setInfo().fx;   // set de 4 Épicas o mejores: sale más a menudo; de 4 Legendarias, además más cargas (el clon dura más)
+    if(f){ const hits=o.id==='tajo'||o.id==='llama'||o.id==='reflejo'; if(f.every) o.every=hits?Math.max(1,Math.round(o.every*f.every)):Math.round(o.every*f.every*100)/100;
+      if(f.ch){ if(o.id==='reflejo') o.dur+=f.ch; else o.ch=(o.ch==null?1:o.ch)+f.ch; } o.set=true; }
+    return o };
+  // qué hace, en palabras (con los números de la rareza); lo que da en cada camino (a, b: cuántas cargas en A y en B)
+  const WFX_C={Guerrero:(a,b)=>`${a} de Guardia (camino A) o ${b} de Furia (camino B)`,Mago:(a,b)=>`${a>1?`le pone ${a} quemaduras`:'lo quema'} (camino A) o le clava ${b} ${b>1?'esquirlas':'esquirla'} (camino B)`,
+    Arquero:(a,b)=>`${a} de Concentración (camino A) o ${b} de Ritmo (camino B)`,Asesino:()=>'sus críticos dan cuchillas (camino A) y sus golpes envenenan (camino B)',
+    Clerigo:(a,b)=>`${a} de Luz (camino A) o ${b} ${b>1?'Sombras':'Sombra'} (camino B)`};
+  // (con números por camino {A, B}: «220 % en A / 90 % en B»)
+  function weaponFxDesc(F,cls){ if(!F) return ''; const ab=(v,f)=>v&&typeof v==='object'?(v.A===v.B?f(v.A):`${f(v.A)} en A / ${f(v.B)} en B`):f(v), pc=x=>ab(x,y=>Math.round(y*100)+' %'), sec=x=>ab(x,y=>String(y).replace('.',',')), num=x=>ab(x,y=>y);
+    const ch=k=>{ const v=F.ch; return v==null?1:typeof v==='object'?(v[k]!=null?v[k]:1):v }, c=WFX_C[cls]?WFX_C[cls](ch('A'),ch('B')):'';
+    switch(F.id){
+      case 'tajo': return `Cada ${num(F.every)} golpes, una onda de corte del ${pc(F.mult)} a hasta ${num(F.n)} (el doble si hay uno solo). Da ${c}.`+(F.onSkill?' Cada habilidad que lanzas también la suelta.':'');
+      case 'orbe': return `Un orbe lanza cada ${sec(F.every)} s un rayo del ${pc(F.mult)} al primer enemigo, que ${c}.`+(F.onSkill?` Cada habilidad que lanzas dispara ${num(F.onSkill)} rayos más.`:'');
+      case 'halcon': return `Cada ${sec(F.every)} s, un halcón cae sobre el enemigo con menos vida (${pc(F.mult)}). Da ${c}.`+(F.onSkill?' Cada habilidad que lanzas lo hace caer al momento.':'');
+      case 'reflejo': return `Cada ${num(F.every)} golpes, un clon copia tus golpes, tu veneno y tus cuchillas ${sec(F.dur)} s (al ${pc(F.copy)}); ${c}.`+(F.skills?' También copia tus habilidades.':'');
+      case 'llama': return `Cada ${num(F.every)} golpes, un destello del ${pc(F.mult)} a hasta ${num(F.n)} (el doble si hay uno solo). Da ${c}.`+(F.onSkill?' Cada habilidad que lanzas también lo suelta.':'');
+    } return '' }
+  const fxInfo=r=>{ const F=CFG.weapon.fx&&CFG.weapon.fx[S.cls], L=F&&(r===3?F.ep:r===4?F.lg:null); return L?{id:F.id,name:F.name,desc:weaponFxDesc({id:F.id,ch:F.ch,...L},S.cls)}:null };   // (el texto, con los números de los dos caminos)
+  // poder del arma en daño equivalente: su daño, su extra (weapon.extraPower) y su efecto (fxPower)
+  const weaponPower=()=>{ const p=piece('arma')||{r:0,l:0}, W=CFG.weapon; return (1+gearDmg(p.r,p.l))*(1+W.extraPower[p.r])*(1+((W.fxPower||[])[p.r]||0))-1 };
+  // poder de todo el equipo en daño del arma equivalente, como lo cuenta el héroe de referencia (lo que rinde en la campaña, medido con el ritmo): cada pieza vale
+  // power × el daño del arma de su rareza y nivel, con la mitad de su extra y, el arma, ¾ de su efecto (la Legendaria, 70 %); los sets, lo que suman a vida, daño y
+  // defensa (×2: valen en ataque y en defensa)
+  const REF_FX={3:0.75,4:0.7};
+  const pieceRef=(s,p)=>{ if(!p) return 0; const W=CFG.weapon, k=s==='arma'?1:slotCfg(s).power;
+    return (1+k*gearDmg(p.r,p.l))*(1+0.5*k*W.extraPower[p.r])*(s==='arma'?1+(REF_FX[p.r]||0)*((W.fxPower||[])[p.r]||0):1)-1 };
+  const gearPower=()=>{ let m=1; for(const s of SLOTS) m*=1+pieceRef(s,piece(s)); return m*(1+2*setInfo().st)-1 };
+  // un hueco para la pantalla: la pieza equipada y una línea por rareza (copias, nivel, valor, extra y, en el arma, el efecto)
+  function gear(s){ s=SLOTS.includes(s)?s:'arma'; if(!S) return null; const C=slotCfg(s), W=CFG.weapon, c=gearCopies(s), names=C.names[S.cls], rb=bestLine(c,s), r=Math.max(0,rb), l=gearLvl(c[r]);
+    const lines=[0,1,2,3,4].map(i=>{ const li=gearLvl(c[i]), e=slotExtra(s,i), v=slotVal(s,i,Math.max(0,li));
+      return {r:i,id:CFG.rar[i].id,rar:CFG.rar[i].name,name:names[i],copies:c[i],owned:li>=0,lvl:li,v,dmg:v,extra:e?{s:e.s,name:XNAME[e.s],v:e.v}:null,fx:s==='arma'?fxInfo(i):null,toNext:li<0?W.need[0]-c[i]:li<W.max?W.need[li+1]-c[i]:0}});
+    const has=rb>=0&&l>=0, v=has?slotVal(s,r,l):0, nextV=has&&l<W.max?slotVal(s,r,l+1):null;
+    return {slot:s,slotName:SNAME[s],open:slotOpen(s),openAt:C.open||0,has,name:names[r],rar:CFG.rar[r].name,rarId:CFG.rar[r].id,r,lvl:l,max:W.max,v,dmg:v,cd:s==='anillo'?v*(C.cd||0):0,
+      extra:lines[r].extra,fx:lines[r].fx,copies:c[r],toNext:has&&l<W.max?W.need[l+1]-c[r]:0,nextV,nextDmg:nextV,lines} }
+  const weapon=()=>gear('arma');
+  const gearSlots=()=>S?SLOTS.map(gear):[];
+  // abre los huecos que ya tocan (por la fase de Normal, o al pasar a Pesadilla): su Común de regalo y box.slotGift tickets (una vez: si aún no tenía ninguna copia)
+  function gearOpenCheck(){ if(!S||!S.gear) return false; let any=false;
+    for(const s of SLOTS){ if(s==='arma'||!slotOpen(s)) continue; const c=S.gear[s]; if(!c||c.some(x=>x>0)) continue; c[0]=1; S.boxT=(S.boxT||0)+(CFG.box.slotGift||0); any=true; emit('slotOpen',{slot:s,name:SNAME[s],tickets:CFG.box.slotGift||0}); }
+    if(any) statsDirty(); return any }
+  // --- la caja ---
+  const boxT=()=>CFG.box.free[Math.min(S.mode||0,CFG.box.free.length-1)];
+  const boxDay=()=>{ const d=dayKey(); if(!S.boxDay||S.boxDay.d!==d) S.boxDay={d,n:0}; return S.boxDay };
+  const boxGoldCost=()=>Math.max(20,farmRate(Math.max(1,S.best)).g*60*CFG.box.gold.min*(1+CFG.box.gold.step*boxDay().n));
+  const boxGoldLeft=()=>Math.max(0,CFG.box.gold.perDay-boxDay().n);
+  // probabilidad de la rareza máxima en la tirada nº c desde la última: su % fijo, y desde «soft» sube en línea recta hasta el 100 % en «hard»
+  function boxTopP(T,c){ const tot=T.odds.reduce((a,b)=>a+b,0), pb=T.odds[T.top.r]/tot; if(c>=T.top.hard) return 1; if(c<T.top.soft) return pb; return Math.min(1,pb+(c-T.top.soft+1)*(1-pb)/(T.top.hard-T.top.soft+1)) }
+  // en cascada: primero la rareza máxima (con su garantía); si falla, la media si toca garantizarla; si no, de arriba abajo, cada una con su % fijo (lo que queda, Común)
+  function boxDraw(T,P){ P.top++; let r=-1;
+    if(rand()<boxTopP(T,P.top)) r=T.top.r;
+    else if(P.mid+1>=T.mid.n) r=T.mid.r;
+    else { let left=T.odds.reduce((a,b)=>a+b,0)-T.odds[T.top.r]; for(let i=T.top.r-1;i>0;i--){ const p=T.odds[i]; if(rand()<p/left){ r=i; break } left-=p; } if(r<0) r=0; }
+    if(r>=T.top.r) P.top=0; if(r>=T.mid.r) P.mid=0; else P.mid++; return r }
+  function boxInfo(){ if(!S) return null; const T=boxT(), P=S.boxP.free, tot=T.odds.reduce((a,b)=>a+b,0);
+    return {mode:S.mode||0, rates:T.odds.map((o,i)=>({r:i,id:CFG.rar[i].id,name:CFG.rar[i].name,pct:o/tot*100})).reverse(),   // (de la más alta a la más baja: el orden de la cascada)
+      mid:{r:T.mid.r,name:CFG.rar[T.mid.r].name,n:T.mid.n,left:Math.max(1,T.mid.n-P.mid)},
+      top:{r:T.top.r,name:CFG.rar[T.top.r].name,soft:T.top.soft,hard:T.top.hard,count:P.top,left:Math.max(1,T.top.hard-P.top),pNext:boxTopP(T,P.top+1)},
+      tickets:S.boxT||0, gold:{cost:boxGoldCost(),left:boxGoldLeft(),limit:CFG.box.gold.perDay}, slots:SLOTS.filter(slotOpen)} }
+  // botín de un élite o JEFE ya vencido (al farmear su fase o en la Sala de jefes): con su probabilidad (CFG.box.drop, que sube con la fase), una pieza de un hueco
+  // abierto al azar; su rareza en cascada como la caja gratis del modo, sin garantía y con la máxima × top
+  const dropP=f=>{ const D=CFG.box.drop, j=f%30===0, [a,b]=j?D.jefe:D.elite, f0=j?30:10, f1=j?CAP():CAP()-10; return a+(b-a)*Math.max(0,Math.min(1,(f-f0)/(f1-f0))) };
+  function gearDrop(f,m){ const D=CFG.box.drop; if(!D||!S||!(rand()<dropP(f))) return null;   // (m: el modo del jefe; si no, el actual)
+    const open=SLOTS.filter(slotOpen), slot=open[Math.floor(rand()*open.length)], T=m==null?boxT():CFG.box.free[Math.min(m,CFG.box.free.length-1)], tot=T.odds.reduce((a,b)=>a+b,0); let r=-1;
+    if(rand()<T.odds[T.top.r]/tot*D.top) r=T.top.r;
+    else { let left=tot-T.odds[T.top.r]; for(let i=T.top.r-1;i>0;i--){ const q=T.odds[i]; if(rand()<q/left){ r=i; break } left-=q; } if(r<0) r=0; }
+    const c=gearCopies(slot), v0=slotV(slot), l0=gearLvl(c[r]); c[r]++; const l1=gearLvl(c[r]); statsDirty();
+    const res={slot,slotName:SNAME[slot],r,id:CFG.rar[r].id,name:CFG.rar[r].name,piece:slotCfg(slot).names[S.cls][r],fresh:l0<0&&l1>=0,up:l1>l0&&l0>=0,lvl:l1,equipped:slotV(slot)>v0+1e-12,f};
+    track('drop',{f,slot,r:res.id}); emit('gearDrop',res); return res }
+  // n tiradas (1 a 10) del hueco «slot» (abierto), pagadas con 'ticket' u 'oro'; devuelve lo que salió en cada una. Si no llega para todas, hace las que pueda.
+  function pull(n,via,slot){ if(!S) return {ok:false,why:'nogame'}; slot=SLOTS.includes(slot)?slot:'arma'; if(!slotOpen(slot)) return {ok:false,why:'closed'};
+    n=Math.max(1,Math.min(10,Math.floor(n)||1)); const T=boxT(), P=S.boxP.free, c=gearCopies(slot), res=[]; let spent=0, why=null;
+    for(let i=0;i<n;i++){
+      if(via==='ticket'){ if((S.boxT||0)<1){ why='tickets'; break } S.boxT--; }
+      else { if(boxGoldLeft()<1){ why='limit'; break } const g=boxGoldCost(); if(S.gold<g){ why='gold'; break } S.gold-=g; spent+=g; boxDay().n++; }
+      const r=boxDraw(T,P), p0=slotV(slot), l0=gearLvl(c[r]); c[r]++; const l1=gearLvl(c[r]);
+      res.push({r,id:CFG.rar[r].id,name:CFG.rar[r].name,slot,fresh:l0<0&&l1>=0,up:l1>l0&&l0>=0,lvl:l1,equipped:slotV(slot)>p0+1e-12});
+    }
+    if(!res.length) return {ok:false,why};
+    statsDirty(); track('pull',{n:res.length,via,slot,gold:Math.round(spent),r:res.map(x=>x.id).join('')}); save(); emit('pull',res); emit('change'); return {ok:true,res,why} }
   /* ---------- enemigos: vida, ataque y oleadas ---------- */
   // Modos (Normal, Pesadilla, Infierno): la fase f de un modo usa los enemigos de la fase f+off
   const MODES=()=>CFG.modes||[{name:'Normal',off:0,gold:1}];
@@ -217,7 +322,7 @@ function createGame(opts){
   function useSkill(k){ const d=skillDef(k); if(!d) return {ok:false,why:'locked'}; if(!B||B.over) return {ok:false,why:'nofight'}; if(autoOnly()) return {ok:false,why:'auto'};
     if(CT<(CD[k]||0)) return {ok:false,why:'cd',left:CD[k]-CT};
     if(CT<GCD) return {ok:false,why:'gap',left:GCD-CT};   // aún no ha pasado la espera desde la anterior
-    if(heroNoSkills()) return {ok:false,why:'stun'};      // aturdido o sin arma (enemigos de zona)
+    if(heroNoSkills()) return {ok:false,why:'stun'};      // aturdido o silenciado (enemigos de zona)
     GCD=CT+(CFG.skillGap||0); CD[k]=CT+d.cd*cdMul(); (B.cast=B.cast||[]).push(k); track('skill',{slot:k,ev:!!B.event}); emit('skill',{slot:k,name:d.name,auto:false}); return {ok:true} }
   // por defecto se lanzan solas en todos los modos; en los eventos se pueden poner a mano (opt.evAuto=false) y en la campaña también (opt.autoSkills=false)
   // en PvP, la Torre y la Mazmorra, siempre solas (sin botones)
@@ -236,7 +341,6 @@ function createGame(opts){
   const tcN=id=>tBoons().filter(b=>b.t==='c'&&b.id===id).length;   // cuántas copias de esta carta
   const tgH=id=>tBoons().some(b=>b.t==='g'&&b.id===id)?1:0;       // ¿tienes este grimorio?
   const tcurse=id=>towerOn()&&S.tower&&S.tower.run?(S.tower.run.curses||[]).filter(c=>c===id).length:0;   // maldiciones de la partida
-  function legendSet(){ const o={}, L=towerOn()?null:legendFx(); if(L) o[L.id]=L; return o }
   /* ---------- sorpresas en la campaña y racha ---------- */
   const STK={n:0}, SUR={next:null,kind:null,until:0};
   const streakMul=()=>1+Math.min(CFG.streak.max,Math.floor(STK.n/CFG.streak.per)*CFG.streak.pct);
@@ -262,10 +366,11 @@ function createGame(opts){
   /* ---------- combate ---------- */
   function startWave(){
     if(B&&B.event) return; // el evento en curso no se interrumpe
-    // jefe: al empujar una fase múltiplo de 10; y el de la fase 150 se puede repetir (farmear) una vez vencido
-    const boss=(S.wave===10 && S.fase%10===0 && (S.fase===S.best+1 || (S.fase===CAP() && S.best>=CAP())));   // fase 10 y 20 de cada zona: élite · 30: JEFE
+    // jefe: en la oleada 10 de las fases múltiplo de 10, al empujarla y también al farmearla una vez vencido
+    const boss=(S.wave===10 && S.fase%10===0 && S.fase<=S.best+1);   // fase 10 y 20 de cada zona: élite · 30: JEFE (también al farmear su fase: puede soltar una pieza)
+    const rep=boss&&S.fase<=S.best&&S.fase<CAP();   // repetido: da lo de una oleada normal (el de la 150, como siempre)
     const h=heroStats();
-    B={intro:boss?CFG.encounter.intro:0,t:0,boss,elite:boss&&S.fase%30===0,count:boss?1:perWave(S.fase)*(hordeOn()?CFG.surprise.horde.count:1),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
+    B={intro:boss?CFG.encounter.intro:0,t:0,boss,rep,elite:boss&&S.fase%30===0,count:boss?1:perWave(S.fase)*(hordeOn()?CFG.surprise.horde.count:1),spawned:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0};
     const g=boss?1:Math.min(B.count,groupAt(S.fase)); for(let i=0;i<g;i++) spawnEnemy(i*((WV()||{}).gap||0)); emit('wave',B);
   }
   // Embestida: los de cuerpo a cuerpo saltan al enemigo, así que esperan menos a que llegue (× enemy.dash)
@@ -273,7 +378,8 @@ function createGame(opts){
   function spawnEnemy(late){   // late: sale un poco después (los del mismo grupo llegan escalonados)
     const e=enemyStats(S.fase,S.wave,B.boss), W=walkT()+(late||0); // (enemyStats ya aplica el modo)
     B.enemies.push({hp:e.hp,max:e.hp,atk:e.atk,df:e.df,spawn:B.t,walk:W,arrive:B.t+W,next:B.t+W,first:true,dead:false,spd:B.boss?1:eSpd(S.fase)});
-    if(B.boss) zoneSetup(B.enemies[B.enemies.length-1],S.fase,S.mode,bossRole(S.fase),{muro:true});   // élite o JEFE de su zona (con su fuerza de muro de la campaña)
+    if(B.boss){ const o=B.enemies[B.enemies.length-1]; zoneSetup(o,S.fase,S.mode,bossRole(S.fase),{muro:true});   // élite o JEFE de su zona (con su fuerza de muro de la campaña)
+      if(B.rep){ const k=CFG.encounter.repHp||1; o.hp*=k; o.max*=k; } }   // ya vencido: vuelve con menos vida
     B.spawned++;
   }
   function endWave(delay){ B.over=true; B.wait=delay }
@@ -290,7 +396,7 @@ function createGame(opts){
     if(B.rew&&!B.rewDone) return;   // Torre: el combate se queda parado mientras eliges la recompensa
     const h0=heroStats(), AF=B.event&&!B.kind&&B.aff;
     const h=AF&&(AF.cr||AF.ls||AF.noHeal)?{...h0,cr:Math.min(CFG.caps.cr,h0.cr+(AF.cr||0)),ls:Math.min(CFG.caps.ls,h0.ls+(AF.ls||0)),noHealAll:!!AF.noHeal}:h0;   // Mazmorra: modificador del día
-    const P=heroPassive(), LS=legendSet(), TW=towerOn(), TC=CFG.tower.cards, TG=CFG.tower.grims;
+    const P=heroPassive(), TW=towerOn(), TC=CFG.tower.cards, TG=CFG.tower.grims, F=h.fx;   // F: efecto del arma Épica o Legendaria (combate/arma-efecto.js)
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
     if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); if(B.hp<=0){ endEvent(); return } }
@@ -322,11 +428,12 @@ function createGame(opts){
     const zap=(e,d,o)=>{ if(e.dead) return; if(e.smallRes&&d<e.smallRes.small*e.max) d*=1-e.smallRes.dr; if(!(o&&o.thorns)) e.hitN=(e.hitN||0)+1; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); emit('hit',{e,d,crit:false,...(o||{})}); if(TW&&!(o&&o.thorns)&&tgH('segador')) heal(d*h.ls,true); if(e.hp<=0) kill(e); };
     const X={h,zap,heal,kill,addShield};   // lo que usa el kit (combate/kit.js)
     kitTick(P,dt,X);                       // quemaduras, veneno, sangrado, Sombras, cuchillas, Terremoto y lo que llega más tarde
+    if(F) wfxTick(F,P,dt,X);               // arma: Orbe y Halcón
     for(const e of B.enemies){ if(e.dead||!(e.dot>B.t)) continue;                   // daño con el tiempo: veneno, sangrado, fuego
       const d=e.dotDps*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(e.hp<=0) kill(e); }
     const hitOnce=(tg,extra)=>{   // extra: golpe de más (Golpe doble, Tormenta, Lluvia): no vuelve a repetir
       if(tg.thorns) tg.thN=(tg.thN||0)+1;   // Torre: élite con Espinas (te devuelve parte de cada golpe)
-      const atkE=h.atk, dfE=tg.df*(LS.vacio?Math.pow(1-LS.vacio.ignoreDf,LS.vacio.n||1):1);   // Vacío: ignora defensa
+      const atkE=h.atk, dfE=tg.df;
       let d=dmgF(atkE,dfE)*(B.boss?1+h.bd:1)*kitMul(P,tg), crit=false;     // kit: Furia, Concentración, Destrozar…
       d*=buffMul('atk')*heroAtkMul();                                           // habilidades: +daño · Burla: −ataque
       const rh=P&&P.id==='ritmo'?rhythm(P,tg):null; if(rh) d*=rh.m;            // Ritmo: el disparo que llega al tope pega más
@@ -335,20 +442,17 @@ function createGame(opts){
         if(BUF.sang>0){ BUF.sang--; d*=1+BUF.sangMult; } }   // Sangría
       { const a1=buffAdd('atk1'); if(a1&&(B.boss||B.kind==='boss')) d*=1+a1; }   // +daño solo contra jefes
       const forced=BUF.crits>0&&CT<BUF.critsUntil; if(forced) BUF.crits--;
-      if(forced||(rh&&rh.crit)||rand()<h.cr){ d*=1+h.cd; crit=true; if(LS.filoVacio) d*=atkE/dmgF(atkE,dfE); if(tg.critRes) d*=1-tg.critRes; }   // Filo del vacío: el crítico ignora la defensa · Cabeza dura
+      if(forced||(rh&&rh.crit)||rand()<h.cr){ d*=1+h.cd; crit=true; if(tg.critRes) d*=1-tg.critRes; }   // Cabeza dura
       if(tg.smallRes&&d<tg.smallRes.small*tg.max) d*=1-tg.smallRes.dr; tg.hitN=(tg.hitN||0)+1;   // Inquebrantable
       tg.hp-=d; B.mD+=d; heal(d*(h.ls+buffAdd('ls')+kitLs(P)),true); if(B.kind==='boss') addDmg(d);   // robo de vida
       emit('hit',{e:tg,d,crit,ranged:h.ranged});
       kitOnHit(P,tg,d,crit,X);                                                  // kit: quemaduras, esquirlas, veneno, Sombras, cuchillas
-      if(LS.llamarada&&(B.flare=(B.flare||0)+1)%LS.llamarada.every===0) for(const e of B.enemies){ if(e.dead) continue; e.dot=B.t+LS.llamarada.dur; e.dotDps=LS.llamarada.pct*(LS.llamarada.n||1)*d; e.dotKind='fuego'; }   // Llamarada solar
       if(TW&&tgH('shuriken')&&(B.shN=(B.shN||0)+1)%TG.shuriken.every===0) B.shur=(B.shur||0)+TG.shuriken.atk;   // Shuriken
       if(tg.hp<=0) kill(tg);
       if(TW&&crit&&!extra&&tgH('tormenta')) for(let i=0;i<TG.tormenta.n;i++){ const os=B.enemies.filter(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5), o=os.length?os[Math.floor(rand()*os.length)]:!tg.dead?tg:null; if(o) hitOnce(o,true); }   // Tormenta de acero
-      // Tajo partido (después de matar: también alcanza al que acaba de salir)
-      if(LS.tajo){ const o=B.enemies.find(e=>!e.dead&&e!==tg&&e.arrive<=B.t+0.5); if(o){ const x=d*LS.tajo.mult*(LS.tajo.n||1); o.hp-=x; B.mD+=x; if(B.kind==='boss') addDmg(x); emit('hit',{e:o,d:x,crit:false,cleave:true}); if(o.hp<=0) kill(o); } }
     };
     const canHit=e=>canTarget(e)&&((h.ranged&&!B.event)||e.arrive<=B.t);   // (zonas: ni caídos, ni invisibles, ni encantadores) // en el evento nadie dispara antes de que llegue (igual para todas las clases)
-    // habilidades: las pedidas a mano (B.cast) y, en automático, las que estén listas (aturdido o sin arma: ninguna)
+    // habilidades: las pedidas a mano (B.cast) y, en automático, las que estén listas (aturdido o silenciado: ninguna)
     if(skillsAuto()&&B.enemies.some(e=>!e.dead&&e.arrive<=B.t+0.3))
       for(const k of heroNoSkills()?[]:skillSlots()){ if(CT<GCD) break; const sk=skillDef(k); if(!(CT>=(CD[k]||0))) continue;   // entre una habilidad y la siguiente, una pequeña espera (CFG.skillGap)
         if((sk.id==='tSed'||sk.id==='tSangria')&&B.hp<0.35*h.hp) continue;         // no gastar vida si va mal
@@ -369,7 +473,7 @@ function createGame(opts){
           case 'tSed': { const l=loseHp(sk.cost*h.hp); addShield(sk.shield*l); BUF.list.push({until:CT+sk.dur,ls:sk.ls}); break; }
           case 'tLluvia': for(let i=0;i<sk.hits;i++){ const e=alive().find(x=>x.arrive<=B.t+0.5); if(e) hitOnce(e,true); } break;
           case 'tFestin': { const e=alive()[0]; if(e&&hurt(e,base(e)*sk.mult,k)&&!e.minion){ const run=S.tower.run; run.hpBonus=(run.hpBonus||0)+sk.maxHp; statsDirty(); } break; }
-          default: kitCast(sk,k,X);   // las del kit del héroe (combate/kit.js)
+          default: if(kitCast(sk,k,X)&&F) wfxSkill(F,P,sk,k,X);   // las del kit del héroe (combate/kit.js) · arma Legendaria: el efecto también sale
         }
         emit('fx',{k:'skill',slot:k,id:sk.look||sk.id,sid:sk.id,name:sk.name}); } }
     if(BUF.lightBack&&BUF.lightBack.length){ const back=BUF.lightBack.filter(x=>CT>=x.at); if(back.length){ BUF.lightBack=BUF.lightBack.filter(x=>CT<x.at); for(const x of back) heal(x.heal*h.hp); emit('fx',{k:'luzVuelve',n:back.length}); } }
@@ -383,9 +487,8 @@ function createGame(opts){
         if(!cand.length){B.th=null;break}
         const tg=zoneTarget(cand)||cand.reduce((a,b)=>a.arrive<=b.arrive?a:b);   // Locura: a uno al azar
         B.mB+=dmgF(h.atk,tg.df)*(B.boss?1+h.bd:1)*(1+h.cr*h.cd);   // lo que diría la fórmula por ataque (para medir el DPS real)
-        hitOnce(tg);
+        hitOnce(tg); if(F) wfxHit(F,P,tg,X);   // arma: cuenta los golpes (Tajo partido, Llamarada, Reflejo) y el clon copia este
         if(TW&&h.dbl) for(let c=h.dbl;c>0;c--) if(rand()<c){ const t2=tg.dead?B.enemies.filter(canHit)[0]:tg; if(t2) hitOnce(t2,true); }   // Torre · Golpe doble (más del 100 %: golpes seguros)
-        if(LS.rafaga&&(B.shots=(B.shots||0)+1)%LS.rafaga.every===0) for(let i=1;i<1+(LS.rafaga.arrows-1)*(LS.rafaga.n||1);i++){ const t2=tg.dead?B.enemies.filter(canHit)[0]:tg; if(t2) hitOnce(t2); }   // Ráfaga: 3 flechas
         if(P&&P.id==='doble'&&rand()<P.chance){ const n=P.triple&&(B.conc||0)>=P.max?2:1, os=B.enemies.filter(e=>canHit(e)&&e!==tg);   // Doble: flechas de más a otros enemigos
           for(let i=0;i<n;i++){ const t2=os[i]||(tg.dead?B.enemies.filter(canHit)[0]:tg); if(t2) hitOnce(t2,true); } B.conc=Math.min(P.max,(B.conc||0)+1); }
         B.th+=1/(h.spd*buffMul('spd')*heroSpdMul());
@@ -481,17 +584,17 @@ function createGame(opts){
     else if(P.id==='corrupcion'&&!tg.dead) addStack(tg,'shadow',P.pct*d,P.dur,P.max);
     else if(P.id==='cuchillas'&&crit) addBlades(P,1); }
   // después de recibir un golpe (d0: el daño antes de los escudos)
-  function kitOnHurt(P,e,d0,X){ if(!P) return; const h=X.h;
+  function kitOnHurt(P,e,d0,X){ if(!P) return;
     if(P.id==='guardia'){ if(d0>0){ const os=nearN(5); for(const o of os) X.zap(o,d0*P.thorns/os.length*pvpRefl(),{thorns:true}); } addGuard(P,1,X); }   // espinas repartidas entre los 5 primeros
     else if(P.id==='furia') B.rage=Math.min(P.max,(B.rage||0)+1);
     else if(P.id==='gracia') addLuz(P,1,X); }
   // cada paso: quemaduras, veneno, sangrado y Sombras (que curan), cuchillas, Terremoto y lo que llega más tarde (B.kq)
-  function kitTick(P,dt,X){ const h=X.h;
+  function kitTick(P,dt,X){ const h=X.h, cm=wfxDot();   // cm: el clon del Reflejo (arma) copia el veneno, el sangrado y las cuchillas
     for(const e of B.enemies){ if(e.dead) continue; let d=0, sh=0;
-      for(const k of ['burn','poison','bleed','shadow']){ if(!e[k]||!e[k].length) continue; const s=stk(e,k).reduce((a,x)=>a+x.dps,0)*dt; d+=s; if(k==='shadow') sh+=s; if(k==='burn') B.burnDmg=(B.burnDmg||0)+s; }
+      for(const k of ['burn','poison','bleed','shadow']){ if(!e[k]||!e[k].length) continue; const s=stk(e,k).reduce((a,x)=>a+x.dps,0)*dt*(k==='poison'||k==='bleed'?cm:1); d+=s; if(k==='shadow') sh+=s; if(k==='burn') B.burnDmg=(B.burnDmg||0)+s; }
       if(d>0){ e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); if(sh) X.heal(sh*((P&&P.healK)||1)); if(e.hp<=0) X.kill(e); } }   // Sombras: curan como robo de vida (healK)
     const area=(per,tag,n)=>{ for(const e of upTo(nearE(),n)){ const d=kitBase(P,h,e)*per*dt; e.hp-=d; B.mD+=d; if(B.kind==='boss') addDmg(d); B[tag]=(B[tag]||0)+d; if(e.hp<=0) X.kill(e); } };
-    if(P&&P.id==='cuchillas'&&B.blades&&B.blades.length){ B.blades=B.blades.filter(u=>u>B.t); if(B.blades.length) area(B.blades.length*P.pct,'bladeDmg',P.targets); }
+    if(P&&P.id==='cuchillas'&&B.blades&&B.blades.length){ B.blades=B.blades.filter(u=>u>B.t); if(B.blades.length) area(B.blades.length*P.pct*cm,'bladeDmg',P.targets); }
     if(B.quake&&B.t<B.quake.until) area(B.quake.dps,'quakeDmg',B.quake.n);
     if(B.kq&&B.kq.length){ const now=B.kq.filter(q=>q.at<=B.t); if(now.length){ B.kq=B.kq.filter(q=>q.at>B.t); for(const q of now) q.f(); } } }
   // las que gastan cargas esperan a tenerlas (como mucho 3 s más; si no, se lanzan igual)
@@ -505,7 +608,7 @@ function createGame(opts){
     } return true }
   // lanza una habilidad del kit (k: su hueco). false si no es del kit (las de la Torre van aparte)
   function kitCast(sk,k,X){ const h=X.h, P=heroPassive(), A=()=>upTo(aliveE(),sk.targets), first=()=>aliveE()[0];   // A: los que alcanza (todos, o hasta sk.targets)
-    const pk=B.kind==='pvp'?((CFG.pvp.skill||{})[S.cls]||{})[kitStage()]||1:1;   // PvP: daño de las habilidades × pvp.skill[clase][etapa]
+    const skm=1+(h.sk||0), pk=(B.kind==='pvp'?((CFG.pvp.skill||{})[S.cls]||{})[kitStage()]||1:1)*(B.wcopy||1)*skm;   // PvP: daño de las habilidades × pvp.skill[clase][etapa] · clon del Reflejo: × su copia · Amuleto: × (1 + sk)
     const base=e=>kitBase(P,h,e)*pk, hit=(e,m)=>{ if(e&&!e.dead) X.zap(e,base(e)*m,{skill:k}); return !e||e.dead };   // hit: true si ya no queda (o acaba de morir)
     const later=(s,f)=>{ if(s<=0) f(); else (B.kq=B.kq||[]).push({at:B.t+s,f}) };
     const bleed=e=>addStack(e,'bleed',CFG.bleed.pct*base(e),CFG.bleed.dur,CFG.bleed.max);
@@ -518,7 +621,7 @@ function createGame(opts){
       case 'escudazo': { hit(first(),sk.mult); let n=0; for(const e of A()){ hit(e,sk.area); n++; }   // mult al primero y area (con su daño, como todas) a los de alrededor
         if(sk.guard&&P&&P.id==='guardia'&&n) addGuard(P,sk.guard*n,X); break; }
       case 'provocar': for(const e of A()) hit(e,sk.mult); if(sk.taken) BUF.list.push({until:CT+sk.dur,taken:sk.taken}); if(sk.shield) X.addShield(sk.shield*h.hp); break;
-      case 'terremoto': for(const e of A()) hit(e,sk.mult); B.quake={until:B.t+sk.dur,dps:sk.dot,n:sk.targets}; B.eslow=B.t+sk.dur; B.eslowM=sk.slow; break;
+      case 'terremoto': for(const e of A()) hit(e,sk.mult); B.quake={until:B.t+sk.dur,dps:sk.dot*skm,n:sk.targets}; B.eslow=B.t+sk.dur; B.eslowM=sk.slow; break;
       case 'desgarro': { const e=first(); if(!e) break; const m=sk.mult*(sk.low&&e.hp<sk.low*e.max?sk.lowMul:1); if(!hit(e,m)) for(let i=0;i<sk.bleed;i++) bleed(e); break; }
       case 'triple': { const r=B.rage||0; B.rage=0; for(let i=0;i<sk.hits;i++){ const e=first(); if(!e) break; if(!hit(e,sk.mult+sk.perRage*r)&&sk.bleed) bleed(e); } break; }
       case 'ejecutar': { const os=A(), low=os.find(e=>e.hp<sk.low*e.max), e=low||os[0]; if(e) hit(e,low?sk.lowMult:sk.mult); break; }
@@ -547,7 +650,7 @@ function createGame(opts){
         BUF.lightBack=(BUF.lightBack||[]).concat([...Array(sk.hits)].map((_,i)=>({at:CT+sk.back+i*0.15,heal:sk.heal}))); break; }   // vuelven y curan
       case 'cadena': for(let i=0;i<sk.jumps;i++){ const os=A(); if(!os.length) break; hit(os[i%os.length],sk.mult); X.heal(sk.heal*h.hp);   // salta de uno a otro
         if(sk.luzEvery&&(i+1)%sk.luzEvery===0&&P&&P.id==='gracia') addLuz(P,1,X); } break;
-      case 'consagrar': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps,n:sk.targets}; break;
+      case 'consagrar': BUF.aura={until:CT+sk.dur,heal:sk.heal,dps:sk.dps*skm,n:sk.targets}; break;
       case 'juicio': { let n=0; for(const e of A()){ hit(e,sk.mult); n++; } X.heal(sk.healPer*n*h.hp); break; }
       case 'sombra': { const e=first(); if(!e) break; if(!hit(e,sk.mult+(sk.perStack||0)*stk(e,'shadow').length)) for(let i=0;i<sk.stacks;i++) shadow(e); break; }
       case 'estallido': { const e=first(); if(e) hit(e,sk.mult+sk.perStack*stk(e,'shadow').length); break; }
@@ -556,20 +659,68 @@ function createGame(opts){
         if(!any){ const e=first(); if(e) for(let i=0;i<sk.reapply;i++) shadow(e); } break; }
       default: return false;
     } return true }
+  /* ---------- efecto del arma Épica o Legendaria (CFG.weapon.fx): Tajo partido, Orbe arcano, Halcón, Reflejo y Llamarada solar ----------
+     F = heroStats().fx (o null; sus números ya son los de tu camino). Sirve en los dos caminos: cada vez que sale da cargas de la pasiva de tu camino (wfxCharge; F.ch, si no 1) y los que dan a
+     varios hacen × F.solo si solo hay un enemigo. WFX sigue de una oleada a la siguiente (si no, con oleadas cortas no saldría nunca): n golpes contados,
+     t segundos, clone hasta cuándo (reloj de combate CT) dura el clon. B.wcopy: mientras el clon repite una habilidad, su daño × eso (kitCast). */
+  const WFX={n:0,t:0,clone:0};
+  const WFX_HERO=['guardia','furia','doble','gracia','cuchillas'];   // pasivas con la carga en el héroe (el resto, en el enemigo)
+  // (n: cuántas cargas, F.ch[camino] o 1 · el veneno y la Sombra, como los de un golpe normal: ni más flojos (echarían a los fuertes) ni más)
+  const wfxN=F=>F.ch==null?1:F.ch;   // (ya del camino: heroe/equipo.js)
+  function wfxCharge(P,e,X,n){ if(!P||!n) return; const st=()=>P.pct*kitBase(P,X.h,e), stack=k=>{ if(e&&!e.dead) for(let i=0;i<n;i++) addStack(e,k,st(),P.dur,P.max) };
+    switch(P.id){
+      case 'guardia': addGuard(P,n,X); break;
+      case 'furia': B.rage=Math.min(P.max,(B.rage||0)+n); break;
+      case 'doble': B.conc=Math.min(P.max,(B.conc||0)+n); break;
+      case 'gracia': addLuz(P,n,X); break;
+      case 'cuchillas': addBlades(P,n); break;
+      case 'ignicion': if(e) addBurn(P,e,n,X); break;
+      case 'esquirlas': if(e) addShards(P,e,n,X); break;
+      case 'ritmo': if(e) e.rhy=Math.min(P.max,(e.rhy||0)+n); break;   // con el tope, el siguiente disparo a ese enemigo es el que llega
+      case 'veneno': stack('poison'); break;
+      case 'corrupcion': stack('shadow'); break;
+    } }
+  // golpe del efecto a varios (Tajo partido, Llamarada; los n primeros en pantalla, también los que aún no han llegado): × solo si solo hay uno; la carga del héroe una vez, la del enemigo en cada uno
+  function wfxArea(F,P,X){ const os=upTo(aliveE(),F.n); if(!os.length) return false; const m=F.mult*(os.length===1?F.solo||1:1), heroK=P&&WFX_HERO.includes(P.id);
+    for(const e of os){ X.zap(e,kitBase(P,X.h,e)*m,{wfx:F.id}); if(!heroK) wfxCharge(P,e,X,wfxN(F)); }
+    if(heroK) wfxCharge(P,null,X,wfxN(F)); emit('fx',{k:'wfx',id:F.id}); return true }
+  // un golpe del efecto a uno (Orbe, Halcón)
+  function wfxOne(F,P,X,e){ if(!e||e.dead) return; X.zap(e,kitBase(P,X.h,e)*F.mult,{wfx:F.id}); wfxCharge(P,e,X,wfxN(F)); emit('fx',{k:'wfx',id:F.id,e}); }
+  const wfxLow=()=>{ const os=aliveE(); return os.length?os.reduce((a,b)=>b.hp<a.hp?b:a):null };   // Halcón: el que tiene menos vida
+  function wfxFire(F,P,X,n){ if(F.id==='orbe'){ const os=aliveE(); for(let i=0;i<(n||1)&&os.length;i++) wfxOne(F,P,X,os[i%os.length]); }
+    else if(F.id==='halcon') wfxOne(F,P,X,wfxLow());
+    else wfxArea(F,P,X); }
+  // el clon del Reflejo copia un golpe normal (con su crítico; sus críticos dan cuchillas y sus golpes envenenan como los tuyos: lo de la pasiva al golpear, con tu daño)
+  function wfxCloneHit(F,P,tg,X){ const h=X.h; if(!tg||tg.dead) tg=aliveE()[0]; if(!tg) return; let d=kitBase(P,h,tg)*F.copy, crit=false;
+    if(rand()<h.cr){ d*=1+h.cd; crit=true; } X.zap(tg,d,{clone:true}); kitOnHit(P,tg,d/F.copy,crit,X); }
+  // Reflejo: mientras está el clon, también copia lo que hacen tu veneno, sangrado y cuchillas (× 1 + copy; lo usa kitTick)
+  const wfxDot=()=>{ const F=B&&heroStats().fx; return F&&F.id==='reflejo'&&CT<WFX.clone?1+F.copy:1 };
+  // después de cada golpe normal (no los de más: Doble, Golpe doble…)
+  function wfxHit(F,P,tg,X){
+    if(F.id==='reflejo'){ if(CT<WFX.clone){ wfxCloneHit(F,P,tg,X); return } if(++WFX.n>=F.every){ WFX.n=0; WFX.clone=CT+F.dur; emit('fx',{k:'wfx',id:'reflejo',dur:F.dur}); } return }
+    if(F.id==='tajo'||F.id==='llama'){ if(++WFX.n>=F.every&&wfxArea(F,P,X)) WFX.n=0; } }   // (si ese golpe mató al último, sale en el siguiente)
+  // cada paso: el Orbe y el Halcón salen cada F.every s (con algún enemigo en pantalla: llegan lejos, como los disparos)
+  function wfxTick(F,P,dt,X){ if((F.id!=='orbe'&&F.id!=='halcon')||!aliveE().length) return;
+    WFX.t+=dt; while(WFX.t>=F.every){ WFX.t-=F.every; wfxFire(F,P,X,1); } }
+  // después de lanzar una habilidad del kit (Legendaria): el efecto también sale (Orbe: onSkill rayos) o el clon la repite
+  function wfxSkill(F,P,sk,k,X){
+    if(F.id==='reflejo'){ if(!F.skills||!(CT<WFX.clone)) return; B.wcopy=F.copy; kitCast(sk,k,X); B.wcopy=0; emit('fx',{k:'wfx',id:'reflejoSkill'}); return }
+    if(F.onSkill) wfxFire(F,P,X,F.onSkill); }
   /* ---------- fases de la campaña: oro y experiencia, ganar y perder ---------- */
   const goldPer=f=>CFG.econ.gold*Math.pow(CFG.econ.goldG,10*Math.floor((f-1)/10));
   const goldAt=f=>goldPer(effF(f))*(modeCfg().gold||1), xpAt=f=>xpPer(effF(f)); // oro y experiencia de la fase f del modo actual
   const xpPer=f=>CFG.econ.xp*Math.pow(CFG.econ.xpG,f-1);
   function onKill(e){
     if(!S.daily||S.daily.d!==dayKey()) daily(); S.kills++;   // el día de las misiones empieza con el primer enemigo
-    const m=e&&e.minion?3/perWave(S.fase):B.boss?CFG.econ.bossGold:3/B.count; // el oro por oleada no sube con más enemigos (los invocados dan como uno normal)
+    const m=e&&e.minion?3/perWave(S.fase):B.boss&&!B.rep?CFG.econ.bossGold:B.boss?3:3/B.count; // el oro por oleada no sube con más enemigos (los invocados dan como uno normal; un élite/JEFE repetido, como una oleada)
     STK.n++; if(STK.n%CFG.streak.per===0) emit('streak',{n:STK.n});
-    const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1)*streakMul()*(hordeOn()?CFG.surprise.horde.gold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales y cofres)
+    const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1)*streakMul()*(hordeOn()?CFG.surprise.horde.gold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales)
     addXp(xpAt(S.fase)*m*heroStats().xpMult);
   }
   // DPS medido: en oleadas normales (sin jefe ni evento) se compara el daño real (golpes, quemaduras, aura…) con el de la
   // fórmula. La proporción (media móvil) se usa en el cálculo sin conexión (hasta tenerla, 1).
-  function measureWave(){ if(!B||B.boss||B.event||!(B.mB>0)) return; const M=S.dpsM=S.dpsM||{d:0,b:0}, k=0.98;
+  function measureWave(){ if(B&&B.rep&&!B.event){ const tf=waveTimeF(S.fase,10,heroStats()); if(tf>0){ const T=S.wtB=S.wtB||{r:0,f:0}; T.r=T.r*0.9+B.t; T.f=T.f*0.9+tf; } return }   // élite/JEFE repetido: lo que tarda frente a una oleada (wtB)
+    if(!B||B.boss||B.event||!(B.mB>0)) return; const M=S.dpsM=S.dpsM||{d:0,b:0}, k=0.98;
     M.d=M.d*k+B.mD; M.b=M.b*k+B.mB;
     if(!hordeOn()&&!B.enemies.some(e=>e.wander)){ const tf=waveTimeF(S.fase,S.wave,heroStats()); if(tf>0){ const T=S.wtS=S.wtS||{r:0,f:0}; T.r=T.r*0.97+B.t; T.f=T.f*0.97+tf; S.wtM=Math.min(3,T.r/T.f); } } }   // lo que tardan de verdad / lo que dice la fórmula (sumando oleadas)
   const dpsK=h=>{ const M=S.dpsM; return M&&M.b>=CFG.offlineMinMeasure*heroStats().atk?Math.max(0.5,Math.min(3,M.d/M.b)):1 };
@@ -579,26 +730,32 @@ function createGame(opts){
     const f=S.fase; S.wave=1;
     if(f===S.best+1){
       S.best=f;
-      if(f%10===0){ S.bossTry=null; addLoot({wood:1,scrap:bossScrap(f,false)});                  // los jefes ya no dan tokens (los tokens son dinero)
+      if(f%10===0){   // (los jefes ya no dan tokens: los tokens son dinero)
         if(!S.mode&&CFG.matDrop&&(CFG.matDrop.sure||[]).includes(f)) addLoot({mat:1}); // élite 50 y 100: 1 esencia segura
-        const mat=rollMat(f);
-        emit('boss',{f,elite:f%50===0,mat,mode:S.mode}); }
-      S.fase=S.push?Math.min(f+1,CAP()):f; if(f>=CAP()) S.push=false;
+        const mat=rollMat(f), K=CFG.box.firstKill||{}, tix=(f%30===0?K.jefe:K.elite)||0; S.boxT=(S.boxT||0)+tix;   // tickets de invocación la primera vez
+        emit('boss',{f,elite:f%50===0,mat,mode:S.mode,tix}); }
+      gearOpenCheck();   // (la Armadura, el Anillo y el Amuleto se abren en su fase de Normal)
+      S.fase=S.push&&!S.repF?Math.min(f+1,CAP()):f; if(f>=CAP()||S.repF) S.push=false;   // repitiendo fase: se queda en la que acaba de vencer
     } else {
-      if(f===CAP()&&B&&B.boss){ addLoot({scrap:bossScrap(f,true)}); const mat=rollMat(f); emit('bossFarm',{f,mat,mode:S.mode}); } // jefe de la 150 repetido
+      if(f===CAP()&&B&&B.boss){ const mat=rollMat(f); emit('bossFarm',{f,mat,mode:S.mode}); } // jefe de la 150 repetido
+      if(f%10===0&&B&&B.boss) gearDrop(f);   // élite o JEFE repetido: puede soltar una pieza de equipo
       S.farmClears++;
-      if(S.autoPush && S.farmClears%3===0 && top()>S.best){S.push=true;S.fase=top()}
+      if(S.repF){ if(S.farmClears%3===0&&S.fase<S.repF){ S.fase=S.repF; S.push=S.repF>S.best; } }   // repitiendo fase: si perdiste y bajaste, vuelve a ella
+      else if(S.autoPush && S.farmClears%3===0 && top()>S.best){S.push=true;S.fase=top()}
       else if(S.autoPush && S.farmClears%3===0 && S.best>=CAP() && S.fase<CAP()) S.fase=CAP(); // vuelve a intentar el jefe de la 150
     }
     emit('fase',f); emit('change'); endWave(CFG.delays.fase);
   }
   function lose(time){   // time: se acabó el tiempo contra el élite/JEFE
-    if(B&&B.boss&&!B.event&&S.fase===S.best+1){ const k=S.mode*1000+S.fase; S.bossTry={k,n:S.bossTry&&S.bossTry.k===k?S.bossTry.n+1:1}; }   // derrotas seguidas contra el élite/JEFE que empujas (oferta 'Rompe el muro')
     let msg;
     if(S.fase===S.best+1){S.push=false;S.fase=Math.max(1,S.best);msg='farm'} else {S.fase=Math.max(1,S.fase-1);msg='retreat'}
     S.wave=1; emit('defeat',{fase:S.fase,kind:msg,time:!!time}); endWave(CFG.delays.defeat);
   }
   function setAuto(v){ S.autoPush=v; if(B&&B.event){ emit('change'); return } if(v&&S.fase!==top()){S.push=top()>S.best;S.fase=top();S.wave=1;startWave()} emit('change') }
+  // botón «Repetir fase»: on → se queda en la fase de ahora (S.repF) sin subir (si aún no la ha vencido, la intenta hasta vencerla); off → vuelve a subir
+  function setRepeat(on){ if(!S) return;
+    if(on){ S.repF=Math.max(1,Math.min(top(),S.fase)); S.autoPush=false; if(S.repF<=S.best) S.push=false; save(); emit('change'); return }
+    S.repF=null; setAuto(true); save() }
   function goFase(f){ if(B&&B.event) return; f=Math.max(1,Math.min(top(),f|0)); if(f===S.best+1) S.push=true; else S.push=false; S.fase=f;S.wave=1;startWave(); emit('change') }
   /* ---------- evolución ---------- */
   // extra de estadísticas de las evoluciones hechas (multiplicativo): tier.bonus={hp,atk,df} · evo: las de otro héroe (si no, las tuyas)
@@ -633,19 +790,15 @@ function createGame(opts){
   function matOdds(f){ const d=CFG.matDrop, t=Math.max(0,Math.min(1,(f-d.from)/(d.to-d.from)));
     return {chance:d.c0+(d.c1-d.c0)*t, max:Math.round(d.max0+(d.max1-d.max0)*t)} }
   function rollMat(f){ if(!CFG.matDrop) return 0; const o=matOdds(f); if(rand()>=o.chance) return 0; const n=1+Math.floor(rand()*o.max); addLoot({mat:n}); return n }
-  // Botín de jefes: se acumula en una bolsa (icono de cofre) y se recoge todo de una vez
-  // chatarra de jefe: base + 1 cada 10 fases (el de la 150 repetido da una cantidad fija), × (modo+1)
-  const bossScrap=(f,farm)=>{ const c=CFG.econ.bossScrap; return (farm?c.farm:c.base+Math.floor(f/10)*c.per10)*(S.mode+1) };
-  function addLoot(x){ const L=S.loot=S.loot||{wood:0,mats:{},n:0,scrap:0};
-    if(x.scrap){ L.scrap=(L.scrap||0)+x.scrap; L.n++; }
-    if(x.wood) L.wood+=x.wood; if(x.mat) L.mats[S.mode]=(L.mats[S.mode]||0)+x.mat; }
-  function claimLoot(){ const L=S&&S.loot; if(!L) return null; S.tokens+=L.t||0; S.scrap+=L.scrap||0; if(L.wood) addChest('wood',L.wood); // (L.t: partidas antiguas)
+  // Botín de jefes: se acumula en una bolsa y se recoge todo de una vez (ahora solo esencias del modo)
+  function addLoot(x){ const L=S.loot=S.loot||{mats:{},n:0}; if(x.mat){ L.mats[S.mode]=(L.mats[S.mode]||0)+x.mat; L.n++; } }
+  function claimLoot(){ const L=S&&S.loot; if(!L) return null; S.tokens+=L.t||0; // (L.t: partidas antiguas)
     for(const m in L.mats) S.mats[m]=(S.mats[m]||0)+L.mats[m]; S.loot=null; emit('change'); return L }
   // Para pasar al siguiente modo: que no esté bloqueado, haber vencido la fase 150 del actual y tener hecha su evolución
   const modeLocked=m=>!!(MODES()[m]&&MODES()[m].locked);         // modo bloqueado ("Próximamente")
   const canAdvanceMode=()=>S.best>=CAP()&&S.mode<MODES().length-1&&!modeLocked(S.mode+1)&&S.evo>=S.mode+1;
-  function advanceMode(){ if(!canAdvanceMode()||(B&&B.event)) return false; S.mode++; S.best=0; S.fase=1; S.wave=1; S.push=true; S.farmClears=0;
-    statsDirty(); startWave(); emit('mode',{mode:S.mode,name:modeCfg().name}); emit('change'); return true }
+  function advanceMode(){ if(!canAdvanceMode()||(B&&B.event)) return false; S.mode++; S.best=0; S.fase=1; S.wave=1; S.push=true; S.farmClears=0; S.repF=null; S.autoPush=true;
+    gearOpenCheck(); statsDirty(); startWave(); emit('mode',{mode:S.mode,name:modeCfg().name}); emit('change'); return true }
   /* ---------- Mazmorra (evento diario) ---------- */
   // Mazmorra infinita: monstruos sin parar hasta morir. Empieza event.back fases por debajo de tu récord en tu modo y cada grupo es una fase más
   // (sigue en el modo siguiente): los monstruos van a tu altura, así cuenta matar rápido (y en área), no solo aguantar.
@@ -693,9 +846,10 @@ function createGame(opts){
     const d=S.evRun?S.evRun.day:dayKey(); S.evRun=null;
     if(!S.evLog||S.evLog.day!==d){ if(S.evLog&&S.evLog.day<d&&evPending()) claimEvent(); S.evLog={day:d,best:0,claimed:false}; }
     const before=S.evLog.best; S.evLog.best+=k; S.evLog.runs=(S.evLog.runs||0)+1;   // varios intentos en el mismo día: las muertes se suman
-    // premios personales: cada 'every' muertes del día, un cofre; cada 'big', otro mejor (se dan al momento)
-    const M=CFG.event.milestones, got={}; if(M){ const a=Math.floor(before/M.every), b=Math.floor(S.evLog.best/M.every); if(b>a){ got[M.ch]=b-a; addChest(M.ch,b-a); }
-      if(M.big){ const a2=Math.floor(before/M.big), b2=Math.floor(S.evLog.best/M.big); if(b2>a2){ got[M.bigCh]=(got[M.bigCh]||0)+b2-a2; addChest(M.bigCh,b2-a2); } } }
+    // premios personales: cada 'every' muertes del día, oro (minutos de farmeo); cada 'big', otro más (se dan al momento)
+    const M=CFG.event.milestones, got={}; if(M){ let g=0; const a=Math.floor(before/M.every), b=Math.floor(S.evLog.best/M.every); if(b>a) g+=(b-a)*M.gold;
+      if(M.big){ const a2=Math.floor(before/M.big), b2=Math.floor(S.evLog.best/M.big); if(b2>a2) g+=(b2-a2)*M.bigGold; }
+      if(g){ got.gold=g; giveBundle({gold:g}); } }
     return {kills:k,best:S.evLog.best,runs:S.evLog.runs,pos:evRank(d,S.evLog.best),died,day:d,got};
   }
   function endEvent(){
@@ -728,11 +882,11 @@ function createGame(opts){
     if(S.evRun&&S.evRun.day===L.day) return null;                   // aún hay un intento de ese día sin terminar
     const pos=evRank(L.day,L.best); return {day:L.day,best:L.best,pos,rew:evReward(pos)} }
   function claimEvent(){ const p=evPending(); if(!p) return null; S.evLog.claimed=true; const r=p.rew;
-    if(r){ S.evm+=r.em||0; if(r.ch) addChest(r.ch,r.n||1); }
+    if(r){ S.evm+=r.em||0; if(r.gold) giveBundle({gold:r.gold}); }
     emit('change'); return p; }
   const evToday=()=>{ const d=evShownDay(); return S.evLog&&S.evLog.day===d?S.evLog.best:0 };
   /* ---------- PvP: combate contra el fantasma de otro jugador ----------
-     El fantasma es una copia de su partida (héroe, arma, mejoras, evolución, grimorio y habilidades al 100 %) que maneja la
+     El fantasma es una copia de su partida (héroe, mejoras, evolución, grimorio y habilidades al 100 %) que maneja la
      IA en otro motor en paralelo (GH). Cada uno golpea a un "doble" del otro: el daño que le hace se le pasa al otro héroe
      por sus defensas (esquiva, escudos, espinas…). Elo pensado para pocos jugadores (K alto al principio).
      Sin servidor (o sin rivales reales) se lucha contra bots: tu misma partida con otra clase. */
@@ -750,8 +904,8 @@ function createGame(opts){
   const pvpExp=(a,b)=>1/(1+Math.pow(10,(b-a)/400));   // probabilidad esperada de ganar
   // bot: tu partida (misma progresión) con otra clase, otro camino y otro nombre
   function pvpBot(){ const P=pvpState(), cls=Object.keys(CFG.classes).filter(c=>c!==S.cls), c=cls[Math.floor(rand()*cls.length)], me=JSON.parse(JSON.stringify(packed()));
-    const w=me.items.find(x=>+String(x).split('|')[0]===S.equippedId), name=pvpName(rand);
-    const save={...me,cls:c,name,items:w?[String(w).replace(/^(\d+)\|[^|]*\|/,'$1|'+c+'|')]:[],path:S.evo>=1?(rand()<0.5?'A':'B'):S.path,pvp:null,tower:null,opt:{evAuto:true,pvpAuto:true}};
+    const name=pvpName(rand);
+    const save={...me,cls:c,name,path:S.evo>=1?(rand()<0.5?'A':'B'):S.path,pvp:null,tower:null,opt:{evAuto:true,pvpAuto:true}};
     P.rival={bot:true,name,cls:c,lvl:S.lvl,evo:S.evo,path:save.path,rating:Math.max(0,Math.round(P.rating+(rand()*2-1)*CFG.pvp.botSpread)),save}; save_(); emit('change'); return P.rival }
   const save_=()=>save();
   // rival real que manda el servidor: {id, name, cls, lvl, evo, path, rating, save, match}
@@ -860,7 +1014,7 @@ function createGame(opts){
   const heroDfMul=()=>{ if(!B||!B.hs) return 1; const D=B.hs.def=B.hs.def.filter(x=>x.until>B.t); return Math.max(0.1,1-D.reduce((a,x)=>a+x.pct,0)) };
   const heroAtkMul=()=>B&&B.hs&&B.hs.burla?1-B.hs.burla*B.hs.burlaPer:1;                     // Burla: te roba ataque
   const heroSpdMul=()=>B&&B.dream&&B.dream.k==='lento'&&B.dream.until>B.t?B.dream.slow:1;      // Cambio de sueño: atacas más lento
-  const heroNoSkills=()=>!!B&&(B.stun>B.t||!!(B.hs&&B.hs.noSkill>B.t));                       // aturdido o sin arma
+  const heroNoSkills=()=>!!B&&(B.stun>B.t||!!(B.hs&&B.hs.noSkill>B.t));                       // aturdido o silenciado
   const cdMul=()=>B&&zAlive('estatica')?1+zPass('estatica').cd:1;                              // Estática: recargas más lentas
   const zPass=id=>{ const e=B.enemies.find(x=>!x.dead&&x.zp&&x.zp.id===id); return e?e.zp:{} };
   const heroCap=h=>B&&B.hs&&B.hs.rot?h.hp*(1-B.hs.rot*B.hs.rotPer):h.hp;                      // Pudrición: menos vida máxima
@@ -1260,14 +1414,14 @@ function createGame(opts){
   function hallBosses(){ const out=[], C=hallState().clr; for(let m=0;m<MODES().length;m++){ if(MODES()[m].locked) break;
       for(let f=CFG.hall.every;f<=CAP();f+=CFG.hall.every){ const beaten=S.mode>m||(S.mode===m&&S.best>=f); out.push({id:hallId(m,f),m,f,elite:f%30===0,beaten,stars:C[hallId(m,f)]||0,foe:zoneFoe(zoneAt(m,f),'jefe')}) } } return out }
   function hallReward(b,star,first){ const H=CFG.hall; if(first) return {...H.first[star-1]};
-    const R=H.repeat[star-1], c=CFG.econ.bossScrap; return {gold:R.gold,scrap:Math.round((c.base+Math.floor(b.f/10)*c.per10)*(b.m+1)*R.scrap)} }
+    return {gold:H.repeat[star-1].gold} }
   function hallStart(id,star){ const b=hallBosses().find(x=>x.id===id); if(!S||inEvent()||!b||!b.beaten||!(star>=1&&star<=3)||star>b.stars+1||!hallTriesLeft()) return false;
     hallState().used++; const h=heroStats(), M=CFG.hall.stars[star-1], e=enemyStats(b.f,10,true,b.m), W=CFG.event.walk;
     B={intro:CFG.encounter.intro,event:true,kind:'hall',t:0,boss:true,elite:b.elite,count:1,spawned:1,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,groups:b.f,hall:{id,m:b.m,f:b.f,star}};
     B.enemies.push({hp:e.hp*M.hp,max:e.hp*M.hp,atk:e.atk*M.atk,df:e.df,spawn:0,walk:W,arrive:W,next:W,first:true,dead:false,f:b.f,spd:1});
     zoneSetup(B.enemies[0],b.f,b.m,'jefe'); track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
   function hallEnd(){ const X=B.hall, won=B.hp>0&&B.enemies.every(e=>e.dead), C=hallState().clr, b={...X,elite:X.f%30===0}, first=won&&X.star>(C[X.id]||0);
-    let rw=null; if(won){ rw=hallReward(b,X.star,first); if(first) C[X.id]=X.star; if(rw.scrap) S.scrap+=rw.scrap; giveBundle(rw); }
+    let rw=null; if(won){ rw=hallReward(b,X.star,first); if(first) C[X.id]=X.star; giveBundle(rw); gearDrop(X.f,X.m); }   // (también puede soltar una pieza)
     const res={kind:'hall',won,first,star:X.star,f:X.f,m:X.m,rw,t:B.t}; B=null; save(); emit('hallEnd',res); startWave(); emit('change'); return res }
   /* ---------- jefe semanal ---------- */
   // Pelea de 1 minuto contra un jefe inmortal que pega cada vez más fuerte (golpea como el jefe de la fase n, y n sube de 1
@@ -1315,7 +1469,7 @@ function createGame(opts){
     if(S.wbRun&&S.wbRun.week===L.week) return null;
     const pos=wbRank(L.week,L.dmg); return {week:L.week,dmg:L.dmg,pos,rew:wbReward(pos)} }
   function wbClaim(){ const p=wbPending(); if(!p) return null; S.wbLog.claimed=true; const r=p.rew;
-    if(r){ S.evm+=r.em||0; if(r.ch) addChest(r.ch,r.n||1); }
+    if(r){ S.evm+=r.em||0; if(r.gold) giveBundle({gold:r.gold}); }
     emit('change'); return p; }
   const wbWeekDmg=()=>{ const w=wbShownWeek(); return S.wbLog&&S.wbLog.week===w?S.wbLog.dmg:0 };
   /* ---------- mejoras ---------- */
@@ -1323,127 +1477,6 @@ function createGame(opts){
   function buyUpgrade(k){ const c=upCost(k); if(S.gold<c) return false; S.gold-=c; S.up[k]++; statsDirty(); track('upgrade',{k,n:1,gold:c}); emit('change'); return true }
   function buyMax(k){ let n=0, g=0; while(S.gold>=upCost(k)){g+=upCost(k);S.gold-=upCost(k);S.up[k]++;n++} if(n){statsDirty();track('upgrade',{k,n,gold:g});emit('change')} return n }
   function upgradeGain(k){ const g0=computeStats(); S.up[k]++; const g1=computeStats(); S.up[k]--; return g1[k]-g0[k] }
-  /* ---------- armas ---------- */
-  const rollVal=rg=>Math.round(rnd(rg[0],rg[1])*10)/10;
-  function rollSecs(r,n,keep=[]){
-    const out=[...keep], pool=Object.keys(CFG.sec).filter(k=>!out.some(s=>s.k===k));
-    while(out.length<n){const i=Math.floor(rand()*pool.length);const k=pool.splice(i,1)[0];out.push({k,v:rollVal(CFG.sec[k][r])})}
-    return out;
-  }
-  function newItem(cls,r){
-    const it={id:S.nextId++,cls,r,lvl:1,sec:rollSecs(r,CFG.weapon[r][2]),refN:0,invested:0,fav:false};
-    S.items.push(it); // nunca se equipa sola: lo decide el jugador
-    return it;
-  }
-  function secQuality(list,r){return list.reduce((a,s)=>{const rg=CFG.sec[s.k][r];return a+(s.v-rg[0])/Math.max(0.01,rg[1]-rg[0])},0)}
-  function fodderFor(it){ // armas iguales (misma clase y rareza) que se pueden gastar, peores primero; nunca una de más nivel
-    return S.items.filter(x=>x.id!==it.id&&x.cls===it.cls&&x.r===it.r&&x.id!==S.equippedId&&!x.fav&&x.lvl<=it.lvl)
-      .sort((a,b)=>(a.lvl-b.lvl)||(secQuality(a.sec,a.r)-secQuality(b.sec,b.r)));
-  }
-  const lvlCostItems=it=>it.lvl, lvlCostScrap=it=>it.lvl*CFG.weapon.scrapLvl[it.r];
-  const findItem=id=>S.items.find(x=>x.id===id);
-  function equip(id){ const it=findItem(id); if(!it||it.cls!==S.cls) return false; S.equippedId=id; statsDirty(); emit('change'); return true }
-  function toggleFav(id){ const it=findItem(id); if(!it) return null; it.fav=!it.fav; emit('change'); return it.fav }
-  // material para pagar las copias que faltan (Rara o mejor): [Esencia, Esencia de pesadilla, Esencia infernal] por copia
-  function lvlMatCost(it){ const per=(CFG.weapon.copyMat||{})[it.r]; if(!per) return null; const miss=Math.max(0,lvlCostItems(it)-fodderFor(it).length);
-    const mats=per.map(n=>n*miss), scrap=((CFG.weapon.copyScrap||{})[it.r]||0)*miss, lack=mats.some((n,m)=>n>(S.mats[m]||0)); return {miss,mats,scrap,lack} }
-  // useMat: si faltan copias, se pagan con material (copyMat)
-  function levelUp(id,useMat){
-    const it=findItem(id); if(!it||it.lvl>=CFG.weapon.maxLvl) return {ok:false,why:'max'};
-    const f=fodderFor(it), n=lvlCostItems(it), sc=lvlCostScrap(it), mc=useMat&&f.length<n?lvlMatCost(it):null;
-    if(f.length<n&&!(mc&&!mc.lack)) return {ok:false,why:'items',need:n,mat:lvlMatCost(it)};
-    if(S.scrap<sc+(mc?mc.scrap:0)) return {ok:false,why:'scrap'};
-    const used=f.slice(0,n), ids=new Set(used.map(x=>x.id));
-    S.items=S.items.filter(x=>!ids.has(x.id));
-    if(mc){ mc.mats.forEach((q,m)=>{ if(q) S.mats[m]=(S.mats[m]||0)-q }); S.scrap-=mc.scrap; }
-    S.scrap-=sc; it.invested+=sc+n*CFG.weapon.scrapDis[it.r]+used.reduce((a,x)=>a+x.invested,0); it.lvl++;
-    statsDirty(); save(); emit('change'); return {ok:true,lvl:it.lvl};
-  }
-  // Ascender: el arma (al nivel máximo) se come otra igual al máximo y pasa a la rareza siguiente, al nivel ascend.lvl.
-  // Sus stats guardan lo buenos que eran (mismo % dentro del rango de la nueva rareza) y gana los huecos que le falten.
-  function ascendInfo(id){ const it=findItem(id); if(!it) return null; const A=(CFG.weapon.ascend||{})[it.r], next=R[R.indexOf(it.r)+1];
-    if(!A||!next) return {top:true,can:false};
-    const max=it.lvl>=CFG.weapon.maxLvl, partner=S.items.filter(x=>x.id!==it.id&&x.cls===it.cls&&x.r===it.r&&x.lvl>=CFG.weapon.maxLvl&&x.id!==S.equippedId&&!x.fav)
-      .sort((a,b)=>secQuality(a.sec,a.r)-secQuality(b.sec,b.r))[0]||null;
-    const mats=A.mats||[], miss={}; if(S.scrap<A.scrap) miss.scrap=A.scrap-S.scrap; mats.forEach((n,m)=>{ if(n&&(S.mats[m]||0)<n) miss['mat'+m]=n-(S.mats[m]||0) });
-    return {next,cost:{scrap:A.scrap,mats},max,partner,miss,can:max&&!!partner&&!Object.keys(miss).length} }
-  function ascend(id){ const it=findItem(id), inf=it&&ascendInfo(id); if(!inf||!inf.can) return {ok:false,why:inf&&inf.top?'top':!inf?'none':!inf.max?'lvl':!inf.partner?'partner':'cost'};
-    const p=inf.partner, from=it.r, to=inf.next;
-    S.items=S.items.filter(x=>x.id!==p.id); S.scrap-=inf.cost.scrap; inf.cost.mats.forEach((n,m)=>{ if(n) S.mats[m]=(S.mats[m]||0)-n });
-    it.sec=it.sec.map(x=>{ const a=CFG.sec[x.k][from], b=CFG.sec[x.k][to], q=Math.max(0,Math.min(1,(x.v-a[0])/Math.max(0.01,a[1]-a[0]))); return {k:x.k,v:Math.round((b[0]+q*(b[1]-b[0]))*10)/10} });
-    it.sec=rollSecs(to,CFG.weapon[to][2],it.sec); it.r=to; it.lvl=CFG.weapon.ascend.lvl||2; it.invested+=inf.cost.scrap+p.invested+CFG.weapon.scrapDis[from];
-    statsDirty(); track('ascend',{r:to}); save(); emit('ascend',{id,r:to}); emit('change'); return {ok:true,r:to} }
-  const disValue=it=>CFG.weapon.scrapDis[it.r]+Math.floor(CFG.weapon.refund*it.invested);
-  // Desmontar por rareza (opcional: solo las de tu clase). Nunca la equipada ni las bloqueadas con ★.
-  // cls: nombre de clase para solo esa clase (true = la tuya; vacío = todas)
-  const byRarity=(r,cls)=>{ const k=cls===true?S.cls:cls||null; return S.items.filter(x=>x.r===r&&(!k||x.cls===k)&&x.id!==S.equippedId&&!x.fav) };
-  function dismantleRarity(r,cls){ return dismantle(byRarity(r,cls).map(x=>x.id)) }
-  function dismantle(ids){
-    let v=0,n=0; const set=new Set(ids);
-    S.items=S.items.filter(x=>{ if(set.has(x.id)&&x.id!==S.equippedId&&!x.fav){v+=disValue(x);n++;return false} return true});
-    S.scrap+=v; if(n) save(); emit('change'); return {n,v};
-  }
-  // coste de reforja: sube un poco con cada reforja y se queda en un tope (base × reforgeCap)
-  const reforgeCost=it=>{ const W=CFG.weapon; return Math.round(W.reforge[it.r]*Math.min(W.reforgeCap,1+W.reforgeStep*it.refN)) };
-  // Bloqueos acumulables: uno se paga con chatarra (el doble) y otro con 1 token; con un solo bloqueo eliges cómo pagarlo.
-  // Siempre queda al menos un stat por cambiar (con un solo stat, el bloqueo mantiene el stat y cambia su valor).
-  const maxLocks=it=>{ const n=CFG.weapon[it.r][2]; return n===1?1:Math.min(2,n-1) };
-  function reforgePrice(it,nl,pay){ const base=reforgeCost(it);
-    if(nl>=2) return {scrap:base*2,tokens:1}; if(nl===1) return pay==='token'?{scrap:base,tokens:1}:{scrap:base*2,tokens:0}; return {scrap:base,tokens:0} }
-  // locks: índices de los stats bloqueados (o un número; -1 = ninguno). pay: 'scrap' | 'token'. Devuelve la propuesta: el jugador elige quedársela o no.
-  function reforge(id,locks,pay){
-    const it=findItem(id); if(!it) return {ok:false};
-    if(typeof locks==='number') locks=locks>=0?[locks]:[]; locks=[...new Set(Array.isArray(locks)?locks:[])].filter(i=>Number.isInteger(i)&&i>=0&&i<it.sec.length);
-    if(locks.length>maxLocks(it)) return {ok:false,why:'locks'};
-    if(pay!=='scrap'&&pay!=='token') return {ok:false,why:'pay'};
-    const p=reforgePrice(it,locks.length,pay);
-    if(S.scrap<p.scrap) return {ok:false,why:'scrap'};
-    if(tokens()<p.tokens) return {ok:false,why:'token'};
-    S.scrap-=p.scrap; spend(p.tokens); it.refN++;
-    const n=CFG.weapon[it.r][2]; let nw;
-    if(locks.length&&n===1){ const s=it.sec[0]; nw=[{k:s.k,v:rollVal(CFG.sec[s.k][it.r])}] }
-    else { const kept=rollSecs(it.r,n,locks.map(i=>it.sec[i])); nw=it.sec.map((s,i)=>locks.includes(i)?s:null); // los bloqueados siguen en su sitio
-      const fresh=kept.slice(locks.length); for(let i=0;i<n;i++) if(!nw[i]) nw[i]=fresh.shift(); }
-    S.refPend={id,sec:nw}; save(); emit('change'); return {ok:true,sec:nw};
-  }
-  // Mejora automática: reforja solo el VALOR de un stat (no cambia de tipo) hasta que salga más alto.
-  // Cada intento cuesta lo que una reforja normal (sin subir el coste de las siguientes). Para al mejorar, al llegar
-  // al límite de gasto (maxSpend) o al quedarse sin chatarra.
-  function improveOdds(id,idx){ const it=findItem(id); if(!it||!it.sec[idx]) return null; const s=it.sec[idx], rg=CFG.sec[s.k][it.r];
-    // los valores se redondean a 0,1: sale más alto si el número sin redondear supera old+0,05
-    const p=Math.max(0,Math.min(1,(rg[1]-(s.v+0.05))/(rg[1]-rg[0]))), cost=reforgeCost(it);
-    return {p,cost,max:rg[1],v:s.v,exp:p>0?Math.ceil(1/p):Infinity,expSpend:p>0?Math.ceil(1/p)*cost:Infinity} }
-  function improveStat(id,idx,maxSpend=Infinity){
-    const it=findItem(id); if(!it||!Number.isInteger(idx)||!it.sec[idx]) return {ok:false,why:'item'};
-    const s=it.sec[idx], rg=CFG.sec[s.k][it.r], old=s.v; if(old>=rg[1]) return {ok:false,why:'max'};
-    const c=reforgeCost(it); let tries=0, spent=0;
-    while(S.scrap>=c&&spent+c<=maxSpend){
-      S.scrap-=c; spent+=c; tries++;
-      const v=rollVal(rg); if(v>old){ s.v=v; statsDirty(); save(); emit('change'); return {ok:true,tries,spent,old,v,k:s.k} } }
-    save(); emit('change'); return {ok:false,why:S.scrap<c?'scrap':'limit',tries,spent,old,k:s.k};
-  }
-  // Solo se puede aplicar la última propuesta de reforja de esa arma (nada de stats inventados)
-  function applyReforge(id){ const p=S.refPend, it=findItem(id); if(!p||p.id!==id||!it) return false; it.sec=p.sec; S.refPend=null; statsDirty(); save(); emit('change'); return true }
-  /* ---------- cofres ---------- */
-  // La calidad de un cofre se decide al ABRIRLO, según tu récord de fase en ese momento
-  // % del cofre según el modo actual (y, dentro del modo, el tramo de fase: [desde, %])
-  function chestProbs(type,mode=S.mode,best=S.best){ const o=CFG.chests[type].odds, t=o[Math.min(mode,o.length-1)]; let p=t[0][1]; for(const [a,q] of t) if(Math.max(1,best)>=a) p=q; return p }
-  function addChest(type,n){ S.chestInv[type]=(S.chestInv[type]||0)+n }
-  const chestCount=type=>S.chestInv[type]||0;
-  function openChest(type){ const r=pick(chestProbs(type)); return newItem(S.cls,r) }   // los cofres solo dan armas de tu clase
-  // Inventario: como mucho weapon.invMax armas (la equipada NO cuenta: va en el Equipo). Para abrir X cofres hacen falta X huecos libres.
-  const invMax=()=>(CFG.weapon.invMax||Infinity)+(S&&S.invBonus||0);   // + huecos comprados
-  const invCount=()=>S.items.filter(x=>x.id!==S.equippedId).length;
-  const invFree=()=>Math.max(0,invMax()-invCount());
-  // all: true = todos, false = 1, número = ese número. Si no caben, no se abre ninguno (devuelve [] con .full)
-  function openChests(type,all){
-    let n=all===true?chestCount(type):typeof all==='number'?Math.min(all|0,chestCount(type)):Math.min(1,chestCount(type));
-    const loot=[]; if(n>invFree()){ loot.full={need:n,free:invFree()}; return loot }
-    while(n-->0){ S.chestInv[type]--; loot.push(openChest(type)); }
-    if(!S.chestInv[type]) delete S.chestInv[type];
-    if(loot.length){ const r={}; for(const x of loot) r[x.r]=(r[x.r]||0)+1; track('chests',{chest:type,n:loot.length,rar:r}); }
-    save(); emit('change'); return loot;
-  }
   /* ---------- tokens: gastar, comprar y retirar ---------- */
   // Tokens = dinero (100 tokens = 1 $). S.tokens: comprados (no se retiran). S.won: ganados en los pools (se pueden retirar).
   // Al gastar se usan primero los comprados.
@@ -1489,24 +1522,14 @@ function createGame(opts){
   function leagueNow(){ const L=league(), d=new Date(dayKey()*864e5).getUTCDate();
     return {name:monthName(L.m),spent:L.spent,ads:L.ads,goldH:L.goldH,pts:leaguePts(L),pool:leaguePool(L),tok:leaguePrize(L),daysLeft:monthDays(L.m)-d+1,
       share:leaguePts(L)/leagueTotal(L)} }
-  /* ---------- tienda: cofres de plata, materiales y tickets ---------- */
-  // Cofre de plata: se paga con ORO. Precio base = el oro de goldMin minutos farmeando tu récord; cada compra del día
-  // lo sube un step (×(1+step·n), n = comprados hoy) y vuelve al base cada día. perDay: máximo al día (null = sin límite).
-  const silverToday=()=>S.silverDay&&S.silverDay.d===dayKey()?S.silverDay.n:0;
-  const silverBase=()=>Math.max(10,farmRate(Math.max(1,S.best)).g*60*CFG.chests.silver.goldMin);
-  const silverPrice=(k=0)=>Math.round(silverBase()*(1+(CFG.chests.silver.step||0)*(silverToday()+k)));   // precio del siguiente (+k)
-  const silverCost=n=>{ let c=0; for(let k=0;k<n;k++) c+=silverPrice(k); return c };
-  const silverLeft=()=>CFG.chests.silver.perDay==null?Infinity:CFG.chests.silver.perDay-silverToday();
-  const silverMax=()=>{ let n=0, c=0; while(n<silverLeft()&&n<1000){ c+=silverPrice(n); if(c>S.gold) break; n++ } return n };   // cuántos te puedes permitir
-  function buySilver(n){ n=n|0; if(n<1||n>silverLeft()) return false; const c=silverCost(n); if(S.gold<c) return false;
-    S.gold-=c; if(!S.silverDay||S.silverDay.d!==dayKey()) S.silverDay={d:dayKey(),n:0}; S.silverDay.n+=n; addChest('silver',n); track('buy',{item:'silver',n,gold:c}); save(); emit('change'); return true }
-  const shopPrice=k=>({ess:(CFG.matShop||{}).ess, ev:(CFG.matShop||{}).ev, mode:CFG.chests.mode.price, ticket:CFG.event.ticketCost, pvp:CFG.pvp.packCost, bossTicket:CFG.wboss.ticketCost, card:CFG.cardPrice, vip:CFG.vipPrice})[k];
+  /* ---------- tienda: materiales y tickets ---------- */
+  // (los cofres y las armas se quitaron del juego: se recrean aparte)
+  const shopPrice=k=>({ess:(CFG.matShop||{}).ess, ev:(CFG.matShop||{}).ev, ticket:CFG.event.ticketCost, pvp:CFG.pvp.packCost, bossTicket:CFG.wboss.ticketCost, card:CFG.cardPrice, vip:CFG.vipPrice})[k];
   function buy(k,n){
-    n=n|0; if(n<1) return false; if(k==='silver') return buySilver(n); const unit=shopPrice(k); if(unit==null) return false;
+    n=n|0; if(n<1) return false; const unit=shopPrice(k); if(unit==null) return false;
     if((k==='card'||k==='vip')&&n!==1) return false;
     if(!spend(unit*n)) return false;
-    if(k==='mode') addChest('mode',n);
-    else if(k==='ticket') S.tickets+=n;
+    if(k==='ticket') S.tickets+=n;
     else if(k==='bossTicket') S.bossTickets+=n;
     else if(k==='pvp') S.pvpTickets=(S.pvpTickets||0)+n*CFG.pvp.pack;   // paquetes de 3 tickets PvP
     else if(k==='ess') S.mats[0]=(S.mats[0]||0)+n;               // esencia (de Normal)
@@ -1543,9 +1566,11 @@ function createGame(opts){
     const hit=dmgF(h.atk,e.df)*(1+h.cr*h.cd)*dpsK(h), K=Math.max(1,e.hp/hit+0.6)/h.spd, W=CFG.enemy.walk/sp*(h.ranged?1:(CFG.enemy.dash||1));
     // a distancia se dispara mientras se acercan; cuerpo a cuerpo cada enemigo sale cuando el anterior llega y hay que esperarlo (menos si salen varios a la vez)
     return h.ranged?per*K:W+K+(per-1)*Math.max(W/grp,K) }
+  // un élite/JEFE repetido (al farmear su fase) tarda bossK oleadas: lo medido (wtB) o, hasta tenerlo, CFG.offlineBossK
+  const bossK=()=>{ const T=S.wtB; return T&&T.f>0?Math.max(1,T.r/T.f):CFG.offlineBossK||4 };
   function farmRate(f){
-    const h=computeStats(), slow=Math.max(1,S.wtM||1);   // si las oleadas de verdad tardan más que la fórmula (wtM medido), el cálculo se ajusta: nunca da más que jugando
-    let t=0; for(let w=1;w<=10;w++) t+=waveTimeF(f,w,h)*slow+CFG.delays.wave;
+    const h=computeStats(), slow=Math.max(1,S.wtM||1), rep=f%10===0&&f<CAP();   // si las oleadas de verdad tardan más que la fórmula (wtM medido), el cálculo se ajusta: nunca da más que jugando
+    let t=0; for(let w=1;w<=10;w++) t+=waveTimeF(f,w,h)*(rep&&w===10?Math.max(slow,bossK()):slow)+CFG.delays.wave+(rep&&w===10?CFG.encounter.intro:0);
     return {g:goldAt(f)*3*10*(hasCard()?1+CFG.cardGold:1)/t, x:xpAt(f)*(3+(CFG.econ.waveXp||0))*10*h.xpMult/t};
   }
   // Farmeo sin conexión: hasta offlineCapH horas (offlineVipH con VIP). Si se llenó el tope, queda un extra
@@ -1592,25 +1617,23 @@ function createGame(opts){
   function grimUp(){ const u=grimUpInfo(); if(!u) return {ok:false,why:'max'}; if(!u.ready) return {ok:false,why:'xp'}; if(Object.keys(u.missing).length) return {ok:false,why:'cost'};
     S.gold-=u.cost.gold; S.mats[0]-=u.cost.ess; S.evm-=u.cost.ev; const G=grimState(); G.lvl++; G.xp=0; track('grimoire',{how:'nivel',lvl:G.lvl}); save(); emit('change'); return {ok:true,lvl:G.lvl} }
   /* ---------- premios del servidor (referidos) ---------- */
-  // El servidor manda premios pendientes: 'silver' = cofres de plata, 'won' = tokens ganados (retirables)
+  // El servidor manda premios pendientes: 'silver' = premio de amigos (5 min de oro por unidad), 'won' = tokens ganados (retirables)
   function applyRewards(list){ const out=[]; if(!S||!Array.isArray(list)) return out;
     for(const r of list){ const n=Math.floor(+r.amount); if(!(n>0)) continue;
-      if(r.kind==='silver') addChest('silver',Math.min(n,100)); else if(r.kind==='won') S.won+=n;
+      if(r.kind==='silver') giveBundle({gold:5*Math.min(n,100)}); else if(r.kind==='won') S.won+=n;   // (el servidor aún habla de «plata»: ahora es oro de 5 min de farmeo cada una)
       else if(r.kind==='tokens'){ S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,stars:n*CFG.stars.perToken}); }   // compra con Stars
-      else if(r.kind==='first'){ const F=CFG.stars.first; if(S.firstBuy) continue; S.firstBuy=true; newItem(S.cls,F.r); S.tokens+=F.tokens; S.stats.deposited+=F.tokens; addChest('silver',F.silver); }
+      else if(r.kind==='first'){ const F=CFG.stars.first; if(S.firstBuy) continue; S.firstBuy=true; S.tokens+=F.tokens; S.stats.deposited+=F.tokens; giveBundle({gold:F.gold}); }
       else if(r.kind==='pass'){ S.passPrem=Math.max(S.passPrem||0,n); }   // pase de pago de la temporada n
-      else if(r.kind==='pvp'){ const w=pvpReward(n); if(w){ S.evm+=w.em||0; if(w.ch) addChest(w.ch,w.n||1); } }   // ranking semanal PvP (amount = puesto)
-      else if(r.kind==='offer_inv'){ S.invBonus=(S.invBonus||0)+CFG.offers.inv.inv; }
-      else if(/^offer_(wall|evo)$/.test(r.kind)){ giveBundle(CFG.offers[r.kind.slice(6)].b); }
+      else if(r.kind==='pvp'){ const w=pvpReward(n); if(w){ S.evm+=w.em||0; if(w.gold) giveBundle({gold:w.gold}); } }   // ranking semanal PvP (amount = puesto)
+      else if(/^offer_evo$/.test(r.kind)){ giveBundle(CFG.offers[r.kind.slice(6)].b); }
       else continue;
       out.push({kind:r.kind,amount:n,reason:r.reason}); }
     if(out.length){ track('reward',{list:out}); save(); emit('change'); } return out }
   /* ---------- misiones diarias y semanales ---------- */
   // Premios: {gold: minutos de farmeo de tu récord, silver, wood, mode, ess, ev, ticket, bossTicket}
   function giveBundle(b){ if(!b) return; if(b.gold) S.gold+=Math.max(20,farmRate(Math.max(1,S.best)).g*60*b.gold);
-    for(const k of ['silver','wood','mode']) if(b[k]) addChest(k,b[k]);
     if(b.ess) S.mats[0]=(S.mats[0]||0)+b.ess; if(b.ev) S.evm+=b.ev; if(b.ticket) S.tickets+=b.ticket; if(b.bossTicket) S.bossTickets+=b.bossTicket;
-    if(b.tok) S.tokens+=b.tok; if(b.item) newItem(S.cls,b.item); }   // tok: tokens (como comprados) · item: arma de tu clase de esa rareza
+    if(b.tok) S.tokens+=b.tok; if(b.box) S.boxT=(S.boxT||0)+b.box; }   // tok: tokens (como comprados) · box: tickets de invocación
   // misiones del día: progreso guardado en S.daily (se renueva cada día; los enemigos se cuentan desde el inicio del día)
   function daily(){ const d=dayKey(); if(!S.daily||S.daily.d!==d) S.daily={d,k0:S.kills||0,p:{},c:{}}; return S.daily }
   function misBump(k,n){ if(!S) return; const D=daily(); D.p[k]=(D.p[k]||0)+n; const W=weekly(); W.p[k]=(W.p[k]||0)+n }
@@ -1624,7 +1647,7 @@ function createGame(opts){
   const bonusState=kind=>{ const box=kind==='week'?weekly():daily(), L=kind==='week'?weekMissions():missions(); return {can:L.every(m=>m.claimed)&&!box.bonus,got:!!box.bonus,b:kind==='week'?CFG.missions.weekly.bonus:CFG.missions.bonus} };
   function claimBonus(kind){ const st=bonusState(kind); if(!st.can) return null; (kind==='week'?weekly():daily()).bonus=true; giveBundle(st.b); track('misBonus',{kind}); save(); emit('change'); return st.b }
   const weeklyReady=()=>weekMissions().filter(m=>m.done&&!m.claimed).length+(bonusState('week').can?1:0);
-  function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1); else if(type==='chests') misBump('chests',d.n||1) }
+  function misHook(type,d){ if(!S) return; if(type==='upgrade') misBump('upgrade',d.n||1) }
   // misiones de modos aún cerrados: no salen (así se puede completar «todas las diarias»)
   const misOpen=m=>m.k==='pvp'?modeOpen('pvp'):m.k==='event'?modeOpen('lab')||modeOpen('boss'):true;
   function missions(){ const D=daily(); return CFG.missions.list.filter(misOpen).map(m=>{ const v=m.k==='kills'?(S.kills||0)-D.k0:(D.p[m.k]||0);
@@ -1649,8 +1672,9 @@ function createGame(opts){
   function passAddXp(n){ passS().xp+=n }
   function passReward(L,prem){ const top=CFG.pass.levels;
     const C=CFG.pass, tk=C.tok&&L%C.tok.every===0?{tok:C.tok.n}:{};
-    if(!prem) return L===top?{item:C.item.free,mode:1}:L%10===0?{mode:1}:L%5===0?{silver:2}:L%2===0?{wood:2}:{gold:30};
-    return L===top?{item:C.item.prem,mode:3,ess:5,ev:10,...tk}:L%10===0?{mode:2,ess:2,...tk}:L%5===0?{ticket:1,bossTicket:1,ev:3}:L%2===0?{silver:2,ev:1}:{silver:1,wood:1} }
+    // (oro = minutos de farmeo de tu récord; los cofres y el arma del último nivel se quitaron con los objetos: se recrean aparte)
+    if(!prem) return L===top?{gold:40}:L%10===0?{gold:20}:L%5===0?{gold:10}:L%2===0?{gold:6}:{gold:30};
+    return L===top?{gold:60,ess:5,ev:10,...tk}:L%10===0?{gold:40,ess:2,...tk}:L%5===0?{ticket:1,bossTicket:1,ev:3}:L%2===0?{gold:10,ev:1}:{gold:8} }
   function passState(){ const P=passS(), C=CFG.pass, lvl=Math.min(C.levels,Math.floor(P.xp/C.xp));
     return {season:P.s,xp:P.xp,lvl,into:P.xp-lvl*C.xp,need:C.xp,prem:(S.passPrem||0)===P.s,daysLeft:C.days-dayKey()%C.days,cf:P.cf,cp:P.cp} }
   function claimPass(L,prem){ const st=passState(); if(!(L>=1&&L<=st.lvl)) return null; if(prem&&!st.prem) return null;
@@ -1669,7 +1693,7 @@ function createGame(opts){
   /* ---------- ofertas en el momento justo ---------- */
   // offerCheck(): mira si toca una oferta nueva (la activa 24 h) y la devuelve para que la pantalla la enseñe
   function offerCheck(){ if(!S||(B&&B.event)) return null; const O=CFG.offers, t=nowFn(); S.offers=S.offers||{};
-    const want={ wall:!!(S.bossTry&&S.bossTry.n>=O.wall.deaths), evo:evoLvlOk()&&!canEvolve(), inv:invFree()===0&&(S.invBonus||0)<O.inv.inv*O.inv.max };
+    const want={ evo:evoLvlOk()&&!canEvolve() };   // (la oferta «Rompe el muro» y la de inventario se quitaron con los objetos)
     for(const k in want){ const o=S.offers[k]||{}; if(want[k]&&!(o.until>t)&&!(o.next>t)){ S.offers[k]={until:t+O.dur*3600e3,next:t+O.cool*3600e3}; save(); track('offer',{k}); return k } }
     return null }
   const activeOffers=()=>{ const t=nowFn(); return Object.entries(S&&S.offers||{}).filter(([k,o])=>o.until>t).map(([k,o])=>({k,left:o.until-t,...CFG.offers[k]})) };
@@ -1678,13 +1702,13 @@ function createGame(opts){
   function dev(k){
     if(!CFG.devTools) return;
     if(k==='gold') S.gold+=Math.max(100,farmRate(Math.max(1,S.best)).g*3600);
-    if(k==='tok') S.tokens+=100; if(k==='ticket') S.tickets++; if(k==='bossTicket') S.bossTickets++; if(k==='scrap') S.scrap+=100; if(k==='wood') addChest('wood',10); if(k==='day') S.devDays=(S.devDays||0)+1;
+    if(k==='tok') S.tokens+=100; if(k==='ticket') S.tickets++; if(k==='bossTicket') S.bossTickets++; if(k==='day') S.devDays=(S.devDays||0)+1;
     emit('change');
   }
 
   return {
     // estado
-    get S(){return S}, get B(){return B}, CFG, R, CLASSES, on, save, load, reset, packed, newGame, setName, validName, cleanName, startWave, dayKey, rand,
+    get S(){return S}, get B(){return B}, CFG, CLASSES, on, save, load, reset, packed, newGame, setName, validName, cleanName, startWave, dayKey, rand,
     // fórmulas
     heroShield:()=>B?(BUF.shield||0)+(BUF.gshield||0):0,   // escudo del héroe ahora (para la barra azul)
     // efectos activos sobre el héroe ahora (para los iconos bajo su barra): {k, left} en segundos (null = mientras dure)
@@ -1694,20 +1718,20 @@ function createGame(opts){
       if(ch&&B[ch]>0) o.push({k:ch,n:Math.min(P.max,B[ch]),max:P.max}); if(P&&P.id==='cuchillas'&&B.blades){ const n=B.blades.filter(u=>u>B.t).length; if(n) o.push({k:'blades',n,max:P.max}); }
       return o },
     heroDebuffs, zoneAt, zoneIdx, bossRole, zoneFoe,
-    hasCard, hasVip, equipped, weaponMain, heroStats, dpsK, computeStats, statsDirty, enemyStats, modeCurve, refHero, xpReq, upCost, upgradeGain, farmRate,
+    hasCard, hasVip, heroStats, dpsK, computeStats, statsDirty, enemyStats, modeCurve, refHero, xpReq, upCost, upgradeGain, farmRate,
     // combate
-    step, setAuto, goFase,
+    step, setAuto, setRepeat, goFase,
     // mejoras
     buyUpgrade, buyMax,
     // evento
-    claimLoot, bossScrap, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
+    claimLoot, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
-    ascendInfo, ascend, lvlMatCost, evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerLinks, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, legendFx, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerLinks, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
     canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, nextEvoInfo, kitStage, heroPassive, lvlCap,
-    // armas
-    findItem, equip, toggleFav, levelUp, dismantle, disValue, fodderFor, lvlCostItems, lvlCostScrap, reforge, reforgeCost, reforgePrice, maxLocks, improveStat, improveOdds, applyReforge, secQuality,
-    // cofres y tienda
-    chestProbs, addChest, chestCount, openChests, invFree, invMax, invCount, byRarity, dismantleRarity, buy, shopPrice, silverPrice, silverCost, silverMax, silverLeft, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
+    // objetos: solo el arma Común de regalo (los demás se recrean aparte)
+    weapon, weaponBonus, weaponExtra, weaponPower, boxInfo, pull, gear, gearSlots, gearPower, setInfo, gearOpenCheck, gearDrop, dropP,
+    // tienda
+    buy, shopPrice, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
     // otros
     applyOffline, claimOfflineBonus, offlineCap, offlineAdLeft, setOpt, dev, applyRewards,
     // grimorios
