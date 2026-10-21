@@ -1909,7 +1909,7 @@ document.addEventListener('click',e=>{ const b=e.target.closest('.sti[data-tip]'
   t.classList.remove('up'); t.innerHTML=`<b>${n}</b><br>${d}`; t.hidden=false; clearTimeout(t._h); t._h=setTimeout(skTipHide,2500) });
 document.addEventListener('click',e=>{
   if(skSkip&&e.target.closest('.skb')){ skSkip=false; return } skSkip=false;
-  const b=e.target.closest('[data-act],[data-tab]'); if(!b) return;
+  const b=e.target.closest('[data-act],[data-tab]'); if(!b||b===document.body) return;   // (body lleva data-tab para los fondos de cada pestaña: no es un botón)
   if(b.dataset.tab){ if(adTimerOn()) return; if(b.dataset.tab==="ev"&&tab==="ev"){ evView=null; modView=null; } /* tocar Modos estando dentro vuelve al inicio de Modos */ boostModalOpen=false;closeModal();if(b.dataset.tab==="inv") invView='main'; /* Inventario siempre abre la pantalla principal */ tab=b.dataset.tab;renderTab();return}
   const fn=ACT[b.dataset.act]; if(fn) fn(b,b.dataset.k,+b.dataset.id);
 });
