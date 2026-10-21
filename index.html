@@ -57,14 +57,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .stage{position:relative;border-radius:14px;overflow:visible;border:1px solid var(--line);background:#0e1017;margin-bottom:1px} /* visible: las calaveras y la fase salen unos píxeles por debajo del borde */
 canvas{border-radius:13px}
 canvas{display:block;width:100%;height:300px}
-.app.home{height:100%;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.app.home{position:fixed;inset:0;margin:0 auto;height:auto;padding-bottom:calc(var(--navh,calc(66px + env(safe-area-inset-bottom,0px))) + 8px)}   /* Inicio: justo la pantalla (sin el margen del body) menos la barra de abajo (--navh: su altura real, estructura.js) */
 .app.home .battle{flex:1;min-height:0}
 .app.home .stage{flex:1;min-height:clamp(140px,32vh,260px)} /* en pantallas bajas (Telegram compacto) el escenario encoge y los botones no tapan al héroe */
 .app.home canvas{position:absolute;inset:0;height:100%}
 .app.home #tab{display:none}
 .app.home{padding-top:calc(24px + var(--safe-top))}
 .tgfs .app,.tgfs .app.home{padding-top:var(--safe-top)}
-.app.home .battle{padding-bottom:58px}
+/* la barra de mejoras va dentro de .battle, debajo del escenario */
 .hero{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
 .hero .name{font-family:var(--display);font-size:16px;grid-column:1 / -1;display:flex;align-items:baseline;min-width:0;white-space:nowrap}
 .hero .name .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -444,8 +444,8 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .mtile b{font-size:15px;font-variant-numeric:tabular-nums}
 .mtile .mn{font-size:11px;color:var(--muted);line-height:1.2}
 
-/* Barra de mejoras */
-.upstrip{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:5;display:grid;grid-template-columns:36px repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;background:rgba(18,20,28,.92);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+/* Barra de mejoras: dentro de la columna del juego, justo debajo del escenario (el escenario ocupa lo que queda: nunca tapa las habilidades ni AUTO) */
+.upstrip{position:relative;flex:none;z-index:5;display:grid;grid-template-columns:36px repeat(4,1fr);gap:4px;padding:4px;border-radius:14px;background:rgba(18,20,28,.92);border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45)}
 .upt{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;column-gap:4px;row-gap:1px;padding:4px 2px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);opacity:.55;min-width:0}
 .upt.ok{opacity:1;border-color:var(--gold);box-shadow:inset 0 -2px 0 rgba(232,176,74,.35)}
 .upt:active{transform:scale(.96)}
@@ -457,7 +457,7 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .upx{border-radius:10px;border:1px solid var(--line);background:var(--panel);font-size:11px;font-weight:800;color:var(--gold);padding:0}
 .upx.lv{display:flex;flex-direction:column;align-items:center;justify-content:center;border-color:var(--gold);background:radial-gradient(circle at 50% 30%,#2b2f40,var(--panel))}
 .upx.lv small{font-size:9px;color:var(--muted);font-weight:800}.upx.lv b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
-.app.home .battle{padding-bottom:62px}   /* barra de mejoras compacta: nombre y valor en una línea, el precio debajo */
+/* (barra de mejoras compacta: nombre y valor en una línea, el precio debajo) */
 
 /* Retrato, cabeceras de pantalla, Forja con marco, cabecera del Inventario y tarjetas de Modos */
 .av{flex:none;width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);background:#1b1e2a no-repeat;background-size:230%;background-position:41% 22%;box-shadow:0 0 0 2px #0b0c10}
@@ -909,7 +909,7 @@ body{background:radial-gradient(ellipse 120% 70% at 50% 0%,#161a28,#0b0c12 70%) 
 /* el título de la pantalla siempre entero (nunca «TIE…»): no se recorta; en móviles estrechos, letra y placas algo más pequeñas */
 .top.slim .sttl{overflow:visible}
 .sttl .stxt{flex:none;overflow:visible;text-overflow:clip;white-space:nowrap}
-@media (max-width:374px){.sttl .stxt{font-size:11px;padding:5px 7px 5px 13px}.sttl .smed{width:38px;height:38px}.top.slim .res span{font-size:12px}.res .rplus{width:13px;height:13px;font-size:10px;line-height:11px}.gear{width:32px;height:32px}}
+
 /* Modos con las ilustraciones de la maqueta: tarjetas más altas y títulos grandes */
 .mcard2{min-height:190px;background-position:center 30%}
 .mcard2.wide{min-height:180px}
@@ -950,10 +950,10 @@ body[data-tab="shop"]{--cab:url(sprites/ui/modo_bg_pvp.webp)}
 .dban-t h3{font-size:18px;white-space:nowrap;letter-spacing:-.2px}
 .dban{margin-right:34px}
 .fchips{flex-wrap:nowrap}
-@media (max-width:374px){.fchips button,.isubs button{font-size:10px;gap:2px;padding:5px 2px}.fchips button .uimg,.isubs button .uimg{width:14px;height:14px}.dban-t h3{font-size:16px}}
+
 /* la letra Cinzel solo tiene mayúsculas: los títulos de las misiones van con la letra normal, que se lee mejor */
 .mrow .mi>b{font-family:var(--body);font-weight:800}
-@media (max-width:374px){.shtabs button .uimg{display:none}}
+
 /* ---------- azul marino de las maquetas: paneles por dentro, pestañas sin elegir y botones secundarios; textos secundarios azul grisáceo ---------- */
 :root{--navy:#131c33;--navy2:#0c1324;--navy-ink:#a9b6d8;
   --plate:linear-gradient(180deg,rgba(48,72,128,.32),rgba(4,8,20,.5)),url(sprites/ui/losa.webp) center/cover,#121a2f}
@@ -974,47 +974,83 @@ body{background:radial-gradient(ellipse 120% 70% at 50% 0%,#141d33,#090d17 70%) 
 .isubs{display:flex}
 .isubs button{flex:1 1 auto}
 .shtabs button .uimg{display:none}
-@media (max-width:374px){.fchips button .uimg,.isubs button .uimg{display:none}.fchips button,.isubs button{font-size:11px;padding:5px 2px}}
+
 /* Tienda: el «i» en la esquina sin taparse con el dibujo (el dibujo deja libre la esquina) */
 .scard button.sc-ic{width:auto;margin:0 auto;padding:0 6px}
 .scard .ibtn{top:-2px;right:-2px;width:22px;height:22px;font-size:11px;z-index:1}
 /* barra de abajo en móviles muy estrechos: nombres más pequeños */
-@media (max-width:360px){.nav .nl{font-size:8.5px;letter-spacing:-.2px}.nav button{border-width:5px;border-image-width:5px}}
+
 .fchips button{overflow:visible;text-overflow:clip}
 /* precio de las tarjetas: si no cabe en una línea, letra más pequeña y en dos líneas antes que cortarse */
 .scard .sc-buy.btn.gold{white-space:normal;line-height:1.1;min-height:28px;flex-wrap:wrap;text-align:center}
 .scard .sc-buy small{display:block;width:100%;font-size:8.5px;line-height:1}
 .scard .sc-tag{z-index:2}
 /* ---------- móviles estrechos (≤360 px): cabecera, Modos, Inventario y estandartes sin cortes ni solapes ---------- */
-@media (max-width:360px){
-  .res .rplus{display:none}
-  .top.slim{gap:4px;padding-left:6px;padding-right:6px}
-  .sttl .smed{width:34px;height:34px;margin-right:-10px}.sttl .smed .uimg{width:22px;height:22px}
-  .sttl .stxt{font-size:10.5px;padding:5px 7px 5px 12px}
-  .top.slim .res span{font-size:12px}
-  .gear{width:30px;height:30px}
-  .mcard2 .mt{font-size:21px}
-  .mcard2.wide:not(.low) .mt{font-size:26px}
-  .mcard2 .mk{font-size:9px;letter-spacing:.5px}
-  .mcard2 .mp{padding:2px 6px}.mcard2 .mp b{font-size:13px}.mcard2 .mp small{font-size:10px}
-  .mcard2 .mbadge{font-size:9px;padding:1px 5px;letter-spacing:.3px}
-  .mcard2 .mm span{padding:1px 5px;font-size:9px}
-  .ihgrid{grid-template-columns:54px 1fr 54px}
-  .ihero .ibslot{width:48px;height:48px;border-width:6px;border-image-width:6px}
-  .ihero .ibslot svg,.ihero .ibslot .bimg{width:26px;height:26px}
-  .ihs>small{font-size:9px}
-  .ihart img{width:104px}
-  .dban{padding-left:40%;min-height:80px}
-  .dban-art{width:42%}
-  .dban-t h3{font-size:14px}
-  .dban-t small{font-size:11px}
-}
+
 /* el estandarte va dentro de la ventana (que sigue pudiendo desplazarse en pantallas bajas) */
-@media (max-width:360px){.dban-t h3{white-space:normal;font-size:15px}}
-@media (max-width:340px){.mcard2 .mt{font-size:19px}}
+
+
 .scard:has(.ibtn) button.sc-ic{max-width:calc(100% - 44px);padding:0}
 .scard:has(.ibtn) .scart{width:100%;max-width:74px}
-@media (max-width:360px){.dban{padding-left:36%}.dban-art{width:38%}.dban-t h3{font-size:12.5px;letter-spacing:-.3px}}
+
+
+/* ---------- tamaños adaptativos: todo escala con el ancho del móvil (de 320 a 430 px), sin quitar nada ----------
+   cada tamaño es su valor en un móvil de 390 px escalado con el ancho (clamp con vw), con topes del 82 % y el 112 % */
+/* cabecera */
+.top.slim{gap:clamp(4.1px,1.282vw,5.6px);padding-left:clamp(8.2px,2.564vw,11.2px);padding-right:clamp(8.2px,2.564vw,11.2px)}
+.sttl .smed{width:clamp(36.08px,11.282vw,49.28px);height:clamp(36.08px,11.282vw,49.28px);margin-right:calc(-1 * clamp(9.84px,3.077vw,13.44px))}
+.sttl .smed .uimg{width:clamp(22.96px,7.179vw,31.36px);height:clamp(22.96px,7.179vw,31.36px)}
+.sttl .stxt{font-size:clamp(9.84px,3.077vw,13.44px);padding:clamp(4.92px,1.538vw,6.72px) clamp(7.38px,2.308vw,10.08px) clamp(4.92px,1.538vw,6.72px) clamp(11.48px,3.59vw,15.68px)}
+.top.slim .res{gap:clamp(3.28px,1.026vw,4.48px)}
+.top.slim .res span,.top .res span{font-size:clamp(11.48px,3.59vw,15.68px);border-width:clamp(4.1px,1.282vw,5.6px);border-image-width:clamp(4.1px,1.282vw,5.6px)}
+.res .ic{width:clamp(13.12px,4.103vw,17.92px);height:clamp(13.12px,4.103vw,17.92px)}
+.res .rplus{display:grid;width:clamp(12.3px,3.846vw,16.8px);height:clamp(12.3px,3.846vw,16.8px);font-size:clamp(9.84px,3.077vw,13.44px);line-height:1;margin-left:clamp(3.28px,1.026vw,4.48px)}
+.gear{width:clamp(29.52px,9.231vw,40.32px);height:clamp(29.52px,9.231vw,40.32px)}
+.gear .uimg{width:clamp(18.04px,5.641vw,24.64px);height:clamp(18.04px,5.641vw,24.64px)}
+.av{width:clamp(31.16px,9.744vw,42.56px);height:clamp(31.16px,9.744vw,42.56px)}
+/* pestañas */
+.fchips button,.isubs button{font-size:clamp(9.84px,3.077vw,13.44px);gap:clamp(3.28px,1.026vw,4.48px);padding:clamp(4.1px,1.282vw,5.6px) clamp(2.46px,0.769vw,3.36px)}
+.fchips button .uimg,.isubs button .uimg{width:clamp(14.76px,4.615vw,20.16px);height:clamp(14.76px,4.615vw,20.16px)}
+/* barra de abajo */
+.nav .nl{font-size:clamp(8.61px,2.692vw,11.76px)}
+.nav .ni .uimg{width:clamp(22.96px,7.179vw,31.36px);height:clamp(22.96px,7.179vw,31.36px)}
+.nav button{border-width:clamp(5.74px,1.795vw,7.84px);border-image-width:clamp(5.74px,1.795vw,7.84px)}
+/* Modos */
+.mcard2 .mt{font-size:clamp(22.96px,7.179vw,31.36px)}
+.mcard2.wide:not(.low) .mt{font-size:clamp(27.88px,8.718vw,38.08px)}
+.mcard2 .mk{font-size:clamp(8.2px,2.564vw,11.2px)}
+.mcard2 .mbadge{font-size:clamp(8.2px,2.564vw,11.2px)}
+.mcard2 .mm span{font-size:clamp(8.2px,2.564vw,11.2px);padding:clamp(1.64px,0.513vw,2.24px) clamp(6.56px,2.051vw,8.96px)}
+.mcard2 .mp b{font-size:clamp(13.12px,4.103vw,17.92px)}.mcard2 .mp small{font-size:clamp(9.02px,2.821vw,12.32px)}
+.mcard2 .mf{font-size:clamp(9.84px,3.077vw,13.44px)}
+.mcard2 .mico{width:clamp(57.4px,17.949vw,78.4px);height:clamp(57.4px,17.949vw,78.4px)}
+/* Inventario: huecos y héroe */
+.ihgrid{grid-template-columns:clamp(52.48px,16.41vw,71.68px) 1fr clamp(52.48px,16.41vw,71.68px)}
+.ihero .ibslot{width:clamp(47.56px,14.872vw,64.96px);height:clamp(47.56px,14.872vw,64.96px);border-width:clamp(5.74px,1.795vw,7.84px);border-image-width:clamp(5.74px,1.795vw,7.84px)}
+.ihero .ibslot svg,.ihero .ibslot .bimg{width:clamp(27.88px,8.718vw,38.08px);height:clamp(27.88px,8.718vw,38.08px)}
+.ihgrim .ibslot{width:clamp(52.48px,16.41vw,71.68px);height:clamp(52.48px,16.41vw,71.68px)}
+.ihs>small{font-size:clamp(8.2px,2.564vw,11.2px)}
+.ihart img{width:clamp(103.32px,32.308vw,141.12px)}
+.ihstats b{font-size:clamp(10.66px,3.333vw,14.56px)}
+/* estandartes de Premios diarios y Potenciadores */
+.dban{min-height:clamp(75.44px,23.59vw,103.04px);padding-left:41%}
+.dban-art{width:44%}
+.dban-t h3{font-size:clamp(14.76px,4.615vw,20.16px);white-space:nowrap}
+.dban-t small{font-size:clamp(9.84px,3.077vw,13.44px)}
+/* Tienda */
+.scard .sc-n{font-size:clamp(11.48px,3.59vw,15.68px)}
+.scard .sc-s{font-size:clamp(8.2px,2.564vw,11.2px)}
+.scard .scart{width:clamp(60.68px,18.974vw,82.88px);height:clamp(54.12px,16.923vw,73.92px)}
+.scard .sc-buy.btn.gold{font-size:clamp(9.84px,3.077vw,13.44px)}
+/* mejoras de Inicio */
+.upt b,.upx b{font-size:clamp(11.48px,3.59vw,15.68px)}
+.upt .un{font-size:clamp(8.2px,2.564vw,11.2px)}
+/* cabecera: en los móviles más estrechos baja un poco más (hasta el 76 %) para que quepa «INVENTARIO» entero junto a las monedas */
+.sttl .stxt{font-size:clamp(9.1px,3.077vw,13.44px);padding-right:clamp(5px,2.3vw,10px)}
+.top.slim .res span,.top .res span{font-size:clamp(10.6px,3.59vw,15.7px);padding-right:clamp(1px,.77vw,3px)}
+.top.slim{gap:clamp(3px,1.28vw,5.6px)}
+.sttl .stxt{font-size:clamp(8.8px,calc(3.9vw - 2.9px),13.44px);letter-spacing:-.02em}
+.sttl .smed{margin-right:clamp(-13px,-3.3vw,-10px)}
 /* Clan: cabecera con el estandarte, pestañas (3 × 2), listas, barras, chat y casillas */
 .mico>.ic{width:42px;height:42px}
 .clcard{background:linear-gradient(135deg,#1d2a4a,#141a2c 60%,#2a2140)}
@@ -1045,6 +1081,65 @@ body{background:radial-gradient(ellipse 120% 70% at 50% 0%,#141d33,#090d17 70%) 
 .clmsg.me{align-self:flex-end;background:#22345a}
 .clmsg b{display:block;font-size:11px;color:var(--gold)}
 .clx{position:absolute;top:3px;right:3px;background:none;border:0;font-size:13px;padding:2px;opacity:.75;cursor:pointer}
+/* ---------- uniformidad: todos los carteles, botones, títulos e insignias con las mismas reglas ----------
+   (va la última para ganar a los estilos antiguos de cada pantalla, Clanes incluido)
+   · Títulos: Cinzel. En pantalla 17 px; en ventanas 20 px; los estandartes con ilustración, 18 px.
+   · Botón principal: placa dorada con marco de oro; botón normal: placa azul marino con marco de oro viejo. Sin esquinas redondeadas.
+   · Placas e insignias: fondo azul marino oscuro, borde fino de oro viejo y esquinas de 4 px (nada de píldoras redondas).
+   · Paneles y casillas: marco de oro viejo del kit; lo elegido o activo, marco de oro vivo. */
+:root{--old:#6b5228;--old2:#a07a3a;--chip:#0f172b}
+/* títulos */
+.panel h3,.modal h3,.chest .cn,.clhead b{font-family:var(--display);font-weight:700;color:#f0d79a}
+.panel h3{font-size:clamp(14px,4.36vw,19px)}
+.modal .box>h3,.modal .box h3:not(.dban-t h3){font-size:clamp(16px,5.13vw,22px)}
+.modal h4,.panel h4{font-family:var(--display);font-weight:700;color:#e6d6b0;font-size:clamp(12px,3.85vw,16px)}
+.unl h3{font-size:clamp(18px,5.6vw,24px)}
+/* botón principal (dorado) */
+.btn.gold:not(.sc-buy){border:7px solid transparent;border-radius:0;border-image:var(--fr-o) 48 / 7px stretch;background:linear-gradient(180deg,#f0c260,#c48f31 55%,#a8761f);background-clip:padding-box;color:#1b1406;box-shadow:0 2px 6px rgba(0,0,0,.45);text-shadow:0 1px 0 rgba(255,235,180,.45);padding:4px 12px}
+.btn.gold:not(.sc-buy):disabled{filter:grayscale(.7) brightness(.7)}
+.btn.sm{font-size:clamp(10.5px,3.33vw,13px)}
+.btn:not(.sm){font-size:clamp(12px,3.85vw,15px)}
+.btn.sm.on,.ctrl .btn.on{border-image-source:var(--fr-o);background:linear-gradient(180deg,#2b2312,#15110a);background-clip:padding-box;color:#f3e3c0}
+/* placas e insignias */
+.pill,.clrole,.sc-tag,.mbadge,.mbadge.g,.ibl,.sc-lim{border-radius:4px}
+.pill{background:var(--chip);border:1px solid var(--old);color:#d9c79a;font-weight:800}
+.scard .sc-tag{background:#1d3a26;border:1px solid #5fbf74;color:#9df0ae}
+.clrole{background:var(--chip)}
+.nb,.lootn{font-size:10px;font-weight:800;border-radius:8px;background:#c9302c;box-shadow:0 0 0 1.5px #0b0c12}
+/* cerrar ventanas: cuadrado con marco, como el resto de botones */
+.modal .xclose{border-radius:0;border:6px solid transparent;border-image:var(--fr-h) 48 / 6px stretch;background:var(--navy,#131c33);background-clip:padding-box;color:#f0d79a;width:34px;height:34px;font-size:14px;line-height:1}
+/* paneles antiguos: ofertas, casillas del Pase, fichas de la Sala de jefes, filas y chat de Clanes */
+.chest{border:11px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 11px stretch;background:var(--plate);background-clip:padding-box;padding:4px 6px}
+.chest.offer{border-image-source:var(--fr-o);box-shadow:0 0 12px rgba(232,176,74,.25)}
+.pcell{border-radius:0;border:6px solid transparent;border-image:var(--fr-h) 48 / 6px stretch;background:#0f172b;background-clip:padding-box}
+.htile{border-radius:0;border:7px solid transparent;border-image:var(--fr-h) 48 / 7px stretch;background:radial-gradient(circle at 50% 40%,#ffffff10,transparent 70%),#0f172b;background-clip:padding-box}
+.htile.sel{border-image-source:var(--fr-o)}
+.clrow{border:9px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 9px stretch;background:var(--plate);background-clip:padding-box;padding:4px 6px}
+.clrow.me{border-image-source:var(--fr-o)}
+.clmsg{border-radius:6px;border-color:#26324f;background:#0f172b}
+.clmsg.me{background:#1a2a4c;border-color:#3a4f7a}
+.clbar{border-radius:5px;border-color:var(--old);background:#0a1020}
+/* filtros de rareza (Forja y Romper): placas con el color de su rareza */
+.rt,button.rt{border-radius:4px;background:var(--chip)}
+button.rt.on{background:color-mix(in srgb,var(--rc,var(--gold)) 22%,#0f172b)}
+/* campos de texto */
+input:not([type=checkbox]):not([type=range]),select,textarea,.clin{border-radius:0;border:6px solid transparent;border-image:var(--fr-h) 48 / 6px stretch;background:#0b1222;background-clip:padding-box;color:#e3e9fb}
+/* Elegir héroe: título y tarjetas con el mismo estilo */
+.ccard2{border-radius:0;border:10px solid transparent;border-image:var(--fr-h) 48 / 10px stretch;background:radial-gradient(circle at 50% 30%,#ffffff0d,transparent 70%),var(--plate);background-clip:padding-box}
+.ccard2.on,.ccard2[aria-pressed="true"]{border-image-source:var(--fr-o);box-shadow:0 0 14px rgba(232,176,74,.35)}
+.ccard2 .cn{color:#f0d79a}
+/* conjunto del Inventario: placa como las demás */
+.ihset{border-radius:4px;background:var(--chip)}
+/* tarjeta de Clan en Modos: con su ilustración de fondo como las demás no hay; fondo azul con el mismo marco */
+.clcard{background:linear-gradient(135deg,#1d2a4a,#141a2c 60%,#2a2140)}
+/* portada y Elegir héroe */
+.hero-title,.boot b{font-family:var(--display);font-weight:900;color:#f3d48a;text-shadow:0 2px 0 #000,0 0 18px rgba(232,176,74,.25);letter-spacing:.5px}
+.scard .sc-tag{border-radius:4px}
+.gcell .gl{border-radius:4px}
+.pill{font-family:var(--body)}
+#pNameIn,.nameinp{border-radius:0;border:6px solid transparent;border-image:var(--fr-h) 48 / 6px stretch;background:#0b1222;background-clip:padding-box;color:#e3e9fb}
+/* lista de piezas en la ficha de un objeto: placa con el color de su rareza a la izquierda */
+.wline{border-radius:4px;background:var(--chip);border:1px solid #26324f;border-left:3px solid var(--rc)}
 </style>
 
 <div class="app" id="app"></div>
@@ -1055,7 +1150,6 @@ body{background:radial-gradient(ellipse 120% 70% at 50% 0%,#141d33,#090d17 70%) 
   <button role="tab" data-tab="mis">Misiones</button>
   <button role="tab" data-tab="shop">Tienda</button>
 </div></nav>
-<div class="upstrip" id="upFab" hidden></div>
 <div id="modal"></div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -1067,7 +1161,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610210946-5409c5f';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610211822-9561a30';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }

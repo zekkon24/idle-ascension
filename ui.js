@@ -387,6 +387,9 @@ let navLockKey='';
 function navLocks(){ const k=NAV_LOCK.map(x=>x==='shop'&&!CFG.shopTab?0:G.modeOpen(x)?1:0).join(''); if(k===navLockKey&&document.querySelector('.nav [data-tab="up"]')) return; navLockKey=k;
   NAV_LOCK.forEach((x,i)=>{ const b=document.querySelector(`.nav [data-tab="${x}"]`); if(b) b.hidden=k[i]!=='1' }); if(NAV_LOCK.includes(tab)&&!G.modeOpen(tab)) tab='up' }
 const navSet=(k,n,kind)=>{ const b=document.querySelector(`.nav [data-tab="${k}"]`); if(b) setHTML(b,`<span class="ni">${NAVI[k]?UI(NAVI[k],'uimg ico'):IC(ICONS[k])}${n?`<sup class="nb${kind?' dot '+kind:''}">${kind?'':n}</sup>`:''}</span><span class="nl">${NAVL[k]}</span>`) };
+// altura real de la barra de abajo (cambia con el ancho del móvil y la zona segura): el Inicio deja ese hueco y nada queda debajo
+{ const nv=document.getElementById('nav'), put=()=>{ if(nv&&!nv.hidden) document.documentElement.style.setProperty('--navh',nv.offsetHeight+'px') };
+  if(nv&&window.ResizeObserver) new ResizeObserver(put).observe(nv); window.addEventListener('resize',put); }
 function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pantalla nueva
   $('#app').innerHTML=`
   <div class="top"><span class="av" id="avatar" aria-hidden="true"></span><div class="uname" id="uName"></div><b class="sttl" id="scrT"></b>
@@ -396,6 +399,7 @@ function renderShell(){ avKey=null;   // el retrato se vuelve a pintar en la pan
   <div class="hero"><div id="evoSlot"></div>
     </div>
   <div class="stage"><canvas id="cv" width="600" height="220"></canvas><div class="enc" id="enc" aria-hidden="true"></div><div class="vshud" id="vsHud" hidden><div class="vsw me"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gMe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe2a9"/><stop offset=".45" stop-color="#6cc47a"/><stop offset="1" stop-color="#3d8a4b"/></linearGradient><clipPath id="cpMe"><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z"/></clipPath></defs><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="trk"/><g clip-path="url(#cpMe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M11,1 H199 L187,21 H11 A10,10 0 0 1 11,1 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><i class="vssh"></i><div class="vsst" id="stMe"></div></div><div class="vsc" id="vsC"><small></small><b></b></div><div class="vsw foe"><svg class="vsv" viewBox="0 0 200 22" preserveAspectRatio="none"><defs><linearGradient id="gFoe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f29a93"/><stop offset=".45" stop-color="#e2605a"/><stop offset="1" stop-color="#9b3a35"/></linearGradient><clipPath id="cpFoe"><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z"/></clipPath></defs><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="trk"/><g clip-path="url(#cpFoe)"><rect class="tr" y="0" height="22" width="0"/><rect class="fl" y="0" height="22" width="0"/><rect class="shn" x="0" y="2" width="200" height="6"/></g><path d="M1,1 H189 A10,10 0 0 1 189,21 H13 Z" class="frm" vector-effect="non-scaling-stroke"/></svg><div class="vsst" id="stFoe"></div></div></div><span class="fasetxt" id="faseTxt"></span><div class="skbar" id="skBar"></div><div class="sktip" id="skTip" hidden></div><div id="skMode"></div><button class="evobtn" id="evoBtn" data-act="evoOpen" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Evolucionar</button><div class="sidebtns"><button class="calbtn" id="dailyBtn" data-act="dailyOpen" aria-label="Premios diarios" title="Premios diarios">${UI('btn_premios','bimg')}<i class="lootn" id="dailyN" hidden>!</i></button><button class="calbtn boostbtn" id="boostBtn" data-act="boostOpen" aria-label="Potenciadores" title="Potenciadores">${UI('btn_pocion','bimg')}<span class="boosttime" id="boostTime" hidden></span></button><button class="calbtn repbtn" id="repBtn" data-act="repeatFase" aria-label="Repetir fase" aria-pressed="false" title="Repetir fase">${UI('btn_repetir','bimg')}</button></div></div>
+  <div class="upstrip" id="upFab" hidden></div>   <!-- barra de mejoras: debajo del escenario, dentro del juego (nunca tapa las habilidades) -->
   </div>
   <div id="tab"></div>`;
   for(const k in NAVL) if(k!=='dev') navSet(k,0);
@@ -511,7 +515,7 @@ function updateHUD(){
   const h=G.heroStats(), B=G.B;
   const ev=G.inEvent();
   // en Inicio: retrato, nombre y dinero; en las demás pantallas, solo el dinero en una barra fina fija arriba (como en los RPG de móvil); luchando, nada
-  { const tp=document.querySelector('.top'); if(tp){ tp.hidden=tab==='up'&&ev; tp.classList.toggle('slim',tab!=='up'); const t=$('#scrT'), nt=((tab==='ev'&&{campana:'Campaña',eventos:'Eventos',pvp:'PvP',torre:'Torre'}[modView])||NAVL[tab]||'').toUpperCase(); const ik=(tab==='ev'&&{campana:'modo_campana',eventos:'modo_mazmorra',pvp:'modo_pvp',torre:'modo_torre'}[modView])||NAVI[tab]||''; if(t&&t.dataset.k!==nt+ik){ t.dataset.k=nt+ik; t.innerHTML=(ik?`<span class="smed">${UI(ik)}</span>`:'')+`<span class="stxt">${nt}</span>` } } }
+  { const tp=document.querySelector('.top'); if(tp){ tp.hidden=tab==='up'&&ev; tp.classList.toggle('slim',tab!=='up'); const t=$('#scrT'), nt=((tab==='ev'&&{campana:'Campaña',eventos:'Eventos',pvp:'PvP',torre:'Torre'}[modView])||NAVL[tab]||'').toUpperCase(); const ik=(tab==='ev'&&{campana:'modo_campana',eventos:'modo_mazmorra',pvp:'modo_pvp',torre:'modo_torre'}[modView])||NAVI[tab]||''; if(t&&t.dataset.k!==nt+ik){ t.dataset.k=nt+ik; t.innerHTML=(ik?`<span class="smed">${UI(ik)}</span>`:'')+`<span class="stxt">${nt}</span>`; fitTitle() } } }
    // el nivel solo cuenta farmeando: en eventos, Torre y PvP no se ve   // retrato, nombre y dinero: solo en Inicio farmeando (en el resto ocupa sitio)
   // abajo a la derecha: la fase (o, en un evento, el tiempo y la puntuación)
   $('#faseTxt').classList.add('top');   // debajo de tu barra de vida (los iconos de abajo a la derecha quedan libres)
@@ -576,6 +580,13 @@ acts({
   repeatFase:()=>{ if(G.inEvent()) return; const on=!S.repF; G.setRepeat(on); haptic('light'); toast(on?`Repitiendo la fase ${S.repF}`:'Vuelves a subir de fase'); updateHUD() },
   autoSkills:()=>{ G.setOpt('autoSkills',S.opt&&S.opt.autoSkills===false); toast(S.opt.autoSkills===false?'Habilidades: solo a mano':'Habilidades automáticas en campaña'); renderTab() },
 });
+
+// título de la cabecera: si no cabe entre el medallón y las monedas, la letra baja poco a poco hasta que quepa (nunca se corta)
+function fitTitle(){ const x=$('#scrT .stxt'), r=$('.top .res'); if(!x||!r) return; x.style.fontSize='';
+  const room=()=>r.getBoundingClientRect().left-x.getBoundingClientRect().left-4; let f=parseFloat(getComputedStyle(x).fontSize), n=0;
+  while(x.getBoundingClientRect().width>room()&&f>7&&n++<20){ f-=.5; x.style.fontSize=f+'px' } }
+window.addEventListener('resize',()=>fitTitle());
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>fitTitle());
 /* ---------- pestañas: dibujar la pantalla abierta ---------- */
 // entrada suave de la pantalla nueva (al cambiar de pestaña o de sección)
 let lastView='';
@@ -1837,7 +1848,7 @@ if(window.Telemetry) Telemetry.onReward=list=>{ const paid=list.some(r=>/^stars:
 let pickCls=null;
 const clsImg=k=>{ const src=window.ART&&ART.spriteSrc(k); return src?`<img src="${src}" alt="" width="64" height="64">`:classSVG(k) };
 function renderSelect(){
-  $('#nav').hidden=true; $('#upFab').hidden=true;
+  $('#nav').hidden=true; { const f=$('#upFab'); if(f) f.hidden=true; }
   $('#app').classList.remove('home');
   const cards=Object.entries(CFG.classes).map(([k,c])=>`<button class="ccard2${pickCls===k?' on':''}" data-act="pickCls" data-c="${k}" style="--cc:${c.color}" aria-pressed="${pickCls===k}"><span class="cimg">${clsImg(k)}</span><span class="cn">${clsLabel(k)}</span><span class="cr">${c.role}</span></button>`).join('');
   const P=pickCls&&CFG.classes[pickCls], sk=P&&CFG.kit[pickCls].base.skills[0];
