@@ -35,14 +35,17 @@ function createGame(opts){
   function newState(cls,name){
     return {v:3,cls,name:cleanName(name),lvl:1,xp:0,gold:0,tokens:0,won:0,withdrawn:0,up:{atk:0,hp:0,df:0,spd:0},
       best:0,fase:1,wave:1,push:true,autoPush:true,farmClears:0,repF:null,   // repF: fase que se repite con el botón «Repetir fase» (null: sube sola)
-      gear:{arma:[1,0,0,0,0,0],armadura:[0,0,0,0,0,0],anillo:[0,0,0,0,0,0],amuleto:[0,0,0,0,0,0]},boxT:0,boxP:{free:{mid:0,top:0}},boxDay:null,   // gear: copias de cada rareza en cada hueco (la Común del arma es de regalo; las de los demás, al abrirse) · boxT: tickets de invocación · boxP: contadores de la garantía (pity) de la caja, una para todos los huecos
+      gear:{arma:[1,0,0,0,0,0],armadura:[0,0,0,0,0,0],anillo:[0,0,0,0,0,0],amuleto:[0,0,0,0,0,0]},gearNv:{arma:[0,0,0,0,0,0],armadura:[0,0,0,0,0,0],anillo:[0,0,0,0,0,0],amuleto:[0,0,0,0,0,0]},gearEq:{arma:0,armadura:null,anillo:null,amuleto:null},gearNew:{},mineral:0,minF:0,chatarra:0,boxT:0,boxP:{free:{mid:0,top:0}},boxDay:null,   // gear: copias de cada rareza en cada hueco (la Común del arma es de regalo; las de los demás, al abrirse) · boxT: tickets de invocación · boxP: contadores de la garantía (pity) de la caja, una para todos los huecos
       opt:{},legacy:null,   // legacy: lo que tenía una partida antigua de objetos (armas, cofres, chatarra), apartado sin borrarlo
       startDay:null,cardUntil:0,vipUntil:0,          // startDay: día en que empezó la partida (para los rivales simulados)
-      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{},tickets:0,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,bossTickets:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{lvl:0,xp:0},
+      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{0:0},essF:1,tal:{},reto:0,selF:1,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{lvl:0,xp:0},
       stats:{deposited:0,withdrawNet:0,adGold:0,ads:0,offGold:0}}; // registro para la base de datos: tokens comprados, $ retirados (neto), oro de anuncios, anuncios vistos, oro sin conexión
   }
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
     if(!st||!CFG.classes[st.cls]) return null;
+    const eq0=st.gearEq;   // (antes de rellenar lo que falta: sin ella, la partida es de antes del «equipar a mano»)
+    const essF0=st.essF;   // (lo mismo: sin ella, la partida es de antes de la Esencia segura)
+    const selF0=st.selF;   // (y sin esta, de antes de los Sellos y el Ticket de reto)
     { const G=st.grim; if(G&&G.owned){ const had=Object.keys(G.owned).length>0; st.grim={lvl:had?((st.evo||0)>=1?5:1):0,xp:0}; } }   // grimorios antiguos → la llave
     st.repF=st.repF>0?Math.min(st.repF|0,Math.max(1,(st.best|0)+1)):null; st.autoPush=!st.repF;   // sube sola de fase salvo con «Repetir fase»
     if((st.evo||0)>=1&&!st.path) st.path='A';                                                                              // evolución antigua = camino A
@@ -55,13 +58,30 @@ function createGame(opts){
     const d=newState(st.cls);
     for(const k in d) if(st[k]===undefined) st[k]=d[k];
     { const W=CFG.weapon, n=Math.max(0,Math.min(W.max,st.wlvl|0)); if(n&&st.gear&&st.gear.arma) st.gear.arma[0]=Math.max(st.gear.arma[0]||1,W.need[n]); delete st.wlvl;   // la mejora con oro de una versión de pruebas → copias de la Común
-      const g0=st.gear||{}; st.gear={}; for(const s of ['arma','armadura','anillo','amuleto']){ const a=g0[s]; st.gear[s]=W.base.map((_,i)=>Number.isFinite(a&&a[i])&&a[i]>0?Math.floor(a[i]):0); } if(!st.gear.arma[0]) st.gear.arma[0]=1;
+      const g0=st.gear||{}; st.gear={}; for(const s of ['arma','armadura','anillo','amuleto']){ const a=g0[s]; st.gear[s]=W.base.map((_,i)=>Number.isFinite(a&&a[i])&&a[i]>0?Math.floor(a[i]):0); } if(!st.gear.arma.some(x=>x>0)) st.gear.arma[0]=1;   // (la Común del arma, de regalo; si la rompiste teniendo otra, no vuelve)
+      { const g1=st.gearNv||{}, e0=eq0; st.gearNv={}; st.gearEq={};   // nivel con mineral de cada pieza (solo las que tienes, hasta su tope) y la pieza equipada
+        for(const s of ['arma','armadura','anillo','amuleto']){ const a=g1[s], c=st.gear[s], C=s==='arma'?CFG.weapon:CFG.equip[s], PL=CFG.pieceLv;
+          st.gearNv[s]=W.base.map((_,i)=>Number.isFinite(a&&a[i])&&a[i]>0&&c[i]>0?Math.min(Math.floor(a[i]),PL?PL.cap[i]||0:0):0);
+          const e=e0&&e0[s]; let r=Number.isInteger(e)&&c[e]>0?e:-1;   // (partidas de antes del «equipar a mano», o la equipada ya no está: la mejor, como se equipaba sola)
+          if(r<0){ let bp=-1; for(let i=0;i<c.length;i++){ if(!(c[i]>0)) continue; const l=W.need.reduce((k,q,ii)=>c[i]>=q?ii:k,-1), v=(C.base[i]+C.step[i]*Math.max(0,l))*(1+((PL&&PL.pct)||0)*st.gearNv[s][i]); if(v>=bp){ bp=v; r=i } } }
+          st.gearEq[s]=r>=0?r:(s==='arma'?0:null); }
+        st.gearNew=st.gearNew&&typeof st.gearNew==='object'?st.gearNew:{}; for(const k of ['mineral','chatarra']) st[k]=Number.isFinite(st[k])&&st[k]>0?Math.floor(st[k]):0; st.minF=Number.isFinite(st.minF)?Math.max(0,Math.min(1,st.minF)):0; }
       st.boxP={...d.boxP,...(st.boxP||{})}; st.boxP.free={...d.boxP.free,...(st.boxP.free||{})}; st.boxT=Math.max(0,Math.floor(st.boxT)||0); }
     st.up={...d.up,...(st.up||{})}; st.stats={...d.stats,...(st.stats||{})}; for(const k in st.up) if(!Number.isFinite(st.up[k])) st.up[k]=0;
-    for(const k of ['gold','tokens','won','withdrawn','xp','lvl','best','fase','wave','tickets','bossTickets','evm','kills','boostMs','evo','mode','cardUntil','vipUntil'])
+    for(const k of ['gold','tokens','won','withdrawn','xp','lvl','best','fase','wave','reto','evm','kills','boostMs','evo','mode','cardUntil','vipUntil'])
       if(!Number.isFinite(st[k])) st[k]=d[k];
     st.lvl=Math.max(1,st.lvl|0); st.fase=Math.max(1,st.fase|0); st.wave=Math.min(10,Math.max(1,st.wave|0));
     st.opt=st.opt||{}; st.mats=st.mats||{};
+    // Esencia única: las de los 3 modos se suman (1 a 1) en S.mats[0]
+    { let n=0; for(const k in st.mats) if(Number.isFinite(st.mats[k])&&st.mats[k]>0) n+=st.mats[k]; st.mats={0:Math.floor(n)}; }
+    // partidas de antes de la Esencia segura: reciben la de los élites (1) y JEFES (3) que ya vencieron, una sola vez
+    if(!essF0){ const E=CFG.essFirst||{}, cap=(CFG.phaseCap||150), md=Number.isFinite(st.mode)?st.mode:0, bt=Number.isFinite(st.best)?st.best:0; let n=0;
+      for(let m=0;m<=md;m++){ const top=m<md?cap:Math.min(cap,bt); for(let f=10;f<=top;f+=10) n+=(f%30===0?E.jefe:E.elite)||0; }
+      st.mats[0]+=n; st.essF=1; }
+    // Sellos y Ticket de reto: los emblemas valen 10 Sellos; los tickets de Mazmorra y Jefe pasan a Tickets de reto (1 a 1) y los de PvP, 1 por cada 3
+    if(!selF0){ const n=x=>Math.max(0,Math.floor(Number(x)||0)); st.evm=n(st.evm)*10; st.reto=n(st.reto)+n(st.tickets)+n(st.bossTickets)+Math.floor(n(st.pvpTickets)/3); st.pvpTickets=n(st.pvpTickets)%3; st.selF=1; }
+    delete st.tickets; delete st.bossTickets; st.reto=Math.max(0,Math.floor(st.reto)||0);
+    { const T=st.tal&&typeof st.tal==='object'?st.tal:{}; st.tal={}; for(const t of ((CFG.talents||{}).list||[])){ const v=Math.floor(Number(T[t.k])||0); if(v>0) st.tal[t.k]=Math.min(v,10000); } }
     if(st.boostUntil!=null){ st.boostMs=Math.max(0,st.boostUntil-nowFn()); delete st.boostUntil; } st.boostMs=st.boostMs||0; st.evo=st.evo||0; st.absorb=st.absorb||{}; st.mode=st.mode||0; delete st.rare;
     delete st.pity; delete st.dropDay; delete st.firstDone; delete st.gps; delete st.xps; delete st.calLast; delete st.mis; delete st.week; // (calendario y misiones ya no existen)
     if(st.calStart!=null&&st.startDay==null) st.startDay=st.calStart; delete st.calStart;
@@ -91,6 +111,7 @@ function createGame(opts){
   function newGame(cls,name){ S=newState(cls,name); HS=null; S.startDay=dayKey(); S.boxT=CFG.box.welcome; startWave(); track('start',{cls,name:S.name}); emit('change'); return S }
   /* ---------- fórmulas ---------- */
   const hasCard=()=>dayKey()<S.cardUntil, hasVip=()=>dayKey()<S.vipUntil;
+  const goldMul=()=>(hasCard()?1+CFG.cardGold:1)*(1+talBonus('gold'));   // oro de los enemigos (también sin conexión): Tarjeta mensual y talento Fortuna
   const statsDirty=()=>{HS=null};
   const heroStats=()=>HS||(HS=computeStats());
   // niveles ganados (contando lo que valen): los de después de cada evolución valen grow[i] × lo de antes (en vida, daño y defensa)
@@ -105,13 +126,14 @@ function createGame(opts){
     // extra fijo (vida, defensa, crítico o daño a jefes; no sube con el nivel); el set, vida, daño y defensa (ss)
     const lg=lvlGain(S.lvl,S.evo,S.cls), ar=1+slotV('armadura'), ss=1+setInfo().st, ring=slotV('anillo');
     return {
-      hp:(c.hp+(A.hp||0)+c.ghp*lg)*Math.pow(U.hp.mult,u.hp)*evoBonus('hp')*(1+extraOf('hp'))*ar*ss*(pvpOn()&&B.hpM||1),
-      atk:(c.atk+(A.atk||0)+c.gatk*lg)*Math.pow(U.atk.mult,u.atk)*evoBonus('atk')*(1+weaponBonus())*ss*(KS.atk||1),
-      df:(c.df+(A.df||0)+c.gdf*lg)*Math.pow(U.df.mult,u.df)*evoBonus('df')*(1+extraOf('df'))*ar*ss,
+      // talentos (heroe/talentos.js): Fuerza, Vitalidad y Coraza multiplican; Cazador suma daño a élites y JEFES; Sabiduría, experiencia
+      hp:(c.hp+(A.hp||0)+c.ghp*lg)*Math.pow(U.hp.mult,u.hp)*evoBonus('hp')*(1+extraOf('hp'))*ar*ss*(1+talBonus('hp'))*(pvpOn()&&B.hpM||1),
+      atk:(c.atk+(A.atk||0)+c.gatk*lg)*Math.pow(U.atk.mult,u.atk)*evoBonus('atk')*(1+weaponBonus())*ss*(1+talBonus('atk'))*(KS.atk||1),
+      df:(c.df+(A.df||0)+c.gdf*lg)*Math.pow(U.df.mult,u.df)*evoBonus('df')*(1+extraOf('df'))*ar*ss*(1+talBonus('df')),
       spd:c.spd*Math.pow(U.spd.mult,u.spd),
       cr:Math.min(CFG.caps.cr,c.cr+extraOf('cr')+ring), cd:c.cd+extraOf('cd')+ring*(CFG.equip.anillo.cd||0), sk:slotV('amuleto'),
-      ls:Math.min(CFG.caps.ls,extraOf('ls')), bd:extraOf('bd'), ranged:c.ranged,
-      regen:c.regen||0, dmgTaken:c.dmgTaken||1, xpMult:1, fx:weaponFx(),   // fx: el efecto del arma Épica o Legendaria (combate/arma-efecto.js)
+      ls:Math.min(CFG.caps.ls,extraOf('ls')), bd:extraOf('bd')+talBonus('bd'), ranged:c.ranged,
+      regen:c.regen||0, dmgTaken:c.dmgTaken||1, xpMult:1+talBonus('xp'), fx:weaponFx(),   // fx: el efecto del arma Épica o Legendaria (combate/arma-efecto.js)
     };
   }
   // Torre: héroe único (CFG.tower.hero) + solo las cartas, grimorios y maldiciones de la partida.
@@ -135,16 +157,23 @@ function createGame(opts){
   const slotOpen=s=>s==='arma'||!!(S&&((S.mode||0)>0||(S.evo||0)>=1||(S.best||0)>=slotCfg(s).open));
   const gearCopies=s=>S.gear[s||'arma'];
   const gearLvl=n=>{ const need=CFG.weapon.need; let l=-1; for(let i=0;i<need.length;i++) if(n>=need[i]) l=i; return l };
-  const slotVal=(s,r,l)=>{ const C=slotCfg(s); return C.base[r]+C.step[r]*l };
+  // nivel (Nv) de cada pieza con mineral (CFG.pieceLv, S.gearNv): aparte del +0…+5 de las copias; cada nivel suma pct del valor principal
+  const PL=()=>CFG.pieceLv;
+  const nvOf=(s,r)=>{ const a=S&&S.gearNv&&S.gearNv[s]; return a&&a[r]>0?a[r]|0:0 };
+  const nvCap=r=>PL()?PL().cap[r]||0:0;
+  const slotVal=(s,r,l,nv)=>{ const C=slotCfg(s); return (C.base[r]+C.step[r]*l)*(1+(PL()?PL().pct:0)*(nv||0)) };
   const gearDmg=(r,l)=>slotVal('arma',r,l);
-  // la mejor pieza de un hueco (a igualdad, la de más rareza); -1 si no tiene ninguna (el arma, la Común)
-  function bestLine(c,s){ s=s||'arma'; c=c||gearCopies(s); let best=-1,bp=-1; for(let r=0;r<c.length;r++){ const l=gearLvl(c[r]); if(l<0) continue; const p=slotVal(s,r,l); if(p>=bp){ bp=p; best=r } } return best<0&&s==='arma'?0:best }
-  // la pieza equipada en un hueco: {r, l, v} (rareza, nivel y valor), o null (hueco cerrado o vacío)
-  function piece(s){ if(!S||!S.gear||!slotOpen(s)) return null; const c=gearCopies(s); if(!c) return null; const r=bestLine(c,s); if(r<0) return null; const l=gearLvl(c[r]); return l<0?null:{r,l,v:slotVal(s,r,l)} }
+  // la mejor pieza de un hueco, contando su nivel (a igualdad, la de más rareza); -1 si no tiene ninguna (el arma, la Común)
+  function bestLine(c,s){ s=s||'arma'; c=c||gearCopies(s); let best=-1,bp=-1; for(let r=0;r<c.length;r++){ const l=gearLvl(c[r]); if(l<0) continue; const p=slotVal(s,r,l,nvOf(s,r)); if(p>=bp){ bp=p; best=r } } return best<0&&s==='arma'?0:best }
+  // la pieza equipada de un hueco (su rareza): la que eligió el jugador (S.gearEq; se equipa a mano). Sin una elección válida (partidas de antes, fantasmas de PvP,
+  // herramientas de prueba), la mejor
+  function eqR(s,c){ c=c||gearCopies(s); const e=S&&S.gearEq?S.gearEq[s]:null; if(e!=null&&c&&gearLvl(c[e])>=0) return e; return bestLine(c,s) }
+  // la pieza equipada en un hueco: {r, l, nv, v} (rareza, +N de copias, nivel con mineral y valor), o null (hueco cerrado o vacío)
+  function piece(s){ if(!S||!S.gear||!slotOpen(s)) return null; const c=gearCopies(s); if(!c) return null; const r=eqR(s,c); if(r<0) return null; const l=gearLvl(c[r]); if(l<0) return null; const nv=nvOf(s,r); return {r,l,nv,v:slotVal(s,r,l,nv)} }
   const slotV=s=>{ const p=piece(s); return p?p.v:0 };
   // el extra fijo de cada pieza (el de su rareza, su hueco y tu clase): {s: estadística, v: valor}; no depende del nivel. Cuentan los de todas las piezas equipadas.
   const slotExtra=(s,r)=>{ const e=S&&slotCfg(s).extra&&slotCfg(s).extra[S.cls]; return e&&e[r]&&typeof e[r]==='object'?e[r]:null };
-  const weaponExtra=(r)=>slotExtra('arma',r==null?bestLine():r);
+  const weaponExtra=(r)=>slotExtra('arma',r==null?eqR('arma'):r);
   const XNAME={hp:'Vida',df:'Defensa',cr:'Crítico',bd:'Daño a jefes'};
   const extraOf=(st)=>{ let v=0; for(const s of SLOTS){ const p=piece(s), e=p&&slotExtra(s,p.r); if(e&&e.s===st) v+=e.v; } return v };
   const weaponBonus=()=>{ if(!S||!S.gear) return CFG.weapon.base[0]; const p=piece('arma'); return p?p.v:CFG.weapon.base[0] };
@@ -155,7 +184,7 @@ function createGame(opts){
   // el efecto de las armas Épica y Legendaria (CFG.weapon.fx; lo que hace, en combate/arma-efecto.js): {id, name, …números} de la rareza r (o de la equipada, con lo
   // que le cambie el set), o null. Un número puede ser distinto por camino, {A, B} (sin evolucionar, el de A); ch (cargas por efecto) es 1 si no se dice
   const wfxPick=(k,v,p)=>v&&typeof v==='object'&&!Array.isArray(v)?(v[p]!=null?v[p]:k==='ch'?1:v.A):v;
-  const weaponFx=(r)=>{ const F=S&&CFG.weapon.fx&&CFG.weapon.fx[S.cls], eq=r==null; if(eq) r=S&&S.gear?bestLine():0; const L=F&&(r===3?F.ep:r===4?F.lg:null); if(!L) return null;
+  const weaponFx=(r)=>{ const F=S&&CFG.weapon.fx&&CFG.weapon.fx[S.cls], eq=r==null; if(eq) r=S&&S.gear?eqR('arma'):0; const L=F&&(r===3?F.ep:r===4?F.lg:null); if(!L) return null;
     const p=S.evo>=1&&S.path==='B'?'B':'A', o={id:F.id,name:F.name,r}; for(const [k,v] of Object.entries({ch:F.ch,...L})) if(v!=null) o[k]=wfxPick(k,v,p);
     const f=eq&&setInfo().fx;   // set de 4 Épicas o mejores: sale más a menudo; de 4 Legendarias, además más cargas (el clon dura más)
     if(f){ const hits=o.id==='tajo'||o.id==='llama'||o.id==='reflejo'; if(f.every) o.every=hits?Math.max(1,Math.round(o.every*f.every)):Math.round(o.every*f.every*100)/100;
@@ -177,26 +206,29 @@ function createGame(opts){
     } return '' }
   const fxInfo=r=>{ const F=CFG.weapon.fx&&CFG.weapon.fx[S.cls], L=F&&(r===3?F.ep:r===4?F.lg:null); return L?{id:F.id,name:F.name,desc:weaponFxDesc({id:F.id,ch:F.ch,...L},S.cls)}:null };   // (el texto, con los números de los dos caminos)
   // poder del arma en daño equivalente: su daño, su extra (weapon.extraPower) y su efecto (fxPower)
-  const weaponPower=()=>{ const p=piece('arma')||{r:0,l:0}, W=CFG.weapon; return (1+gearDmg(p.r,p.l))*(1+W.extraPower[p.r])*(1+((W.fxPower||[])[p.r]||0))-1 };
+  const weaponPower=()=>{ const p=piece('arma')||{r:0,l:0,v:CFG.weapon.base[0]}, W=CFG.weapon; return (1+p.v)*(1+W.extraPower[p.r])*(1+((W.fxPower||[])[p.r]||0))-1 };
   // poder de todo el equipo en daño del arma equivalente, como lo cuenta el héroe de referencia (lo que rinde en la campaña, medido con el ritmo): cada pieza vale
   // power × el daño del arma de su rareza y nivel, con la mitad de su extra y, el arma, ¾ de su efecto (la Legendaria, 70 %); los sets, lo que suman a vida, daño y
   // defensa (×2: valen en ataque y en defensa)
   const REF_FX={3:0.75,4:0.7};
   const pieceRef=(s,p)=>{ if(!p) return 0; const W=CFG.weapon, k=s==='arma'?1:slotCfg(s).power;
-    return (1+k*gearDmg(p.r,p.l))*(1+0.5*k*W.extraPower[p.r])*(s==='arma'?1+(REF_FX[p.r]||0)*((W.fxPower||[])[p.r]||0):1)-1 };
+    return (1+k*gearDmg(p.r,p.l)*(1+(PL()?PL().pct:0)*(p.nv||0)))*(1+0.5*k*W.extraPower[p.r])*(s==='arma'?1+(REF_FX[p.r]||0)*((W.fxPower||[])[p.r]||0):1)-1 };
   const gearPower=()=>{ let m=1; for(const s of SLOTS) m*=1+pieceRef(s,piece(s)); return m*(1+2*setInfo().st)-1 };
   // un hueco para la pantalla: la pieza equipada y una línea por rareza (copias, nivel, valor, extra y, en el arma, el efecto)
-  function gear(s){ s=SLOTS.includes(s)?s:'arma'; if(!S) return null; const C=slotCfg(s), W=CFG.weapon, c=gearCopies(s), names=C.names[S.cls], rb=bestLine(c,s), r=Math.max(0,rb), l=gearLvl(c[r]);
-    const lines=[0,1,2,3,4].map(i=>{ const li=gearLvl(c[i]), e=slotExtra(s,i), v=slotVal(s,i,Math.max(0,li));
-      return {r:i,id:CFG.rar[i].id,rar:CFG.rar[i].name,name:names[i],copies:c[i],owned:li>=0,lvl:li,v,dmg:v,extra:e?{s:e.s,name:XNAME[e.s],v:e.v}:null,fx:s==='arma'?fxInfo(i):null,toNext:li<0?W.need[0]-c[i]:li<W.max?W.need[li+1]-c[i]:0}});
-    const has=rb>=0&&l>=0, v=has?slotVal(s,r,l):0, nextV=has&&l<W.max?slotVal(s,r,l+1):null;
-    return {slot:s,slotName:SNAME[s],open:slotOpen(s),openAt:C.open||0,has,name:names[r],rar:CFG.rar[r].name,rarId:CFG.rar[r].id,r,lvl:l,max:W.max,v,dmg:v,cd:s==='anillo'?v*(C.cd||0):0,
-      extra:lines[r].extra,fx:lines[r].fx,copies:c[r],toNext:has&&l<W.max?W.need[l+1]-c[r]:0,nextV,nextDmg:nextV,lines} }
+  // (por línea: nv, nvCap y nvCost, el nivel con mineral; eq, si es la equipada; extra, copias que pasan del +5; scrap, la chatarra al romperla entera)
+  function gear(s){ s=SLOTS.includes(s)?s:'arma'; if(!S) return null; const C=slotCfg(s), W=CFG.weapon, c=gearCopies(s), names=C.names[S.cls], rb=eqR(s,c), r=Math.max(0,rb), l=gearLvl(c[r]), MAXC=W.need[W.max];
+    const lines=[0,1,2,3,4].map(i=>{ const li=gearLvl(c[i]), e=slotExtra(s,i), nv=nvOf(s,i), v=slotVal(s,i,Math.max(0,li),nv);
+      return {r:i,id:CFG.rar[i].id,rar:CFG.rar[i].name,name:names[i],copies:c[i],owned:li>=0,lvl:li,nv,nvCap:nvCap(i),nvCost:li>=0?nvCost(s,i):null,eq:li>=0&&i===rb,v,dmg:v,
+        extra:e?{s:e.s,name:XNAME[e.s],v:e.v}:null,fx:s==='arma'?fxInfo(i):null,toNext:li<0?W.need[0]-c[i]:li<W.max?W.need[li+1]-c[i]:0,over:Math.max(0,c[i]-MAXC),
+        scrap:li>=0?c[i]*scrapPer(i)+0:0,refund:li>=0?Math.floor(nvSpent(i,nv)*(PL()?PL().refund:0)):0}});
+    const has=rb>=0&&l>=0, nv=has?nvOf(s,r):0, v=has?slotVal(s,r,l,nv):0, nextV=has&&l<W.max?slotVal(s,r,l+1,nv):null;
+    return {slot:s,slotName:SNAME[s],open:slotOpen(s),openAt:C.open||0,has,name:names[r],rar:CFG.rar[r].name,rarId:CFG.rar[r].id,r,lvl:l,nv,max:W.max,v,dmg:v,cd:s==='anillo'?v*(C.cd||0):0,
+      extra:lines[r].extra,fx:lines[r].fx,copies:c[r],toNext:has&&l<W.max?W.need[l+1]-c[r]:0,nextV,nextDmg:nextV,lines,isNew:!!(S.gearNew&&S.gearNew[s])} }
   const weapon=()=>gear('arma');
   const gearSlots=()=>S?SLOTS.map(gear):[];
   // abre los huecos que ya tocan (por la fase de Normal, o al pasar a Pesadilla): su Común de regalo y box.slotGift tickets (una vez: si aún no tenía ninguna copia)
   function gearOpenCheck(){ if(!S||!S.gear) return false; let any=false;
-    for(const s of SLOTS){ if(s==='arma'||!slotOpen(s)) continue; const c=S.gear[s]; if(!c||c.some(x=>x>0)) continue; c[0]=1; S.boxT=(S.boxT||0)+(CFG.box.slotGift||0); any=true; emit('slotOpen',{slot:s,name:SNAME[s],tickets:CFG.box.slotGift||0}); }
+    for(const s of SLOTS){ if(s==='arma'||!slotOpen(s)) continue; const c=S.gear[s]; if(!c||c.some(x=>x>0)) continue; c[0]=1; S.gearEq=S.gearEq||{}; S.gearEq[s]=0; S.boxT=(S.boxT||0)+(CFG.box.slotGift||0); any=true; emit('slotOpen',{slot:s,name:SNAME[s],tickets:CFG.box.slotGift||0}); }
     if(any) statsDirty(); return any }
   // --- la caja ---
   const boxT=()=>CFG.box.free[Math.min(S.mode||0,CFG.box.free.length-1)];
@@ -220,23 +252,74 @@ function createGame(opts){
   // abierto al azar; su rareza en cascada como la caja gratis del modo, sin garantía y con la máxima × top
   const dropP=f=>{ const D=CFG.box.drop, j=f%30===0, [a,b]=j?D.jefe:D.elite, f0=j?30:10, f1=j?CAP():CAP()-10; return a+(b-a)*Math.max(0,Math.min(1,(f-f0)/(f1-f0))) };
   function gearDrop(f,m){ const D=CFG.box.drop; if(!D||!S||!(rand()<dropP(f))) return null;   // (m: el modo del jefe; si no, el actual)
-    const open=SLOTS.filter(slotOpen), slot=open[Math.floor(rand()*open.length)], T=m==null?boxT():CFG.box.free[Math.min(m,CFG.box.free.length-1)], tot=T.odds.reduce((a,b)=>a+b,0); let r=-1;
-    if(rand()<T.odds[T.top.r]/tot*D.top) r=T.top.r;
+    const res={...gearPiece(m),f}; track('drop',{f,slot:res.slot,r:res.id}); emit('gearDrop',res); return res }
+  // una pieza de un hueco abierto al azar; su rareza en cascada como la caja gratis del modo m, sin garantía y con la máxima × box.drop.top (top: forzar la máxima)
+  function gearPiece(m,top){ const D=CFG.box.drop, open=SLOTS.filter(slotOpen), slot=open[Math.floor(rand()*open.length)], T=m==null?boxT():CFG.box.free[Math.min(m,CFG.box.free.length-1)], tot=T.odds.reduce((a,b)=>a+b,0); let r=-1;
+    if(top||rand()<T.odds[T.top.r]/tot*(D?D.top:1)) r=T.top.r;
     else { let left=tot-T.odds[T.top.r]; for(let i=T.top.r-1;i>0;i--){ const q=T.odds[i]; if(rand()<q/left){ r=i; break } left-=q; } if(r<0) r=0; }
-    const c=gearCopies(slot), v0=slotV(slot), l0=gearLvl(c[r]); c[r]++; const l1=gearLvl(c[r]); statsDirty();
-    const res={slot,slotName:SNAME[slot],r,id:CFG.rar[r].id,name:CFG.rar[r].name,piece:slotCfg(slot).names[S.cls][r],fresh:l0<0&&l1>=0,up:l1>l0&&l0>=0,lvl:l1,equipped:slotV(slot)>v0+1e-12,f};
-    track('drop',{f,slot,r:res.id}); emit('gearDrop',res); return res }
+    return addCopy(slot,r) }
   // n tiradas (1 a 10) del hueco «slot» (abierto), pagadas con 'ticket' u 'oro'; devuelve lo que salió en cada una. Si no llega para todas, hace las que pueda.
   function pull(n,via,slot){ if(!S) return {ok:false,why:'nogame'}; slot=SLOTS.includes(slot)?slot:'arma'; if(!slotOpen(slot)) return {ok:false,why:'closed'};
-    n=Math.max(1,Math.min(10,Math.floor(n)||1)); const T=boxT(), P=S.boxP.free, c=gearCopies(slot), res=[]; let spent=0, why=null;
+    n=Math.max(1,Math.min(10,Math.floor(n)||1)); const T=boxT(), P=S.boxP.free, res=[]; let spent=0, why=null;
     for(let i=0;i<n;i++){
       if(via==='ticket'){ if((S.boxT||0)<1){ why='tickets'; break } S.boxT--; }
       else { if(boxGoldLeft()<1){ why='limit'; break } const g=boxGoldCost(); if(S.gold<g){ why='gold'; break } S.gold-=g; spent+=g; boxDay().n++; }
-      const r=boxDraw(T,P), p0=slotV(slot), l0=gearLvl(c[r]); c[r]++; const l1=gearLvl(c[r]);
-      res.push({r,id:CFG.rar[r].id,name:CFG.rar[r].name,slot,fresh:l0<0&&l1>=0,up:l1>l0&&l0>=0,lvl:l1,equipped:slotV(slot)>p0+1e-12});
+      res.push(addCopy(slot,boxDraw(T,P)));
     }
     if(!res.length) return {ok:false,why};
     statsDirty(); track('pull',{n:res.length,via,slot,gold:Math.round(spent),r:res.map(x=>x.id).join('')}); save(); emit('pull',res); emit('change'); return {ok:true,res,why} }
+  // una copia más de la pieza r del hueco s (caja, botín o Forja). No se equipa sola: si es una pieza nueva de más rareza que la equipada, queda el aviso
+  // (S.gearNew[s], hasta que abras ese hueco) y el evento 'gearNew'. equipped: si subió el valor de la equipada (copias de esa misma pieza); extra: pasa del +5
+  function addCopy(s,r){ const c=gearCopies(s), p0=slotV(s), l0=gearLvl(c[r]); c[r]++; const l1=gearLvl(c[r]); statsDirty();
+    const fresh=l0<0&&l1>=0, better=fresh&&r>eqR(s,c), W=CFG.weapon;
+    const res={r,id:CFG.rar[r].id,name:CFG.rar[r].name,slot:s,slotName:SNAME[s],piece:slotCfg(s).names[S.cls][r],fresh,up:l1>l0&&l0>=0,lvl:l1,equipped:slotV(s)>p0+1e-12,better,extra:c[r]>W.need[W.max]};
+    if(better){ S.gearNew=S.gearNew||{}; S.gearNew[s]=1; emit('gearNew',res); }
+    return res }
+  // equipar a mano la pieza r (que tengas) del hueco s · equipar la mejor de cada hueco (herramientas, bot de ritmo)
+  function equipPiece(s,r){ if(!S||!SLOTS.includes(s)||!slotOpen(s)) return false; r=r|0; const c=gearCopies(s); if(!c||gearLvl(c[r])<0) return false;
+    S.gearEq=S.gearEq||{}; S.gearEq[s]=r; if(S.gearNew) delete S.gearNew[s]; statsDirty(); save(); emit('change'); return true }
+  function equipBest(){ if(!S||!S.gear) return; S.gearEq=S.gearEq||{}; for(const s of SLOTS){ const c=gearCopies(s), r=c?bestLine(c,s):-1; S.gearEq[s]=r>=0&&c&&gearLvl(c[r])>=0?r:(s==='arma'?0:null); } statsDirty() }
+  const seenNew=s=>{ if(S&&S.gearNew&&S.gearNew[s]){ delete S.gearNew[s]; emit('change'); } };   // (al abrir la ventana del hueco se quita el aviso)
+  // --- nivel de las piezas con mineral ---
+  const nvSpent=(r,L)=>PL()?PL().base[r]*L*(L+1)/2:0;   // mineral gastado para llegar al nivel L
+  const nvCost=(s,r)=>{ const L=nvOf(s,r); return !PL()||L>=nvCap(r)?null:Math.round(PL().base[r]*(L+1)) };
+  // sube n niveles (los que alcancen) la pieza r del hueco s; why: 'cap' (tope de su rareza) o 'mineral'
+  function nvUp(s,r,n){ if(!S||!PL()||!SLOTS.includes(s)) return {ok:false,why:'nogame'}; r=r|0; const c=gearCopies(s); if(!c||gearLvl(c[r])<0) return {ok:false,why:'owned'};
+    n=Math.max(1,Math.floor(n)||1); S.gearNv=S.gearNv||{}; const a=S.gearNv[s]=S.gearNv[s]||[0,0,0,0,0,0]; let done=0, why=null;
+    for(let i=0;i<n;i++){ const k=nvCost(s,r); if(k==null){ why='cap'; break } if((S.mineral||0)<k){ why='mineral'; break } S.mineral-=k; a[r]=(a[r]||0)+1; done++; }
+    if(!done) return {ok:false,why}; statsDirty(); save(); emit('change'); return {ok:true,n:done,nv:a[r],why} }
+  // --- romper: chatarra y la mitad del mineral gastado ---
+  const scrapPer=r=>(CFG.scrap&&CFG.scrap.per[r])||0;
+  // list: [{s, r, k}] con k 'all' (la pieza entera: todas sus copias; nunca la equipada) o 'extra' (solo las copias que pasan del +5; la pieza se queda)
+  function breakCalc(list){ const W=CFG.weapon, MAXC=W.need[W.max], all=new Set(), out=[]; let scrap=0, mineral=0, copies=0;
+    for(const x of list||[]) if(x&&x.k==='all') all.add(x.s+'|'+(x.r|0));
+    const seen=new Set(); for(const x of list||[]){ if(!x||!SLOTS.includes(x.s)) continue; const s=x.s, r=x.r|0, key=s+'|'+r, c=gearCopies(s); if(!c||!(c[r]>0)) continue;
+      if(x.k==='all'){ if(seen.has(key+'a')||r===eqR(s,c)) continue; seen.add(key+'a'); const m=Math.floor(nvSpent(r,nvOf(s,r))*(PL()?PL().refund:0)); scrap+=c[r]*scrapPer(r); mineral+=m; copies+=c[r]; out.push({s,r,k:'all',n:c[r],mineral:m}); }
+      else if(x.k==='extra'){ if(all.has(key)||seen.has(key+'e')) continue; const e=c[r]-MAXC; if(e<=0) continue; seen.add(key+'e'); scrap+=e*scrapPer(r); copies+=e; out.push({s,r,k:'extra',n:e,mineral:0}); } }
+    return {scrap,mineral,copies,list:out} }
+  function breakPieces(list){ if(!S) return {ok:false,why:'nogame'}; const R=breakCalc(list); if(!R.list.length) return {ok:false,why:'none'};
+    for(const x of R.list){ const c=gearCopies(x.s); if(x.k==='extra') c[x.r]-=x.n; else { c[x.r]=0; if(S.gearNv&&S.gearNv[x.s]) S.gearNv[x.s][x.r]=0; } }
+    S.chatarra=(S.chatarra||0)+R.scrap; S.mineral=(S.mineral||0)+R.mineral; statsDirty(); track('break',{n:R.copies,scrap:R.scrap,mineral:R.mineral}); save(); emit('change'); return {ok:true,...R} }
+  // --- Forja: 1 copia de la pieza que elijas, hasta la rareza máxima de la caja gratis del modo ---
+  const forgeMax=()=>boxT().top.r;
+  const forgeCost=r=>{ const F=CFG.forge; return {scrap:F.cost[r]||0, gold:Math.max(20,farmRate(Math.max(1,S.best)).g*60*(F.goldMin[r]||0))} };
+  function forgeInfo(){ if(!S||!CFG.forge) return null; return {max:forgeMax(),slots:SLOTS.filter(slotOpen),scrap:S.chatarra||0,gold:S.gold,
+    costs:CFG.rar.slice(0,forgeMax()+1).map((x,r)=>({r,id:x.id,name:x.name,...forgeCost(r)}))} }
+  function forgeCraft(s,r){ if(!S||!CFG.forge) return {ok:false,why:'nogame'}; if(!SLOTS.includes(s)||!slotOpen(s)) return {ok:false,why:'closed'}; r=r|0; if(r<0||r>forgeMax()) return {ok:false,why:'rar'};
+    const k=forgeCost(r); if((S.chatarra||0)<k.scrap) return {ok:false,why:'scrap'}; if(S.gold<k.gold) return {ok:false,why:'gold'};
+    S.chatarra-=k.scrap; S.gold-=k.gold; const res=addCopy(s,r); track('forge',{slot:s,r:res.id}); save(); emit('forge',res); emit('change'); return {ok:true,res} }
+  // --- mineral: por minuto de combate en la campaña (también sin conexión) × el modo ---
+  const mineMult=m=>{ const M=CFG.mineral; if(!M) return 0; const a=M.mode; return a[Math.min(m==null?(S.mode||0):m,a.length-1)]||1 };
+  function mineAdd(min){ if(!S||!CFG.mineral||!(min>0)) return 0; S.minF=(S.minF||0)+min*CFG.mineral.perMin*mineMult(); const n=Math.floor(S.minF); if(n>0){ S.minF-=n; S.mineral=(S.mineral||0)+n; } return n }
+  // botín de un élite/JEFE ya vencido (al farmear su fase o en la Sala de jefes): siempre algo de mineral; con su probabilidad, pieza (gearDrop), ticket de
+  // invocación, chatarra y Esencia
+  function bossLoot(f,m){ if(!S) return null; m=m==null?(S.mode||0):m; const k=f%30===0?'jefe':'elite', M=CFG.mineral, L=CFG.repLoot, o={f,mode:m,mineral:0,tickets:0,scrap:0,ess:0,piece:null};
+    if(M){ o.mineral=Math.round((M.rep[k]||0)*mineMult(m)); S.mineral=(S.mineral||0)+o.mineral; }
+    o.piece=gearDrop(f,m);
+    if(L){ if(rand()<(L.ticket[k]||0)){ o.tickets=1; S.boxT=(S.boxT||0)+1; }
+      const sc=L.scrap[k]; if(sc&&rand()<sc[0]){ o.scrap=sc[1]; S.chatarra=(S.chatarra||0)+sc[1]; }
+      if(rand()<(L.ess[k]||0)) o.ess=essAdd(1); }
+    emit('bossLoot',o); return o }
   /* ---------- enemigos: vida, ataque y oleadas ---------- */
   // Modos (Normal, Pesadilla, Infierno): la fase f de un modo usa los enemigos de la fase f+off
   const MODES=()=>CFG.modes||[{name:'Normal',off:0,gold:1}];
@@ -261,12 +344,16 @@ function createGame(opts){
   function enemyStats(f,w,boss,mode){
     const md=mode==null?(S?S.mode||0:0):mode, E=CFG.enemy, mc=modeCurve(md,f);
     let hp=mc.hp*(1+E.waveHp*(w-1)), atk=mc.atk, df=mc.df;
+    { const k=earlyK(md,f); if(k<1){ hp*=k; atk*=k; } }   // inicio suave (primeras fases de Normal)
     // Jefes: su vida se mide en "oleadas" (la vida de toda la oleada de su fase) y su ataque en enemigos (×1 = un enemigo normal)
     if(!boss&&WV()){ const V=WV(); hp*=perOld(f)/perWave(f)*(V.hpMul||1); atk*=Math.pow(V.atkG||1,groupAt(f)-1); }
     if(boss){ const per=perOld(f);
       const bb=bossBand(f), J=E.jefe, m=f%30!==0?bb:{hp:bb.hp*J.hp,atk:bb.atk*J.atk}; hp*=per*m.hp; atk*=m.atk; }   // JEFE (fases 30, 60…) = el élite de su tramo × enemy.jefe
     return {hp,atk,df};
   }
+  // inicio suave (enemy.early): en las primeras fases de Normal los enemigos (también élites y JEFES) tienen menos vida y ataque: × k en la fase 1,
+  // subiendo en línea recta hasta ×1 en la fase «to». Así la primera media hora va rápida y casi sin derrotas; desde ahí, todo igual
+  function earlyK(m,f){ const Q=CFG.enemy.early; if(!Q||m!==0||f>=Q.to) return 1; return Q.k+(1-Q.k)*Math.max(0,f-1)/(Q.to-1) }
   // jefe normal según el tramo de fases: bossBands=[[desde, vida, ataque], ...] (en oleadas)
   function bossBand(f){ const E=CFG.enemy; let m={hp:E.bossHp,atk:E.bossAtk}; for(const [a,hp,atk] of (E.bossBands||[])) if(f>=a) m={hp,atk}; return m }
   // Daño de un golpe (fórmula del TFG, igual para héroes y enemigos): si la defensa no pasa del ataque, resta la mitad de su valor
@@ -391,6 +478,7 @@ function createGame(opts){
   function labStep(dt){ while(dt>1e-9&&B&&B.event&&!B.kind){ const sp=labSpeed(), r=Math.min(dt,0.05/sp); dt-=r; B.rt=(B.rt||0)+r; stepCore(r*sp); } }
   function stepCore(dt){
     if(!S||!B) return;
+    if(!B.event) mineAdd(dt/60);   // mineral: por minuto de combate en la campaña
     if(B.over){ B.wait-=dt; if(B.wait<=0) startWave(); return }
     if(B.intro>0){ B.intro-=dt; return }   // entrada: el combate no empieza hasta que se va el cartel (élite, JEFE, Torre)
     if(B.rew&&!B.rewDone) return;   // Torre: el combate se queda parado mientras eliges la recompensa
@@ -714,7 +802,7 @@ function createGame(opts){
     if(!S.daily||S.daily.d!==dayKey()) daily(); S.kills++;   // el día de las misiones empieza con el primer enemigo
     const m=e&&e.minion?3/perWave(S.fase):B.boss&&!B.rep?CFG.econ.bossGold:B.boss?3:3/B.count; // el oro por oleada no sube con más enemigos (los invocados dan como uno normal; un élite/JEFE repetido, como una oleada)
     STK.n++; if(STK.n%CFG.streak.per===0) emit('streak',{n:STK.n});
-    const g=goldAt(S.fase)*m*(hasCard()?1+CFG.cardGold:1)*streakMul()*(hordeOn()?CFG.surprise.horde.gold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales)
+    const g=goldAt(S.fase)*m*goldMul()*streakMul()*(hordeOn()?CFG.surprise.horde.gold:1); S.gold+=g; addGoldH(g); // el oro entra directo (la bolsa solo guarda materiales)
     addXp(xpAt(S.fase)*m*heroStats().xpMult);
   }
   // DPS medido: en oleadas normales (sin jefe ni evento) se compara el daño real (golpes, quemaduras, aura…) con el de la
@@ -731,14 +819,14 @@ function createGame(opts){
     if(f===S.best+1){
       S.best=f;
       if(f%10===0){   // (los jefes ya no dan tokens: los tokens son dinero)
-        if(!S.mode&&CFG.matDrop&&(CFG.matDrop.sure||[]).includes(f)) addLoot({mat:1}); // élite 50 y 100: 1 esencia segura
-        const mat=rollMat(f), K=CFG.box.firstKill||{}, tix=(f%30===0?K.jefe:K.elite)||0; S.boxT=(S.boxT||0)+tix;   // tickets de invocación la primera vez
+        const k=f%30===0?'jefe':'elite', K=CFG.box.firstKill||{}, tix=K[k]||0; S.boxT=(S.boxT||0)+tix;   // tickets de invocación la primera vez
+        const mat=essAdd((CFG.essFirst||{})[k]||0);   // y Esencia segura (élite 1, JEFE 3)
         emit('boss',{f,elite:f%50===0,mat,mode:S.mode,tix}); }
       gearOpenCheck();   // (la Armadura, el Anillo y el Amuleto se abren en su fase de Normal)
       S.fase=S.push&&!S.repF?Math.min(f+1,CAP()):f; if(f>=CAP()||S.repF) S.push=false;   // repitiendo fase: se queda en la que acaba de vencer
     } else {
-      if(f===CAP()&&B&&B.boss){ const mat=rollMat(f); emit('bossFarm',{f,mat,mode:S.mode}); } // jefe de la 150 repetido
-      if(f%10===0&&B&&B.boss) gearDrop(f);   // élite o JEFE repetido: puede soltar una pieza de equipo
+      if(f===CAP()&&B&&B.boss) emit('bossFarm',{f,mode:S.mode});   // JEFE de la 150 repetido (lo cuentan las herramientas de ritmo)
+      if(f%10===0&&B&&B.boss) bossLoot(f);   // élite o JEFE repetido: siempre algo (mineral) y, con suerte, pieza, ticket, chatarra o esencia
       S.farmClears++;
       if(S.repF){ if(S.farmClears%3===0&&S.fase<S.repF){ S.fase=S.repF; S.push=S.repF>S.best; } }   // repitiendo fase: si perdiste y bajaste, vuelve a ella
       else if(S.autoPush && S.farmClears%3===0 && top()>S.best){S.push=true;S.fase=top()}
@@ -767,17 +855,17 @@ function createGame(opts){
   // los 2 caminos de la 1.ª evolución y la próxima evolución de tu camino (en la 1.ª se elige)
   const evoPaths=()=>({A:stageInfo('A1'),B:stageInfo('B1')});
   const nextEvoInfo=()=>{ const t=nextEvo(); return t&&S.evo>0?stageInfo((S.path==='B'?'B':'A')+(S.evo+1)):null };
-  // Coste de la próxima evolución: esencias del modo del tier (evo 1 = Esencia de Normal, evo 2 = de Pesadilla), oro y material del evento
-  function evoCost(){ const t=nextEvo(); if(!t||!t.cost) return null; const i=evoTiers().indexOf(t); return {ess:t.cost.ess||0,essMode:i,gold:t.cost.gold||0,tokens:t.cost.tokens||0,ev:t.cost.ev||0} }
+  // Coste de la próxima evolución: Esencia y oro (y emblemas o tokens si la configuración los pide)
+  function evoCost(){ const t=nextEvo(); if(!t||!t.cost) return null; return {ess:t.cost.ess||0,gold:t.cost.gold||0,tokens:t.cost.tokens||0,ev:t.cost.ev||0} }
   function evoMissing(){ const c=evoCost(); if(!c) return {}; const o={};
-    if((S.mats[c.essMode]||0)<c.ess) o.ess=c.ess-(S.mats[c.essMode]||0); if(S.gold<c.gold) o.gold=c.gold-S.gold; if(tokens()<c.tokens) o.tokens=c.tokens-tokens(); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o }
+    if(essN()<c.ess) o.ess=c.ess-essN(); if(S.gold<c.gold) o.gold=c.gold-S.gold; if(tokens()<c.tokens) o.tokens=c.tokens-tokens(); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o }
   const evoLvlOk=()=>{ const t=nextEvo(); return !!t&&!t.pending&&S.lvl>=t.lvl };
   const evoKeyOk=()=>S.evo>0||grimDone();                                  // la 1.ª evolución pide el grimorio en el nivel 5
   const canEvolve=()=>evoLvlOk()&&evoKeyOk()&&Object.keys(evoMissing()).length===0;
   function evolve(path){
     if(!canEvolve()||inEvent()) return {ok:false};
     if(S.evo===0){ if(path!=='A'&&path!=='B') path='A'; S.path=path; }     // 1.ª evolución: se elige camino
-    const c=evoCost(); if(c){ if(c.ess) S.mats[c.essMode]-=c.ess; S.gold-=c.gold; spend(c.tokens); S.evm-=c.ev; }
+    const c=evoCost(); if(c){ if(c.ess) S.mats[0]=essN()-c.ess; S.gold-=c.gold; spend(c.tokens); S.evm-=c.ev; }
     S.evo++; S.dpsM=null; statsDirty(); save();                 // con el kit nuevo se vuelve a medir el DPS
     emit('evolve',{evo:S.evo,name:evoP().name}); emit('change'); return {ok:true};
   }
@@ -785,15 +873,12 @@ function createGame(opts){
   function pathSwitch(){ if(!(S.evo>=1)) return {ok:false,why:'evo'}; if(inEvent()) return {ok:false,why:'event'}; if(!spend(CFG.grimoire.switchCost)) return {ok:false,why:'tokens'};
     S.path=S.path==='B'?'A':'B'; S.dpsM=null; statsDirty(); track('path',{path:S.path}); save(); emit('change'); return {ok:true,path:S.path} }
   /* ---------- modos ---------- */
-  // Esencia del modo: todos los jefes pueden soltarla; la probabilidad y la cantidad máxima suben con la fase
-  // (matDrop: fase 'from' → c0 de probabilidad y 1..max0; fase 'to' → c1 y 1..max1; lineal entre medias)
-  function matOdds(f){ const d=CFG.matDrop, t=Math.max(0,Math.min(1,(f-d.from)/(d.to-d.from)));
-    return {chance:d.c0+(d.c1-d.c0)*t, max:Math.round(d.max0+(d.max1-d.max0)*t)} }
-  function rollMat(f){ if(!CFG.matDrop) return 0; const o=matOdds(f); if(rand()>=o.chance) return 0; const n=1+Math.floor(rand()*o.max); addLoot({mat:n}); return n }
-  // Botín de jefes: se acumula en una bolsa y se recoge todo de una vez (ahora solo esencias del modo)
-  function addLoot(x){ const L=S.loot=S.loot||{mats:{},n:0}; if(x.mat){ L.mats[S.mode]=(L.mats[S.mode]||0)+x.mat; L.n++; } }
+  // Esencia: una sola para los 3 modos (S.mats[0]). Segura la primera vez que vences a cada élite y JEFE (CFG.essFirst); con suerte en el botín
+  function essN(){ return S&&S.mats?(S.mats[0]||0):0 }
+  function essAdd(n){ if(!S||!(n>0)) return 0; S.mats[0]=(S.mats[0]||0)+n; return n }
+  // Bolsa de botín de partidas antiguas (S.loot): se recoge todo de una vez y entra como Esencia
   function claimLoot(){ const L=S&&S.loot; if(!L) return null; S.tokens+=L.t||0; // (L.t: partidas antiguas)
-    for(const m in L.mats) S.mats[m]=(S.mats[m]||0)+L.mats[m]; S.loot=null; emit('change'); return L }
+    for(const m in L.mats) essAdd(L.mats[m]); S.loot=null; emit('change'); return L }
   // Para pasar al siguiente modo: que no esté bloqueado, haber vencido la fase 150 del actual y tener hecha su evolución
   const modeLocked=m=>!!(MODES()[m]&&MODES()[m].locked);         // modo bloqueado ("Próximamente")
   const canAdvanceMode=()=>S.best>=CAP()&&S.mode<MODES().length-1&&!modeLocked(S.mode+1)&&S.evo>=S.mode+1;
@@ -834,9 +919,9 @@ function createGame(opts){
   // dónde empieza la Mazmorra: event.back fases por debajo de tu récord en tu modo (fase 1 de Normal al principio)
   const evStart=()=>S.mode*CAP()+Math.max(0,(S.best||0)-(CFG.event.back==null?30:CFG.event.back));
   function startEvent(){
-    if(!S||inEvent()||!modeOpen('lab')||(S.tickets<1&&!evFreeLeft())||evPaused()) return false;
+    if(!S||inEvent()||!modeOpen('lab')||(retoN()<1&&!evFreeLeft())||evPaused()) return false;
     if(evPending()) claimEvent();                         // cobra antes el premio de un día anterior
-    if(evFreeLeft()) S.evFree=dayKey(); else S.tickets--; const h=heroStats();
+    if(evFreeLeft()) S.evFree=dayKey(); else retoUse(); const h=heroStats();   // sin entrada gratis, un Ticket de reto
     S.evRun={day:dayKey(),kills:0};                       // el intento se guarda: si se cierra la app, cuenta lo que llevaba
     B={event:true,t:0,boss:false,count:0,spawned:0,kills:0,nextSpawn:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,aff:evAffix(dayKey()),start:evStart()};
     save(); emit('eventStart',B); emit('change'); return true;
@@ -863,7 +948,15 @@ function createGame(opts){
   /* ---------- rivales simulados y premios del ranking de la Mazmorra ---------- */
   // Ranking con rivales simulados (hasta que haya servidor): su puntuación sigue la curva de un jugador medio con tus días de juego
   const RIV={};
-  function evRivals(d){ const key=d+'|'+S.startDay; if(RIV.k===key) return RIV.v; RIV.k=key; RIV.v=makeRivals(CFG.event,d*7919,d-(S.startDay==null?d:S.startDay)+1,(evAffix(d)||{}).score||1); return RIV.v }
+  function evSim(d){ const key=d+'|'+S.startDay; if(RIV.k===key) return RIV.v; RIV.k=key; RIV.v=makeRivals(CFG.event,d*7919,d-(S.startDay==null?d:S.startDay)+1,(evAffix(d)||{}).score||1); return RIV.v }
+  const evRivals=d=>mixRivals(evSim(d),realOf('lab',d));
+  // Rankings reales (el servidor guarda la puntuación de cada jugador; rankTop da los 100 mejores de un día/semana): S.rk[kind] = {p: día/semana, list}.
+  // Con n jugadores reales, el ranking son ellos y (rivales − n) simulados repartidos por toda la tabla; sin servidor, solo simulados (como antes).
+  function setRealRank(kind,period,list){ if(!S||!Array.isArray(list)||!(kind==='lab'||kind==='wb')) return false; S.rk=S.rk||{};
+    S.rk[kind]={p:period|0,list:list.filter(x=>x&&!x.me&&+x.score>0).slice(0,100).map(x=>({name:String(x.name||'?').slice(0,16),score:+x.score,real:true}))}; emit('change'); return true }
+  const realOf=(kind,p)=>{ const R=S&&S.rk&&S.rk[kind]; return R&&R.p===p?R.list:[] };
+  function mixRivals(sim,real){ const N=sim.length, n=Math.min(real.length,N); if(!n) return sim; const keep=N-n, out=real.slice(0,N);
+    for(let i=0;i<keep;i++) out.push(sim[Math.floor((i+0.5)*N/keep)]); return out.sort((a,b)=>b.score-a.score) }
   function makeRivals(V,seed,age,mul=1){
     const r=mulberry32(seed+(S.startDay||0)*104729), c=V.curve;
     const seg=c.findIndex((p,i)=>i>0&&age<p[0]), i=seg<0?c.length-1:seg, [a,x]=c[i-1], [b,y]=c[i], base=(x+(y-x)*(Math.max(1,age)-a)/(b-a))*(V.rivalBase||1)*mul; // interpola (y extrapola tras el último punto)
@@ -895,9 +988,10 @@ function createGame(opts){
   let GH=null;   // motor del fantasma durante el duelo
   function pvpState(){ const d=dayKey(); S.pvp=S.pvp&&S.pvp.rating!=null?S.pvp:{rating:CFG.pvp.start,games:0,wins:0,d,used:0,hist:[],rival:null}; const P=S.pvp;
     if(P.d!==d){ P.d=d; P.used=0; } return P }
-  // 3 duelos gratis al día; después, 1 ticket PvP por duelo (se compran de 3 en 3 con tokens)
+  // 3 duelos gratis al día; después, los combates que queden de un Ticket de reto (cada uno da CFG.reto.pvp) o un Ticket de reto nuevo
   const pvpFreeLeft=()=>Math.max(0,CFG.pvp.free-pvpState().used);
-  const pvpCanFight=()=>pvpFreeLeft()>0||(S.pvpTickets||0)>0;
+  const pvpCanFight=()=>pvpFreeLeft()>0||(S.pvpTickets||0)>0||retoN()>0;
+  const pvpExtra=()=>(S.pvpTickets||0)+retoN()*((CFG.reto||{}).pvp||3);   // combates extra que puedes hacer hoy (además de los gratis)
   function pvpReward(pos){ for(const r of CFG.pvp.rewards) if(pos<=r.to) return r; return null }
   const pvpLeague=pts=>{ let L=CFG.pvp.leagues[0]; for(const x of CFG.pvp.leagues) if(pts>=x[0]) L=x; return {name:L[1],color:L[2]} };   // insignia
   const pvpK=g=>g<CFG.pvp.newGames?CFG.pvp.kNew:CFG.pvp.k;
@@ -921,7 +1015,7 @@ function createGame(opts){
     B={event:true,kind:'pvp',hpM,t:0,boss:false,count:0,spawned:0,kills:0,enemies:[pvpDouble(o,o.name,o.cls)],hp:0,th:null,over:false,wait:0,mD:0,mB:0,inc:[]};
     statsDirty(); B.hp=heroStats().hp; return heroStats() }
   function pvpFight(){ const P=pvpState(), r=P.rival; if(!r||inEvent()||!modeOpen('pvp')||!pvpCanFight()) return false;
-    const g=ghostOf(r.save); if(!g) return false; if(pvpFreeLeft()>0) P.used++; else S.pvpTickets--;
+    const g=ghostOf(r.save); if(!g) return false; if(pvpFreeLeft()>0) P.used++; else if((S.pvpTickets||0)>0) S.pvpTickets--; else if(retoUse()) S.pvpTickets=((CFG.reto||{}).pvp||3)-1;
     P.fight={name:r.name,cls:r.cls,bot:r.bot,rating:r.rating,id:r.id,match:r.match};   // si se cierra la app a mitad, cuenta como derrota
     const a=heroStats(), b=g.heroStats(), dps=(x,y)=>dmgF(x.atk,y.df)*x.spd*(1+x.cr*x.cd), M=CFG.pvp.hpMul?CFG.pvp.hpMul:pvpTtk(S.evo,g.S.evo)*(dps(a,b)*pvpK2(S,g.S)+dps(b,a)*pvpK2(g.S,S))/(a.hp+b.hp);   // (con la fuerza de cada clase: todos los duelos duran parecido)   // vida en PvP: × hpMul (igual para los dos)
     const gs=g.duelEnter({...a,name:S.name,cls:S.cls},M), ms=duelEnter({...b,name:r.name,cls:r.cls},M); GH=g;
@@ -1414,14 +1508,14 @@ function createGame(opts){
   function hallBosses(){ const out=[], C=hallState().clr; for(let m=0;m<MODES().length;m++){ if(MODES()[m].locked) break;
       for(let f=CFG.hall.every;f<=CAP();f+=CFG.hall.every){ const beaten=S.mode>m||(S.mode===m&&S.best>=f); out.push({id:hallId(m,f),m,f,elite:f%30===0,beaten,stars:C[hallId(m,f)]||0,foe:zoneFoe(zoneAt(m,f),'jefe')}) } } return out }
   function hallReward(b,star,first){ const H=CFG.hall; if(first) return {...H.first[star-1]};
-    return {gold:H.repeat[star-1].gold} }
-  function hallStart(id,star){ const b=hallBosses().find(x=>x.id===id); if(!S||inEvent()||!b||!b.beaten||!(star>=1&&star<=3)||star>b.stars+1||!hallTriesLeft()) return false;
+    return {...H.repeat[star-1]} }   // repetir: oro y Sellos
+  function hallStart(id,star){ const b=hallBosses().find(x=>x.id===id); if(!S||inEvent()||!modeOpen('hall')||!b||!b.beaten||!(star>=1&&star<=3)||star>b.stars+1||!hallTriesLeft()) return false;
     hallState().used++; const h=heroStats(), M=CFG.hall.stars[star-1], e=enemyStats(b.f,10,true,b.m), W=CFG.event.walk;
     B={intro:CFG.encounter.intro,event:true,kind:'hall',t:0,boss:true,elite:b.elite,count:1,spawned:1,kills:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,groups:b.f,hall:{id,m:b.m,f:b.f,star}};
     B.enemies.push({hp:e.hp*M.hp,max:e.hp*M.hp,atk:e.atk*M.atk,df:e.df,spawn:0,walk:W,arrive:W,next:W,first:true,dead:false,f:b.f,spd:1});
     zoneSetup(B.enemies[0],b.f,b.m,'jefe'); track('hall',{id,star}); save(); emit('eventStart',B); emit('change'); return true }
   function hallEnd(){ const X=B.hall, won=B.hp>0&&B.enemies.every(e=>e.dead), C=hallState().clr, b={...X,elite:X.f%30===0}, first=won&&X.star>(C[X.id]||0);
-    let rw=null; if(won){ rw=hallReward(b,X.star,first); if(first) C[X.id]=X.star; giveBundle(rw); gearDrop(X.f,X.m); }   // (también puede soltar una pieza)
+    let rw=null; if(won){ rw=hallReward(b,X.star,first); if(first) C[X.id]=X.star; giveBundle(rw); bossLoot(X.f,X.m); }   // (y el botín de un JEFE repetido: mineral y, con suerte, pieza, ticket, chatarra o esencia)
     const res={kind:'hall',won,first,star:X.star,f:X.f,m:X.m,rw,t:B.t}; B=null; save(); emit('hallEnd',res); startWave(); emit('change'); return res }
   /* ---------- jefe semanal ---------- */
   // Pelea de 1 minuto contra un jefe inmortal que pega cada vez más fuerte (golpea como el jefe de la fase n, y n sube de 1
@@ -1443,9 +1537,10 @@ function createGame(opts){
   // Entrada gratis: 1 a la semana (wbFree guarda la semana en que se usó). Las demás, con Ticket Jefe.
   const wbFreeLeft=()=>S.wbFree!==weekKey()?1:0;
   function wbStart(){
-    if(!S||inEvent()||!modeOpen('boss')||(S.bossTickets<1&&!wbFreeLeft())||evPaused()) return false;
+    if(!S||inEvent()||!modeOpen('boss')||(retoN()<1&&!wbFreeLeft())||evPaused()) return false;
     if(wbPending()) wbClaim();
-    if(wbFreeLeft()) S.wbFree=weekKey(); else S.bossTickets--; const h=heroStats(), s=wbStats(1), V=CFG.event;
+    if(wbFreeLeft()) S.wbFree=weekKey(); else retoUse();   // sin entrada gratis, un Ticket de reto
+    const h=heroStats(), s=wbStats(1), V=CFG.event;
     S.wbRun={week:weekKey(),dmg:0};
     B={intro:CFG.encounter.intro,event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:wbBoss(weekKey()),noHurt:!!CFG.wboss.noHurt};   // noHurt: no te pega (reto de daño)
     B.enemies.push({hp:Infinity,max:Infinity,atk:s.atk,df:s.df,spawn:0,walk:V.walk,arrive:V.walk,next:V.walk,first:false,dead:false,immortal:true});
@@ -1459,7 +1554,8 @@ function createGame(opts){
     return {kind:'boss',dmg,best:S.wbLog.dmg,runs:S.wbLog.runs,pos:wbRank(w,S.wbLog.dmg),died,week:w};
   }
   const RIVW={};
-  function wbRivals(w){ const key=w+'|'+S.startDay; if(RIVW.k===key) return RIVW.v; RIVW.k=key;
+  const wbRivals=w=>mixRivals(wbSim(w),realOf('wb',w));   // (con los jugadores reales de esa semana, si los hay: rivales.js)
+  function wbSim(w){ const key=w+'|'+S.startDay; if(RIVW.k===key) return RIVW.v; RIVW.k=key;
     const end=w*7, age=end-(S.startDay==null?end:S.startDay)+1;           // días de juego a mitad de esa semana (jueves)
     RIVW.v=makeRivals(CFG.wboss,w*104723+17,Math.max(1,age),(wbBoss(w)||{}).score||1); return RIVW.v }
   const wbRank=(w,dmg)=>1+wbRivals(w).filter(x=>x.score>dmg).length;
@@ -1524,20 +1620,44 @@ function createGame(opts){
       share:leaguePts(L)/leagueTotal(L)} }
   /* ---------- tienda: materiales y tickets ---------- */
   // (los cofres y las armas se quitaron del juego: se recrean aparte)
-  const shopPrice=k=>({ess:(CFG.matShop||{}).ess, ev:(CFG.matShop||{}).ev, ticket:CFG.event.ticketCost, pvp:CFG.pvp.packCost, bossTicket:CFG.wboss.ticketCost, card:CFG.cardPrice, vip:CFG.vipPrice})[k];
+  const shopPrice=k=>({ess:(CFG.matShop||{}).ess, reto:(CFG.reto||{}).price, card:CFG.cardPrice, vip:CFG.vipPrice})[k];   // (los Sellos no se venden: solo se ganan jugando)
   function buy(k,n){
     n=n|0; if(n<1) return false; const unit=shopPrice(k); if(unit==null) return false;
     if((k==='card'||k==='vip')&&n!==1) return false;
     if(!spend(unit*n)) return false;
-    if(k==='ticket') S.tickets+=n;
-    else if(k==='bossTicket') S.bossTickets+=n;
-    else if(k==='pvp') S.pvpTickets=(S.pvpTickets||0)+n*CFG.pvp.pack;   // paquetes de 3 tickets PvP
-    else if(k==='ess') S.mats[0]=(S.mats[0]||0)+n;               // esencia (de Normal)
-    else if(k==='ev') S.evm+=n;                                   // emblema
+    if(k==='reto') retoAdd(n);                                   // Ticket de reto
+    else if(k==='ess') essAdd(n);                                // Esencia
     else if(k==='card') S.cardUntil=Math.max(S.cardUntil,dayKey())+30;
     else if(k==='vip') S.vipUntil=Math.max(S.vipUntil,dayKey())+30;
     track('buy',{item:k,n,tokens:unit*n}); save(); emit('change'); return true;
   }
+  /* ---------- Ticket de reto y Mercado ---------- */
+  // Ticket de reto (S.reto): sustituye a los tickets de Mazmorra, Jefe y PvP. Vale 1 entrada extra a la Mazmorra o al Jefe semanal,
+  // o CFG.reto.pvp combates de PvP (los que sobran se guardan en S.pvpTickets).
+  function retoN(){ return S&&S.reto||0 }
+  function retoAdd(n){ if(!S||!(n>0)) return 0; S.reto=(S.reto||0)+n; return n }
+  function retoUse(){ if(retoN()<1) return false; S.reto--; return true }
+  // Mercado: se paga con Sellos (S.evm). La lista es siempre la misma y cada cosa tiene un límite a la semana (se renueva el lunes)
+  function mktState(){ const w=weekKey(); if(!S.mkt||S.mkt.w!==w) S.mkt={w,b:{}}; return S.mkt }
+  const mktDef=k=>CFG.market&&CFG.market.list.find(x=>x.k===k);
+  // piezas: de Rara a la rareza máxima de la caja gratis de tu modo (las que tienen precio)
+  const mktRars=()=>{ const d=mktDef('piece'); if(!d) return []; const o=[]; for(let r=0;r<=forgeMax();r++) if(d.price[r]!=null) o.push({r,name:CFG.rar[r].name,price:d.price[r]}); return o };
+  const mktN=x=>x.k==='mineral'?Math.round(x.n*mineMult()):x.n||1;
+  function mktInfo(){ if(!S||!CFG.market) return null; const st=mktState(), daysLeft=7-((dayKey()+3)%7);
+    return {sellos:S.evm||0, daysLeft, items:CFG.market.list.map(x=>{ const bought=st.b[x.k]||0, left=Math.max(0,x.lim-bought), rars=x.k==='piece'?mktRars():null;
+      const price=x.k==='piece'?(rars.length?rars[0].price:null):x.price;
+      return {k:x.k,n:x.k==='piece'?1:mktN(x),price,lim:x.lim,bought,left,rars,slots:x.k==='piece'?SLOTS.filter(slotOpen):null,
+        can:left>0&&price!=null&&(S.evm||0)>=price} })} }
+  // comprar: o = {s, r} para la pieza (hueco y rareza)
+  function mktBuy(k,o){ if(!S) return {ok:false,why:'nogame'}; const d=mktDef(k); if(!d) return {ok:false,why:'no'}; const st=mktState();
+    if((st.b[k]||0)>=d.lim) return {ok:false,why:'limit'};
+    let price=d.price, res=null;
+    if(k==='piece'){ o=o||{}; const s=o.s, r=o.r|0; if(!SLOTS.includes(s)||!slotOpen(s)) return {ok:false,why:'closed'}; const R=mktRars().find(x=>x.r===r); if(!R) return {ok:false,why:'rar'}; price=R.price;
+      if((S.evm||0)<price) return {ok:false,why:'sellos'}; S.evm-=price; res=addCopy(s,r); }
+    else { if((S.evm||0)<price) return {ok:false,why:'sellos'}; S.evm-=price; const n=mktN(d);
+      if(k==='box') S.boxT=(S.boxT||0)+n; else if(k==='reto') retoAdd(n); else if(k==='ess') essAdd(n);
+      else if(k==='mineral') S.mineral=(S.mineral||0)+n; else if(k==='scrap') S.chatarra=(S.chatarra||0)+n; res={n}; }
+    st.b[k]=(st.b[k]||0)+1; track('market',{k,price}); save(); emit('market',{k,res}); emit('change'); return {ok:true,res,price} }
   /* ---------- potenciadores por anuncios ---------- */
   function adsState(){ if(!S.ads||S.ads.day!==dayKey()) S.ads={day:dayKey(),p:{},n:{}}; return S.ads }
   const boostLeft=()=>S.boostMs||0;                                    // ms que le quedan al ×2 (solo se gastan jugando)
@@ -1571,7 +1691,7 @@ function createGame(opts){
   function farmRate(f){
     const h=computeStats(), slow=Math.max(1,S.wtM||1), rep=f%10===0&&f<CAP();   // si las oleadas de verdad tardan más que la fórmula (wtM medido), el cálculo se ajusta: nunca da más que jugando
     let t=0; for(let w=1;w<=10;w++) t+=waveTimeF(f,w,h)*(rep&&w===10?Math.max(slow,bossK()):slow)+CFG.delays.wave+(rep&&w===10?CFG.encounter.intro:0);
-    return {g:goldAt(f)*3*10*(hasCard()?1+CFG.cardGold:1)/t, x:xpAt(f)*(3+(CFG.econ.waveXp||0))*10*h.xpMult/t};
+    return {g:goldAt(f)*3*10*goldMul()/t, x:xpAt(f)*(3+(CFG.econ.waveXp||0))*10*h.xpMult/t};
   }
   // Farmeo sin conexión: hasta offlineCapH horas (offlineVipH con VIP). Si se llenó el tope, queda un extra
   // de oro (offlineAdMult) que se cobra viendo un anuncio con claimOfflineBonus().
@@ -1582,11 +1702,11 @@ function createGame(opts){
     if(inEvent()) return null;                                 // durante el evento el tiempo está en pausa: no se farmea a la vez
     if(!(el>60&&(S.best>0||S.mode>0))) return null;
     const f=Math.max(1,Math.min(S.fase,S.best)), r=farmRate(f), l0=S.lvl;
-    const g=r.g*el, x=r.x*el; S.gold+=g; addGoldH(g); addXp(x); grimXp(el);   // el grimorio también gana tiempo sin conexión
+    const g=r.g*el, x=r.x*el; S.gold+=g; addGoldH(g); addXp(x); grimXp(el); const mn=mineAdd(el/60);   // el grimorio y el mineral también cuentan el tiempo sin conexión
     S.stats.offGold+=g; track('offline',{secs:Math.round(el),gold:g});
     const capped=raw>=cap; if(capped&&offlineAdLeft()>0) S.offBonus=g*(CFG.offlineAdMult-1);
     emit('change');
-    return {secs:el,fase:f,gold:g,xp:x,lvlFrom:l0,lvlTo:S.lvl,capped,bonus:S.offBonus||0};
+    return {secs:el,fase:f,gold:g,xp:x,mineral:mn,lvlFrom:l0,lvlTo:S.lvl,capped,bonus:S.offBonus||0};
   }
   // usos que quedan hoy del extra con anuncio (se renuevan con el cambio de día)
   const offlineAdLeft=()=>CFG.offlineAdPerDay-(adsState().n.off||0);
@@ -1602,25 +1722,41 @@ function createGame(opts){
   const grimDone=()=>grimLevel()>=GC().levels;
   const grimName=()=>GC().names[S.cls];
   const goldH=h=>Math.round(h*3600*farmRate(Math.max(1,S.best)).g);
-  function grimCost(){ const c=GC().cost; return {gold:goldH(c.goldH),ess:c.ess,ev:c.ev} }
+  function grimCost(){ const c=GC().cost; return {gold:goldH(c.goldH),ess:c.ess||0,ev:c.ev||0} }
   const grimPack=()=>GC().pack;
-  const missOf=c=>{ const o={}; if(S.gold<c.gold) o.gold=c.gold-S.gold; if((S.mats[0]||0)<c.ess) o.ess=c.ess-(S.mats[0]||0); if(S.evm<c.ev) o.ev=c.ev-S.evm; return o };
+  const missOf=c=>{ const o={}; if(S.gold<c.gold) o.gold=c.gold-S.gold; if(essN()<c.ess) o.ess=c.ess-essN(); if(c.ev&&S.evm<c.ev) o.ev=c.ev-S.evm; return o };
+  const payOf=c=>{ S.gold-=c.gold; S.mats[0]=essN()-c.ess; S.evm-=c.ev||0 };
   const grimMissing=()=>missOf(grimCost());
   function grimGet(how){ grimState().lvl=1; grimState().xp=0; track('grimoire',{how}); save(); emit('change'); return {ok:true} }
   function grimUnlock(){ if(grimOwned()) return {ok:false,why:'owned'}; if(Object.keys(grimMissing()).length) return {ok:false,why:'cost'};
-    const c=grimCost(); S.gold-=c.gold; S.mats[0]-=c.ess; S.evm-=c.ev; return grimGet('recursos') }
+    payOf(grimCost()); return grimGet('recursos') }
   function grimBuy(){ if(grimOwned()) return {ok:false,why:'owned'}; if(!spend(grimPack())) return {ok:false,why:'tokens'}; return grimGet('tokens') }
   // siguiente subida: tiempo que falta y recursos
   function grimUpInfo(){ const G=grimState(); if(!G.lvl||grimDone()) return null; const u=GC().up[G.lvl-1];
-    const cost={gold:goldH(u.goldH),ess:u.ess,ev:u.ev}; return {to:G.lvl+1,xp:G.xp,need:u.secs,ready:G.xp>=u.secs,cost,missing:missOf(cost)} }
+    const cost={gold:goldH(u.goldH),ess:u.ess||0,ev:u.ev||0}; return {to:G.lvl+1,xp:G.xp,need:u.secs,ready:G.xp>=u.secs,cost,missing:missOf(cost)} }
   function grimXp(secs){ const G=S&&S.grim; if(!G||!G.lvl||G.lvl>=GC().levels) return; const u=GC().up[G.lvl-1]; G.xp=Math.min(u.secs,G.xp+secs) }
   function grimUp(){ const u=grimUpInfo(); if(!u) return {ok:false,why:'max'}; if(!u.ready) return {ok:false,why:'xp'}; if(Object.keys(u.missing).length) return {ok:false,why:'cost'};
-    S.gold-=u.cost.gold; S.mats[0]-=u.cost.ess; S.evm-=u.cost.ev; const G=grimState(); G.lvl++; G.xp=0; track('grimoire',{how:'nivel',lvl:G.lvl}); save(); emit('change'); return {ok:true,lvl:G.lvl} }
+    payOf(u.cost); const G=grimState(); G.lvl++; G.xp=0; track('grimoire',{how:'nivel',lvl:G.lvl}); save(); emit('change'); return {ok:true,lvl:G.lvl} }
+  /* ---------- talentos (dentro del Grimorio) ---------- */
+  // Se abren con la 1.ª evolución y no tienen tope: subir un talento al nivel n cuesta n × cost esencias (10 niveles = 55).
+  // Cada nivel da su v (CFG.talents.list): daño, vida, defensa, daño a élites y JEFES, oro o experiencia. Se guardan en S.tal.
+  function TL(){ return CFG.talents }
+  function talState(){ return S.tal=S.tal||{} }
+  function talOpen(){ return !!TL()&&!!S&&(S.evo||0)>=TL().from }
+  function talLv(k){ return (S&&S.tal&&S.tal[k])||0 }
+  function talDef(k){ return TL()&&TL().list.find(t=>t.k===k) }
+  function talCost(k){ return (talLv(k)+1)*(TL().cost||1) }
+  // lo que suma un talento (0 si no hay talentos en la configuración); sirve también para el fantasma del PvP (su propia S)
+  function talBonus(k){ const d=talDef(k); return d?talLv(k)*d.v:0 }
+  function talInfo(){ return TL()?TL().list.map(t=>({k:t.k,name:t.name,desc:t.desc,v:t.v,lvl:talLv(t.k),bonus:talLv(t.k)*t.v,cost:talCost(t.k),can:talOpen()&&essN()>=talCost(t.k)})):[] }
+  function talUp(k){ if(!talOpen()) return {ok:false,why:'evo'}; if(!talDef(k)) return {ok:false,why:'no'};
+    const c=talCost(k); if(essN()<c) return {ok:false,why:'ess'};
+    S.mats[0]=essN()-c; talState()[k]=talLv(k)+1; statsDirty(); track('talent',{k,lvl:S.tal[k]}); save(); emit('change'); return {ok:true,lvl:S.tal[k],cost:c} }
   /* ---------- premios del servidor (referidos) ---------- */
   // El servidor manda premios pendientes: 'silver' = premio de amigos (5 min de oro por unidad), 'won' = tokens ganados (retirables)
   function applyRewards(list){ const out=[]; if(!S||!Array.isArray(list)) return out;
     for(const r of list){ const n=Math.floor(+r.amount); if(!(n>0)) continue;
-      if(r.kind==='silver') giveBundle({gold:5*Math.min(n,100)}); else if(r.kind==='won') S.won+=n;   // (el servidor aún habla de «plata»: ahora es oro de 5 min de farmeo cada una)
+      if(r.kind==='silver') giveBundle({gold:5*Math.min(n,100)}); else if(r.kind==='won') S.won+=n; else if(r.kind==='box') S.boxT=(S.boxT||0)+Math.min(n,100);   // box: tickets de invocación (premio por invitar)   // (el servidor aún habla de «plata»: ahora es oro de 5 min de farmeo cada una)
       else if(r.kind==='tokens'){ S.tokens+=n; S.stats.deposited+=n; track('deposit',{tokens:n,stars:n*CFG.stars.perToken}); }   // compra con Stars
       else if(r.kind==='first'){ const F=CFG.stars.first; if(S.firstBuy) continue; S.firstBuy=true; S.tokens+=F.tokens; S.stats.deposited+=F.tokens; giveBundle({gold:F.gold}); }
       else if(r.kind==='pass'){ S.passPrem=Math.max(S.passPrem||0,n); }   // pase de pago de la temporada n
@@ -1632,7 +1768,7 @@ function createGame(opts){
   /* ---------- misiones diarias y semanales ---------- */
   // Premios: {gold: minutos de farmeo de tu récord, silver, wood, mode, ess, ev, ticket, bossTicket}
   function giveBundle(b){ if(!b) return; if(b.gold) S.gold+=Math.max(20,farmRate(Math.max(1,S.best)).g*60*b.gold);
-    if(b.ess) S.mats[0]=(S.mats[0]||0)+b.ess; if(b.ev) S.evm+=b.ev; if(b.ticket) S.tickets+=b.ticket; if(b.bossTicket) S.bossTickets+=b.bossTicket;
+    if(b.ess) essAdd(b.ess); if(b.ev) S.evm+=b.ev; if(b.reto) retoAdd(b.reto); if(b.ticket) retoAdd(b.ticket); if(b.bossTicket) retoAdd(b.bossTicket);   // ev: Sellos · (los tickets de modo de antes son Tickets de reto)
     if(b.tok) S.tokens+=b.tok; if(b.box) S.boxT=(S.boxT||0)+b.box; }   // tok: tokens (como comprados) · box: tickets de invocación
   // misiones del día: progreso guardado en S.daily (se renueva cada día; los enemigos se cuentan desde el inicio del día)
   function daily(){ const d=dayKey(); if(!S.daily||S.daily.d!==d) S.daily={d,k0:S.kills||0,p:{},c:{}}; return S.daily }
@@ -1657,7 +1793,24 @@ function createGame(opts){
   const missionsReady=()=>missions().filter(m=>m.done&&!m.claimed).length+(bonusState('day').can?1:0);
   /* ---------- premios diarios: ruleta y calendario de 7 días ---------- */
   // ruleta diaria: 1 tirada gratis + 1 con anuncio por día
-  function wheelState(){ const d=dayKey(); if(!S.wheel||S.wheel.d!==d) S.wheel={d,free:false,ad:false}; return {free:!S.wheel.free,ad:!S.wheel.ad,list:CFG.wheel} }
+  function wheelState(){ const d=dayKey(); if(!S.wheel||S.wheel.d!==d) S.wheel={d,free:false,ad:false}; return {free:!S.wheel.free,ad:CFG.wheelAd!==false&&!S.wheel.ad,list:CFG.wheel} }
+  // rodillo de la suerte (CFG.slot): una tirada por anuncio, hasta perDay al día; el premio se reparte al momento
+  const slotDay=()=>{ const d=dayKey(); if(!S.slot||S.slot.d!==d) S.slot={d,n:0}; return S.slot };
+  const slotMin=min=>Math.round(min*((CFG.mineral&&CFG.mineral.perMin)||1)*mineMult());
+  function slotState(){ const C=CFG.slot; if(!S||!C) return null; const tot=C.list.reduce((a,x)=>a+x.w,0);
+    return {left:Math.max(0,C.perDay-slotDay().n),perDay:C.perDay,list:C.list.map((x,i)=>({...x,i,pct:x.w/tot*100,gold:x.k==='gold'?Math.max(20,farmRate(Math.max(1,S.best)).g*60*x.min):0,mineral:x.k==='mineral'?slotMin(x.min):0,maxR:CFG.rar[boxT().top.r].name}))} }
+  function slotSpin(){ const C=CFG.slot, st=slotState(); if(!st||st.left<1) return null; slotDay().n++; S.stats.ads++; addAd();   // (cuenta como anuncio visto: misiones y estadísticas)
+   
+    const tot=C.list.reduce((a,x)=>a+x.w,0); let r=rand()*tot, i=0; for(;i<C.list.length-1;i++){ r-=C.list[i].w; if(r<0) break; }
+    const x=C.list[i], out={i,k:x.k};
+    if(x.k==='gold'){ out.gold=st.list[i].gold; S.gold+=out.gold; addGoldH(out.gold); }
+    else if(x.k==='mineral'){ out.mineral=st.list[i].mineral; S.mineral=(S.mineral||0)+out.mineral; }
+    else if(x.k==='scrap'){ out.scrap=x.n; S.chatarra=(S.chatarra||0)+x.n; }
+    else if(x.k==='ticket'){ out.tickets=x.n; S.boxT=(S.boxT||0)+x.n; }
+    else if(x.k==='ess'){ out.ess=essAdd(x.n); }
+    else if(x.k==='piece'){ out.piece=gearPiece(); }
+    else if(x.k==='jackpot'){ out.tickets=x.tickets; S.boxT=(S.boxT||0)+x.tickets; out.piece=gearPiece(null,true); }
+    track('slot',{k:x.k}); save(); emit('change'); return out }
   function spinWheel(viaAd){ const st=wheelState(); if(viaAd?!st.ad:!st.free) return null; if(viaAd){ S.wheel.ad=true; addAd(); } else S.wheel.free=true;
     const L=CFG.wheel, tot=L.reduce((a,x)=>a+x.w,0); let r=rand()*tot, i=0; for(;i<L.length-1;i++){ r-=L[i].w; if(r<0) break; }
     giveBundle(L[i].b); track('wheel',{i,ad:!!viaAd}); save(); emit('change'); return {i,b:L[i].b} }
@@ -1674,7 +1827,7 @@ function createGame(opts){
     const C=CFG.pass, tk=C.tok&&L%C.tok.every===0?{tok:C.tok.n}:{};
     // (oro = minutos de farmeo de tu récord; los cofres y el arma del último nivel se quitaron con los objetos: se recrean aparte)
     if(!prem) return L===top?{gold:40}:L%10===0?{gold:20}:L%5===0?{gold:10}:L%2===0?{gold:6}:{gold:30};
-    return L===top?{gold:60,ess:5,ev:10,...tk}:L%10===0?{gold:40,ess:2,...tk}:L%5===0?{ticket:1,bossTicket:1,ev:3}:L%2===0?{gold:10,ev:1}:{gold:8} }
+    return L===top?{gold:60,ess:10,ev:100,...tk}:L%10===0?{gold:40,ess:2,...tk}:L%5===0?{reto:2,ev:30}:L%2===0?{gold:10,ev:10}:{gold:8} }   // ev: Sellos · reto: Ticket de reto
   function passState(){ const P=passS(), C=CFG.pass, lvl=Math.min(C.levels,Math.floor(P.xp/C.xp));
     return {season:P.s,xp:P.xp,lvl,into:P.xp-lvl*C.xp,need:C.xp,prem:(S.passPrem||0)===P.s,daysLeft:C.days-dayKey()%C.days,cf:P.cf,cp:P.cp} }
   function claimPass(L,prem){ const st=passState(); if(!(L>=1&&L<=st.lvl)) return null; if(prem&&!st.prem) return null;
@@ -1682,7 +1835,7 @@ function createGame(opts){
   function claimPassAll(){ const st=passState(); let n=0; for(let L=1;L<=st.lvl;L++){ if(claimPass(L,false)) n++; if(st.prem&&claimPass(L,true)) n++; } return n }
   const passReady=()=>{ const st=passState(); let n=0; for(let L=1;L<=st.lvl;L++){ if(!st.cf[L]) n++; if(st.prem&&!st.cp[L]) n++; } return n };
   /* ---------- desbloqueo de modos ---------- */
-  // Desbloqueo de modos (Mazmorra, Jefe semanal, PvP, Torre): por fase récord o por días de juego
+  // Desbloqueo de pestañas (Misiones, Inventario, Modos, Tienda) y modos (Mazmorra, Sala de jefes, Jefe semanal, PvP, Torre): por fase récord o por días de juego
   const daysPlayed=()=>dayKey()-(S.startDay==null?dayKey():S.startDay)+1;
   function modeReq(k){ const U=(CFG.unlock||{})[k]; if(!U||!S) return null; if(U.fase&&!(S.mode>0)&&S.best<U.fase) return {fase:U.fase}; if(U.day&&daysPlayed()<U.day) return {day:U.day,left:U.day-daysPlayed()}; return null }
   const modeOpen=k=>!modeReq(k);
@@ -1702,7 +1855,7 @@ function createGame(opts){
   function dev(k){
     if(!CFG.devTools) return;
     if(k==='gold') S.gold+=Math.max(100,farmRate(Math.max(1,S.best)).g*3600);
-    if(k==='tok') S.tokens+=100; if(k==='ticket') S.tickets++; if(k==='bossTicket') S.bossTickets++; if(k==='day') S.devDays=(S.devDays||0)+1;
+    if(k==='tok') S.tokens+=100; if(k==='ticket'||k==='bossTicket'||k==='reto') retoAdd(1); if(k==='day') S.devDays=(S.devDays||0)+1;
     emit('change');
   }
 
@@ -1727,9 +1880,9 @@ function createGame(opts){
     claimLoot, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
     evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerLinks, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
-    canEvolve, evolve, rollMat, matOdds, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, nextEvoInfo, kitStage, heroPassive, lvlCap,
+    canEvolve, evolve, essN, essAdd, retoN, retoAdd, mktInfo, mktBuy, pvpExtra, talInfo, talUp, talOpen, talBonus, talCost, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, nextEvoInfo, kitStage, heroPassive, lvlCap,
     // objetos: solo el arma Común de regalo (los demás se recrean aparte)
-    weapon, weaponBonus, weaponExtra, weaponPower, boxInfo, pull, gear, gearSlots, gearPower, setInfo, gearOpenCheck, gearDrop, dropP,
+    weapon, weaponBonus, weaponExtra, weaponPower, boxInfo, pull, gear, gearSlots, gearPower, setInfo, gearOpenCheck, gearDrop, dropP, equipPiece, equipBest, slotState, slotSpin, gearPiece, setRealRank, seenNew, nvUp, nvCost, breakCalc, breakPieces, forgeInfo, forgeCraft, bossLoot, mineAdd,
     // tienda
     buy, shopPrice, tokens, leagueNow, leaguePending, leagueClaim, monthKey, spend, buyTokens, withdraw,
     // otros

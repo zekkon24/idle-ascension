@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- la fuente no bloquea el arranque: si tarda o falla, se usa la del sistema -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,800&display=swap" media="print" onload="this.media='all'">
 <style>
 /* ARCHIVO GENERADO por tools/construir.js desde src/estilos/ (orden en orden.json): no lo edites aquí. */
 :root{
@@ -190,6 +190,11 @@ canvas{display:block;width:100%;height:300px}
 .demo{font-size:10px;font-weight:800;color:var(--gold);letter-spacing:.6px;text-transform:uppercase}
 .tw{overflow-x:auto}
 @media (max-width:374px){.calg{grid-template-columns:repeat(3,minmax(0,1fr))}.cald:last-child{grid-column:span 3}}
+/* Mercado: lo agotado (hasta el lunes) se ve apagado */
+.scard.sold{opacity:.55}
+/* pestañas de la Tienda: las 4 en una fila (repartidas a lo ancho) */
+.fchips.shtabs{flex-wrap:nowrap}
+.fchips.shtabs button{flex:1 1 auto;justify-content:center;padding:4px 6px;min-width:0;white-space:nowrap}
 .classes{display:grid;grid-template-columns:1fr;gap:10px} /* una clase por fila: nombre y pasiva */
 .ccard{text-align:left;border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--panel);display:flex;flex-direction:column;gap:6px}
 .ccard:hover{border-color:var(--gold)}
@@ -216,6 +221,21 @@ input[type=number]{width:64px}
 .loot{display:flex;flex-direction:column;gap:6px}
 .loot div{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:8px;background:var(--panel2);font-size:13px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(128px + max(env(safe-area-inset-top,0px),var(--safe-top)));pointer-events:none;background:var(--panel2);border:1px solid var(--gold);padding:8px 14px;border-radius:10px;font-weight:800;font-size:13px;z-index:20;max-width:90%;text-align:center}
+/* elegir héroe: tarjetas con su dibujo (2 por fila; la última, centrada) y debajo la elegida con «Empezar» */
+.classes2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ccard2{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px 10px;border:1px solid var(--line);border-radius:14px;background:radial-gradient(ellipse at 50% 30%,color-mix(in srgb,var(--cc) 22%,transparent),transparent 70%),var(--panel);color:var(--ink);cursor:pointer}
+.ccard2:last-child:nth-child(odd){grid-column:1 / -1;justify-self:center;width:calc(50% - 5px)}
+.ccard2.on{border-color:var(--cc);box-shadow:0 0 0 2px var(--cc),0 0 18px -4px var(--cc)}
+.ccard2 .cimg{height:72px;display:grid;place-items:end center}
+.ccard2 .cimg img,.ccard2 .cimg svg{height:72px;width:auto;image-rendering:auto;animation:cbob 2.4s ease-in-out infinite}
+.ccard2:nth-child(2) .cimg img{animation-delay:-.5s}.ccard2:nth-child(3) .cimg img{animation-delay:-1s}.ccard2:nth-child(4) .cimg img{animation-delay:-1.5s}.ccard2:nth-child(5) .cimg img{animation-delay:-2s}
+.ccard2 .cn{font-family:var(--display);font-size:17px}
+.ccard2 .cr{font-size:11px;color:var(--muted);text-align:center;line-height:1.3}
+.cdetail{margin-top:12px;padding:12px;border-radius:14px;border:1.5px solid var(--cc);background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.cdetail b{font-family:var(--display);font-size:18px}.cdetail span{font-size:13px;color:var(--muted)}.cdetail span b{font-family:inherit;font-size:13px;color:var(--ink)}
+.cdetail .btn{margin-top:4px;font-size:16px;padding:12px}
+@keyframes cbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.ccard2 .cimg img,.ccard2 .cimg svg{animation:none}}
 
 .win-card{border:1px solid var(--rc);border-radius:12px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--panel2);box-shadow:0 0 22px -6px var(--rc);text-align:center}
 .win-card b{font-size:16px}
@@ -236,6 +256,15 @@ input[type=number]{width:64px}
 .nb.dot{min-width:9px;width:9px;height:9px;padding:0;top:-1px;right:-5px}.nb.gold{background:var(--gold);animation:none;box-shadow:0 0 6px rgba(232,176,74,.7)}
 .gear{flex:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);display:grid;place-items:center;padding:0}.gear svg{width:18px;height:18px}
 .nav button[aria-selected="true"] .ico{filter:drop-shadow(0 0 4px rgba(232,176,74,.55))}
+
+/* iconos pintados (sprites/ui): barra de abajo, engranaje, botones del combate y Torre */
+.uimg{display:block;width:26px;height:26px;object-fit:contain;pointer-events:none}
+.nav .ni .uimg{width:28px;height:28px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.nav button:not([aria-selected="true"]) .ni .uimg{filter:saturate(.55) brightness(.8) drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.gear .uimg{width:24px;height:24px}
+.bimg{display:block;width:32px;height:32px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.mico .mimg{width:42px;height:42px}
+img.ic{object-fit:contain}
 /* botones con relieve y pequeño rebote al tocar */
 .btn,.mcard,.fchips button,.calbtn,.skb,.evcard{transition:transform .08s ease-out,box-shadow .08s,border-color .15s}
 .btn{box-shadow:0 2px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
@@ -284,6 +313,17 @@ input[type=number]{width:64px}
 .rwodds{font-size:12px;color:var(--muted)}.rwodds div{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px}.rwodds span{display:inline-flex;align-items:center;gap:3px}
 .stk{color:var(--gold)}
 .tchips{display:flex;flex-wrap:wrap;gap:4px}
+/* Jackpot: rodillo vertical; se ven 3 casillas (58 px) y la del centro, marcada con la línea dorada, es la que toca */
+.sreel{position:relative;height:174px;overflow:hidden;margin:10px auto;width:100%;max-width:300px;box-sizing:border-box;border-radius:14px;border:2px solid var(--gold);background:linear-gradient(180deg,#0c0d14,#1a1c28 30%,#1a1c28 70%,#0c0d14);box-shadow:inset 0 10px 18px rgba(0,0,0,.6),inset 0 -10px 18px rgba(0,0,0,.6),0 0 16px -4px rgba(232,176,74,.5)}
+.sstrip{position:absolute;left:0;right:0;top:0}
+.sstrip.spin{transition:transform 3.6s cubic-bezier(.12,.82,.18,1)}
+.sitem{height:58px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.05)}
+.sitem .ic{width:26px;height:26px}
+.sitem.s-ticket b,.sitem.s-ess b{color:#c9b6ff}.sitem.s-piece b{color:var(--rR)}
+.sitem .spc{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;border:2px solid var(--rR);font-weight:900;color:var(--rR)}
+.sitem.s-jackpot{flex-direction:column;gap:0}.sitem .jk{font-family:var(--display);font-size:22px;letter-spacing:2px;color:var(--gold);text-shadow:0 0 10px rgba(232,176,74,.8)}.sitem.s-jackpot small{font-size:10px;color:var(--muted)}
+.sline{position:absolute;left:0;right:0;top:58px;height:58px;border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);background:rgba(232,176,74,.07);pointer-events:none}
+@media (prefers-reduced-motion:reduce){.sstrip.spin{transition:none}}
 /* minitutorial: oscurece todo menos lo que señala; solo el cuadro de texto recibe toques */
 #tut{position:fixed;inset:0;z-index:300;pointer-events:none}
 .tuthole{position:fixed;border:2px solid var(--gold);border-radius:12px;box-shadow:0 0 0 9999px rgba(5,4,10,.62),0 0 16px rgba(232,176,74,.7);animation:tutp 1.6s ease-in-out infinite}
@@ -437,6 +477,23 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .ibslot{position:relative;width:46px;height:46px;border-radius:11px;display:grid;place-items:center;border:2px solid var(--rc,var(--line));background:rgba(10,11,16,.7);color:var(--rE);padding:0}
 .ibslot.empty{border-style:dashed;color:var(--muted);font-size:18px}
 .ibl{position:absolute;right:-6px;bottom:-6px;padding:1px 5px;border-radius:6px;background:var(--rc,var(--line));color:#0c0d12;font-size:10px;font-weight:800}
+/* Inventario: el héroe al centro con sus 4 piezas alrededor y el grimorio debajo; stats y set activo; pestañas */
+.ihero{position:relative;border-radius:14px;border:1px solid var(--line);background-size:cover;background-position:center;padding:10px 12px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:hidden}
+.ihname{display:flex;flex-direction:column;align-items:center;line-height:1.15}.ihname b{font-size:18px;font-weight:800;text-shadow:0 2px 6px #000}.ihname span{font-size:11px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase}
+.ihgrid{display:grid;grid-template-columns:56px 1fr 56px;align-items:center;width:100%;max-width:330px}
+.ihcol{display:flex;flex-direction:column;gap:14px;align-items:center}
+.ihcol .ibslot{width:54px;height:54px}
+.ihart{display:grid;place-items:center;min-height:140px}.ihart img{width:118px;height:auto;filter:drop-shadow(0 8px 12px rgba(0,0,0,.65))}
+.ihgrim{margin-top:-6px}
+.ihstats{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;font-size:12px;color:var(--muted)}.ihstats b{color:var(--ink)}
+.ihset{border:1px solid var(--rc);border-radius:999px;padding:4px 12px;font:inherit;font-size:12px;font-weight:800;color:var(--muted);background:rgba(10,11,16,.75);cursor:pointer}
+.ihset.on{color:var(--rc);box-shadow:0 0 10px -3px var(--rc)}
+.isubs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 0 8px;padding:4px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.isubs button{position:relative;border:0;border-radius:9px;padding:8px 2px;font:inherit;font-size:12px;font-weight:800;color:var(--muted);background:transparent;cursor:pointer}
+.isubs button.on{color:#1b1407;background:var(--gold)}
+.isubs .nb{position:absolute;top:-4px;right:2px;font-size:9px}
+.loot span .ic{width:16px;height:16px;vertical-align:-3px;margin-right:4px}
+.mtile .mi .ic{width:30px;height:30px}
 /* Campaña · Sala de jefes */
 .hgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .htile{position:relative;aspect-ratio:.82;border-radius:10px;border:2px solid var(--line);background:radial-gradient(circle at 50% 40%,#ffffff12,transparent 70%),var(--panel2);padding:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden}
@@ -590,6 +647,269 @@ button.skmode.on{color:var(--gold);border-color:var(--gold)}
 .gset p{margin:2px 0 0;font-size:11px;line-height:1.3}
 .gset .act{color:var(--good);font-weight:800}
 .flyg{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;border:2px solid var(--rc);background:rgba(10,11,16,.85)}
+/* recursos (fase 1): aviso de pieza nueva, pieza elegida en su ventana, botones, colección con nivel, modo romper y Forja */
+.ibslot{position:relative}
+.newdot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--bad);border:2px solid #12141c}
+.wline[role="button"]{cursor:pointer}
+.wline.sel{background:color-mix(in srgb,var(--rc) 16%,var(--panel2))}
+.wline .wc i{font-style:normal;color:#7fd8e8;font-size:11px}
+.gacts{flex-wrap:wrap;gap:6px;margin:6px 0}
+.gacts .btn .ic,.brkbar .ic,.invforge .ic,.fpiece .ic{width:16px;height:16px;vertical-align:-3px}
+.gcell{position:relative}
+.gcell small{position:absolute;right:2px;bottom:0;font-size:8px;color:#7fd8e8;font-weight:800}
+.gcell[role="button"]{cursor:pointer}
+.gcell.mk.all{background:color-mix(in srgb,var(--bad) 45%,transparent);border-color:var(--bad)}
+.gcell.mk.extra{box-shadow:inset 0 0 0 2px var(--bad)}
+button.rt{cursor:pointer;color:var(--ink);font:inherit;font-size:12px}
+.rt.on{outline:2px solid var(--rc);background:color-mix(in srgb,var(--rc) 18%,var(--panel2))}
+.brkbar{margin:6px 0 8px;padding:8px;border-radius:8px;background:var(--panel2);border:1px solid var(--bad)}
+.brkbar .ctrl{flex-wrap:wrap;gap:6px;align-items:center}
+.brklist{margin:6px 0;padding-left:18px;font-size:12px;line-height:1.4;max-height:160px;overflow:auto}
+.fpiece{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:var(--panel2);border-left:3px solid var(--rc);margin-bottom:8px}
+.fpiece span{display:flex;flex-direction:column}.fpiece b{font-size:12px;color:var(--rc)}.fpiece small{font-size:10px;color:var(--muted)}
+/* Talentos (dentro del Grimorio): una fila por talento con su nivel, lo que da y el botón de subir */
+.tals{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+.tals h4{margin:0;font-size:14px;color:var(--rE)}
+.tals.off{opacity:.65}
+.tal{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.tal:last-child{border-bottom:0}
+.tal .btn{white-space:nowrap;flex:none}
+/* ---------- estilo RPG (rediseño): marcos pintados de hierro y bronce; el oro brillante solo en lo elegido y el botón principal ----------
+   Marcos en sprites/ui (9 partes con border-image, corte de 48 px): marco_dorado (oro viejo desgastado del kit de las maquetas: casi todo) y marco_oro (lo elegido).
+   Dentro de los paneles, la pizarra rayada del kit (losa) con un degradado suave. */
+:root{--fr-h:url(sprites/ui/marco_dorado.webp);--fr-b:url(sprites/ui/marco_dorado.webp);--fr-o:url(sprites/ui/marco_oro.webp);
+  --plate:linear-gradient(180deg,rgba(46,50,70,.28),rgba(0,0,0,.4)),url(sprites/ui/losa.webp) center/cover,#11131b;--cream:#efe2c2}
+body{background:radial-gradient(ellipse 120% 70% at 50% 0%,#161a28,#0b0c12 70%) fixed,#0b0c12}
+/* marcos */
+.panel,.mrow,.cald,.scard,.modal .box,.mcard2,.stage,.ihero{border:12px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 12px stretch;box-shadow:0 6px 14px rgba(0,0,0,.45)}
+.panel,.mrow,.cald,.scard,.modal .box{background:var(--plate);background-clip:padding-box}
+.mcard2,.ihero{border-image-source:var(--fr-b)}
+.panel{padding:8px}
+.mrow{padding:4px 5px;border-width:10px;border-image-width:10px}
+/* un panel que ya lleva filas o tarjetas enmarcadas no lleva marco propio (sin marcos dentro de marcos) */
+.panel:has(> .mrow,> .scard,> .sgrid,> .mcard2,> .mlist){border:0;border-image:none;background:none;box-shadow:none;padding:0}
+.cald.now,.scard.on{border-image-source:var(--fr-o)}
+.cald.now{box-shadow:0 0 14px rgba(232,176,74,.35)}
+/* cabecera: medallón con el icono de la pantalla, título y monedas en placas */
+.top.slim{background:linear-gradient(180deg,#0b0c12 75%,transparent)}
+.top.slim .sttl{display:flex;align-items:center;gap:6px;font-size:15px;letter-spacing:.6px;color:var(--cream);text-shadow:0 2px 0 #000}
+.sttl .stxt{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sttl .smed{flex:none;width:34px;height:34px;display:grid;place-items:center;background:url(sprites/ui/aro_hierro.webp) center/100% 100% no-repeat}
+.sttl .smed .uimg{width:22px;height:22px}
+.top.slim .res span,.top .res span{border:7px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 7px stretch;background:var(--plate);background-clip:padding-box;padding:1px 6px 1px 2px}
+.gear{border:7px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 7px stretch;background:var(--plate);background-clip:padding-box;width:40px;height:40px}
+/* pestañas: placa oscura sencilla; la elegida, marco de oro */
+.fchips button{border:6px solid transparent;border-radius:0;border-image:none;background:#141622;background-clip:padding-box;padding:2px 7px;color:#9a97a6;box-shadow:inset 0 0 0 1px #2c2c38}
+.fchips button[aria-pressed="true"]{border-image:var(--fr-o) 48 / 6px stretch;background:linear-gradient(180deg,#2a2210,#14110a);background-clip:padding-box;color:var(--cream);box-shadow:0 0 10px rgba(232,176,74,.25)}
+/* botones: el normal, placa de hierro; el dorado, placa de oro apagado (sin brillo) */
+.btn:not(.gold){border:7px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 7px stretch;background:var(--plate);background-clip:padding-box;padding:4px 10px;color:var(--cream)}
+.btn.gold{border:1px solid #6b4a14;border-radius:8px;background:linear-gradient(#e2b25a,#b9862d);color:#1b1406;box-shadow:0 2px 0 #5a3c0e,inset 0 1px 0 rgba(255,240,200,.35)}
+/* barra de abajo: la barra entera es una franja (con su línea morada de arriba); los botones, sin caja; el elegido, marco de oro con brillo suave */
+.nav{background:linear-gradient(180deg,#12141e,#08090d)}
+.nav div{gap:4px}
+.nav button{border:7px solid transparent;border-radius:0;background:none;padding:1px 0 2px;color:#8f8c9c}
+.nav button[aria-selected="true"]{border-image:var(--fr-o) 48 / 7px stretch;background:linear-gradient(180deg,#2a2210,#14110a);background-clip:padding-box;color:var(--cream);box-shadow:0 0 12px rgba(232,176,74,.3)}
+/* pestañas del inventario: franja de hierro; la elegida, marco de oro */
+.isubs{border:7px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 7px stretch;background:var(--plate);background-clip:padding-box;padding:2px}
+.isubs button{border:5px solid transparent;border-radius:0;padding:3px 2px}
+.isubs button.on{border-image:var(--fr-o) 48 / 5px stretch;border-radius:0;background:linear-gradient(180deg,#2a2210,#14110a);background-clip:padding-box;color:var(--cream)}
+/* insignias de las tarjetas: placa oscura con borde fino (sin rojo ni dorado chillón) */
+.mbadge{background:#0e0f16e6;border:1px solid #7a6a4a;color:var(--cream)}
+.mbadge.g{border-color:#7a6a4a;color:#d9c79a}
+/* ---------- maquetación de cada pantalla con el estilo RPG (según las maquetas): Modos, Misiones, Tienda y Premios diarios ---------- */
+/* pestañas: ocupan todo el ancho, cada una lo que necesita */
+.fchips{display:flex;gap:4px}
+.fchips button{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* placa oscura con borde fino (datos dentro de las tarjetas) */
+.mcard2 .mp,.mcard2 .mf{background:#0b0c12d9;border:1px solid #5e5038;border-radius:6px}
+/* Modos: progreso en recuadro; dificultades en placas de su color (la de ahora, encendida); datos en placa */
+.mcard2 .mp{padding:4px 10px}
+.mcard2 .mm{gap:6px;margin-top:2px}
+.mcard2 .mm span{padding:2px 8px;border:1px solid currentColor;border-radius:6px;background:#0b0c12d9;opacity:.6}
+.mcard2 .mm span:nth-child(1){color:#8fb3e8}
+.mcard2 .mm span:nth-child(2){color:#7fd08a}
+.mcard2 .mm span:nth-child(3){color:#ff6b6b}
+.mcard2 .mm span.on{opacity:1;box-shadow:0 0 8px -2px currentColor}
+.mcard2 .mf{align-self:stretch;padding:3px 10px}
+.mcard2.low .mf{display:table;align-self:auto;margin-top:5px}
+.mcard2 .mico{width:58px;height:58px;border:0;background:url(sprites/ui/aro_hierro.webp) center/100% 100% no-repeat}
+.mcard2 .mico .mimg{width:38px;height:38px}
+/* Misiones: retrato a la izquierda, barra verde, premios en placas */
+.mpor{flex:none;width:50px;height:50px;display:grid;place-items:center;background:#0a0b10;border-radius:4px;box-shadow:inset 0 0 0 1px #3a3442,inset 0 0 12px #000}
+.mpor .uimg{width:38px;height:38px}
+.mrow .mbar .rbar{height:9px;border-radius:5px;overflow:hidden}
+.mrow .mbar .rbar i,.mrow.ready .mbar .rbar i{background:linear-gradient(90deg,#3f9a4c,#7ed35f)}
+.mrow .mrw .rw{background:#0a0b10;border:1px solid #2e2a36;border-radius:6px}
+.mrow.ready{background:var(--plate);background-clip:padding-box;border-image-source:var(--fr-o)}
+/* Tienda: 3 columnas; el precio en placa oscura con marco de bronce (sin botón dorado) */
+.sgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.scard{border-width:10px;border-image-width:10px;padding:4px 2px 5px}
+.scard .sc-ic{height:50px;background:radial-gradient(circle,color-mix(in srgb,var(--tone) 30%,transparent) 0,transparent 68%)}
+.scard .sc-ic .ic{width:44px;height:44px}
+.scard .sc-n{font-size:13px}
+.scard .sc-s{font-size:10px;margin-bottom:6px}
+.scard .sc-buy.btn.gold{border:6px solid transparent;border-image:var(--fr-b) 48 / 6px stretch;border-radius:0;background:#0d0e15;background-clip:padding-box;color:var(--cream);box-shadow:none;padding:1px 2px;font-size:12px;gap:3px;overflow:hidden}
+.scard .sc-buy.btn.gold:disabled{opacity:.5}
+.scard .ibtn{top:2px;right:2px;width:22px;height:22px;font-size:11px}
+@media (max-width:359px){.sgrid{grid-template-columns:1fr 1fr}}
+/* Premios diarios: cabecera con el cofre; cada día, el premio grande en el centro */
+.dhead{display:flex;align-items:center;gap:10px;margin:0 30px 10px 0}
+.dhead .uimg{flex:none;width:54px;height:54px}
+.dhead h3{margin:0;font-size:18px;color:var(--cream);letter-spacing:.3px;white-space:nowrap}
+.dhead small{display:block;font-size:12px;color:#b3aebf;line-height:1.3}
+.cald{align-items:center;justify-content:flex-start;gap:5px;padding:3px 1px;min-height:72px;border-width:9px;border-image-width:9px}
+.cald .s{font-weight:800;color:var(--cream)}
+.cald b{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 6px}
+.cald .rw{flex-direction:column;gap:1px;margin:0;font-size:12px}
+.cald .rw .ic,.cald .rw img,.cald .rw svg{width:26px;height:26px}
+.cald.got{opacity:.6}
+.cald .rmax{color:#7ed35f;font-weight:900}
+/* Tienda: «desde» pequeño para que quepa el precio */
+.scard .sc-buy small{font-size:9px;opacity:.8}
+/* Potenciadores (como su maqueta): cada ventaja en un panel enmarcado con medallón, título, duración y explicación; a la derecha, el botón y cuántas quedan */
+.brow{display:flex;align-items:center;gap:8px;padding:6px 4px;margin-bottom:8px;border:11px solid transparent;border-image:var(--fr-h) 48 / 11px stretch;background:var(--plate);background-clip:padding-box}
+.bmed{flex:none;width:56px;height:56px;display:grid;place-items:center;background:url(sprites/ui/aro_dorado.webp) center/100% 100% no-repeat}
+.bmed .uimg{width:34px;height:34px}
+.brow .bt{flex:1;min-width:0}
+.brow .t{font-family:var(--display);font-weight:700;font-size:16px;color:#f0d79a;line-height:1.15}
+.brow .bd{font-size:12px;font-weight:800;color:#e8c46a;margin-top:2px}
+.brow .bx{font-size:11px;color:#a8a3b3;line-height:1.3;margin-top:2px}
+.brow .acts{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px}
+.brow .acts .btn{font-size:12px;padding:6px 8px}
+.brow .acts .s{font-size:10.5px;color:#a8a3b3;text-align:center}
+/* Inventario, al estilo de la ficha de personaje de los MMO: el héroe en el centro sobre su pedestal y los huecos enmarcados a los lados */
+.ihero{padding:8px 8px 10px;gap:4px;background-color:#0c0d14}
+.ihname{padding:3px 18px;background:#0b0c12d9;border:1px solid #5e5038;border-radius:6px}
+.ihname b{font-size:16px;color:var(--cream)}
+.ihname span{font-size:10px;color:#d9c79a}
+.ihgrid{grid-template-columns:64px 1fr 64px;max-width:340px}
+.ihcol{gap:10px}
+.ihs{display:flex;flex-direction:column;align-items:center;gap:2px}
+.ihs>small{font-size:10px;font-weight:800;color:#b3aebf;letter-spacing:.3px;text-shadow:0 1px 2px #000}
+.ihero .ibslot{width:58px;height:58px;border:7px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 7px stretch;background:#0a0b10;background-clip:padding-box;box-shadow:inset 0 0 0 2px var(--rc,#3a3442),inset 0 0 14px #000,0 4px 8px rgba(0,0,0,.6)}
+.ihero .ibslot.empty{border-style:solid;box-shadow:inset 0 0 0 1px #2e2a36,inset 0 0 14px #000}
+.ihero .ibslot svg,.ihero .ibslot .bimg{width:34px;height:34px}
+.ihero .ibslot .ilock{width:26px;height:26px;opacity:.7}
+.ihero .ibslot .ibl{bottom:-3px;right:-3px;padding:0 4px;background:#0b0c12;border:1px solid #5e5038;border-radius:4px;color:var(--cream);font-size:9px}
+.ihart{position:relative;min-height:150px}
+.ihart img{position:relative;width:126px}
+.ihped{position:absolute;left:50%;bottom:4px;width:120px;height:26px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(150,90,255,.35),rgba(0,0,0,.65) 55%,transparent 72%)}
+.ihgrim{margin-top:-4px}
+.ihgrim .ibslot{width:64px;height:64px;box-shadow:inset 0 0 0 2px var(--rE),inset 0 0 16px #000,0 0 12px -2px rgba(176,102,232,.5)}
+.ihstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;width:100%;margin-top:2px}
+.ihstats span{display:flex;flex-direction:column;align-items:center;gap:0;padding:3px 2px;background:#0b0c12d9;border:1px solid #2e2a36;border-radius:6px}
+.ihstats .uimg{width:20px;height:20px}
+.ihstats em{font-style:normal;font-size:9px;color:#9a97a6;line-height:1.1}
+.ihstats b{font-size:13px;color:var(--cream)}
+.ihset{border-radius:6px}
+/* ---------- más cerca de las maquetas: letra con serifa, pestañas con icono, cabecera con estandarte y barra de abajo en cajas ---------- */
+:root{--display:"Cinzel",Georgia,"Times New Roman",serif}
+.sttl .stxt,.mcard2 .mt,.mcard2 .mk,.scard .sc-n,.dhead h3,.modal h3,.panel h3,.fchips button,.isubs button,.nav .nl,.btn,.ihname b,.ihs>small,.mbadge,.cald .s{font-family:var(--display);font-weight:700}
+.mcard2 .mt{font-weight:900;font-size:26px;color:#f3e3c0}
+.dhead h3,.modal h3{color:#f0d79a}
+/* cabecera: el título en un estandarte del kit y el medallón con aro de oro */
+.top.slim .sttl{gap:0}
+.sttl .smed{width:44px;height:44px;margin-right:-10px;position:relative;z-index:1;background-image:url(sprites/ui/aro_dorado.webp)}
+.sttl .smed .uimg{width:28px;height:28px}
+.sttl .stxt{padding:6px 13px 6px 15px;background:url(sprites/ui/banner.webp) center/100% 100% no-repeat;color:#f0d79a;font-size:13px;font-weight:900;letter-spacing:.4px}
+.top.slim .res{gap:4px}
+.gear{border-image-source:var(--fr-h)}
+/* pestañas: caja con marco, icono encima del nombre; la elegida, oro vivo con brillo */
+.fchips button,.isubs button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:3px 2px;font-size:11px;line-height:1.1;border:6px solid transparent;border-image:var(--fr-h) 48 / 6px stretch;background:#10121a;background-clip:padding-box;color:#a8a3b3;box-shadow:none}
+.fchips button .uimg,.isubs button .uimg{width:20px;height:20px;filter:saturate(.6) brightness(.85)}
+.fchips button[aria-pressed="true"],.isubs button.on{border-image:var(--fr-o) 48 / 6px stretch;background:linear-gradient(180deg,#2b2312,#15110a);background-clip:padding-box;color:#f3e3c0;box-shadow:0 0 12px rgba(232,176,74,.35)}
+.fchips button[aria-pressed="true"] .uimg,.isubs button.on .uimg{filter:none}
+.isubs{border:0;border-image:none;background:none;padding:0;gap:4px}
+.fchips .nb,.isubs .nb{position:absolute!important;top:-6px;right:-4px}
+.fchips button{position:relative;overflow:visible}
+/* barra de abajo: cada botón en su caja con marco; el elegido, oro vivo con brillo y un rombo encima */
+.nav button{border:7px solid transparent;border-image:var(--fr-h) 48 / 7px stretch;background:#10121a;background-clip:padding-box;overflow:visible}
+.nav button[aria-selected="true"]::after{content:"";position:absolute;top:-11px;left:50%;width:9px;height:9px;transform:translateX(-50%) rotate(45deg);background:linear-gradient(135deg,#ffe2a0,#c48a2c);box-shadow:0 0 8px rgba(255,200,90,.8);border:1px solid #5a3c0e}
+/* botones normales: placa oscura con marco de oro viejo */
+.btn:not(.gold){border-image-source:var(--fr-h);color:#f0e2c4}
+/* insignias de las tarjetas: placa con borde de oro viejo */
+.mbadge,.mbadge.g{border-color:#a07a3a;color:#f0d79a;font-weight:700}
+/* separadores del kit bajo los títulos de las ventanas */
+.dhead{padding-bottom:10px;background:url(sprites/ui/separador.webp) center bottom/90% 10px no-repeat}
+.mrow .mi>b{font-size:13.5px;color:#f0e2c4}
+/* ---------- Inicio (como su maqueta): fase en un escudo, barras con borde de oro viejo, botones del combate en marcos y mejoras en cajas con icono ---------- */
+.vsc{width:58px;height:60px;margin:-12px -10px 0;border:0;border-radius:0;background:url(sprites/ui/emblema.webp) center/100% 100% no-repeat;box-shadow:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.7));padding-top:4px}
+.vsc small{color:#f0d79a}
+.vsc.boss,.vsc.eboss,.vsc.elite,.vsc.horde,.vsc.wander{box-shadow:none}
+.vsc.boss{filter:drop-shadow(0 0 6px rgba(229,72,77,.9))}
+.vsc.eboss,.vsc.elite{filter:drop-shadow(0 0 6px rgba(168,107,224,.9))}
+.vsc.horde{filter:drop-shadow(0 0 6px rgba(240,138,60,.9))}
+.vsc.wander{filter:drop-shadow(0 0 6px rgba(79,149,230,.9))}
+.vsv .frm{stroke:#c9a052;stroke-width:2.6}
+@keyframes vslow{from{stroke:#c9a052}to{stroke:#ff4d45}}
+.av{border-color:#c9a052;box-shadow:0 0 0 2px #0b0c10,0 0 0 4px #6b5228}
+/* premios, poción y repetir: abajo a la derecha, en fila y con marco */
+.sidebtns{top:auto;bottom:14px;right:12px;flex-direction:row-reverse;gap:6px}
+.sidebtns .calbtn{width:46px;height:46px;border:6px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 6px stretch;background:#0c0d15d9;background-clip:padding-box}
+.sidebtns .calbtn .bimg{width:30px;height:30px}
+.sidebtns .boosttime{right:auto;left:50%;top:auto;bottom:calc(100% + 4px);transform:translateX(-50%)}
+/* habilidad y AUTO con aro de oro */
+.skb{border:3px solid #c9a052;box-shadow:0 0 0 2px #0b0c10,0 3px 8px rgba(0,0,0,.6)}
+.skbar .skmode{width:48px;height:48px;border:0;background:url(sprites/ui/aro_dorado.webp) center/100% 100% no-repeat,#0c0d15;border-radius:50%}
+.skbar .skmode.on{box-shadow:0 0 10px rgba(232,176,74,.5)}
+/* mejoras: cajas con marco, icono, nombre, nivel y precio */
+.upt,.upx{border:6px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 6px stretch;background:#0c0d15;background-clip:padding-box;flex-direction:column;align-items:center;row-gap:0;padding:1px 1px 2px}
+.upt.ok{border-image-source:var(--fr-h);box-shadow:none}
+.upt .upi,.upx .upi{width:16px;height:16px}
+.upt .un{color:#b3aebf}
+.upt b,.upx b{color:#f3e3c0;font-size:14px}
+.upx.lv{background:#0c0d15;background-clip:padding-box}
+.upx small{font-size:9px;color:#b3aebf}
+/* el escenario del combate, sin marco y de borde a borde (como la maqueta) */
+.app.home .stage{border:0;border-image:none;border-radius:0;margin-inline:-16px;box-shadow:none}
+.upstrip{grid-template-columns:repeat(5,minmax(0,1fr))}
+.vsc small{font-size:8px;margin-bottom:-1px}
+.vsc.sk svg{width:22px;height:22px}
+/* Inventario, tabla de equipo (como la maqueta): cada pieza en una casilla cuadrada con marco; la que tienes, con su dibujo, el color de su rareza y el +nivel */
+.gcol .ghead,.gcol .grow{grid-template-columns:64px repeat(5,minmax(0,1fr));gap:5px;margin:4px 0}
+.gcol .ghead span{font-family:var(--display);font-size:10px}
+.gcol .gname{font-family:var(--display);font-size:11px;color:#e6d6b0}
+.gcell{height:auto;aspect-ratio:1;border:5px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 5px stretch;background:#0a0b10;background-clip:padding-box;box-shadow:inset 0 0 8px #000;opacity:.75}
+.gcell.has{opacity:1;border-style:solid;background:radial-gradient(circle,color-mix(in srgb,var(--rc) 28%,#0a0b10),#0a0b10 78%);background-clip:padding-box;box-shadow:inset 0 0 0 2px var(--rc)}
+.gcell.eq{outline:0;box-shadow:inset 0 0 0 2px var(--rc),0 0 9px -1px var(--rc)}
+.gcell svg{width:24px;height:24px}
+.gcell .gl{position:absolute;right:-5px;bottom:-5px;padding:0 3px;border-radius:3px;background:var(--rc);color:#0c0d12;font-size:9px;font-weight:900;line-height:13px}
+.gcell small{left:-3px;right:auto;bottom:-4px}
+.gcol .glock{display:flex;align-items:center;gap:6px}
+.gcol .glock .uimg{width:18px;height:18px}
+/* iconos pintados: AUTO, insignias de Modos, tarjetas de Mazmorra y Jefe semanal, candados */
+.skbar .skmode{background:#0c0d15;gap:0}
+.skbar .skmode .uimg{width:40px;height:40px;margin-top:-2px}
+.skbar .skmode small{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);padding:0 4px;background:#0b0c12;border:1px solid #a07a3a;border-radius:4px;font-family:var(--display);color:#f0d79a}
+.skbar .skmode:not(.on) .uimg{filter:grayscale(.8) brightness(.7)}
+.mbadge{display:inline-flex;align-items:center;gap:4px}
+.mbadge .bi{width:15px;height:15px}
+.evcard{display:grid;grid-template-columns:62px 1fr;column-gap:10px;row-gap:3px;align-items:center;border:12px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 12px stretch;background:var(--plate);background-clip:padding-box;padding:6px 8px}
+.evcard>.evic{grid-row:1 / span 3;width:62px;height:62px;display:grid;place-items:center}
+.evcard>.evic .uimg{width:58px;height:58px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))}
+.evcard .evt{font-family:var(--display);color:#f0d79a}
+.evcard .evlk{width:18px;height:18px;vertical-align:-3px}
+.htile .hlk .uimg{width:30px;height:30px;opacity:.75}
+.back{border:8px solid transparent;border-radius:0;border-image:var(--fr-h) 48 / 8px stretch;background:var(--plate);background-clip:padding-box;font-family:var(--display);font-weight:700;color:#f0d79a;padding:2px 10px}
+.panel:has(> .evcard){border:0;border-image:none;background:none;box-shadow:none;padding:0}
+/* Potenciadores: medallón a la izquierda; a la derecha el texto y, debajo, el botón con cuántas quedan */
+.brow{display:grid;grid-template-columns:56px 1fr;column-gap:10px;row-gap:6px;align-items:center}
+.brow .bmed{grid-row:1 / span 2}
+.brow .acts{flex-direction:row;justify-content:space-between;align-items:center;gap:8px}
+/* cabecera: «+» junto al oro y los tokens (lleva a la Tienda) y el nivel bajo el nombre */
+.res span{display:inline-flex;align-items:center}
+.res .rplus{flex:none;width:15px;height:15px;margin:0 -2px 0 4px;padding:0;border:1px solid #5a3c0e;border-radius:50%;background:radial-gradient(circle at 50% 35%,#f0c56a,#a8761f);color:#1b1406;font:900 12px/13px var(--body);display:grid;place-items:center;cursor:pointer}
+.uname .nlv{align-self:flex-start;margin-top:2px;padding:0 6px;border:1px solid #6b5228;border-radius:4px;background:#0b0c12;color:#d9c79a;font:700 10px/14px var(--body)}
+/* cabecera más compacta para que quepan el título y los «+» */
+.top.slim{gap:5px}
+.top.slim .res span,.top .res span{border-width:5px;border-image-width:5px;padding:1px 3px 1px 1px}
+.gear{width:36px;height:36px}
+.sttl .smed{margin-right:-12px}
+.sttl .stxt{padding:6px 9px 6px 14px;font-size:12px;letter-spacing:0}
+/* el título de la pantalla siempre entero (nunca «TIE…»): no se recorta; en móviles estrechos, letra y placas algo más pequeñas */
+.top.slim .sttl{overflow:visible}
+.sttl .stxt{flex:none;overflow:visible;text-overflow:clip;white-space:nowrap}
+@media (max-width:374px){.sttl .stxt{font-size:11px;padding:5px 7px 5px 13px}.sttl .smed{width:38px;height:38px}.top.slim .res span{font-size:12px}.res .rplus{width:13px;height:13px;font-size:10px;line-height:11px}.gear{width:32px;height:32px}}
 </style>
 
 <div class="app" id="app"></div>
@@ -612,7 +932,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610200528-3fffc94';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610210400-5d5458b';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
