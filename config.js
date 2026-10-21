@@ -549,9 +549,9 @@ const CFG = {
   referral:{link:'https://t.me/IdleAscensionTestBot/game', goalFase:50, goalSilver:24, goalBox:3, buyPct:0.05, buyOn:false, giftSilver:1},
   // ---------- modos: desbloqueo, Sala de jefes, Mazmorra, jefe semanal y PvP (trozo de la lista CFG) ----------
   // Desbloqueo escalonado (algo nuevo cada pocos minutos): por fase récord (en Normal; desde Pesadilla, todo abierto) o por días de juego (desde que empezó
-  // la partida). Pestañas: mis (Misiones), inv (Inventario), ev (Modos), shop (Tienda). Modos: lab (Mazmorra), hall (Sala de jefes), pvp, tower, boss (Jefe semanal).
+  // la partida). Pestañas: mis (Misiones), inv (Inventario), ev (Modos), shop (Tienda). Modos: lab (Mazmorra), hall (Sala de jefes), pvp, clan, tower, boss (Jefe semanal).
   // Al abrirse cada cosa sale un aviso que la señala (pantallas/inicio/tutorial.js).
-  unlock:{mis:{fase:3}, inv:{fase:5}, ev:{fase:10}, lab:{fase:10}, shop:{fase:20}, hall:{fase:30}, pvp:{fase:40}, tower:{fase:60}, boss:{day:3}},
+  unlock:{mis:{fase:3}, inv:{fase:5}, ev:{fase:10}, lab:{fase:10}, shop:{fase:20}, hall:{fase:30}, pvp:{fase:40}, clan:{fase:40}, tower:{fase:60}, boss:{day:3}},
   // Sala de jefes: cada JEFE de campaña vencido (fases 30, 60, 90, 120 y 150 de cada modo) se puede volver a luchar. 3 intentos al día (se gastan al empezar).
   // 3 estrellas: ★ como en la campaña; ★★ y ★★★ más fuertes (hay que pasar la anterior). 1.ª victoria de cada estrella: 'first';
   // repetir: 'repeat' (oro de X min)
@@ -630,6 +630,21 @@ const CFG = {
     vs:{},
     // Asesino: base, B1 y B2 ×1,02 a mano sobre lo calculado (petición: un poco más fuerte en PvP)
     cls:{Guerrero:{base:0.911,A1:0.604,B1:0.691,A2:0.663,B2:0.791},Mago:{base:1.061,A1:1.35,B1:1.518,A2:1.098,B2:1.681},Arquero:{base:1.078,A1:1.202,B1:0.876,A2:1.372,B2:1.048},Asesino:{base:1.129,A1:1.477,B1:0.847,A2:1.046,B2:0.748},Clerigo:{base:0.884,A1:0.944,B1:0.978,A2:0.832,B2:1.15}}, start:1000, k:24, kNew:40, newGames:10, defK:0.5, botSpread:60, near:5},
+  // Clanes: viven en el servidor (supabase/functions/track/clanes.js copia estos números: si cambian, cambiarlos allí también).
+  // Hasta 20 miembros; líder y 2 oficiales; crear cuesta 'cost' tokens; quien sale espera 'cooldownH' h para entrar en otro.
+  // JEFE de clan: como el Jefe semanal (1 min, no te pega), 'tries' intentos al día; el daño de todos se suma y cada nivel tiene ×grow de vida
+  // (el nivel L, hp0 × grow^(L−1)). Es otro JEFE de tu modo que el del Jefe semanal. Premio el lunes por el nivel al que llegó el clan (si pegaste):
+  // Sellos min(evMax, ev × (L−1)); tickets de invocación y esencias min(max, (L−1) / every).
+  // ×1,25 por nivel (y no ×2) para que cuenten el poder y los miembros: con el bot (10 partidas), ×4 de miembros son unos 6 niveles y el máximo
+  // (nivel 51) solo lo alcanza un clan de 20 activos ya en el final del juego; 5 miembros, la 1.ª semana, nivel 11 (30 Sellos y 1 y 1).
+  // Objetivo semanal: cada misión diaria hecha suma 'daily' puntos y cada semanal 'weekly'; premio para todos según el tramo.
+  // Bonus: cada miembro aporta oro (minutos de farmeo de su récord, hasta maxGiveMin al día) al bonus que elija; el nivel L cuesta cost × L minutos.
+  // per: lo que da cada nivel (oro, experiencia y mineral de la campaña; daño al JEFE de clan). rank: premio por puesto del ranking semanal de clanes.
+  clan:{max:20, officers:2, cost:300, cooldownH:24, inactiveDays:7, nameMin:3, nameMax:16, descrMax:80, chat:{max:150, every:5, poll:5, keep:100},
+    boss:{tries:2, hp0:50000, grow:1.25, pick:2, rew:{ev:3, evMax:150, every:10, max:5}},
+    goal:{daily:1, weekly:3, tiers:[50,150,300,500], rew:[{ev:20,box:1},{ev:40,box:1,ess:1},{ev:60,box:2,ess:2},{ev:80,box:3,ess:3}]},
+    bonus:{maxGiveMin:120, cost:600, max:10, keys:['gold','xp','mineral','boss'], per:{gold:0.01, xp:0.01, mineral:0.02, boss:0.05}},
+    rank:[{to:1,ev:150,box:5,ess:5},{to:3,ev:120,box:4,ess:4},{to:10,ev:90,box:3,ess:3},{to:25,ev:60,box:2,ess:2},{to:50,ev:30,box:1,ess:1}]},
   // ---------- Torre (trozo de la lista CFG) ----------
   // Torre (roguelike): mapa de pisos con caminos; entras con tu héroe y sumas mejoras de cualquier clase durante la partida.
   // 3 vidas por partida (perder un combate = −1 vida y repites el piso); vida extra con tokens. Enemigos: los de tu fase récord

@@ -143,6 +143,8 @@ const UI=(n,cls='uimg')=>`<img class="${cls}" src="sprites/ui/${n}.webp${window.
 const NAVI={up:'nav_inicio',inv:'nav_inventario',shop:'nav_tienda',ev:'modo_pvp',mis:'nav_misiones',dev:'nav_ajustes'};
 // iconos de las monedas de arriba: moneda de oro y token (rombo)
 const ICON={
+  // clan: estandarte azul con una huella dorada
+  clan:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M14 8v52" stroke="#140f1c" stroke-width="7" stroke-linecap="round"/><path d="M14 8v52" stroke="#8a5a2b" stroke-width="3.5" stroke-linecap="round"/><path d="M16 11h40l-9 14 9 14H16z" fill="#3b6fd8" stroke="#140f1c" stroke-width="3.5" stroke-linejoin="round"/><ellipse cx="31" cy="29" rx="6" ry="5" fill="#f2c14e"/><circle cx="23.5" cy="22" r="2.7" fill="#f2c14e"/><circle cx="28.5" cy="18" r="2.7" fill="#f2c14e"/><circle cx="34" cy="18" r="2.7" fill="#f2c14e"/><circle cx="39" cy="22" r="2.7" fill="#f2c14e"/><circle cx="14" cy="7" r="4" fill="#f2c14e" stroke="#140f1c" stroke-width="2.5"/></svg>',
   // mineral (roca gris con cristales: sube el nivel de las piezas) y chatarra (engranaje de bronce: la Forja)
   mineral:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 44L18 22L34 14L52 24L58 44L40 56H20Z" fill="#6b7280"/><path d="M8 44L18 22L34 14L52 24L58 44L40 56H20Z" fill="none" stroke="#140f1c" stroke-width="3.5" stroke-linejoin="round"/><path d="M26 40L32 20L40 38L33 46Z" fill="#7fd8e8" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round"/><path d="M42 44L47 32L52 43Z" fill="#7fd8e8" stroke="#140f1c" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 40L20 30" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/></svg>',
   scrap:'<svg class="ic" viewBox="0 0 64 64" aria-hidden="true"><path d="M28 6h8l2 8 6 3 7-4 6 6-4 7 3 6 8 2v8l-8 2-3 6 4 7-6 6-7-4-6 3-2 8h-8l-2-8-6-3-7 4-6-6 4-7-3-6-8-2v-8l8-2 3-6-4-7 6-6 7 4 6-3z" fill="#b07a45" stroke="#140f1c" stroke-width="3" stroke-linejoin="round"/><circle cx="32" cy="32" r="9" fill="#5c3b1e" stroke="#140f1c" stroke-width="3"/></svg>',
@@ -417,7 +419,7 @@ function encInfo(B,ev){ if(!B) return null; const fmtN=n=>n.toLocaleString('es-E
       return {k:'elite',s:'✦ ÉLITE ✦',b:F.name,i:encSub(F),chips:encSkills(F).concat(tr.map(t=>(T[t]||{}).name||t))} }
     return null }
   if(B.kind==='hall'){ const H=B.hall, F=encFoe(B); return {k:'boss',s:'⚠ JEFE '+'★'.repeat(H.star)+' ⚠',b:F?F.name:'JEFE',i:(F?encSub(F)+' · ':'')+'desde el minuto 1 se enfurece',chips:F?encSkills(F):[]} }
-  if(B.kind==='boss'){ const W=B.wb||{}, F=encFoe(B); return {k:'boss',s:'⚠ JEFE SEMANAL ⚠',b:F?F.name:W.name||'Jefe semanal',i:F?encSub(F):W.desc||'',chips:F?encSkills(F):[]} }
+  if(B.kind==='boss'){ const W=B.wb||{}, F=encFoe(B); return {k:'boss',s:B.clan?'⚠ JEFE DE CLAN ⚠':'⚠ JEFE SEMANAL ⚠',b:F?F.name:W.name||(B.clan?'JEFE de clan':'Jefe semanal'),i:F?encSub(F):W.desc||'',chips:F?encSkills(F):[]} }
   if(ev) return null;   // Mazmorra y PvP: sin cartel
   if(B.boss){ const F=encFoe(B); if(!F) return null;
     return B.elite?{k:'boss',s:'⚠ JEFE ⚠',b:F.name,i:`Fase ${fmtN(S.fase)} · ${encSub(F)}`,chips:encSkills(F)}
@@ -524,7 +526,7 @@ function updateHUD(){
   { const sp=!ev&&G.surpriseState(), run=ev&&B&&B.kind==='tower'?G.towerState().run:null;
     // mismos colores que el borde del combate: JEFE rojo · élite morado · horda naranja · errante azul · PvP: VS en azul
     const SK='\u0000skull', [lb,mn,cl]=!B?['FASE',S.fase,'']:B.kind==='pvp'?['PVP','VS','pvp']:run?(B.final?['FINAL','∞','boss']:B.node==='boss'?['JEFE',SK,'boss']:B.node==='elite'?['ÉLITE',run.floor,'elite']:['PISO',run.floor,''])
-      :B.kind==='hall'?['★'.repeat(B.hall.star),SK,'boss']:B.kind==='boss'?['SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'JEFE':'ÉLITE',SK,B.elite?'boss':'elite']
+      :B.kind==='hall'?['★'.repeat(B.hall.star),SK,'boss']:B.kind==='boss'?[B.clan?'CLAN':'SEMANAL',SK,'boss']:ev?['MAZMORRA',(G.evRamp()||{r:0}).r+1,'']:B.boss?[B.elite?'JEFE':'ÉLITE',SK,B.elite?'boss':'elite']
       :sp?[{horde:'HORDA',wander:'ERRANTE'}[sp.k]||'¡!',Math.ceil(sp.left),sp.k==='horde'?'horde':'wander']:['FASE',S.fase,''];
     const c=$('#vsC'), k=lb+'|'+mn+'|'+cl; if(c&&c.dataset.k!==k){ c.dataset.k=k; c.className='vsc'+(cl?' '+cl:'')+(mn===SK?' sk':'')+(String(mn).length>3?' long':'')+(String(lb).length>6?' ll':'');
       c.setAttribute('aria-label',lb); c.innerHTML=`<small>${esc(lb)}</small>`+(mn===SK?`<svg viewBox="0 0 24 24" width="27" height="27" aria-hidden="true"><path fill="currentColor" d="M12 2C6.9 2 3 5.6 3 10.3c0 2.9 1.5 5.2 3.8 6.6V20a1 1 0 0 0 1 1h1.6v-2h1.4v2h2.4v-2h1.4v2h1.6a1 1 0 0 0 1-1v-3.1c2.3-1.4 3.8-3.7 3.8-6.6C21 5.6 17.1 2 12 2Zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2Zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2ZM12 13.3l1.2 2.2h-2.4l1.2-2.2Z"/></svg>`:`<b>${esc(String(mn))}</b>`); } }
@@ -582,6 +584,7 @@ function viewEnter(){ const v=[tab,invView,modView,evView,misView].join('|'); if
 function renderTab(){
   if(!S) return;
   document.querySelectorAll('.nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab));
+  document.body.dataset.tab=tab;   // (los estilos ponen un fondo ilustrado detrás de la cabecera de algunas pantallas)
   const el=$('#tab'); if(!el) return;
   // al cambiar de pestaña, la pantalla nueva entra con un pequeño fundido hacia arriba
   if(renderTab.last!==tab){ renderTab.last=tab; if(tab!=='up'&&!battery()){ el.classList.remove('tabin'); void el.offsetWidth; el.classList.add('tabin'); } }
@@ -948,17 +951,20 @@ function firstOfferRow(){ const F=CFG.stars.first; if(S.firstBuy) return '';
     <div class="acts">${payBtn('first',F.stars,'data-act="devFirst"')}</div></div>` }
 // Tienda en rejilla (como en los RPG de móvil): cada producto con su dibujo grande sobre un brillo de su color, nombre y botón de precio con la moneda
 const SHOPTONE={reto:'#e8b04a',ess:'#a46be0',box:'#6a5acd',mineral:'#7fd8e8',scrap:'#b07a45',piece:'var(--rR)'};
+// dibujos grandes de la Tienda (sacados de las maquetas) y una línea de qué es cada cosa
+const SHOPART={ess:'tienda_esencia',reto:'tienda_reto'}, shopPic=k=>SHOPART[k]?UI(SHOPART[k],'uimg scart'):ICON[k]||'';
+const MKTD={box:'Abre la caja de invocación.',reto:'Una entrada más a los eventos.',ess:'Mejora el Grimorio y los talentos.',mineral:'Para mejorar en la Forja.',scrap:'Para mejorar en la Forja.',piece:'Elige el hueco y la rareza.'};
 const priceHTML=(k,n=1)=>`${ICON.tok}${fmt(G.shopPrice(k)*n)}`;
 function shopCard(k){ const it=SHOP[k];
   return `<div class="scard" style="--tone:${SHOPTONE[k]||'var(--gold)'}"><button class="ibtn" data-act="shopInfo" data-k="${k}" aria-label="Info de ${it.name}">i</button>
-    <button class="sc-ic" data-act="shopInfo" data-k="${k}" aria-label="Qué es ${it.name}">${ICON[k]||''}</button><div class="sc-n">${it.name}</div><div class="sc-s">&nbsp;</div>
+    <button class="sc-ic" data-act="shopInfo" data-k="${k}" aria-label="Qué es ${it.name}">${shopPic(k)}</button><div class="sc-n">${it.name}</div><div class="sc-s">${esc(MKTD[k]||'')}</div>
     ${tokOpen()?`<button class="btn gold sc-buy" data-act="buyAsk" data-k="${k}">${priceHTML(k)}</button>`:soon}</div>` }
 // Mercado: se paga con Sellos; cada cosa tiene su límite a la semana (se renueva el lunes)
 const MKTN={box:'Ticket de invocación',reto:'Ticket de reto',ess:'Esencia',mineral:'Mineral',scrap:'Chatarra',piece:'Pieza a elegir'};
-const mktIcon=k=>k==='piece'?gIcon('arma',S.cls,40):ICON[k]||'';
+const mktIcon=k=>k==='piece'?gIcon('arma',S.cls,40):shopPic(k);
 function mktCard(x){ const n=x.k==='piece'?'':x.n>1?' ×'+fmt(x.n):'';
-  return `<div class="scard${x.left?'':' sold'}" style="--tone:${SHOPTONE[x.k]||'var(--gold)'}"><div class="sc-ic">${mktIcon(x.k)}</div><div class="sc-n">${MKTN[x.k]}${n}</div>
-    <div class="sc-s">${x.left?`${x.left}/${x.lim} esta semana`:'Agotado hasta el lunes'}</div>
+  return `<div class="scard${x.left?'':' sold'}" style="--tone:${SHOPTONE[x.k]||'var(--gold)'}"><div class="sc-ic">${mktIcon(x.k)}</div><span class="sc-lim">${x.left?`${x.left}/${x.lim}`:'Agotado'}</span><div class="sc-n">${MKTN[x.k]}${n}</div>
+    <div class="sc-s">${MKTD[x.k]}</div>
     <button class="btn gold sc-buy" data-act="mktBuy" data-k="${x.k}" ${x.can?'':'disabled'}>${ICON.ev}${x.k==='piece'?'<small>desde</small>':''}${fmt(x.price||0)}</button></div>` }
 function mktBody(){ const M=G.mktInfo(); if(!M) return '';
   return `<div class="loot"><div><span>${ICON.ev}Tus Sellos</span><b>${fmt(M.sellos)}</b></div><div><span>Se renueva</span><b>en ${M.daysLeft} ${M.daysLeft===1?'día':'días'}</b></div></div>
@@ -1076,7 +1082,7 @@ const dhm=ms=>{ const m=Math.max(0,Math.floor(ms/60000)), d=Math.floor(m/1440), 
 const pauseBox=()=>`<div class="misTop"><b>Pausa · reparto de premios</b><span class="s">Vuelve en <span id="evPause">${mmss(G.evPauseLeft())}</span>. Los intentos empezados antes pueden terminar.</span></div>`;
 // Pestaña Modos: tarjetas grandes (Campaña, Eventos, PvP); en Eventos, al tocar uno se abre
 G.on('eventEnd',r=>{ later(()=>evEndModal(r)); renderTab(); });
-function evEndModal(r){ const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
+function evEndModal(r){ if(r.clan) return clanEndModal(r); const boss=r.kind==='boss', rw=r.best>0?(boss?G.wbReward(r.pos):G.evReward(r.pos)):null; if(!r.best) r={...r,pos:'–'};
   showModal(`<h3>${boss?'Jefe semanal':'Mazmorra'}</h3>
     <div class="evhead"><div><span class="s">${boss?'Daño':'Muertes'}</span><b>${boss?fmt(r.dmg):r.kills}</b></div><div><span class="s">Puesto</span><b>${r.pos}</b></div><div><span class="s">${boss?'Total semana':'Total hoy'}</span><b>${boss?fmt(r.best):r.best}</b></div></div>
     ${r.got&&Object.keys(r.got).length?`<p class="hint">Por tus muertes de hoy: <b>${bundleHTML(r.got)}</b></p>`:''}
@@ -1298,6 +1304,175 @@ acts({
       else if(!G.pvpSetRival({...j.rival,match:j.match})) return renderTab();
       go(); }) },
 });
+/* ---------- Clan: buscar, crear, JEFE de clan, objetivo, bonus, miembros, chat y ranking ----------
+   Todo se pide al servidor (acciones clan…). Fuera de Telegram, o con un servidor que aún no tiene clanes, lo dice.
+   El motor guarda lo justo (G.clanSync): el clan, tu rol, los bonus y los intentos contra el JEFE de clan. */
+const clanOnline=()=>!!(window.Telemetry&&Telemetry.canSync&&Telemetry.canSync(CFG));
+const clanVis=()=>tab==='ev'&&modView==='clan';
+const clanCall=(action,extra)=>Telemetry.pvp(CFG,action,extra);   // (la misma llamada al servidor que el PvP)
+let CLI=null, clNoSrv=false, clanView='jefe', CLLIST=null, CLQ='', CLTOP=null, CLCHAT=[], clDraft='', clSending=false, clBusy=false;
+const CLWHY={tokens:'Te faltan tokens',nombre:'Nombre: de 3 a 16 letras o números','nombre usado':'Ese nombre ya existe',descr:'Descripción: hasta 80 letras y sin enlaces',
+  ya:'Ya estás en un clan',lleno:'El clan está lleno',no:'Ese clan ya no existe',permiso:'No tienes permiso',oficiales:'Ya hay 2 oficiales',enlace:'Sin enlaces, por favor',
+  largo:'Demasiado largo (150 letras)','vacío':'Escribe algo',intentos:'Sin intentos hoy',semana:'Ese intento era de la semana pasada',hoy:'Hoy ya aportaste lo máximo',
+  tope:'Ese bonus ya está al máximo','sin clan':'No estás en ningún clan',espera:'Saliste de un clan hace poco: espera 24 h'};
+const clWhy=j=>!j?'Sin conexión':CLWHY[j.why]||'No se pudo';
+const CLROLE={leader:'Líder',officer:'Oficial',member:'Miembro'};
+const CLBN={gold:['Oro','de la campaña'],xp:['Experiencia','de la campaña'],mineral:['Mineral','de la campaña'],boss:['Daño','al JEFE de clan']};
+const clManage=()=>CLI&&CLI.me&&(CLI.me.role==='leader'||CLI.me.role==='officer');
+const clanLink=id=>CFG.referral&&CFG.referral.link?CFG.referral.link+'?startapp=clan_'+id:'';
+// lo que responde el servidor: se guarda y, si se está viendo, se redibuja
+function clanTake(j){ if(!j||!j.ok) return false;
+  if(!('clan' in j)){ clNoSrv=true; if(clanVis()) renderTab(); return false }   // servidor sin clanes (aún no publicado)
+  clNoSrv=false; G.clanSync(j); CLI=j; if(!j.clan&&!CLLIST) clanListLoad(); if(clanVis()) renderTab(); return true }
+function clanLoad(){ if(!clanOnline()||!S) return; clanCall('clanInfo',{report:G.clanReport()}).then(clanTake) }
+function clanListLoad(){ if(!clanOnline()) return; clanCall('clanList',{q:CLQ}).then(j=>{ CLLIST=j&&j.ok&&Array.isArray(j.list)?j.list:[]; if(clanVis()) renderTab() }) }
+function clanTopLoad(){ if(!clanOnline()) return; clanCall('clanTop').then(j=>{ if(j&&j.ok){ CLTOP=j.list; if(clanVis()) renderTab() } }) }
+// intentos contra el JEFE de clan que faltan por enviar: uno a uno (si no hay conexión, se quedan para la próxima)
+function clanFlush(){ if(!clanOnline()||clSending||!S) return; const x=G.clanQueue()[0]; if(!x) return; clSending=true;
+  clanCall('clanHit',{w:x.w,dmg:x.dmg}).then(j=>{ clSending=false; if(!j) return;
+    G.clanHitDone(x.id,j); if(j.ok&&'clan' in j){ CLI=j; if(j.hit) toast(`JEFE de clan: +${fmt(j.hit)} · nivel ${j.clan.boss.lvl}`); }
+    if(G.clanQueue().length) clanFlush(); else if(clanVis()) renderTab(); }) }
+function clanEnter(){ clanFlush(); clanLoad(); if(clanView==='rank') clanTopLoad(); if(clanView==='chat') clanChatLoad(true); }
+
+/* ---------- pantalla ---------- */
+function tabClan(){ const box=t=>`<section class="panel"><h3>Clan</h3><p class="hint">${t}</p></section>`;
+  if(!clanOnline()) return box('Los clanes funcionan dentro de Telegram (necesitan el servidor).');
+  if(clNoSrv) return box('Los clanes no están disponibles ahora mismo. Prueba más tarde.');
+  if(!CLI) return box('Cargando…');
+  return CLI.clan?clanHome():clanFind() }
+// sin clan: buscador, crear y la espera de 24 h si saliste de otro
+function clanFind(){ const C=CFG.clan, cd=CLI.cooldown||0;
+  const row=c=>`<div class="clrow"><div><b>${esc(c.name)}</b><span class="s">${c.members}/${C.max} · JEFE nivel ${c.lvl} · ${c.open?'entrada libre':'con solicitud'}</span>${c.descr?`<span class="s">${esc(c.descr)}</span>`:''}</div>
+    <button class="btn sm ${c.open?'gold':''}" data-act="clanJoin" data-id="${c.id}" ${cd||c.members>=C.max||clBusy?'disabled':''}>${c.members>=C.max?'Lleno':c.open?'Entrar':'Pedir'}</button></div>`;
+  return `<section class="panel"><h3>Clanes</h3>
+    <p class="hint">Hasta ${C.max} jugadores. Cada semana, JEFE de clan, objetivo y ranking con premios para todos; y bonus que suben con el oro que aportáis.</p>
+    ${cd?`<div class="misTop"><b>Saliste de un clan hace poco</b><span class="s">Podrás entrar en otro en ${dhm(cd)}.</span></div>`:''}
+    <div class="ctrl"><input id="clanQ" class="clin" maxlength="16" placeholder="Buscar por nombre" value="${esc(CLQ)}" aria-label="Buscar clan"><button class="btn sm" data-act="clanSearch">Buscar</button></div>
+    <div class="cllist">${CLLIST?CLLIST.map(row).join('')||'<p class="hint">No hay clanes con sitio con ese nombre.</p>':'<p class="hint">Buscando…</p>'}</div>
+    <button class="btn gold" style="width:100%" data-act="clanNew" ${cd?'disabled':''}>Crear clan · ${C.cost} ${ICON.tok}</button></section>` }
+function clanHome(){ const c=CLI.clan, me=CLI.me, C=CFG.clan, nreq=(CLI.requests||[]).length;
+  const tabs=[['jefe','JEFE'],['obj','Objetivo'],['bonus','Bonus'],['miembros','Miembros'],['chat','Chat'],['rank','Ranking']];
+  return `<section class="panel"><div class="clhead">${ICON.clan}<div><b>${esc(c.name)}</b><span class="s">${c.members}/${C.max} miembros · ${CLROLE[me.role]||''} · ${c.open?'entrada libre':'con solicitud'}</span>${c.descr?`<span class="s">${esc(c.descr)}</span>`:''}</div></div>
+    <div class="fchips cltabs" role="tablist">${tabs.map(([v,l])=>`<button data-act="clanTab" data-v="${v}" aria-pressed="${clanView===v}">${l}${v==='miembros'&&nreq?` <sup class="nb">${nreq}</sup>`:''}</button>`).join('')}</div></section>
+    ${clanView==='obj'?clanGoal():clanView==='bonus'?clanBonusTab():clanView==='miembros'?clanMembers():clanView==='chat'?clanChat():clanView==='rank'?clanRank():clanBoss()}` }
+const clBar=(v,max,txt,cls)=>`<div class="clbar ${cls||''}"><i style="width:${Math.max(0,Math.min(100,v/max*100))}%"></i><span>${txt}</span></div>`;
+const clanWeekLeft=()=>Math.max(0,G.weekLeft()-(CFG.event.pauseH||0)*3600e3);   // el clan cierra el lunes a las 00:00 UTC
+function clanBoss(){ const c=CLI.clan, b=c.boss, me=CLI.me, C=CFG.clan, J=G.clanBoss(), left=G.clanHitsLeft(), pend=G.clanQueue().length;
+  const lv=[6,11,21,31,41,51].map(L=>`<div><b>${L}</b><span>${bundleHTML(G.clanRew('clan_boss',L)||{})}</span></div>`).join('');
+  return `<section class="panel"><h3>JEFE de clan · nivel ${b.lvl}</h3>
+    ${J?`<div class="affx boss"><span class="affi">${WBICO[J.id]||'👑'}</span><div><small>JEFE DE CLAN DE ESTA SEMANA</small><b>${J.name}</b><span>${J.desc}</span></div></div>`:''}
+    ${clBar(b.dmg,b.hp,`${fmt(b.dmg)} / ${fmt(b.hp)}`)}
+    <div class="evhead"><div><span class="s">Intentos hoy</span><b>${left}/${C.boss.tries}</b></div><div><span class="s">Tu daño</span><b>${fmt(me.dmg)}</b></div><div><span class="s">Clan (semana)</span><b>${fmt(b.total)}</b></div></div>
+    <button class="btn gold" style="width:100%" data-act="clanGo" ${G.clanCanFight()?'':'disabled'}>${G.inEvent()?'En curso…':left?'Luchar':'Vuelve mañana'}</button>
+    ${pend?`<p class="hint">Enviando ${pend} intento${pend>1?'s':''} al clan…</p>`:''}
+    <p class="hint">${CFG.wboss.dur} s y no te pega. El daño de todos se suma: al vencer un nivel sale el siguiente, con un 25 % más de vida. Cierra en ${dhm(clanWeekLeft())}.</p></section>
+    <details class="panel fold"><summary><h3>Premios por nivel</h3></summary><div class="rank evrew">${lv}</div><p class="hint">El lunes, para todos los que pegaron al JEFE esa semana, según el nivel al que llegó el clan.</p></details>` }
+function clanGoal(){ const g=CLI.clan.goal, G2=CFG.clan.goal, T=G2.tiers, max=T[T.length-1];
+  return `<section class="panel"><h3>Objetivo semanal</h3>${clBar(g.pts,max,`${fmt(g.pts)} / ${fmt(max)} puntos`,'g')}
+    <div class="rank evrew">${T.map((t,i)=>`<div class="${g.pts>=t?'me':''}"><b>${fmt(t)}</b><span>${bundleHTML(G2.rew[i])}</span></div>`).join('')}</div>
+    <p class="hint">Cada misión diaria que completa un miembro suma ${G2.daily} punto y cada semanal, ${G2.weekly}. El lunes, premio para todos según el tramo al que llegasteis.</p></section>` }
+function clanBonusTab(){ const B=CLI.clan.bonus||{}, C=CFG.clan.bonus, left=CLI.me.giveLeft;
+  const row=k=>{ const x=B[k]||{lvl:0,pts:0}, lv=x.lvl||0, need=C.cost*(lv+1), top=lv>=C.max, pct=n=>Math.round(n*C.per[k]*100);
+    return `<div class="clrow"><div><b>${CLBN[k][0]} +${pct(lv)} %</b><span class="s">${CLBN[k][1]} · nivel ${lv}/${C.max}${top?'':` · siguiente +${pct(lv+1)} %`}</span>${top?'':clBar(x.pts||0,need,`${fmt(x.pts||0)} / ${fmt(need)} min`,'g')}</div>
+      <button class="btn sm gold" data-act="clanGive" data-k="${k}" ${top||!left?'disabled':''}>Aportar</button></div>` };
+  return `<section class="panel"><h3>Bonus de clan</h3><div class="cllist">${C.keys.map(row).join('')}</div>
+    <p class="hint">Aportas oro (en minutos de farmeo de tu fase récord, hasta ${C.maxGiveMin/60} h al día; hoy te quedan ${left} min) al bonus que elijas. Los bonus son para todo el clan y no caducan.</p></section>` }
+function clanMembers(){ const C=CFG.clan, me=CLI.me, L=me.role==='leader', M=clManage(), ago=t=>{ const h=Math.floor((Date.now()-t)/3600e3); return h<1?'ahora':h<24?`hace ${h} h`:`hace ${Math.floor(h/24)} d` };
+  const can=x=>!x.me&&M&&(L||x.role==='member');   // el líder gestiona a todos; un oficial, a los miembros (expulsar)
+  const acts=x=>can(x)?`<div class="acts"><button class="btn sm" data-act="clanMember" data-id="${x.id}">Gestionar</button></div>`:'';
+  const rows=CLI.members.map(x=>`<div class="clrow${x.me?' me':''}"><div><b>${esc(x.name)}${x.me?' (tú)':''} <span class="clrole ${x.role}">${CLROLE[x.role]}</span></b><span class="s">${x.cls&&CFG.classes[x.cls]?clsLabel(x.cls)+' · ':''}nivel ${x.lvl} · daño ${fmt(x.dmg)} · ${ago(x.seen)}</span></div>${acts(x)}</div>`).join('');
+  const req=M&&CLI.requests.length?`<section class="panel"><h3>Solicitudes</h3><div class="cllist">${CLI.requests.map(r=>`<div class="clrow"><div><b>${esc(r.name)}</b><span class="s">${r.cls&&CFG.classes[r.cls]?clsLabel(r.cls)+' · ':''}nivel ${r.lvl}</span></div>
+    <div class="acts"><button class="btn sm gold" data-act="clanReq" data-k="1" data-id="${r.id}">Aceptar</button><button class="btn sm" data-act="clanReq" data-k="0" data-id="${r.id}">Rechazar</button></div></div>`).join('')}</div></section>`:'';
+  const edit=L?`<details class="panel fold"><summary><h3>Editar clan</h3></summary><input id="clanDescr" class="clin" maxlength="${C.descrMax}" placeholder="Descripción (sin enlaces)" value="${esc(CLI.clan.descr||'')}" aria-label="Descripción">
+    <label class="clchk"><input type="checkbox" id="clanOpen" ${CLI.clan.open?'checked':''}> Entrada libre (sin solicitud)</label><button class="btn gold" data-act="clanEdit">Guardar</button></details>`:'';
+  return `${req}<section class="panel"><h3>Miembros · ${CLI.members.length}/${C.max}</h3><div class="cllist">${rows}</div>
+    <div class="ctrl"><button class="btn gold" style="flex:1" data-act="clanInvShare">Invitar por Telegram</button><button class="btn" data-act="clanInvCopy">Copiar enlace</button></div></section>${edit}
+    <section class="panel"><button class="btn" style="width:100%" data-act="clanLeave">Salir del clan</button><p class="hint">Si sales, tendrás que esperar ${C.cooldownH} h para entrar en otro clan.</p></section>` }
+// chat: los últimos 100 mensajes; mientras se ve, pregunta cada pocos segundos si hay nuevos (solo cambia la lista: lo que escribes no se borra)
+const clanChatHTML=()=>CLCHAT.length?CLCHAT.map(m=>`<div class="clmsg${m.me?' me':''}"><b>${esc(m.name)}</b>${esc(m.text)}${clManage()?`<button class="clx" data-act="clanDel" data-id="${m.id}" aria-label="Borrar mensaje">🗑</button>`:''}</div>`).join(''):'<p class="hint">Aún no hay mensajes.</p>';
+function clanChat(){ const foc=document.activeElement&&document.activeElement.id==='clanMsg', C=CFG.clan.chat;
+  setTimeout(()=>{ const l=$('#clanChatList'); if(l) l.scrollTop=l.scrollHeight; const i=$('#clanMsg'); if(i&&foc){ i.focus(); i.selectionStart=i.selectionEnd=i.value.length } },0);
+  return `<section class="panel"><h3>Chat del clan</h3><div class="clchat" id="clanChatList">${clanChatHTML()}</div>
+    <div class="ctrl"><input id="clanMsg" class="clin" maxlength="${C.max}" placeholder="Escribe (sin enlaces)" value="${esc(clDraft)}" aria-label="Mensaje"><button class="btn sm gold" data-act="clanSay">Enviar</button></div>
+    <p class="hint">Hasta ${C.max} letras y sin enlaces.${clManage()?' Como líder u oficial puedes borrar mensajes (🗑).':''}</p></section>` }
+function clanChatLoad(full){ if(!clanOnline()||!CLI||!CLI.clan) return; const since=full||!CLCHAT.length?0:CLCHAT[CLCHAT.length-1].id;
+  clanCall('clanChat',{since}).then(j=>{ if(!j||!j.ok) return; const add=j.list.filter(m=>!CLCHAT.some(x=>x.id===m.id));
+    if(!full&&!add.length) return; CLCHAT=(full?j.list:CLCHAT.concat(add)).slice(-CFG.clan.chat.keep);
+    const l=$('#clanChatList'); if(l){ const end=l.scrollHeight-l.scrollTop-l.clientHeight<40; l.innerHTML=clanChatHTML(); if(end||full) l.scrollTop=l.scrollHeight; } }) }
+function clanRank(){ const R=CFG.clan.rank;
+  const rows=CLTOP?CLTOP.map(x=>`<div class="${x.mine?'me':''}"><span>${x.pos}.</span><span>${esc(x.name)} <small>(${x.members})</small></span><b>nivel ${x.lvl}</b></div>`).join('')||'<div><span></span><span>Aún nadie esta semana</span><b></b></div>':'<div><span></span><span>Cargando…</span><b></b></div>';
+  return `<section class="panel"><h3>Ranking de clanes (semana)</h3><div class="rank"><div class="rh"><span>#</span><span>Clan</span><b>JEFE</b></div>${rows}</div>
+    <p class="hint">Por el nivel del JEFE de clan (y el daño, si empatan). Cierra en ${dhm(clanWeekLeft())}.</p></section>
+    <details class="panel fold"><summary><h3>Premios del ranking</h3></summary><div class="rank evrew">${R.map((r,i)=>{ const from=i?R[i-1].to+1:1; return `<div><b>${from===r.to?r.to:from+'–'+r.to}</b><span>${bundleHTML({ev:r.ev,box:r.box,ess:r.ess})}</span></div>` }).join('')}</div><p class="hint">Para todos los miembros del clan, el lunes.</p></details>` }
+// al acabar un intento: el resultado (y se envía al clan)
+function clanEndModal(r){ const C=CFG.clan;
+  showModal(`<h3>JEFE de clan</h3><div class="evhead"><div><span class="s">Daño</span><b>${fmt(r.dmg)}</b></div><div><span class="s">Intentos hoy</span><b>${G.clanHitsLeft()}/${C.boss.tries}</b></div></div>
+    <p class="hint">${clanOnline()?'Se suma al daño de todo el clan.':'Se sumará al clan cuando haya conexión.'}</p><button class="btn gold" data-act="close">Continuar</button>`) }
+G.on('eventEnd',r=>{ if(!r||!r.clan) return; tab='ev'; modView='clan'; evView=null; clanView='jefe'; clanFlush(); renderTab() });
+// al poco de entrar: lo pendiente del clan y el enlace de invitación (startapp=clan_<n>); después, cada 10 min (bonus y objetivo al día)
+function clanInvite(){ const tg=window.Telegram&&Telegram.WebApp, sp=tg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param, m=/^clan_(\d{1,12})$/.exec(sp||''); if(!m||clanInvite.done) return; clanInvite.done=true;
+  if(!G.modeOpen('clan')) return toast(`Te han invitado a un clan: los clanes se abren en la fase ${CFG.unlock.clan.fase}`);
+  if(G.clanIn()) return;
+  clanCall('clanList',{id:+m[1]}).then(j=>{ const c=j&&j.ok&&j.list&&j.list[0]; if(!c) return;
+    later(()=>showModal(`<h3>Invitación a un clan</h3><p class="hint"><b>${esc(c.name)}</b> · ${c.members}/${CFG.clan.max} miembros${c.descr?'<br>'+esc(c.descr):''}</p>
+      <div class="ctrl"><button class="btn" data-act="close">Ahora no</button><button class="btn gold" style="flex:1" data-act="clanJoin" data-id="${c.id}">${c.open?'Entrar':'Pedir entrar'}</button></div>`)) }) }
+setTimeout(()=>{ if(!S||!clanOnline()) return; clanInvite(); if(G.clanIn()){ clanFlush(); clanLoad(); } },5000);
+setInterval(()=>{ if(S&&clanOnline()&&G.clanIn()&&!document.hidden){ clanFlush(); clanLoad(); } },600000);
+setInterval(()=>{ if(S&&clanVis()&&clanView==='chat'&&!document.hidden) clanChatLoad(false) },CFG.clan.chat.poll*1000);
+document.addEventListener('input',e=>{ if(e.target.id==='clanMsg') clDraft=e.target.value; else if(e.target.id==='clanQ') CLQ=e.target.value });
+document.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; if(e.target.id==='clanMsg') ACT.clanSay(); else if(e.target.id==='clanQ') ACT.clanSearch() });
+
+// botones de esta pantalla (data-act)
+const clRes=(j,okTxt)=>{ clBusy=false; if(!j||!j.ok){ toast(clWhy(j)); if(clanVis()) renderTab(); return false } if(okTxt) toast(okTxt); clanTake(j); return true };
+acts({
+  clanTab:b=>{ clanView=b.dataset.v; if(clanView==='rank') clanTopLoad(); if(clanView==='chat') clanChatLoad(true); if(clanView!=='chat') clanLoad(); renderTab() },
+  clanSearch:()=>{ const i=$('#clanQ'); CLQ=i?i.value.trim():''; CLLIST=null; renderTab(); clanListLoad() },
+  clanJoin:(b,k,id)=>{ if(clBusy) return; clBusy=true; closeModal();
+    clanCall('clanJoin',{id}).then(j=>{ clBusy=false; if(!j||!j.ok){ toast(clWhy(j)); return }
+      if(j.requested){ toast('Solicitud enviada: la aceptará el líder o un oficial'); return } haptic('ok'); tab='ev'; modView='clan'; clanView='jefe'; clanTake(j); toast('¡Ya estás en el clan!') }) },
+  clanNew:()=>{ const C=CFG.clan; showModal(`<h3>Crear clan</h3>
+    <input id="clanName" class="clin" maxlength="${C.nameMax}" placeholder="Nombre (${C.nameMin}-${C.nameMax} letras)" aria-label="Nombre del clan">
+    <input id="clanDescr" class="clin" maxlength="${C.descrMax}" placeholder="Descripción (opcional, sin enlaces)" aria-label="Descripción">
+    <label class="clchk"><input type="checkbox" id="clanOpen" checked> Entrada libre (sin solicitud)</label>
+    <p class="hint">Cuesta ${C.cost} tokens (tienes ${fmt(G.tokens())}). El nombre no se puede cambiar.</p>
+    <div class="ctrl"><button class="btn" data-act="close">Cancelar</button><button class="btn gold" style="flex:1" data-act="clanCreate" ${G.clanCanCreate()?'':'disabled'}>Crear · ${C.cost} ${ICON.tok}</button></div>`) },
+  clanCreate:()=>{ if(clBusy) return; if(!G.clanCanCreate()) return toast(`Necesitas ${CFG.clan.cost} tokens`);
+    const v=id=>($('#'+id)||{}).value||'', open=!!($('#clanOpen')||{}).checked; clBusy=true;
+    clanCall('clanCreate',{name:v('clanName').trim(),descr:v('clanDescr').trim(),open}).then(j=>{ clBusy=false;
+      if(!j||!j.ok){ if(j&&j.why==='tokens'&&Telemetry.push){ Telemetry.push(false); return toast('Guardando tu partida en el servidor: prueba otra vez en unos segundos') } return toast(clWhy(j)) }
+      G.clanPayCreate(); if(Telemetry.push) Telemetry.push(false); closeModal(); haptic('ok'); clanView='jefe'; clanTake(j); toast('¡Clan creado!') }) },
+  clanGo:()=>{ if(G.clanStart()){ tab='up'; renderTab(); } },
+  clanGive:(b,k)=>{ const left=CLI&&CLI.me?CLI.me.giveLeft:0, opts=[15,30,60,120].filter(m=>m<=left);
+    showModal(`<h3>Aportar al bonus: ${CLBN[k][0]}</h3><p class="hint">Oro de tus minutos de farmeo (fase ${S.best}). Hoy puedes aportar ${left} min más.</p>
+      <div class="cllist">${opts.map(m=>`<button class="btn ${G.clanCanGive(m)?'gold':''}" data-act="clanGiveGo" data-k="${k}" data-id="${m}" ${G.clanCanGive(m)?'':'disabled'}>${m} min · ${ICON.gold} ${fmtG(G.clanGoldOf(m))}</button>`).join('')||'<p class="hint">Hoy ya aportaste lo máximo.</p>'}</div>
+      <button class="btn" data-act="close">Cancelar</button>`) },
+  clanGiveGo:(b,k,min)=>{ if(clBusy||!G.clanCanGive(min)) return; clBusy=true;
+    clanCall('clanGive',{k,min}).then(j=>{ if(j&&j.ok&&j.given) G.clanPay(j.given); closeModal(); if(clRes(j)) { haptic('ok'); toast(`Aportaste ${j.given} min de oro`) } }) },
+  clanMember:(b,k,id)=>{ const x=CLI.members.find(m=>m.id===id); if(!x) return; const L=CLI.me.role==='leader', o=[];
+    if(L&&x.role==='member') o.push(`<button class="btn" data-act="clanRole" data-k="officer" data-id="${id}">Hacer oficial</button>`);
+    if(L&&x.role==='officer') o.push(`<button class="btn" data-act="clanRole" data-k="member" data-id="${id}">Quitar de oficial</button>`);
+    if(L) o.push(`<button class="btn" data-act="clanRole" data-k="leader" data-id="${id}">Pasarle el mando</button>`);
+    if(x.role==='member'||(L&&x.role==='officer')) o.push(`<button class="btn" data-act="clanKick" data-id="${id}">Expulsar</button>`);
+    showModal(`<h3>${esc(x.name)}</h3><p class="hint">${CLROLE[x.role]}${x.cls&&CFG.classes[x.cls]?' · '+clsLabel(x.cls):''} · nivel ${x.lvl} · daño esta semana ${fmt(x.dmg)}</p><div class="cllist">${o.join('')}</div><button class="btn" data-act="close">Cerrar</button>`) },
+  clanKick:(b,k,id)=>{ const x=CLI.members.find(m=>m.id===id); if(!x) return;
+    showModal(`<h3>Expulsar</h3><p class="hint">¿Sacar a <b>${esc(x.name)}</b> del clan?</p><div class="ctrl"><button class="btn" data-act="close">No</button><button class="btn gold" style="flex:1" data-act="clanKickGo" data-id="${id}">Expulsar</button></div>`) },
+  clanKickGo:(b,k,id)=>{ closeModal(); clanCall('clanKick',{tg:id}).then(j=>clRes(j,'Expulsado')) },
+  clanRole:(b,k,id)=>{ const x=CLI.members.find(m=>m.id===id); if(!x) return;
+    if(k==='leader') return showModal(`<h3>Pasar el mando</h3><p class="hint"><b>${esc(x.name)}</b> será el líder y tú, oficial.</p><div class="ctrl"><button class="btn" data-act="close">No</button><button class="btn gold" style="flex:1" data-act="clanRoleGo" data-k="leader" data-id="${id}">Sí, hacerle líder</button></div>`);
+    ACT.clanRoleGo(b,k,id) },
+  clanRoleGo:(b,k,id)=>{ closeModal(); clanCall('clanRole',{tg:id,role:k}).then(j=>clRes(j)) },
+  clanReq:(b,k,id)=>{ clanCall('clanReq',{tg:id,accept:k==='1'}).then(j=>clRes(j,k==='1'?'Aceptado':'Rechazada')) },
+  clanEdit:()=>{ const d=($('#clanDescr')||{}).value||'', open=!!($('#clanOpen')||{}).checked; clanCall('clanEdit',{descr:d.trim(),open}).then(j=>clRes(j,'Guardado')) },
+  clanLeave:()=>showModal(`<h3>Salir del clan</h3><p class="hint">Tendrás que esperar ${CFG.clan.cooldownH} h para entrar en otro clan.${CLI&&CLI.me&&CLI.me.role==='leader'?' El mando pasa a un oficial (o al miembro más activo).':''}</p>
+    <div class="ctrl"><button class="btn" data-act="close">No</button><button class="btn gold" style="flex:1" data-act="clanLeaveGo">Salir</button></div>`),
+  clanLeaveGo:()=>{ closeModal(); clanCall('clanLeave').then(j=>{ if(!j||!j.ok) return toast(clWhy(j)); G.clanSync({ok:true,clan:null}); CLI={ok:true,clan:null,cooldown:j.cooldown||0}; CLCHAT=[]; CLLIST=null; clanListLoad(); renderTab(); toast('Has salido del clan') }) },
+  clanSay:()=>{ const i=$('#clanMsg'), t=(i?i.value:clDraft).trim(); if(!t||clBusy) return; clBusy=true;
+    clanCall('clanSay',{text:t}).then(j=>{ clBusy=false; if(!j||!j.ok) return toast(j&&j.why==='espera'?'Espera unos segundos':clWhy(j)); clDraft=''; const x=$('#clanMsg'); if(x) x.value=''; clanChatLoad(false) }) },
+  clanDel:(b,k,id)=>{ clanCall('clanDel',{id}).then(j=>{ if(!j||!j.ok) return toast(clWhy(j)); CLCHAT=CLCHAT.filter(m=>m.id!==id); const l=$('#clanChatList'); if(l) l.innerHTML=clanChatHTML() }) },
+  clanInvShare:()=>{ const link=clanLink(CLI.clan.id), tg=window.Telegram&&Telegram.WebApp, txt=`¡Únete a mi clan «${CLI.clan.name}» en Idle Ascension!`;
+    const url='https://t.me/share/url?url='+encodeURIComponent(link)+'&text='+encodeURIComponent(txt); if(tg&&tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url,'_blank') },
+  clanInvCopy:()=>{ const link=clanLink(CLI.clan.id), ok=()=>toast('Enlace copiado'), no=()=>toast(link); try{ navigator.clipboard.writeText(link).then(ok,no) }catch(e){ no() } },
+});
 function tabEv(){
   if(evView==='lab') return tabLab();
   if(evView==='boss') return tabBoss();
@@ -1310,24 +1485,28 @@ function tabEv(){
   // Campaña (Normal, Pesadilla, Infierno), Eventos (Mazmorra, Jefe semanal; la Liga está oculta) y PvP (próximamente)
   const back=`<button class="back" data-act="modview" data-v="">← Modos</button>`;
   if(!modView){ const pend=(G.evPending()?1:0)+(G.wbPending()?1:0)+(CFG.league.show&&G.leaguePending()?1:0);
-    const tw=G.towerState(), tr=tw.run, pv=G.pvpState(), cap=CFG.phaseCap, bg=(z,w,h)=>`background-image:linear-gradient(180deg,rgba(10,10,16,0) 35%,rgba(10,10,16,.8)),url(${sceneImg(z,w,h)})`;
+    const tw=G.towerState(), tr=tw.run, pv=G.pvpState(), cap=CFG.phaseCap, art=k=>`background-image:linear-gradient(180deg,rgba(10,10,16,0) 40%,rgba(10,10,16,.7)),url(sprites/ui/modo_bg_${k}.webp)`;   // ilustraciones de las maquetas
     const modesTxt=CFG.modes.map((x,i)=>`<span class="${i===S.mode?'on':''}">${x.name.toUpperCase()}</span>`).join('');
     return `<div class="mgrid2">
-      <button class="mcard2 wide" style="${bg(zoneNow(),360,150)}" data-act="modview" data-v="campana">
+      <button class="mcard2 wide" style="${art('campana')}" data-act="modview" data-v="campana">
         ${G.modeOpen('hall')&&G.hallBosses().some(b=>b.beaten)?`<span class="mbadge g">${UI('st_dano','uimg bi')}${G.hallTriesLeft()} INTENTOS</span>`:''}<span class="mk">AVENTURA PRINCIPAL</span><b class="mt">Campaña</b><span class="mm">${modesTxt}</span>
         <span class="mp"><small>Progreso</small><b>Fase ${S.best} / ${cap}</b></span><span class="mbar"><i style="width:${S.best/cap*100}%"></i></span></button>
-      ${!G.modeOpen('lab')&&!G.modeOpen('boss')?`<button class="mcard2 locked" style="${bg(4,180,170)}" data-act="lockInfo" data-k="lab">${lockBadge('lab')}<b class="mt">Eventos</b><span class="mf">${reqTxt('lab')}</span></button>`:`<button class="mcard2" style="${bg(4,180,170)}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${UI('btn_premios','uimg bi')}${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${UI('modo_pvp','uimg bi')}${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
+      ${!G.modeOpen('lab')&&!G.modeOpen('boss')?`<button class="mcard2 locked" style="${art('eventos')}" data-act="lockInfo" data-k="lab">${lockBadge('lab')}<b class="mt">Eventos</b><span class="mf">${reqTxt('lab')}</span></button>`:`<button class="mcard2" style="${art('eventos')}" data-act="modview" data-v="eventos">${pend?`<span class="mbadge">${UI('btn_premios','uimg bi')}${pend} PREMIO${pend>1?'S':''}</span>`:`<span class="mbadge g">${UI('modo_pvp','uimg bi')}${G.evFreeLeft()+G.wbFreeLeft()} GRATIS</span>`}
         <b class="mt">Eventos</b><span class="mf">${G.modeOpen('boss')?`⏱ Jefe: ${dhm(G.weekLeft())}`:'Jefe: '+reqTxt('boss').split(' · ')[0]}</span></button>`}
-      ${G.modeOpen('pvp')?`<button class="mcard2" style="${bg('arena',180,170)}" data-act="modview" data-v="pvp"><span class="mbadge g">${UI('modo_pvp','uimg bi')}${G.pvpFreeLeft()} GRATIS</span>
+      ${G.modeOpen('pvp')?`<button class="mcard2" style="${art('pvp')}" data-act="modview" data-v="pvp"><span class="mbadge g">${UI('modo_pvp','uimg bi')}${G.pvpFreeLeft()} GRATIS</span>
         <b class="mt">PvP</b><span class="mf">🛡 ${fmt(pv.rating)} puntos</span></button>`
-        :`<button class="mcard2 locked" style="${bg('arena',180,170)}" data-act="lockInfo" data-k="pvp">${lockBadge('pvp')}<b class="mt">PvP</b><span class="mf">${reqTxt('pvp')}</span></button>`}
-      ${G.modeOpen('tower')?`<button class="mcard2 wide low" style="${bg(3,360,110)}" data-act="modview" data-v="torre"><span class="mico">${UI('modo_torre','uimg mimg')}</span>
+        :`<button class="mcard2 locked" style="${art('pvp')}" data-act="lockInfo" data-k="pvp">${lockBadge('pvp')}<b class="mt">PvP</b><span class="mf">${reqTxt('pvp')}</span></button>`}
+      ${G.modeOpen('clan')?`<button class="mcard2 wide low clcard" data-act="modview" data-v="clan"><span class="mico">${ICON.clan}</span>
+        <span><b class="mt">Clan</b><span class="mf">${S.clan?`${esc(S.clan.name)} · ${G.clanHitsLeft()} intento${G.clanHitsLeft()===1?'':'s'} al JEFE`:'Únete o crea uno'}</span></span></button>`
+        :`<button class="mcard2 wide low clcard locked" data-act="lockInfo" data-k="clan"><span class="mico">${ICON.clan}</span><span><b class="mt">Clan</b><span class="ms">${reqTxt('clan')}</span></span>${lockBadge('clan')}</button>`}
+      ${G.modeOpen('tower')?`<button class="mcard2 wide low" style="${art('torre')}" data-act="modview" data-v="torre"><span class="mico">${UI('modo_torre','uimg mimg')}</span>
         <span><b class="mt">Torre</b><span class="mf">${tr?`Piso ${tr.floor} · ♥ ${tr.lives}`:`Récord: piso ${tw.best}`}</span></span></button>`
-        :`<button class="mcard2 wide low locked" style="${bg(3,360,110)}" data-act="lockInfo" data-k="tower"><span class="mico">${UI('modo_torre','uimg mimg')}</span><span><b class="mt">Torre</b><span class="ms">${reqTxt('tower')}</span></span>${lockBadge('tower')}</button>`}
+        :`<button class="mcard2 wide low locked" style="${art('torre')}" data-act="lockInfo" data-k="tower"><span class="mico">${UI('modo_torre','uimg mimg')}</span><span><b class="mt">Torre</b><span class="ms">${reqTxt('tower')}</span></span>${lockBadge('tower')}</button>`}
     </div>` }
   if(modView==='campana') return back+tabHall();
   if(modView==='torre') return tabTower();   // Torre a pantalla completa: se sale con la barra de abajo
   if(modView==='pvp') return back+tabPvp();
+  if(modView==='clan') return back+tabClan();
   return `${back}<section class="panel"><h3>Eventos</h3>
     ${card('lab','Mazmorra','Ranking diario por muertes',`Entradas <b>${G.evFreeLeft()+G.retoN()}</b>`,paused?'En pausa':lb?`Hoy ${lb} · puesto ${lpos}`:'Aún no has jugado hoy',!!lp)}
     ${CFG.league&&CFG.league.show?(n=>card('league','Liga de '+n.name,'Bote mensual repartido según tus puntos',`Puntos <b>${fmt(n.pts)}</b>`,`Premio estimado ${fmt(n.tok)} tokens`,!!G.leaguePending()))(G.leagueNow()):''}
@@ -1338,9 +1517,9 @@ function tabEv(){
 acts({
   evOpen:(b,k)=>{ evView=k; renderTab(); window.scrollTo({top:0}); },
   evBack:()=>{ evView=null; renderTab(); },
-  modview:b=>{ modView=b.dataset.v||null; evView=null; if(modView==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}); },
+  modview:b=>{ modView=b.dataset.v||null; evView=null; if(modView==='pvp') pvpLoad(); if(modView==='clan') clanEnter(); renderTab(); window.scrollTo({top:0}); },
   lockInfo:(b,k)=>{ const u=UNL[k]; if(u) toast(`🔒 ${u[0]}: se desbloquea en ${reqTxt(k)}`) },
-  unlGo:(b,k)=>{ closeModal(); tab='ev'; modView=k==='pvp'?'pvp':k==='tower'?'torre':k==='hall'?'campana':'eventos'; evView=k==='lab'||k==='boss'?k:null; if(k==='pvp') pvpLoad(); renderTab(); window.scrollTo({top:0}) },
+  unlGo:(b,k)=>{ closeModal(); tab='ev'; modView=k==='pvp'?'pvp':k==='clan'?'clan':k==='tower'?'torre':k==='hall'?'campana':'eventos'; evView=k==='lab'||k==='boss'?k:null; if(k==='pvp') pvpLoad(); if(k==='clan') clanEnter(); renderTab(); window.scrollTo({top:0}) },
 });
 function tabLab(){
   const V=CFG.event, paused=G.evPaused(), d=G.evShownDay(), best=G.evToday(), pend=G.evPending(), live=G.inEvent(); rankSync('lab',d); if(pend) rankSync('lab',pend.day);
@@ -1406,7 +1585,7 @@ function boostModal(){
   const B=CFG.boosts, a=G.adsState(), row=(k,t,dur,desc,sub)=>{const left=G.boostUsesLeft(k);
     return `<div class="row brow"><span class="bmed">${UI(k==='speed'?'st_velocidad':'res_oro')}</span><div class="bt"><div class="t">${t}</div><div class="bd">⏱ ${dur}</div><div class="bx">${desc}</div></div>
       <div class="acts"><button class="btn sm gold" data-act="adWatch" data-k="${k}" ${left>0?'':'disabled'}>▶ Ver anuncio (${a.p[k]||0}/${B[k].ads})</button><div class="s" id="bs_${k}">${sub}</div></div></div>`};
-  showModal(`<div class="dhead">${UI('btn_pocion','uimg')}<div><h3>Potenciadores</h3><small>Mira un anuncio y llévate una ventaja.</small></div></div>
+  showModal(`<div class="dban">${UI('mago_pocion','dban-art')}<div class="dban-t"><h3>Potenciadores</h3><small>Mira un anuncio y llévate una ventaja.</small></div></div>
     ${row('speed',`Velocidad ×${B.speed.mult}`,`${B.speed.min} min`,'Todo va más rápido: avanzas antes.',boostSub('speed'))}
     ${row('gold',`+${fmtG(G.goldBoostValue())} oro`,G.goldBoostHours()>=1?G.goldBoostHours()+' h':G.goldBoostHours()*60+' min','El oro de ese tiempo, al instante.',boostSub('gold'))}
     <button class="btn" data-act="boostClose">Cerrar</button>`);
@@ -1456,7 +1635,7 @@ function misKeyNow(){ const P=G.passState(), badge=[G.missionsReady(),G.weeklyRe
   return misView+JSON.stringify([badge,v]) }
 // misiones: barra con el progreso, premios como iconos y, a la derecha, «Recoger» (brilla) si está completa o «Ir» (te lleva) si no
 const MISGO={event:'eventos',pvp:'pvp',upgrade:'up',kills:'up'};
-const misBtn=(m,act)=>m.claimed?'<span class="mcheck" aria-label="Recogida">✓</span>':m.done?`<button class="btn sm gold mclaim" data-act="${act}" data-k="${m.k}">Recoger</button>`
+const misBtn=(m,act)=>m.claimed?'<span class="mcheck" aria-label="Recogida">✓</span>':m.done?`<button class="btn sm gold mclaim" data-act="${act}" data-k="${m.k}">✓ Recoger</button>`
   :MISGO[m.k]?`<button class="btn sm mgo" data-act="misGo" data-k="${m.k}">Ir ›</button>`:'';
 const misRank=m=>m.claimed?2:m.done?0:1, misRows=(L,act,M)=>[...L].sort((a,b)=>misRank(a)-misRank(b)).map(m=>`<div class="mrow${m.claimed?' done':m.done?' ready':''}"><div class="mi"><b>${m.t}</b>
       <div class="mbar"><div class="rbar"><i style="width:${Math.min(100,m.prog/m.n*100)}%"></i></div><span>${fmt(Math.min(m.prog,m.n))}/${fmt(m.n)}</span></div>
@@ -1467,7 +1646,7 @@ function tabMis(){ const P=G.passState();
   let body='';
   const bonusRow=(kind,t)=>{ const st=G.bonusState(kind), L=kind==='week'?G.weekMissions():G.missions(), n=L.filter(m=>m.claimed).length;
     return `<div class="mrow bonus${st.got?' done':st.can?' ready':''}"><div class="mi"><b>${t}</b><div class="mbar"><div class="rbar"><i style="width:${n/L.length*100}%"></i></div><span>${n}/${L.length}</span></div><div class="mrw">${bundleHTML(st.b)}</div></div>
-      ${st.got?'<span class="mcheck" aria-label="Recogido">✓</span>':st.can?`<button class="btn sm gold mclaim" data-act="misBonus" data-k="${kind}">Recoger</button>`:'<span class="mlock" aria-label="Aún no">🔒</span>'}</div>` };
+      ${st.got?'<span class="mcheck" aria-label="Recogido">✓</span>':st.can?`<button class="btn sm gold mclaim" data-act="misBonus" data-k="${kind}">✓ Recoger</button>`:'<span class="mlock" aria-label="Aún no">🔒</span>'}</div>` };
   if(misView==='dia') body=bonusRow('day','Bonus: completa todas las diarias')+misRows(G.missions(),'misClaim',CFG.missions)+'<p class="hint">Se renuevan cada día.</p>';
   if(misView==='sem') body=bonusRow('week','Bonus: completa todas las semanales')+misRows(G.weekMissions(),'weekClaim',CFG.missions.weekly)+`<p class="hint">Se renuevan cada lunes · quedan ${dhm(G.weekLeft())}.</p>`;
   if(misView==='pass') body=passView(P);
@@ -1509,7 +1688,7 @@ acts({
 // Ruleta diaria: tirada gratis + tirada con anuncio; resalta el premio que toca
 // pestañas de «Premios diarios» (Calendario · Ruleta), con aviso si hay algo por recoger
 // cabecera de las tres ventanas: cofre, título y una línea de qué va
-const dailyHead=sub=>`<div class="dhead">${UI('btn_premios','uimg')}<div><h3>Premios diarios</h3><small>${sub}</small></div></div>`;
+const dailyHead=sub=>`<div class="dban">${UI('mago_cofre','dban-art')}<div class="dban-t"><h3>Premios diarios</h3><small>${sub}</small></div></div>`;
 const dailyTabs=cur=>`<div class="fchips">${[['calOpen','Calendario',G.calState().can,'btn_premios'],['wheelOpen','Ruleta',G.wheelState().free,'btn_auto'],['slotOpen','Jackpot',false,'res_oro']].map(([a,l,n,ic])=>`<button data-act="${a}" aria-pressed="${cur===a}">${UI(ic)}${l}${n?' <sup class="nb" style="position:static">!</sup>':''}</button>`).join('')}</div>`;
 // Ruleta de verdad: una rueda con un sector por premio (mismo tamaño; la probabilidad de cada uno se ve debajo).
 // Gira con CSS y se para con el premio debajo de la flecha de arriba; wheelRot guarda dónde se quedó.
@@ -1559,7 +1738,7 @@ function wheelGo(viaAd){ const r=G.spinWheel(viaAd); if(!r) return; const n=G.wh
 // Calendario: icono en el combate; ventana con los 7 días
 function calModal(){ const C=G.calState();
   showModal(`${dailyHead('Entra cada día y recoge tu premio.')}${dailyTabs('calOpen')}<div class="calg">${C.list.map((b,i)=>{ const d=i+1, got=d<C.day||(d===C.day&&!C.can), now=d===C.day&&C.can;
-      return `<div class="cald${got?' got':''}${now?' now':''}"><span class="s">Día ${d}</span><b>${bundleHTML(b)}</b>${got?'<span class="rmax">✓</span>':''}</div>` }).join('')}</div>
+      return `<div class="cald${got?' got':''}${now?' now':''}"><span class="s">Día ${d}</span>${d===C.list.length?UI('btn_premios','uimg cbig'):''}<b>${bundleHTML(b)}</b>${got?'<span class="rmax">✓</span>':''}</div>` }).join('')}</div>
     <button class="btn gold" data-act="calClaim" ${C.can?'':'disabled'}>${C.can?'Recoger día '+C.day:'Vuelve mañana'}</button><p class="hint">Un premio por cada día que entras (no hace falta seguidos).</p><button class="btn" data-act="close">Cerrar</button>`) }
 // botones de esta pantalla (data-act)
 acts({
@@ -1647,13 +1826,13 @@ function tabDev(){
 function inviteRow(){ const T=window.Telemetry, link=T&&T.inviteLink(CFG), R=CFG.referral; if(!link) return '';
   return `<div class="row"><div><div class="t">Invitar amigos${T.refs!=null?` · ${T.refs}`:''}</div><div class="s">${`Tu amigo recibe ${R.giftSilver*5} min de oro. Tú, ${R.goalSilver*5>=60?R.goalSilver*5/60+' h':R.goalSilver*5+' min'} de oro y ${R.goalBox} tickets de invocación cuando llegue a la fase ${R.goalFase}${R.buyOn?` y el ${Math.round(R.buyPct*100)} % de lo que compre en tokens`:''}.`}</div></div>
     <div class="acts"><button class="btn sm gold" data-act="invShare">Compartir</button><button class="btn sm" data-act="invCopy">Copiar</button></div></div>` }
-const REW_T={'pvp:semana':'Ranking semanal de PvP',invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
+const REW_T={'pvp:semana':'Ranking semanal de PvP','clan:jefe':'JEFE de clan','clan:objetivo':'Objetivo del clan','clan:ranking':'Ranking de clanes',invitado:'Regalo de bienvenida',amigo_fase50:'Tu amigo llegó a la fase '+CFG.referral.goalFase,amigo_compra:'Tu amigo compró tokens'};
 // premios del servidor: por invitar o compras con Stars
 const rewTxt=r=>r.kind==='silver'?rw(ICON.gold,'+'+fmt(5*r.amount)+' min'):r.kind==='box'?rw(ICON.box,'+'+fmt(r.amount)):r.kind==='tokens'||r.kind==='won'?rw(ICON.tok,'+'+fmt(r.amount))
-  :r.kind==='first'?bundleHTML({tok:CFG.stars.first.tokens,gold:CFG.stars.first.gold}):r.kind==='pass'?'Pase de pago activado':r.kind==='pvp'?`Puesto ${r.amount}: ${(w=>w?evRewText(w):'sin premio')(G.pvpReward(r.amount))}`:'';
+  :/^clan_/.test(r.kind)?`${r.kind==='clan_boss'?'Nivel':r.kind==='clan_goal'?'Tramo':'Puesto'} ${r.amount}: ${bundleHTML(G.clanRew(r.kind,r.amount)||{})}`:r.kind==='first'?bundleHTML({tok:CFG.stars.first.tokens,gold:CFG.stars.first.gold}):r.kind==='pass'?'Pase de pago activado':r.kind==='pvp'?`Puesto ${r.amount}: ${(w=>w?evRewText(w):'sin premio')(G.pvpReward(r.amount))}`:'';
 if(window.Telemetry) Telemetry.onReward=list=>{ const paid=list.some(r=>/^stars:/.test(r.reason||'')); if(paid) haptic('ok');
-  const pvp=list.every(r=>r.kind==='pvp');
-  later(()=>showModal(`<h3>${paid?'¡Compra recibida!':pvp?'¡Premio de la semana PvP!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
+  const pvp=list.every(r=>r.kind==='pvp'), clan=list.every(r=>/^clan_/.test(r.kind));
+  later(()=>showModal(`<h3>${paid?'¡Compra recibida!':pvp?'¡Premio de la semana PvP!':clan?'¡Premios del clan!':'¡Premio por invitar!'}</h3><div class="loot">${list.map(r=>`<div><span>${REW_T[r.reason]||(paid?'Gracias por tu compra':'Premio')}</span><b>${rewTxt(r)}</b></div>`).join('')}</div><button class="btn gold" data-act="close">Genial</button>`)); if(paid) renderTab(); };
 // Elegir héroe: tarjetas con su dibujo, nombre y papel; al tocar una, abajo su rasgo, su habilidad y «Empezar»
 let pickCls=null;
 const clsImg=k=>{ const src=window.ART&&ART.spriteSrc(k); return src?`<img src="${src}" alt="" width="64" height="64">`:classSVG(k) };
@@ -1842,7 +2021,7 @@ const ZICO={dividirse:'🫧',division:'🫧',dotGolpe:'☠️',alfa:'🐺',acech
   invisible:'👻',puerta:'🚪',armaduraInf:'🛡️',festinDolor:'⛓️',montura:'🐎',hermandad:'🤝',inquebrantable:'🗿',ardiente:'🔥',forja:'⚒️',lago:'🌋',escudoLuz:'✨',hambreLuz:'🕳️',formas:'💠'};
 // Desbloqueo de modos: nombre, qué es y qué falta («Fase 10 · vas por la 4», «Día 7 · faltan 3 días»)
 const UNL={lab:['Mazmorra','Aguanta oleadas sin fin: ranking diario y premios por muertes','lab'],boss:['Jefe semanal','Un jefe distinto cada semana: ranking por daño','boss'],
-  pvp:['PvP','Duelos contra la partida de otros jugadores','pvp'],tower:['Torre','Roguelike: sube pisos eligiendo cartas y grimorios','torre'],
+  pvp:['PvP','Duelos contra la partida de otros jugadores','pvp'],clan:['Clan','Únete a un clan o crea el tuyo: JEFE de clan, objetivo semanal, bonus y chat','clan'],tower:['Torre','Roguelike: sube pisos eligiendo cartas y grimorios','torre'],
   hall:['Sala de jefes','Vuelve a luchar contra los JEFES que ya venciste: 3 intentos al día, con botín','hall']};
 const reqTxt=k=>{ const r=G.modeReq(k); return !r?'':r.fase?`Fase ${r.fase} · vas por la ${S.best}`:`Día ${r.day} de juego · falta${r.left>1?'n':''} ${r.left} día${r.left>1?'s':''}` };
 const lockBadge=k=>`<span class="mlock2">🔒 ${G.modeReq(k).fase?'FASE '+G.modeReq(k).fase:'DÍA '+G.modeReq(k).day}</span>`;

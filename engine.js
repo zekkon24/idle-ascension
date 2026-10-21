@@ -38,7 +38,7 @@ function createGame(opts){
       gear:{arma:[1,0,0,0,0,0],armadura:[0,0,0,0,0,0],anillo:[0,0,0,0,0,0],amuleto:[0,0,0,0,0,0]},gearNv:{arma:[0,0,0,0,0,0],armadura:[0,0,0,0,0,0],anillo:[0,0,0,0,0,0],amuleto:[0,0,0,0,0,0]},gearEq:{arma:0,armadura:null,anillo:null,amuleto:null},gearNew:{},mineral:0,minF:0,chatarra:0,boxT:0,boxP:{free:{mid:0,top:0}},boxDay:null,   // gear: copias de cada rareza en cada hueco (la Común del arma es de regalo; las de los demás, al abrirse) · boxT: tickets de invocación · boxP: contadores de la garantía (pity) de la caja, una para todos los huecos
       opt:{},legacy:null,   // legacy: lo que tenía una partida antigua de objetos (armas, cofres, chatarra), apartado sin borrarlo
       startDay:null,cardUntil:0,vipUntil:0,          // startDay: día en que empezó la partida (para los rivales simulados)
-      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{0:0},essF:1,tal:{},reto:0,selF:1,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,wbLog:null,wbRun:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{lvl:0,xp:0},
+      lastSeen:nowFn(),devDays:0,speed:1,kills:0,boostMs:0,ads:null,evo:0,absorb:{},mode:0,mats:{0:0},essF:1,tal:{},reto:0,selF:1,evm:0,evLog:null,loot:null,evRun:null,maxDay:0,wbLog:null,wbRun:null,clan:null,clanRun:null,clanQ:[],clanHits:null,evFree:null,wbFree:null,league:null,leagueLast:null,grim:{lvl:0,xp:0},
       stats:{deposited:0,withdrawNet:0,adGold:0,ads:0,offGold:0}}; // registro para la base de datos: tokens comprados, $ retirados (neto), oro de anuncios, anuncios vistos, oro sin conexión
   }
   function migrate(st){ // pone al día partidas guardadas con versiones anteriores (rellena todo campo que falte y limpia números rotos)
@@ -57,6 +57,7 @@ function createGame(opts){
       if(st.loot){ delete st.loot.wood; delete st.loot.scrap; } }
     const d=newState(st.cls);
     for(const k in d) if(st[k]===undefined) st[k]=d[k];
+    clanClean(st);
     { const W=CFG.weapon, n=Math.max(0,Math.min(W.max,st.wlvl|0)); if(n&&st.gear&&st.gear.arma) st.gear.arma[0]=Math.max(st.gear.arma[0]||1,W.need[n]); delete st.wlvl;   // la mejora con oro de una versión de pruebas → copias de la Común
       const g0=st.gear||{}; st.gear={}; for(const s of ['arma','armadura','anillo','amuleto']){ const a=g0[s]; st.gear[s]=W.base.map((_,i)=>Number.isFinite(a&&a[i])&&a[i]>0?Math.floor(a[i]):0); } if(!st.gear.arma.some(x=>x>0)) st.gear.arma[0]=1;   // (la Común del arma, de regalo; si la rompiste teniendo otra, no vuelve)
       { const g1=st.gearNv||{}, e0=eq0; st.gearNv={}; st.gearEq={};   // nivel con mineral de cada pieza (solo las que tienes, hasta su tope) y la pieza equipada
@@ -93,7 +94,7 @@ function createGame(opts){
   let autoLoot=null; // botín de jefes que quedó sin recoger al cerrar: al volver a entrar va directo al inventario
   let autoEvent=null; // intento del evento que quedó a medias al cerrar: se cuenta con las muertes que llevaba
   function load(){ if(!storage) return null; try{const t=storage.get(SAVE_KEY); S=t?migrate(JSON.parse(t)):null}catch(e){S=null} HS=null; B=null; if(S) gearOpenCheck();   // (huecos que ya tocaban)
-    autoLoot=S&&S.loot?claimLoot():null; autoEvent=S&&S.evRun?finishRun(S.evRun.kills,false):S&&S.wbRun?wbFinish(S.wbRun.dmg,false):null;
+    autoLoot=S&&S.loot?claimLoot():null; autoEvent=S&&S.evRun?finishRun(S.evRun.kills,false):S&&S.wbRun?wbFinish(S.wbRun.dmg,false):S&&S.clanRun?clanFinish(S.clanRun.dmg):null;
     autoQuit=S?quitFights():null; return S }
   // combate de la Torre o duelo PvP que quedó a medias al cerrar la app: cuenta como derrota (así cerrar no sirve para no perder)
   let autoQuit=null;
@@ -111,7 +112,7 @@ function createGame(opts){
   function newGame(cls,name){ S=newState(cls,name); HS=null; S.startDay=dayKey(); S.boxT=CFG.box.welcome; startWave(); track('start',{cls,name:S.name}); emit('change'); return S }
   /* ---------- fórmulas ---------- */
   const hasCard=()=>dayKey()<S.cardUntil, hasVip=()=>dayKey()<S.vipUntil;
-  const goldMul=()=>(hasCard()?1+CFG.cardGold:1)*(1+talBonus('gold'));   // oro de los enemigos (también sin conexión): Tarjeta mensual y talento Fortuna
+  const goldMul=()=>(hasCard()?1+CFG.cardGold:1)*(1+talBonus('gold'))*(1+clanBonus('gold'));   // oro de los enemigos (también sin conexión): Tarjeta mensual, talento Fortuna y bonus de clan
   const statsDirty=()=>{HS=null};
   const heroStats=()=>HS||(HS=computeStats());
   // niveles ganados (contando lo que valen): los de después de cada evolución valen grow[i] × lo de antes (en vida, daño y defensa)
@@ -133,7 +134,7 @@ function createGame(opts){
       spd:c.spd*Math.pow(U.spd.mult,u.spd),
       cr:Math.min(CFG.caps.cr,c.cr+extraOf('cr')+ring), cd:c.cd+extraOf('cd')+ring*(CFG.equip.anillo.cd||0), sk:slotV('amuleto'),
       ls:Math.min(CFG.caps.ls,extraOf('ls')), bd:extraOf('bd')+talBonus('bd'), ranged:c.ranged,
-      regen:c.regen||0, dmgTaken:c.dmgTaken||1, xpMult:1+talBonus('xp'), fx:weaponFx(),   // fx: el efecto del arma Épica o Legendaria (combate/arma-efecto.js)
+      regen:c.regen||0, dmgTaken:c.dmgTaken||1, xpMult:(1+talBonus('xp'))*(1+clanBonus('xp')), fx:weaponFx(),   // fx: el efecto del arma Épica o Legendaria (combate/arma-efecto.js)
     };
   }
   // Torre: héroe único (CFG.tower.hero) + solo las cartas, grimorios y maldiciones de la partida.
@@ -310,7 +311,7 @@ function createGame(opts){
     S.chatarra-=k.scrap; S.gold-=k.gold; const res=addCopy(s,r); track('forge',{slot:s,r:res.id}); save(); emit('forge',res); emit('change'); return {ok:true,res} }
   // --- mineral: por minuto de combate en la campaña (también sin conexión) × el modo ---
   const mineMult=m=>{ const M=CFG.mineral; if(!M) return 0; const a=M.mode; return a[Math.min(m==null?(S.mode||0):m,a.length-1)]||1 };
-  function mineAdd(min){ if(!S||!CFG.mineral||!(min>0)) return 0; S.minF=(S.minF||0)+min*CFG.mineral.perMin*mineMult(); const n=Math.floor(S.minF); if(n>0){ S.minF-=n; S.mineral=(S.mineral||0)+n; } return n }
+  function mineAdd(min){ if(!S||!CFG.mineral||!(min>0)) return 0; S.minF=(S.minF||0)+min*CFG.mineral.perMin*mineMult()*(1+clanBonus('mineral')); const n=Math.floor(S.minF); if(n>0){ S.minF-=n; S.mineral=(S.mineral||0)+n; } return n }   // (con el bonus de clan)
   // botín de un élite/JEFE ya vencido (al farmear su fase o en la Sala de jefes): siempre algo de mineral; con su probabilidad, pieza (gearDrop), ticket de
   // invocación, chatarra y Esencia
   function bossLoot(f,m){ if(!S) return null; m=m==null?(S.mode||0):m; const k=f%30===0?'jefe':'elite', M=CFG.mineral, L=CFG.repLoot, o={f,mode:m,mineral:0,tickets:0,scrap:0,ess:0,piece:null};
@@ -487,7 +488,7 @@ function createGame(opts){
     const P=heroPassive(), TW=towerOn(), TC=CFG.tower.cards, TG=CFG.tower.grims, F=h.fx;   // F: efecto del arma Épica o Legendaria (combate/arma-efecto.js)
     B.t+=dt; CT+=dt; grimXp(dt);
     // Grimorio del Tiempo: guarda la vida de hace unos segundos (muestra cada 0,5 s)
-    if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); if(B.hp<=0){ endEvent(); return } }
+    if(B.event&&B.kind==='boss'){ if(B.t>=CFG.wboss.dur||(B.clan?S.clanRun&&S.clanRun.week<weekKey():S.wbRun&&S.wbRun.week<weekKey()&&!evPaused())){ endEvent(); return } wbUpdate(); if(B.hp<=0){ endEvent(); return } }   // (un intento de la semana pasada se cierra)
     if(!B.event){ if(B.boss&&CFG.encounter.bossTime&&B.t>=CFG.encounter.bossTime){ lose(true); return } surpriseTick(); }   // élite y JEFE de la campaña: si no cae a tiempo, cuenta como derrota
     else if(!B.kind){ if((CFG.event.dur&&B.t>=CFG.event.dur)||(B.rt||0)>=(CFG.event.maxDur||1e9)||(S.evRun&&S.evRun.day<dayKey()&&!evPaused())){ endEvent(); return } evSpawn(); } // solo la Mazmorra (no tiene kind): un intento de ayer se cierra al acabar la pausa
     // curación (ls: viene del robo de vida)
@@ -942,7 +943,7 @@ function createGame(opts){
     if(B.kind==='tower') return towerEnd(B.hp>0);
     if(B.kind==='hall') return hallEnd();
     if(B.kind==='pvp') return pvpFightEnd();
-    const res=B.kind==='boss'?wbFinish(B.dmg,B.hp<=0):finishRun(B.kills,B.hp<=0);
+    const res=B.kind==='boss'?(B.clan?clanFinish(B.dmg):wbFinish(B.dmg,B.hp<=0)):finishRun(B.kills,B.hp<=0);
     B=null; misBump('event',1); save(); emit('eventEnd',res); startWave(); emit('change'); return res;
   }
   /* ---------- rivales simulados y premios del ranking de la Mazmorra ---------- */
@@ -1533,19 +1534,22 @@ function createGame(opts){
   // cada paso: pega como el jefe de ese momento; sus esbirros, como los de entonces
   function wbUpdate(){ const e=B.enemies[0]; if(!e) return; const s=wbStats(wbPhase(B.t)), M=CFG.wboss.minion||{hp:0.6,atk:0.4}; e.atk=s.atk*(e.atkK||1); e.df=s.df; e.refMax=s.hp*10;
     B.minion={hp:s.hp*M.hp,atk:s.atk*M.atk,df:s.df,spd:1}; }
-  function addDmg(d){ B.dmg+=d; if(S.wbRun) S.wbRun.dmg=B.dmg; }
+  // daño al jefe (también al JEFE de clan, con su bonus de daño)
+  function addDmg(d){ if(B.clan){ B.dmg+=d*(1+clanBonus('boss')); if(S.clanRun) S.clanRun.dmg=B.dmg; return } B.dmg+=d; if(S.wbRun) S.wbRun.dmg=B.dmg; }
   // Entrada gratis: 1 a la semana (wbFree guarda la semana en que se usó). Las demás, con Ticket Jefe.
   const wbFreeLeft=()=>S.wbFree!==weekKey()?1:0;
   function wbStart(){
     if(!S||inEvent()||!modeOpen('boss')||(retoN()<1&&!wbFreeLeft())||evPaused()) return false;
     if(wbPending()) wbClaim();
     if(wbFreeLeft()) S.wbFree=weekKey(); else retoUse();   // sin entrada gratis, un Ticket de reto
-    const h=heroStats(), s=wbStats(1), V=CFG.event;
-    S.wbRun={week:weekKey(),dmg:0};
-    B={intro:CFG.encounter.intro,event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:wbBoss(weekKey()),noHurt:!!CFG.wboss.noHurt};   // noHurt: no te pega (reto de daño)
+    S.wbRun={week:weekKey(),dmg:0}; wbFight(wbBoss(weekKey()));
+    save(); emit('eventStart',B); emit('change'); return true;
+  }
+  // la pelea de 1 minuto contra un jefe inmortal (Jefe semanal y JEFE de clan: o = {clan:true})
+  function wbFight(J,o){ const h=heroStats(), s=wbStats(1), V=CFG.event;
+    B={intro:CFG.encounter.intro,event:true,kind:'boss',t:0,boss:true,elite:true,count:0,spawned:1,kills:0,dmg:0,enemies:[],hp:h.hp,th:null,over:false,wait:0,mD:0,mB:0,wb:J,noHurt:!!CFG.wboss.noHurt,...(o||{})};   // noHurt: no te pega (reto de daño)
     B.enemies.push({hp:Infinity,max:Infinity,atk:s.atk,df:s.df,spawn:0,walk:V.walk,arrive:V.walk,next:V.walk,first:false,dead:false,immortal:true});
     wbUpdate(); if(B.wb) zoneSetup(B.enemies[0],1,S.mode,'jefe',{zone:B.wb.zone,keepMinion:true,noEscort:true});   // con su pasiva y sus habilidades
-    save(); emit('eventStart',B); emit('change'); return true;
   }
   function wbFinish(dmg,died){
     const w=S.wbRun?S.wbRun.week:weekKey(); S.wbRun=null; dmg=Math.round(dmg||0);
@@ -1568,6 +1572,63 @@ function createGame(opts){
     if(r){ S.evm+=r.em||0; if(r.gold) giveBundle({gold:r.gold}); }
     emit('change'); return p; }
   const wbWeekDmg=()=>{ const w=wbShownWeek(); return S.wbLog&&S.wbLog.week===w?S.wbLog.dmg:0 };
+  /* ---------- Clanes ---------- */
+  // El clan vive en el servidor (acciones clan…: supabase/functions/track/clanes.js). La pantalla le pregunta y pasa al motor lo que
+  // responde (clanSync). El motor guarda lo justo para jugar sin conexión (S.clan: id, nombre, rol y nivel de cada bonus) y lleva el JEFE de
+  // clan: la pelea (la del Jefe semanal, con B.clan), los intentos de hoy (S.clanHits) y los intentos acabados que faltan por enviar (S.clanQ).
+  // Los premios del lunes llegan como premios del servidor (clan_boss = nivel, clan_goal = tramo, clan_rank = puesto).
+  const clanIn=()=>!!(S&&S.clan&&S.clan.id);
+  // bonus de clan (oro, experiencia, mineral, daño al JEFE de clan): nivel × lo que da cada nivel
+  function clanBonus(k){ if(!clanIn()) return 0; const C=CFG.clan.bonus, lv=Math.max(0,Math.min(C.max,Math.floor(Number((S.clan.bonus||{})[k])||0))); return lv*(C.per[k]||0) }
+  // (al cargar una partida: solo lo que tiene sentido)
+  function clanClean(st){ const c=st.clan, C=CFG.clan;
+    if(c&&typeof c==='object'&&Number(c.id)>0){ const b={}; for(const k of C.bonus.keys){ const v=Math.floor(Number((c.bonus||{})[k])||0); if(v>0) b[k]=Math.min(v,C.bonus.max); }
+      st.clan={id:Math.floor(Number(c.id)),name:String(c.name||'').slice(0,C.nameMax),role:['leader','officer','member'].includes(c.role)?c.role:'member',bonus:b}; }
+    else st.clan=null;
+    st.clanQ=Array.isArray(st.clanQ)?st.clanQ.filter(x=>x&&x.w>0&&x.dmg>=0).slice(-6):[];
+    if(!(st.clanHits&&st.clanHits.d>0)) st.clanHits=null; }
+  // intentos de hoy contra el JEFE de clan (se gastan al empezar)
+  function clanHitsState(){ const d=dayKey(); if(!S.clanHits||S.clanHits.d!==d) S.clanHits={d,n:0}; return S.clanHits }
+  const clanHitsLeft=()=>S?Math.max(0,CFG.clan.boss.tries-clanHitsState().n):0;
+  const clanQToday=()=>(S.clanQ||[]).filter(x=>x.d===dayKey()).length;
+  // lo que responde el servidor: {ok, clan: null | {id, name, bonus:{k:{lvl}}…}, me:{role, hitsLeft…}}
+  function clanSync(j){ if(!S||!j||!j.ok||!('clan' in j)) return false; const C=CFG.clan;
+    if(!j.clan){ if(S.clan){ S.clan=null; S.clanQ=[]; statsDirty(); save(); emit('change'); } return true }
+    const b={}; for(const k of C.bonus.keys){ const v=Math.floor(Number(((j.clan.bonus||{})[k]||{}).lvl)||0); if(v>0) b[k]=Math.min(v,C.bonus.max); }
+    const old=JSON.stringify(S.clan&&S.clan.bonus||{});
+    S.clan={id:j.clan.id,name:String(j.clan.name||''),role:j.me&&j.me.role||'member',bonus:b};
+    if(j.me&&typeof j.me.hitsLeft==='number'){ const H=clanHitsState(); H.n=Math.max(H.n,C.boss.tries-j.me.hitsLeft+clanQToday()); }   // (los de otro móvil también cuentan)
+    if(JSON.stringify(b)!==old) statsDirty();
+    save(); emit('change'); return true }
+  // JEFE de clan: otro JEFE de tu modo que el del Jefe semanal (rota igual, cada semana)
+  const clanBoss=w=>wbBoss((w==null?weekKey():w)+CFG.clan.boss.pick);
+  const clanCanFight=()=>clanIn()&&modeOpen('clan')&&!inEvent()&&clanHitsLeft()>0;
+  function clanStart(){ if(!clanCanFight()) return false; clanHitsState().n++;
+    S.clanRun={week:weekKey(),dmg:0}; wbFight(clanBoss(),{clan:true});
+    save(); emit('eventStart',B); emit('change'); return true }
+  // fin del intento: el daño se apunta para enviarlo (la pantalla lo envía con clanHit y lo quita con clanHitDone)
+  function clanFinish(dmg){ const w=S.clanRun?S.clanRun.week:weekKey(); S.clanRun=null; dmg=Math.round(dmg||0);
+    if(w===weekKey()&&clanIn()&&dmg>0){ S.clanQ=S.clanQ||[]; S.clanQ.push({id:nowFn()+Math.floor(rand()*1000),w,d:dayKey(),dmg}); }
+    return {kind:'boss',clan:true,dmg,week:w} }
+  const clanQueue=()=>S?(S.clanQ||[]).filter(x=>x.w===weekKey()):[];
+  // el servidor ya respondió a ese intento (aceptado o no): fuera de la lista. Los de semanas pasadas ya no valen.
+  function clanHitDone(id,j){ if(!S) return; S.clanQ=(S.clanQ||[]).filter(x=>x.id!==id&&x.w===weekKey()); if(j&&j.ok) clanSync(j); else save() }
+  // objetivo semanal: misiones hechas hoy y esta semana (el servidor solo suma lo nuevo)
+  const clanReport=()=>S?{d:dayKey(),dn:missions().filter(m=>m.done).length,w:weekKey(),wn:weekMissions().filter(m=>m.done).length}:null;
+  // aportar al bonus: minutos de farmeo de tu récord (lo que da una misión de «oro de X min»)
+  const clanGoldOf=min=>goldOfMin(min);
+  const clanCanGive=min=>!!S&&min>0&&S.gold>=goldOfMin(min);
+  function clanPay(min){ if(!S||!(min>0)) return 0; const g=Math.min(S.gold,goldOfMin(min)); S.gold-=g; track('clanGive',{min,gold:Math.round(g)}); save(); emit('change'); return g }
+  // crear un clan: se pagan los tokens cuando el servidor lo confirma
+  const clanCanCreate=()=>!!S&&tokens()>=CFG.clan.cost;
+  function clanPayCreate(){ if(!spend(CFG.clan.cost)) return false; track('clanCreate',{tokens:CFG.clan.cost}); save(); emit('change'); return true }
+  // premios del lunes (los manda el servidor): JEFE por nivel, objetivo por tramo y ranking por puesto
+  function clanRew(kind,n){ const C=CFG.clan; n=Math.floor(n);
+    if(kind==='clan_boss'){ const R=C.boss.rew, L=Math.max(0,n-1), ev=Math.min(R.evMax,R.ev*L), k=Math.min(R.max,Math.floor(L/R.every)), b={};
+      if(ev) b.ev=ev; if(k){ b.box=k; b.ess=k; } return Object.keys(b).length?b:null }
+    if(kind==='clan_goal') return n>0?C.goal.rew[Math.min(C.goal.rew.length,n)-1]:null;
+    if(kind==='clan_rank'){ for(const r of C.rank) if(n<=r.to){ const b={}; for(const k of ['ev','box','ess']) if(r[k]) b[k]=r[k]; return b } return null }
+    return null }
   /* ---------- mejoras ---------- */
   const upCost=k=>{const u=CFG.upgrades[k];return u.base*Math.pow(u.g,S.up[k])};
   function buyUpgrade(k){ const c=upCost(k); if(S.gold<c) return false; S.gold-=c; S.up[k]++; statsDirty(); track('upgrade',{k,n:1,gold:c}); emit('change'); return true }
@@ -1762,12 +1823,14 @@ function createGame(opts){
       else if(r.kind==='pass'){ S.passPrem=Math.max(S.passPrem||0,n); }   // pase de pago de la temporada n
       else if(r.kind==='pvp'){ const w=pvpReward(n); if(w){ S.evm+=w.em||0; if(w.gold) giveBundle({gold:w.gold}); } }   // ranking semanal PvP (amount = puesto)
       else if(/^offer_evo$/.test(r.kind)){ giveBundle(CFG.offers[r.kind.slice(6)].b); }
+      else if(/^clan_(boss|goal|rank)$/.test(r.kind)){ const b=clanRew(r.kind,n); if(!b) continue; giveBundle(b); }   // premios del lunes del clan
       else continue;
       out.push({kind:r.kind,amount:n,reason:r.reason}); }
     if(out.length){ track('reward',{list:out}); save(); emit('change'); } return out }
   /* ---------- misiones diarias y semanales ---------- */
   // Premios: {gold: minutos de farmeo de tu récord, silver, wood, mode, ess, ev, ticket, bossTicket}
-  function giveBundle(b){ if(!b) return; if(b.gold) S.gold+=Math.max(20,farmRate(Math.max(1,S.best)).g*60*b.gold);
+  const goldOfMin=m=>Math.max(20,farmRate(Math.max(1,S.best)).g*60*m);   // oro de m minutos de farmeo en tu fase récord
+  function giveBundle(b){ if(!b) return; if(b.gold) S.gold+=goldOfMin(b.gold);
     if(b.ess) essAdd(b.ess); if(b.ev) S.evm+=b.ev; if(b.reto) retoAdd(b.reto); if(b.ticket) retoAdd(b.ticket); if(b.bossTicket) retoAdd(b.bossTicket);   // ev: Sellos · (los tickets de modo de antes son Tickets de reto)
     if(b.tok) S.tokens+=b.tok; if(b.box) S.boxT=(S.boxT||0)+b.box; }   // tok: tokens (como comprados) · box: tickets de invocación
   // misiones del día: progreso guardado en S.daily (se renueva cada día; los enemigos se cuentan desde el inicio del día)
@@ -1880,6 +1943,7 @@ function createGame(opts){
     claimLoot, autoLoot:()=>{const a=autoLoot;autoLoot=null;return a}, autoEvent:()=>{const a=autoEvent;autoEvent=null;return a}, autoQuit:()=>{const a=autoQuit;autoQuit=null;return a}, inEvent, evPhase, evRamp:()=>B&&B.event&&B.kind!=='boss'?evRamp():null, evPaused, evPauseLeft, evShownDay, startEvent, evFreeLeft, wbStart, wbFreeLeft, wbRivals, wbRank, wbReward, wbPending, wbClaim, wbWeekDmg, wbShownWeek, weekKey, weekLeft, wbPhase, endEvent, evRivals, evRank, evReward, evPending, claimEvent, evToday,
     // evolución
     evAffix, wbBoss, hallBosses, hallStart, hallTriesLeft, hallReward, modeReq, modeOpen, unlockNew, daysPlayed, canAdvanceMode, advanceMode, modeLocked, modeCfg, top, goldAt, missions, claimMission, missionsReady, weekMissions, claimWeekly, weeklyReady, pvpState, pvpReward, pvpLeague, pvpFreeLeft, pvpCanFight, pvpBot, pvpSetRival, pvpSync, pvpFight, duelEnter, duelSpeed, labSpeed, autoOnly, pvpOn, ghost:()=>GH, towerState, towerStart, towerAbandon, towerGo, towerPick, towerBuyLife, towerEvent, towerRevive, towerMap, towerCanGo, towerLinks, towerShopBuy, towerShopLeave, towerShopRemove, towerRewardPending, towerRemoveCost, towerPrice, boonInfo, boonDef, towerOn, wheelState, spinWheel, surpriseState, streak:()=>({n:STK.n,mul:streakMul()}), bonusState, claimBonus, grimDone, grimName, grimUpInfo, grimUp, grimXp, evoPaths, pathSwitch, evoKeyOk, skills, useSkill, manualSkills, skillDef, offerCheck, activeOffers, calState, claimCal, passState, passReward, claimPass, claimPassAll, passReady,
+    clanIn, clanBonus, clanSync, clanStart, clanCanFight, clanHitsLeft, clanBoss, clanQueue, clanHitDone, clanReport, clanGoldOf, clanCanGive, clanPay, clanCanCreate, clanPayCreate, clanRew,
     canEvolve, evolve, essN, essAdd, retoN, retoAdd, mktInfo, mktBuy, pvpExtra, talInfo, talUp, talOpen, talBonus, talCost, evoCost, evoMissing, evoLvlOk, evoP, nextEvo, nextEvoInfo, kitStage, heroPassive, lvlCap,
     // objetos: solo el arma Común de regalo (los demás se recrean aparte)
     weapon, weaponBonus, weaponExtra, weaponPower, boxInfo, pull, gear, gearSlots, gearPower, setInfo, gearOpenCheck, gearDrop, dropP, equipPiece, equipBest, slotState, slotSpin, gearPiece, setRealRank, seenNew, nvUp, nvCost, breakCalc, breakPieces, forgeInfo, forgeCraft, bossLoot, mineAdd,

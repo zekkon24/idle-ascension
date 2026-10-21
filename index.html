@@ -910,6 +910,141 @@ body{background:radial-gradient(ellipse 120% 70% at 50% 0%,#161a28,#0b0c12 70%) 
 .top.slim .sttl{overflow:visible}
 .sttl .stxt{flex:none;overflow:visible;text-overflow:clip;white-space:nowrap}
 @media (max-width:374px){.sttl .stxt{font-size:11px;padding:5px 7px 5px 13px}.sttl .smed{width:38px;height:38px}.top.slim .res span{font-size:12px}.res .rplus{width:13px;height:13px;font-size:10px;line-height:11px}.gear{width:32px;height:32px}}
+/* Modos con las ilustraciones de la maqueta: tarjetas más altas y títulos grandes */
+.mcard2{min-height:190px;background-position:center 30%}
+.mcard2.wide{min-height:180px}
+.mcard2.wide.low{min-height:118px;background-position:center}
+.mcard2.wide:not(.low) .mt{font-size:34px}
+.mcard2 .mt{font-size:28px;text-shadow:0 2px 0 #000,0 3px 10px #000}
+.mcard2 .mico{width:70px;height:70px;background-image:url(sprites/ui/aro_dorado.webp)}
+.mcard2 .mico .mimg{width:44px;height:44px}
+/* ---------- más cerca de las maquetas (2.ª tanda) ---------- */
+/* estandarte con ilustración arriba de Premios diarios y Potenciadores: el personaje sale por encima del borde */
+.dban{position:relative;display:flex;align-items:center;min-height:92px;margin:-4px 26px 10px 0;padding-left:47%;background:url(sprites/ui/separador.webp) right bottom/58% 10px no-repeat}
+.dban-art{position:absolute;left:-14px;bottom:2px;width:50%;max-width:210px;height:auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.7));pointer-events:none}
+.dban-t h3{margin:0;font-size:21px;font-weight:900;color:#f3d48a;text-shadow:0 2px 0 #000;line-height:1.05}
+.dban-t small{display:block;margin-top:4px;font-size:12px;color:#d8cfe0;line-height:1.3}
+/* día 7: el cofre grande */
+.cald .cbig{width:34px;height:34px;margin:-2px 0 -4px}
+.cald.now{box-shadow:0 0 16px rgba(255,190,80,.5)}
+/* Misiones: «✓ Recoger» oscuro con marco de oro brillante; «Ir ›» con marco */
+.mrow .mclaim.btn.gold{border:7px solid transparent;border-image:var(--fr-o) 48 / 7px stretch;border-radius:0;background:#14110a;background-clip:padding-box;color:#f3d48a;box-shadow:0 0 12px rgba(255,190,80,.45)}
+.mrow .mgo{min-width:60px}
+.mrow .mi>b{font-family:var(--display);font-weight:700}
+/* fondo ilustrado detrás de la cabecera (Misiones: el castillo; Tienda: las antorchas de la arena) */
+body[data-tab="mis"] .top.slim,body[data-tab="shop"] .top.slim{background:linear-gradient(180deg,rgba(11,12,18,.25),#0b0c12 96%),var(--cab) center 35%/cover no-repeat}
+body[data-tab="mis"]{--cab:url(sprites/ui/modo_bg_campana.webp)}
+body[data-tab="shop"]{--cab:url(sprites/ui/modo_bg_pvp.webp)}
+/* Tienda: dibujo grande con brillo, nombre, descripción y precio en placa enmarcada */
+.scard{padding-top:2px}
+.scard .sc-ic{height:66px;background:none}
+.scard .scart{width:74px;height:66px;object-fit:contain;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--tone) 55%,transparent))}
+.scard .sc-n{font-size:14px;color:#f0e2c4}
+.scard .sc-s{font-size:10px;color:#a8a3b3;line-height:1.25;min-height:26px}
+.scard .sc-lim{position:absolute;top:2px;left:3px;font-size:9px;font-weight:800;color:#d9c79a;background:#0b0c12d9;border:1px solid #5e5038;border-radius:4px;padding:0 4px}
+/* pestañas: icono al lado del nombre (como las maquetas) */
+.fchips button,.isubs button{flex-direction:row;justify-content:center;gap:4px;padding:5px 3px;font-size:11.5px}
+.fchips button .uimg,.isubs button .uimg{width:18px;height:18px;flex:none}
+.dban{padding-left:43%}
+.dban-art{width:46%}
+.dban-t h3{font-size:18px;white-space:nowrap;letter-spacing:-.2px}
+.dban{margin-right:34px}
+.fchips{flex-wrap:nowrap}
+@media (max-width:374px){.fchips button,.isubs button{font-size:10px;gap:2px;padding:5px 2px}.fchips button .uimg,.isubs button .uimg{width:14px;height:14px}.dban-t h3{font-size:16px}}
+/* la letra Cinzel solo tiene mayúsculas: los títulos de las misiones van con la letra normal, que se lee mejor */
+.mrow .mi>b{font-family:var(--body);font-weight:800}
+@media (max-width:374px){.shtabs button .uimg{display:none}}
+/* ---------- azul marino de las maquetas: paneles por dentro, pestañas sin elegir y botones secundarios; textos secundarios azul grisáceo ---------- */
+:root{--navy:#131c33;--navy2:#0c1324;--navy-ink:#a9b6d8;
+  --plate:linear-gradient(180deg,rgba(48,72,128,.32),rgba(4,8,20,.5)),url(sprites/ui/losa.webp) center/cover,#121a2f}
+body{background:radial-gradient(ellipse 120% 70% at 50% 0%,#141d33,#090d17 70%) fixed,#090d17}
+.top.slim{background:linear-gradient(180deg,#090d17 75%,transparent)}
+.nav{background:linear-gradient(180deg,#101830,#070b14)}
+.fchips button,.isubs button,.nav button{background:linear-gradient(180deg,#18233f,#0d1426);background-clip:padding-box;color:#b4bfdc}
+.btn:not(.gold){background:linear-gradient(180deg,#1b2846,#0e1629);background-clip:padding-box;color:#e3e9fb}
+.top.slim .res span,.top .res span,.gear,.mrow .mrw .rw,.mcard2 .mp,.mcard2 .mf,.ihstats span,.ihname,.mbadge,.mbadge.g,.cald,.upt,.upx,.upx.lv,.sidebtns .calbtn,.skbar .skmode{background-color:#0f172b}
+.mrow .mrw .rw,.ihstats span{background:#0d1528;border-color:#26324f}
+.upt,.upx,.upx.lv{background:linear-gradient(180deg,#17223d,#0c1324);background-clip:padding-box}
+.hint,.dban-t small,.brow .bx,.brow .acts .s,.scard .sc-s,.mrow .mbar span,.upt .un,.upx small,.ihstats em,.ihs>small{color:var(--navy-ink)}
+.mpor,.gcell,.ihero .ibslot{background-color:#0b1222}
+.mrow .mbar .rbar{background:#0a1020}
+/* ---------- revisión visual: que nada se corte ni se salga en ningún ancho ---------- */
+/* pestañas: nombre con la letra normal (más estrecha y se lee mejor que la Cinzel en mayúsculas); repartidas según lo que ocupa cada nombre */
+.fchips button,.isubs button{font-family:var(--body);font-weight:800;font-size:12px;letter-spacing:0;min-width:0;flex:1 1 auto;white-space:nowrap}
+.isubs{display:flex}
+.isubs button{flex:1 1 auto}
+.shtabs button .uimg{display:none}
+@media (max-width:374px){.fchips button .uimg,.isubs button .uimg{display:none}.fchips button,.isubs button{font-size:11px;padding:5px 2px}}
+/* Tienda: el «i» en la esquina sin taparse con el dibujo (el dibujo deja libre la esquina) */
+.scard button.sc-ic{width:auto;margin:0 auto;padding:0 6px}
+.scard .ibtn{top:-2px;right:-2px;width:22px;height:22px;font-size:11px;z-index:1}
+/* barra de abajo en móviles muy estrechos: nombres más pequeños */
+@media (max-width:360px){.nav .nl{font-size:8.5px;letter-spacing:-.2px}.nav button{border-width:5px;border-image-width:5px}}
+.fchips button{overflow:visible;text-overflow:clip}
+/* precio de las tarjetas: si no cabe en una línea, letra más pequeña y en dos líneas antes que cortarse */
+.scard .sc-buy.btn.gold{white-space:normal;line-height:1.1;min-height:28px;flex-wrap:wrap;text-align:center}
+.scard .sc-buy small{display:block;width:100%;font-size:8.5px;line-height:1}
+.scard .sc-tag{z-index:2}
+/* ---------- móviles estrechos (≤360 px): cabecera, Modos, Inventario y estandartes sin cortes ni solapes ---------- */
+@media (max-width:360px){
+  .res .rplus{display:none}
+  .top.slim{gap:4px;padding-left:6px;padding-right:6px}
+  .sttl .smed{width:34px;height:34px;margin-right:-10px}.sttl .smed .uimg{width:22px;height:22px}
+  .sttl .stxt{font-size:10.5px;padding:5px 7px 5px 12px}
+  .top.slim .res span{font-size:12px}
+  .gear{width:30px;height:30px}
+  .mcard2 .mt{font-size:21px}
+  .mcard2.wide:not(.low) .mt{font-size:26px}
+  .mcard2 .mk{font-size:9px;letter-spacing:.5px}
+  .mcard2 .mp{padding:2px 6px}.mcard2 .mp b{font-size:13px}.mcard2 .mp small{font-size:10px}
+  .mcard2 .mbadge{font-size:9px;padding:1px 5px;letter-spacing:.3px}
+  .mcard2 .mm span{padding:1px 5px;font-size:9px}
+  .ihgrid{grid-template-columns:54px 1fr 54px}
+  .ihero .ibslot{width:48px;height:48px;border-width:6px;border-image-width:6px}
+  .ihero .ibslot svg,.ihero .ibslot .bimg{width:26px;height:26px}
+  .ihs>small{font-size:9px}
+  .ihart img{width:104px}
+  .dban{padding-left:40%;min-height:80px}
+  .dban-art{width:42%}
+  .dban-t h3{font-size:14px}
+  .dban-t small{font-size:11px}
+}
+/* el estandarte va dentro de la ventana (que sigue pudiendo desplazarse en pantallas bajas) */
+@media (max-width:360px){.dban-t h3{white-space:normal;font-size:15px}}
+@media (max-width:340px){.mcard2 .mt{font-size:19px}}
+.scard:has(.ibtn) button.sc-ic{max-width:calc(100% - 44px);padding:0}
+.scard:has(.ibtn) .scart{width:100%;max-width:74px}
+@media (max-width:360px){.dban{padding-left:36%}.dban-art{width:38%}.dban-t h3{font-size:12.5px;letter-spacing:-.3px}}
+/* Clan: cabecera con el estandarte, pestañas (3 × 2), listas, barras, chat y casillas */
+.mico>.ic{width:42px;height:42px}
+.clcard{background:linear-gradient(135deg,#1d2a4a,#141a2c 60%,#2a2140)}
+.clhead{display:flex;gap:10px;align-items:center}
+.clhead>.ic{width:46px;height:46px;flex:none}
+.clhead>div{min-width:0}
+.clhead b{display:block;font-size:18px;overflow-wrap:anywhere}
+.clhead .s{display:block;overflow-wrap:anywhere}
+.fchips.cltabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:10px}
+.fchips.cltabs button{justify-content:center;text-align:center;padding:6px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clin{flex:1;min-width:0;width:100%;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;color:var(--ink);font:inherit;font-size:14px;margin:4px 0}
+.clchk{display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+.cllist{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.clrow{display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.clrow.me{border-color:var(--gold)}
+.clrow>div:first-child{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.clrow .s{overflow-wrap:anywhere}
+.clrow .acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:52%}
+.clrole{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted);vertical-align:middle}
+.clrole.leader{color:var(--gold);border-color:var(--gold)}
+.clrole.officer{color:#8fc3ff;border-color:#8fc3ff}
+.clbar{position:relative;height:22px;border-radius:11px;background:#0008;border:1px solid var(--line);overflow:hidden;margin:8px 0}
+.clbar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#9b2a26,#e8673a)}
+.clbar.g i{background:linear-gradient(90deg,#2a7d50,#5fd08a)}
+.clbar span{position:relative;display:block;text-align:center;font-size:12px;font-weight:800;line-height:22px;text-shadow:0 1px 2px #000;white-space:nowrap}
+.clchat{display:flex;flex-direction:column;gap:5px;max-height:50vh;overflow-y:auto;margin:8px 0;padding:2px}
+.clmsg{position:relative;align-self:flex-start;max-width:86%;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px 28px 6px 10px;font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.clmsg.me{align-self:flex-end;background:#22345a}
+.clmsg b{display:block;font-size:11px;color:var(--gold)}
+.clx{position:absolute;top:3px;right:3px;background:none;border:0;font-size:13px;padding:2px;opacity:.75;cursor:pointer}
 </style>
 
 <div class="app" id="app"></div>
@@ -932,7 +1067,7 @@ try{ const tg=window.Telegram&&Telegram.WebApp; if(tg&&tg.initData!==undefined){
    Si la hay, recarga con los archivos nuevos; si no (o sin conexión), carga el juego. Cada archivo lleva ?v=versión,
    así Telegram no puede usar una copia vieja. En local (versión DEV) no comprueba nada. */
 (function(){
-  var APP_VERSION='202610210400-5d5458b';                                      // tools/publicar.sh pone aquí la versión publicada
+  var APP_VERSION='202610210936-776c130';                                      // tools/publicar.sh pone aquí la versión publicada
   var FILES=['config.js','engine.js','telemetry.js','control.js','tonpay.js','art.js','ui.js'];
   window.APP_VERSION=APP_VERSION;
   function load(i){ if(i>=FILES.length){ var b=document.getElementById('boot'); if(b) b.remove(); return }
